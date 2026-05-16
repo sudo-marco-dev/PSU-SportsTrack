@@ -8,7 +8,8 @@ import {
   Menu, 
   X,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  Globe
 } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -23,6 +24,11 @@ export const AppLayout = () => {
       name: 'Dashboard', 
       href: role === 'Admin' ? '/admin' : role === 'Coach' ? '/coach' : '/player', 
       icon: LayoutDashboard 
+    },
+    { 
+      name: 'Match Center', 
+      href: '/explorer', 
+      icon: Globe 
     },
     ...(role === 'Admin' ? [
       { name: 'Tournaments', href: '/admin/tournaments', icon: Trophy },

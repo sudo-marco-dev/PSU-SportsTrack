@@ -279,8 +279,16 @@ export const LiveMatch = () => {
               <ChevronLeft className="size-6" />
             </Button>
             <div>
-              <h1 className="text-3xl font-black tracking-tighter italic uppercase leading-none">MATCH <span className="text-orange-500">CONTROL</span></h1>
-              <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-1 opacity-70">Official PSU Match Execution Interface</p>
+              <h1 className="text-3xl font-black tracking-tighter italic uppercase leading-none">
+                {match.status === 'Completed' ? (
+                  <>POST-GAME <span className="text-orange-500">BOX SCORE</span></>
+                ) : (
+                  <>MATCH <span className="text-orange-500">CONTROL</span></>
+                )}
+              </h1>
+              <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-1 opacity-70">
+                {match.status === 'Completed' ? 'Official PSU Historical Match Record' : 'Official PSU Match Execution Interface'}
+              </p>
             </div>
           </div>
           
@@ -348,11 +356,47 @@ export const LiveMatch = () => {
           </CardContent>
         </Card>
 
-        {/* Controls (Admin/Coach Only) */}
+        {/* MVP Recognition Center (Visible to EVERYONE once awarded) */}
+        {awardedMVP && (
+          <Card className="border-primary/50 bg-primary/5 shadow-lg overflow-hidden border-2">
+            <CardContent className="p-0">
+              <div className="relative py-12 px-6 text-center overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-orange-500/10 to-transparent pointer-events-none" />
+                <div className="relative z-10 animate-in zoom-in fade-in duration-700">
+                  <div className="flex justify-center mb-6">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-orange-500 blur-xl opacity-20 animate-pulse" />
+                      <div className="relative inline-flex items-center justify-center p-6 bg-orange-500 rounded-full shadow-2xl shadow-orange-500/50">
+                        <Trophy className="size-16 text-white" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center gap-2 text-orange-600 mb-1">
+                      <Star className="size-5 fill-orange-600" />
+                      <span className="text-xs font-black uppercase tracking-[0.2em]">Match Recognition</span>
+                      <Star className="size-5 fill-orange-600" />
+                    </div>
+                    <h3 className="text-4xl font-black text-slate-900 uppercase tracking-tighter italic">{awardedMVP}</h3>
+                    <div className="inline-block px-4 py-1.5 bg-slate-900 text-white rounded-full text-xs font-bold uppercase tracking-widest mt-4">
+                      Official Red Star MVP
+                    </div>
+                    <p className="text-slate-500 text-sm mt-6 max-w-xs mx-auto">
+                      This player has been officially recognized for their exceptional performance in this match.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Administrative Controls (Admins/Coaches Only) */}
         {isAuthorized && (
-          <div className="grid md:grid-cols-2 gap-8">
-            {match.status === 'Ongoing' ? (
-              <>
+          <div className="space-y-8">
+            {/* Live Scoring Controls */}
+            {match.status === 'Ongoing' && (
+              <div className="grid md:grid-cols-2 gap-8">
                 {/* Team A Controls */}
                 <Card>
                   <CardHeader className="text-center border-b pb-4">
@@ -394,97 +438,53 @@ export const LiveMatch = () => {
                     </Button>
                   </CardContent>
                 </Card>
-              </>
-            ) : match.status === 'Completed' ? (
-              <Card className="col-span-full border-primary/50 bg-primary/5 shadow-lg overflow-hidden">
-                {!awardedMVP ? (
-                  <>
-                    <CardHeader className="text-center">
-                      <div className="flex justify-center mb-2">
-                        <Star className="size-12 text-red-500 fill-red-500 animate-bounce" />
-                      </div>
-                      <CardTitle className="text-2xl text-primary font-black uppercase italic">Post-Game: Award MVP</CardTitle>
-                      <p className="text-sm text-muted-foreground">Select the standout player of this match to recognize their performance.</p>
-                    </CardHeader>
-                    <CardContent className="max-w-md mx-auto space-y-4 pb-8 text-center">
-                      {isAuthorized ? (
-                        <>
-                          <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block text-left">Select MVP Player</label>
-                            <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
-                              <SelectTrigger className="w-full bg-white border-slate-200">
-                                <SelectValue placeholder="Select a player..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {(eligiblePlayers || []).map((player) => {
-                                  const users = player.users as any;
-                                  const playerName = Array.isArray(users) ? users[0]?.full_name : users?.full_name;
-                                  return (
-                                    <SelectItem key={player.player_id} value={player.player_id}>
-                                      {playerName || 'Unknown Player'}
-                                    </SelectItem>
-                                  );
-                                })}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <Button 
-                            className="w-full bg-red-500 hover:bg-red-600 text-white font-bold h-12 gap-2"
-                            onClick={handleAwardMVP}
-                            disabled={!selectedPlayerId || isAwarding}
-                          >
-                            <Star className="size-5 fill-white" />
-                            {isAwarding ? 'Awarding...' : 'Award Red Star'}
-                          </Button>
-                        </>
-                      ) : (
-                        <div className="p-6 bg-slate-100 rounded-xl border border-dashed border-slate-300">
-                          <p className="text-slate-500 italic">Match completed. Waiting for officials to recognize the MVP.</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </>
-                ) : (
-                  <CardContent className="p-0">
-                    <div className="relative py-12 px-6 text-center overflow-hidden">
-                      {/* Decorative background element */}
-                      <div className="absolute inset-0 bg-gradient-to-b from-orange-500/10 to-transparent pointer-events-none" />
-                      
-                      <div className="relative z-10 animate-in zoom-in fade-in duration-700">
-                        <div className="flex justify-center mb-6">
-                          <div className="relative">
-                            <div className="absolute inset-0 bg-orange-500 blur-xl opacity-20 animate-pulse" />
-                            <div className="relative inline-flex items-center justify-center p-6 bg-orange-500 rounded-full shadow-2xl shadow-orange-500/50">
-                              <Trophy className="size-16 text-white" />
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-center gap-2 text-orange-600 mb-1">
-                            <Star className="size-5 fill-orange-600" />
-                            <span className="text-xs font-black uppercase tracking-[0.2em]">Match Recognition</span>
-                            <Star className="size-5 fill-orange-600" />
-                          </div>
-                          
-                          <h3 className="text-4xl font-black text-slate-900 uppercase tracking-tighter italic">
-                            {awardedMVP}
-                          </h3>
-                          
-                          <div className="inline-block px-4 py-1.5 bg-slate-900 text-white rounded-full text-xs font-bold uppercase tracking-widest mt-4">
-                            Official Red Star MVP
-                          </div>
-                          
-                          <p className="text-slate-500 text-sm mt-6 max-w-xs mx-auto">
-                            This player has been officially recognized for their exceptional performance in this match.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                )}
+              </div>
+            )}
+
+            {/* Post-Game Award Form (Only if NOT awarded yet) */}
+            {match.status === 'Completed' && !awardedMVP && (
+              <Card className="border-primary/50 bg-primary/5 shadow-lg overflow-hidden border-2">
+                <CardHeader className="text-center">
+                  <div className="flex justify-center mb-2">
+                    <Star className="size-12 text-red-500 fill-red-500 animate-bounce" />
+                  </div>
+                  <CardTitle className="text-2xl text-primary font-black uppercase italic">Post-Game: Award MVP</CardTitle>
+                  <p className="text-sm text-muted-foreground">Select the standout player of this match to recognize their performance.</p>
+                </CardHeader>
+                <CardContent className="max-w-md mx-auto space-y-4 pb-8 text-center">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block text-left">Select MVP Player</label>
+                    <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
+                      <SelectTrigger className="w-full bg-white border-slate-200">
+                        <SelectValue placeholder="Select a player..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(eligiblePlayers || []).map((player) => {
+                          const users = player.users as any;
+                          const playerName = Array.isArray(users) ? users[0]?.full_name : users?.full_name;
+                          return (
+                            <SelectItem key={player.player_id} value={player.player_id}>
+                              {playerName || 'Unknown Player'}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button 
+                    className="w-full bg-red-500 hover:bg-red-600 text-white font-bold h-12 gap-2"
+                    onClick={handleAwardMVP}
+                    disabled={!selectedPlayerId || isAwarding}
+                  >
+                    <Star className="size-5 fill-white" />
+                    {isAwarding ? 'Awarding...' : 'Award Red Star'}
+                  </Button>
+                </CardContent>
               </Card>
-            ) : (
+            )}
+
+            {/* Default state if scheduled */}
+            {match.status === 'Scheduled' && (
               <div className="col-span-full py-12 text-center text-muted-foreground border-2 border-dashed rounded-xl">
                 Match is scheduled. Start the match to enable score controls.
               </div>

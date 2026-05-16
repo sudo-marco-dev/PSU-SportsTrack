@@ -11,6 +11,7 @@ import { CoachDashboard } from '@/pages/CoachDashboard';
 import { TournamentManagement } from '@/pages/TournamentManagement';
 import { LiveMatch } from '@/pages/LiveMatch';
 import { MyAchievements } from '@/pages/MyAchievements';
+import { TournamentExplorer } from '@/pages/TournamentExplorer';
 import { AppLayout } from '@/components/AppLayout';
 
 const RootRedirect = () => {
@@ -55,6 +56,7 @@ function App() {
                 <Route path="/achievements" element={<MyAchievements />} />
               </Route>
               <Route path="/match/:matchId" element={<LiveMatch />} />
+              <Route path="/explorer" element={<TournamentExplorer />} />
             </Route>
           </Route>
         </Routes>
