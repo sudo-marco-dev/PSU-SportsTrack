@@ -31,6 +31,9 @@ export const AppLayout = () => {
     ...(role === 'Coach' ? [
       { name: 'My Teams', href: '/coach', icon: UserCheck },
     ] : []),
+    ...(role === 'Player' ? [
+      { name: 'My Achievements', href: '/achievements', icon: Trophy },
+    ] : []),
   ];
 
   const isActive = (path: string) => location.pathname === path;

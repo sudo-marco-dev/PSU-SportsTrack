@@ -10,6 +10,7 @@ import { AdminDashboard } from '@/pages/AdminDashboard';
 import { CoachDashboard } from '@/pages/CoachDashboard';
 import { TournamentManagement } from '@/pages/TournamentManagement';
 import { LiveMatch } from '@/pages/LiveMatch';
+import { MyAchievements } from '@/pages/MyAchievements';
 import { AppLayout } from '@/components/AppLayout';
 
 const RootRedirect = () => {
@@ -51,6 +52,7 @@ function App() {
               
               <Route element={<ProtectedRoute requiredRole="Player" />}>
                 <Route path="/player" element={<PlayerDashboard />} />
+                <Route path="/achievements" element={<MyAchievements />} />
               </Route>
               <Route path="/match/:matchId" element={<LiveMatch />} />
             </Route>

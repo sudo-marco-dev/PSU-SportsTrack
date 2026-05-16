@@ -59,12 +59,20 @@ export const LiveMatch = () => {
 
     // Subscribe to Match Updates (Score changes)
     const matchSubscription = supabase
-      .channel('match-updates')
+      .channel(`match-${matchId}`)
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` },
         (payload) => {
-          setMatch((prev) => (prev ? { ...prev, ...payload.new } : payload.new as Match));
+          setMatch(payload.new as Match);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'player_stars', filter: `match_id=eq.${matchId}` },
+        () => {
+          // Re-fetch to get the name and lock the UI
+          fetchInitialData();
         }
       )
       .subscribe();
@@ -89,58 +97,80 @@ export const LiveMatch = () => {
 
   const fetchInitialData = async () => {
     if (!matchId) return;
+    setIsLoading(true);
     
-    const { data: matchData, error: matchError } = await supabase
-      .from('matches')
-      .select('*, team_a:team_a_id(name), team_b:team_b_id(name)')
-      .eq('id', matchId)
-      .single();
+    try {
+      // Fetch match, events, and star in parallel
+      // We fetch star player_id only to avoid ambiguous join issues
+      const [matchRes, eventsRes, starRes] = await Promise.all([
+        supabase
+          .from('matches')
+          .select('*, team_a:team_a_id(name), team_b:team_b_id(name)')
+          .eq('id', matchId)
+          .single(),
+        supabase
+          .from('match_events')
+          .select('*')
+          .eq('match_id', matchId)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('player_stars')
+          .select('player_id')
+          .eq('match_id', matchId)
+          .eq('star_type', 'Red')
+          .maybeSingle()
+      ]);
 
-    if (matchError) {
-      toast.error('Failed to load match: ' + matchError.message);
-      return;
-    }
+      if (matchRes.error) throw matchRes.error;
 
-    const { data: eventsData, error: eventsError } = await supabase
-      .from('match_events')
-      .select('*')
-      .eq('match_id', matchId)
-      .order('created_at', { ascending: false });
+      setMatch(matchRes.data);
+      if (eventsRes.data) setEvents(eventsRes.data);
 
-    if (eventsError) {
-      toast.error('Failed to load events: ' + eventsError.message);
-    } else {
-      setMatch(matchData);
-      setEvents(eventsData);
-
-      // Check for existing MVP
-      const { data: starData } = await supabase
-        .from('player_stars')
-        .select('users(full_name)')
-        .eq('match_id', matchId)
-        .eq('star_type', 'Red')
-        .maybeSingle();
-
-      if (starData) {
-        const users = starData.users as any;
-        const mvpName = Array.isArray(users) ? users[0]?.full_name : users?.full_name;
-        setAwardedMVP(mvpName ?? 'A Player');
-      }
-      
-      // Fetch eligible players for MVP
-      if (matchData) {
+      // Fetch eligible players for the match roster first
+      let currentRoster: EligiblePlayer[] = [];
+      if (matchRes.data) {
         const { data: rosterData } = await supabase
           .from('team_roster')
           .select('player_id, users(full_name)')
-          .in('team_id', [matchData.team_a_id, matchData.team_b_id])
+          .in('team_id', [matchRes.data.team_a_id, matchRes.data.team_b_id])
           .eq('status', 'Approved');
         
         if (rosterData) {
-          setEligiblePlayers((rosterData as unknown) as EligiblePlayer[]);
+          currentRoster = (rosterData as unknown) as EligiblePlayer[];
+          setEligiblePlayers(currentRoster);
         }
       }
+
+      // Now resolve the MVP name based on the star data
+      if (starRes.data) {
+        const star = starRes.data;
+        const playerInRoster = currentRoster.find(p => p.player_id === star.player_id);
+        
+        if (playerInRoster) {
+          const users = playerInRoster.users as any;
+          const mvpName = Array.isArray(users) ? users[0]?.full_name : users?.full_name;
+          setAwardedMVP(mvpName || 'A Player');
+        } else {
+          // Fallback: Fetch user name directly if not found in pre-fetched roster
+          const { data: userData } = await supabase
+            .from('users')
+            .select('full_name')
+            .eq('id', star.player_id)
+            .single();
+          setAwardedMVP(userData?.full_name || 'A Player');
+        }
+      } else {
+        setAwardedMVP(null);
+      }
+
+    } catch (error: any) {
+      console.error("Error fetching match data:", error);
+      if (error.code !== 'PGRST116') {
+         toast.error("Failed to load match details");
+      }
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const handleUpdateScore = async (team: 'a' | 'b', points: number) => {
@@ -205,7 +235,7 @@ export const LiveMatch = () => {
   };
 
   const handleAwardMVP = async () => {
-    if (!isAuthorized || !match || !selectedPlayerId) return;
+    if (isAwarding || !isAuthorized || !match || !selectedPlayerId) return;
     setIsAwarding(true);
 
     const { error } = await supabase.from('player_stars').insert({
@@ -217,16 +247,23 @@ export const LiveMatch = () => {
     });
 
     if (error) {
-      toast.error('Failed to award MVP: ' + error.message);
+      if (error.code === '23505') {
+        toast.error("An MVP has already been awarded for this match!");
+        // Re-fetch to lock UI
+        fetchInitialData();
+      } else {
+        toast.error('Failed to award MVP: ' + error.message);
+      }
+      setIsAwarding(false);
     } else {
       toast.success('Red Star awarded to player!');
-      const player = eligiblePlayers.find(p => p.player_id === selectedPlayerId);
+      const player = (eligiblePlayers || []).find(p => p.player_id === selectedPlayerId);
       const users = player?.users as any;
       const selectedPlayerName = Array.isArray(users) ? users[0]?.full_name : users?.full_name;
       setAwardedMVP(selectedPlayerName || 'Unknown Player');
+      setIsAwarding(false);
       setSelectedPlayerId('');
     }
-    setIsAwarding(false);
   };
 
   if (isLoading) return <div className="p-8 text-center">Loading match...</div>;
@@ -359,68 +396,93 @@ export const LiveMatch = () => {
                 </Card>
               </>
             ) : match.status === 'Completed' ? (
-              <Card className="col-span-full border-primary/50 bg-primary/5 shadow-lg">
-                <CardHeader className="text-center">
-                  <div className="flex justify-center mb-2">
-                    <Star className="size-12 text-red-500 fill-red-500 animate-bounce" />
-                  </div>
-                  <CardTitle className="text-2xl text-primary">Post-Game: Award MVP (Red Star)</CardTitle>
-                  <p className="text-sm text-muted-foreground">Select the standout player of this match to recognize their performance.</p>
-                </CardHeader>
-                <CardContent className="max-w-md mx-auto space-y-4 pb-8 text-center">
-                  {awardedMVP ? (
-                    <div className="py-8 space-y-4 animate-in fade-in zoom-in duration-500">
-                      <div className="flex justify-center">
-                        <div className="relative">
-                          <Star className="size-20 text-red-500 fill-red-500" />
-                          <Trophy className="size-8 text-yellow-400 absolute -bottom-2 -right-2 bg-background rounded-full p-1 border-2 border-primary" />
+              <Card className="col-span-full border-primary/50 bg-primary/5 shadow-lg overflow-hidden">
+                {!awardedMVP ? (
+                  <>
+                    <CardHeader className="text-center">
+                      <div className="flex justify-center mb-2">
+                        <Star className="size-12 text-red-500 fill-red-500 animate-bounce" />
+                      </div>
+                      <CardTitle className="text-2xl text-primary font-black uppercase italic">Post-Game: Award MVP</CardTitle>
+                      <p className="text-sm text-muted-foreground">Select the standout player of this match to recognize their performance.</p>
+                    </CardHeader>
+                    <CardContent className="max-w-md mx-auto space-y-4 pb-8 text-center">
+                      {isAuthorized ? (
+                        <>
+                          <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block text-left">Select MVP Player</label>
+                            <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
+                              <SelectTrigger className="w-full bg-white border-slate-200">
+                                <SelectValue placeholder="Select a player..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(eligiblePlayers || []).map((player) => {
+                                  const users = player.users as any;
+                                  const playerName = Array.isArray(users) ? users[0]?.full_name : users?.full_name;
+                                  return (
+                                    <SelectItem key={player.player_id} value={player.player_id}>
+                                      {playerName || 'Unknown Player'}
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button 
+                            className="w-full bg-red-500 hover:bg-red-600 text-white font-bold h-12 gap-2"
+                            onClick={handleAwardMVP}
+                            disabled={!selectedPlayerId || isAwarding}
+                          >
+                            <Star className="size-5 fill-white" />
+                            {isAwarding ? 'Awarding...' : 'Award Red Star'}
+                          </Button>
+                        </>
+                      ) : (
+                        <div className="p-6 bg-slate-100 rounded-xl border border-dashed border-slate-300">
+                          <p className="text-slate-500 italic">Match completed. Waiting for officials to recognize the MVP.</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </>
+                ) : (
+                  <CardContent className="p-0">
+                    <div className="relative py-12 px-6 text-center overflow-hidden">
+                      {/* Decorative background element */}
+                      <div className="absolute inset-0 bg-gradient-to-b from-orange-500/10 to-transparent pointer-events-none" />
+                      
+                      <div className="relative z-10 animate-in zoom-in fade-in duration-700">
+                        <div className="flex justify-center mb-6">
+                          <div className="relative">
+                            <div className="absolute inset-0 bg-orange-500 blur-xl opacity-20 animate-pulse" />
+                            <div className="relative inline-flex items-center justify-center p-6 bg-orange-500 rounded-full shadow-2xl shadow-orange-500/50">
+                              <Trophy className="size-16 text-white" />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-center gap-2 text-orange-600 mb-1">
+                            <Star className="size-5 fill-orange-600" />
+                            <span className="text-xs font-black uppercase tracking-[0.2em]">Match Recognition</span>
+                            <Star className="size-5 fill-orange-600" />
+                          </div>
+                          
+                          <h3 className="text-4xl font-black text-slate-900 uppercase tracking-tighter italic">
+                            {awardedMVP}
+                          </h3>
+                          
+                          <div className="inline-block px-4 py-1.5 bg-slate-900 text-white rounded-full text-xs font-bold uppercase tracking-widest mt-4">
+                            Official Red Star MVP
+                          </div>
+                          
+                          <p className="text-slate-500 text-sm mt-6 max-w-xs mx-auto">
+                            This player has been officially recognized for their exceptional performance in this match.
+                          </p>
                         </div>
                       </div>
-                      <div className="space-y-1">
-                        <p className="text-sm uppercase tracking-widest font-bold opacity-50">Match Recognition</p>
-                        <h3 className="text-2xl font-black text-red-600">🏆 {awardedMVP}</h3>
-                        <p className="font-medium text-primary/80">Has been recognized as the Match MVP</p>
-                      </div>
                     </div>
-                  ) : (
-                    <>
-                      <div className="space-y-2 text-left">
-                        <label className="text-sm font-bold uppercase tracking-wider opacity-60">Select MVP Player</label>
-                        <Select value={selectedPlayerId} onValueChange={(val) => setSelectedPlayerId(val ?? '')}>
-                          <SelectTrigger className="w-full bg-background border-2 h-12">
-                            <SelectValue placeholder="Search or select player...">
-                              {selectedPlayerId && (() => {
-                                const p = (eligiblePlayers || []).find(player => player.player_id === selectedPlayerId);
-                                const u = p?.users as any;
-                                return Array.isArray(u) ? u[0]?.full_name : u?.full_name;
-                              })()}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {(eligiblePlayers || []).length === 0 ? (
-                              <div className="p-4 text-center text-sm text-muted-foreground">No players found in rosters.</div>
-                            ) : (
-                              (eligiblePlayers || []).map((p) => (
-                                <SelectItem key={p.player_id} value={p.player_id}>
-                                  {Array.isArray(p.users) 
-                                    ? p.users[0]?.full_name 
-                                    : p.users?.full_name ?? 'Unknown Player'}
-                                </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <Button 
-                        className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-bold gap-2 text-lg"
-                        disabled={!selectedPlayerId || isAwarding}
-                        onClick={handleAwardMVP}
-                      >
-                        <Star className="size-5 fill-white" /> {isAwarding ? 'Awarding...' : 'Award Red Star'}
-                      </Button>
-                    </>
-                  )}
-                </CardContent>
+                  </CardContent>
+                )}
               </Card>
             ) : (
               <div className="col-span-full py-12 text-center text-muted-foreground border-2 border-dashed rounded-xl">

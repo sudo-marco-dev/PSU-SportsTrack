@@ -222,8 +222,10 @@ export const TournamentManagement = () => {
   };
 
   const handleAwardGoldStar = async () => {
-    if (!selectedTournamentId || !selectedPlayerForGoldId) {
-      toast.error('Please select both a tournament and a player.');
+    if (isAwardingGold || !selectedTournamentId || !selectedPlayerForGoldId) {
+      if (!selectedTournamentId || !selectedPlayerForGoldId) {
+        toast.error('Please select both a tournament and a player.');
+      }
       return;
     }
 
@@ -236,7 +238,11 @@ export const TournamentManagement = () => {
     });
 
     if (error) {
-      toast.error('Failed to award Tournament MVP: ' + error.message);
+      if (error.code === '23505') {
+        toast.error("A Tournament MVP has already been awarded!");
+      } else {
+        toast.error('Failed to award Tournament MVP: ' + error.message);
+      }
     } else {
       toast.success('Gold Star awarded to Tournament MVP!');
       setSelectedPlayerForGoldId('');

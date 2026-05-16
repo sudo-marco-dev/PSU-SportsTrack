@@ -190,59 +190,60 @@ export const PlayerDashboard = () => {
 
   return (
     <div className="space-y-12">
-      <div className="bg-slate-900 text-white p-10 rounded-3xl shadow-xl border border-white/5 relative overflow-hidden">
-        <div className="relative z-10">
-          <h1 className="text-4xl font-black tracking-tight italic uppercase">PLAYER <span className="text-orange-500">HUB</span></h1>
-          <p className="text-slate-400 font-bold opacity-80 uppercase text-xs tracking-widest mt-1">Manage team invitations and track university match stats.</p>
-        </div>
-        <div className="absolute right-0 top-0 h-full w-64 bg-orange-500/10 -skew-x-12 translate-x-32" />
+      <div className="bg-slate-900 text-white rounded-xl p-6 mb-8 text-center md:text-left shadow-lg border-t-4 border-orange-500">
+        <h1 className="text-3xl font-black italic tracking-wider mb-2">
+          PLAYER <span className="text-orange-500">HUB</span>
+        </h1>
+        <p className="text-sm text-slate-400 max-w-md mx-auto md:mx-0">
+          Manage your active teams and track live university matches.
+        </p>
       </div>
 
-      {/* MVP Stars / Trophy Case Section */}
+      {/* MVP Stars / Achievements Preview */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <Trophy className="size-5 text-yellow-500" /> My Achievements
-        </h2>
-        <Card className="bg-gradient-to-br from-background to-muted/50 border-2">
-          <CardContent className="pt-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-black uppercase italic tracking-tight flex items-center gap-2">
+            <Trophy className="size-5 text-orange-500" /> My Achievements
+          </h2>
+        </div>
+        <Card className="bg-white border-2 overflow-hidden">
+          <CardContent className="p-6">
             {stars.length === 0 ? (
-              <div className="text-center py-6 space-y-2">
-                <p className="text-muted-foreground">Participate in matches to earn MVP stars!</p>
-                <div className="flex justify-center gap-2 opacity-20">
-                  <Star className="size-6" />
-                  <Star className="size-6" />
-                  <Star className="size-6" />
+              <div className="text-center py-6 space-y-2 opacity-50">
+                <p className="text-sm font-bold uppercase tracking-widest">No Stars Earned Yet</p>
+                <div className="flex justify-center gap-2">
+                  <Star className="size-5" />
                 </div>
               </div>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {stars.map((star) => (
-                  <div 
-                    key={star.id} 
-                    className="flex items-center gap-4 p-4 rounded-xl bg-background border shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <div className={`p-3 rounded-full ${
-                      star.star_type === 'Red' ? 'bg-red-100' : 'bg-yellow-100'
-                    }`}>
-                      <Star className={`size-6 ${
-                        star.star_type === 'Red' 
-                          ? 'text-red-500 fill-red-500' 
-                          : 'text-yellow-500 fill-yellow-500'
-                      }`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm truncate">
-                        {star.star_type === 'Red' ? 'Match MVP' : 'Tournament MVP'}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {star.star_type === 'Red' 
-                          ? `${star.tournaments?.name} - ${star.matches?.round}`
-                          : star.tournaments?.name
-                        }
-                      </p>
-                    </div>
+              <div className="space-y-6">
+                {/* Only show the single most recent star */}
+                <div className="flex items-center gap-6 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                  <div className={`p-4 rounded-full ${
+                    stars[0].star_type === 'Red' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'
+                  }`}>
+                    <Star className={`size-8 ${stars[0].star_type === 'Red' ? 'fill-red-500' : 'fill-orange-500'}`} />
                   </div>
-                ))}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-black text-lg uppercase italic tracking-tight">
+                      {stars[0].star_type === 'Red' ? 'Match MVP' : 'Tournament MVP'}
+                    </p>
+                    <p className="text-sm font-bold text-slate-500 truncate">
+                      {stars[0].tournaments?.name}
+                    </p>
+                  </div>
+                  <div className="hidden sm:block">
+                    <Badge variant="outline" className="font-bold border-2">{new Date(stars[0].created_at).toLocaleDateString()}</Badge>
+                  </div>
+                </div>
+
+                <Button 
+                  variant="outline" 
+                  className="w-full h-12 border-2 font-black uppercase italic tracking-widest hover:bg-orange-500 hover:text-white hover:border-orange-500 transition-all group"
+                  onClick={() => navigate('/achievements')}
+                >
+                  View All Achievements
+                </Button>
               </div>
             )}
           </CardContent>
