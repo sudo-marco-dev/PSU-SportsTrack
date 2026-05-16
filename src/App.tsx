@@ -10,7 +10,7 @@ import { AdminDashboard } from '@/pages/AdminDashboard';
 import { CoachDashboard } from '@/pages/CoachDashboard';
 import { TournamentManagement } from '@/pages/TournamentManagement';
 import { LiveMatch } from '@/pages/LiveMatch';
-import { Navbar } from '@/components/layout/Navbar';
+import { AppLayout } from '@/components/AppLayout';
 
 const RootRedirect = () => {
   const { role, isLoading } = useAuth();
@@ -29,35 +29,33 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <div className="min-h-screen bg-background">
-          <Navbar />
-          <main className="container mx-auto py-6 px-4">
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+        <Routes>
+          {/* Public Standalone Routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
+          {/* Protected Routes inside App Shell */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<RootRedirect />} />
               
-              {/* Protected Routes */}
-              <Route element={<ProtectedRoute />}>
-                <Route path="/" element={<RootRedirect />} />
-                
-                {/* Role-Specific Routes */}
-                <Route element={<ProtectedRoute requiredRole="Admin" />}>
-                  <Route path="/admin" element={<AdminDashboard />} />
-                  <Route path="/admin/tournaments" element={<TournamentManagement />} />
-                </Route>
-                
-                <Route element={<ProtectedRoute requiredRole="Coach" />}>
-                  <Route path="/coach" element={<CoachDashboard />} />
-                </Route>
-                
-                <Route element={<ProtectedRoute requiredRole="Player" />}>
-                  <Route path="/player" element={<PlayerDashboard />} />
-                </Route>
-                <Route path="/match/:matchId" element={<LiveMatch />} />
+              {/* Role-Specific Routes */}
+              <Route element={<ProtectedRoute requiredRole="Admin" />}>
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/tournaments" element={<TournamentManagement />} />
               </Route>
-            </Routes>
-          </main>
-        </div>
+              
+              <Route element={<ProtectedRoute requiredRole="Coach" />}>
+                <Route path="/coach" element={<CoachDashboard />} />
+              </Route>
+              
+              <Route element={<ProtectedRoute requiredRole="Player" />}>
+                <Route path="/player" element={<PlayerDashboard />} />
+              </Route>
+              <Route path="/match/:matchId" element={<LiveMatch />} />
+            </Route>
+          </Route>
+        </Routes>
       </BrowserRouter>
       <Toaster />
     </AuthProvider>

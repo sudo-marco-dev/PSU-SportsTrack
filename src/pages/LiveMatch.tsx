@@ -233,24 +233,34 @@ export const LiveMatch = () => {
   if (!match) return <div className="p-8 text-center text-destructive">Match not found.</div>;
 
   return (
-    <div className="min-h-screen bg-muted/30 pb-12">
-      {/* Header */}
-      <div className="bg-background border-b sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-2">
-            <ChevronLeft className="size-4" /> Back to Dashboard
-          </Button>
-          <div className="flex items-center gap-3">
-            <Activity className="size-5 text-primary animate-pulse" />
-            <span className="font-bold text-lg">{isAuthorized ? 'Live Match Control' : 'Live Scoreboard'}</span>
+    <div className="space-y-8 pb-12">
+      {/* Dynamic Arena Header */}
+      <div className="bg-slate-900 text-white p-8 rounded-3xl shadow-xl border border-white/5 relative overflow-hidden">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-6">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full bg-white/10 hover:bg-white/20 text-white border-none">
+              <ChevronLeft className="size-6" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-black tracking-tighter italic uppercase leading-none">MATCH <span className="text-orange-500">CONTROL</span></h1>
+              <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-1 opacity-70">Official PSU Match Execution Interface</p>
+            </div>
           </div>
-          <Badge variant={match.status === 'Ongoing' ? 'destructive' : 'secondary'} className="animate-pulse">
-            {match.status}
-          </Badge>
+          
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10">
+              <Activity className="size-4 text-orange-500 animate-pulse" />
+              <span className="font-black text-xs uppercase tracking-widest">{match.status}</span>
+            </div>
+            <Badge variant={match.status === 'Completed' ? 'secondary' : 'destructive'} className="h-10 px-6 rounded-full font-black text-sm uppercase tracking-tighter italic animate-pulse">
+              {match.status === 'Ongoing' ? 'LIVE' : match.status}
+            </Badge>
+          </div>
         </div>
+        <div className="absolute right-0 top-0 h-full w-64 bg-orange-500/10 -skew-x-12 translate-x-32" />
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+      <div className="max-w-5xl mx-auto space-y-8">
         {/* Scoreboard */}
         <Card className="bg-primary text-primary-foreground shadow-2xl overflow-hidden border-none">
           <CardContent className="p-0">

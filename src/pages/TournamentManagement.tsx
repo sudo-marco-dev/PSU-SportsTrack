@@ -305,12 +305,65 @@ export const TournamentManagement = () => {
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-8">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Tournament Management</h1>
-          <p className="text-muted-foreground">Oversee all institution-wide competitions and team enrollments.</p>
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-900 text-white p-8 rounded-3xl shadow-xl border border-white/5 relative overflow-hidden">
+        <div className="relative z-10">
+          <h1 className="text-4xl font-black tracking-tight italic uppercase">TOURNAMENT <span className="text-orange-500">ARENA</span></h1>
+          <p className="text-slate-400 font-bold opacity-80 uppercase text-xs tracking-widest">Institution-wide competitions and team enrollments.</p>
         </div>
+        <div className="flex gap-3 relative z-10">
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger render={
+              <Button size="lg" className="bg-orange-500 hover:bg-orange-600 text-white font-black gap-2 px-8 rounded-full shadow-lg shadow-orange-500/20 uppercase italic tracking-wider transition-all hover:scale-105 active:scale-95">
+                <Plus className="size-5" /> New Tournament
+              </Button>
+            } />
+            <DialogContent className="max-w-md rounded-2xl">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-black italic uppercase">Host <span className="text-orange-500">Tournament</span></DialogTitle>
+                <DialogDescription className="font-medium text-slate-500">Define the rules and schedule for your upcoming event.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase font-black text-slate-400 tracking-widest">Event Name</Label>
+                  <Input placeholder="e.g., PSU Intramurals 2024" value={newTournament.name} onChange={(e) => setNewTournament({...newTournament, name: e.target.value})} className="h-12 bg-slate-50 border-slate-200 focus:ring-orange-500 rounded-xl" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase font-black text-slate-400 tracking-widest">Sport</Label>
+                    <Input placeholder="e.g., Basketball" value={newTournament.sport} onChange={(e) => setNewTournament({...newTournament, sport: e.target.value})} className="h-12 bg-slate-50 border-slate-200 focus:ring-orange-500 rounded-xl" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase font-black text-slate-400 tracking-widest">Format</Label>
+                    <Select value={newTournament.type} onValueChange={(val) => setNewTournament({...newTournament, type: val ?? 'Binturungan'})}>
+                      <SelectTrigger className="h-12 bg-slate-50 border-slate-200 rounded-xl"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Binturungan">Binturungan</SelectItem>
+                        <SelectItem value="STRASUC">STRASUC</SelectItem>
+                        <SelectItem value="Faculty and Staff Friendly Games">Friendly Games</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase font-black text-slate-400 tracking-widest">Start Date</Label>
+                    <Input type="date" value={newTournament.start_date} onChange={(e) => setNewTournament({...newTournament, start_date: e.target.value})} className="h-12 bg-slate-50 border-slate-200 rounded-xl" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase font-black text-slate-400 tracking-widest">End Date</Label>
+                    <Input type="date" value={newTournament.end_date} onChange={(e) => setNewTournament({...newTournament, end_date: e.target.value})} className="h-12 bg-slate-50 border-slate-200 rounded-xl" />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="ghost" onClick={() => setIsCreateOpen(false)} className="rounded-xl font-bold uppercase tracking-tight">Cancel</Button>
+                <Button onClick={handleCreateTournament} className="bg-orange-500 hover:bg-orange-600 rounded-xl px-8 font-black uppercase italic tracking-wider">Launch Tournament</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+        <div className="absolute right-0 top-0 h-full w-64 bg-orange-500/10 -skew-x-12 translate-x-32" />
       </div>
 
       <Tabs defaultValue="tournaments" className="w-full">

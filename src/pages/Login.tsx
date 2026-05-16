@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Trophy } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -66,25 +66,41 @@ export const Login = () => {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold tracking-tight">Login</CardTitle>
-          <CardDescription>Enter your email below to login to your account</CardDescription>
+    <div className="flex min-h-screen items-center justify-center p-4 bg-slate-900 relative overflow-hidden">
+      {/* Decorative Background Elements */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-600/20 blur-[120px] rounded-full animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-600/10 blur-[120px] rounded-full" />
+      
+      <Card className="w-full max-w-md bg-white/5 backdrop-blur-xl border-white/10 shadow-2xl relative z-10 overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-orange-500" />
+        <CardHeader className="space-y-2 text-center pb-8 pt-10">
+          <div className="mx-auto w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center rotate-3 mb-4 shadow-lg shadow-orange-500/20">
+            <Trophy className="text-white size-10" />
+          </div>
+          <CardTitle className="text-4xl font-black tracking-tighter text-white italic uppercase">
+            PSU <span className="text-orange-500">BEARCATS</span>
+          </CardTitle>
+          <CardDescription className="text-slate-400 font-medium uppercase text-[10px] tracking-[0.3em]">
+            Official Sports Tracking Portal
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-xs font-black uppercase text-slate-400 tracking-widest">Email Address</FormLabel>
                     <FormControl>
-                      <Input placeholder="m.delacruz@psu.edu.ph" {...field} />
+                      <Input 
+                        placeholder="m.delacruz@psu.edu.ph" 
+                        {...field} 
+                        className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus:ring-orange-500 rounded-xl"
+                      />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
                   </FormItem>
                 )}
               />
@@ -92,35 +108,39 @@ export const Login = () => {
                 control={form.control}
                 name="password"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-xs font-black uppercase text-slate-400 tracking-widest">Password</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Input type={showPassword ? "text" : "password"} {...field} />
+                        <Input 
+                          type={showPassword ? "text" : "password"} 
+                          {...field} 
+                          className="h-12 bg-white/5 border-white/10 text-white focus:ring-orange-500 rounded-xl"
+                        />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-orange-500 transition-colors"
                         >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                         </button>
                       </div>
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
                   </FormItem>
                 )}
               />
-              <Button className="w-full" type="submit" disabled={isLoading}>
-                {isLoading ? 'Signing in...' : 'Sign In'}
+              <Button className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98] mt-4" type="submit" disabled={isLoading}>
+                {isLoading ? 'Processing Access...' : 'Sign In To Portal'}
               </Button>
             </form>
           </Form>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-2 text-center text-sm">
-          <div className="text-gray-500">
+        <CardFooter className="flex flex-col space-y-4 text-center pb-10 pt-4">
+          <div className="text-slate-500 text-xs font-bold uppercase tracking-widest">
             Don't have an account?{' '}
-            <Link to="/register" className="text-primary hover:underline font-medium">
-              Sign up
+            <Link to="/register" className="text-orange-500 hover:text-orange-400 transition-colors font-black underline underline-offset-4">
+              Join The Roster
             </Link>
           </div>
         </CardFooter>

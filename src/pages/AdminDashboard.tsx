@@ -118,10 +118,13 @@ export const AdminDashboard = () => {
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Admin Verification Dashboard</h1>
-        <Badge variant="secondary">{documents.length} Pending</Badge>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center mb-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/50">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase italic">System <span className="text-orange-500">Verification</span></h1>
+          <p className="text-slate-500 text-sm font-medium">Manage and approve user eligibility documents.</p>
+        </div>
+        <Badge variant="secondary" className="h-8 px-4 font-bold bg-slate-100 text-slate-700 border-none">{documents.length} Pending</Badge>
       </div>
 
       <div className="border rounded-md">

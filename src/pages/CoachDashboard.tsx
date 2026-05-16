@@ -187,9 +187,13 @@ export const CoachDashboard = () => {
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Coach Dashboard</h1>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center bg-white p-8 rounded-3xl shadow-sm border border-slate-200/50 relative overflow-hidden">
+        <div className="relative z-10">
+          <h1 className="text-4xl font-black tracking-tight text-slate-900 italic uppercase">COACH <span className="text-orange-500">CENTRAL</span></h1>
+          <p className="text-slate-500 font-bold opacity-70">Manage your teams and recruit top talent.</p>
+        </div>
+        <div className="absolute right-0 top-0 h-full w-32 bg-orange-500/5 -skew-x-12 translate-x-16" />
       </div>
 
       <Tabs defaultValue="my-teams" className="w-full">

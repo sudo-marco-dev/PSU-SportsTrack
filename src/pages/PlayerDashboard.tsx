@@ -163,9 +163,12 @@ export const PlayerDashboard = () => {
   if (!isVerified) {
     if (hasPendingDocuments) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-          <h1 className="text-2xl font-bold mb-2">Documents Under Review</h1>
-          <p className="text-gray-600">Your verification documents have been received and are currently being reviewed by an admin. Please check back later.</p>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center bg-white rounded-3xl border border-slate-200 shadow-sm">
+          <div className="size-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mb-6">
+            <Clock className="size-8 animate-pulse" />
+          </div>
+          <h1 className="text-3xl font-black text-slate-900 uppercase italic">Review <span className="text-orange-500">In Progress</span></h1>
+          <p className="text-slate-500 max-w-md mx-auto mt-4 font-medium">Your verification documents are being processed by our team. You'll gain full access once your eligibility is confirmed.</p>
         </div>
       );
     }
@@ -186,10 +189,13 @@ export const PlayerDashboard = () => {
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-12">
-      <div>
-        <h1 className="text-3xl font-bold">Player Dashboard</h1>
-        <p className="mt-2 text-gray-600">Manage your team invitations and watch live university matches.</p>
+    <div className="space-y-12">
+      <div className="bg-slate-900 text-white p-10 rounded-3xl shadow-xl border border-white/5 relative overflow-hidden">
+        <div className="relative z-10">
+          <h1 className="text-4xl font-black tracking-tight italic uppercase">PLAYER <span className="text-orange-500">HUB</span></h1>
+          <p className="text-slate-400 font-bold opacity-80 uppercase text-xs tracking-widest mt-1">Manage team invitations and track university match stats.</p>
+        </div>
+        <div className="absolute right-0 top-0 h-full w-64 bg-orange-500/10 -skew-x-12 translate-x-32" />
       </div>
 
       {/* MVP Stars / Trophy Case Section */}

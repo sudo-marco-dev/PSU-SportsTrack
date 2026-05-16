@@ -90,25 +90,38 @@ export const Register = () => {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold tracking-tight">Create an account</CardTitle>
-          <CardDescription>Enter your details below to create your account</CardDescription>
+    <div className="flex min-h-screen items-center justify-center p-4 bg-slate-900 relative overflow-hidden">
+      {/* Decorative Background Elements */}
+      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-600/20 blur-[120px] rounded-full animate-pulse" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-600/10 blur-[120px] rounded-full" />
+      
+      <Card className="w-full max-w-lg bg-white/5 backdrop-blur-xl border-white/10 shadow-2xl relative z-10 overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-orange-500" />
+        <CardHeader className="space-y-2 text-center pb-8 pt-10">
+          <CardTitle className="text-4xl font-black tracking-tighter text-white italic uppercase">
+            JOIN THE <span className="text-orange-500">ROSTER</span>
+          </CardTitle>
+          <CardDescription className="text-slate-400 font-medium uppercase text-[10px] tracking-[0.3em]">
+            Create your official PSU athlete or coach profile
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               <FormField
                 control={form.control}
                 name="fullName"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-xs font-black uppercase text-slate-400 tracking-widest">Full Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Juan Dela Cruz" {...field} />
+                      <Input 
+                        placeholder="Juan Dela Cruz" 
+                        {...field} 
+                        className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus:ring-orange-500 rounded-xl"
+                      />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
                   </FormItem>
                 )}
               />
@@ -116,12 +129,16 @@ export const Register = () => {
                 control={form.control}
                 name="email"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-xs font-black uppercase text-slate-400 tracking-widest">University Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="m.delacruz@psu.edu.ph" {...field} />
+                      <Input 
+                        placeholder="m.delacruz@psu.edu.ph" 
+                        {...field} 
+                        className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus:ring-orange-500 rounded-xl"
+                      />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
                   </FormItem>
                 )}
               />
@@ -129,21 +146,25 @@ export const Register = () => {
                 control={form.control}
                 name="password"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-xs font-black uppercase text-slate-400 tracking-widest">Security Password</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Input type={showPassword ? "text" : "password"} {...field} />
+                        <Input 
+                          type={showPassword ? "text" : "password"} 
+                          {...field} 
+                          className="h-12 bg-white/5 border-white/10 text-white focus:ring-orange-500 rounded-xl"
+                        />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-orange-500 transition-colors"
                         >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                         </button>
                       </div>
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
                   </FormItem>
                 )}
               />
@@ -153,20 +174,20 @@ export const Register = () => {
                   control={form.control}
                   name="role"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Role</FormLabel>
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-xs font-black uppercase text-slate-400 tracking-widest">Designation</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a role" />
+                          <SelectTrigger className="h-12 bg-white/5 border-white/10 text-white rounded-xl">
+                            <SelectValue placeholder="Role" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="bg-slate-800 border-white/10 text-white">
                           <SelectItem value="Player">Player</SelectItem>
                           <SelectItem value="Coach">Coach</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormMessage />
+                      <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
                     </FormItem>
                   )}
                 />
@@ -175,37 +196,37 @@ export const Register = () => {
                   control={form.control}
                   name="collegeId"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>College</FormLabel>
+                    <FormItem className="space-y-1">
+                      <FormLabel className="text-xs font-black uppercase text-slate-400 tracking-widest">Department</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a college" />
+                          <SelectTrigger className="h-12 bg-white/5 border-white/10 text-white rounded-xl">
+                            <SelectValue placeholder="College" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="bg-slate-800 border-white/10 text-white">
                           {colleges.map((c) => (
                             <SelectItem key={c.id} value={c.id}>{c.college_name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      <FormMessage />
+                      <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
                     </FormItem>
                   )}
                 />
               </div>
 
-              <Button className="w-full mt-4" type="submit" disabled={isLoading}>
-                {isLoading ? 'Registering...' : 'Register'}
+              <Button className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98] mt-4" type="submit" disabled={isLoading}>
+                {isLoading ? 'Creating Profile...' : 'Complete Registration'}
               </Button>
             </form>
           </Form>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-2 text-center text-sm">
-          <div className="text-gray-500">
-            Already have an account?{' '}
-            <Link to="/login" className="text-primary hover:underline font-medium">
-              Log in
+        <CardFooter className="flex flex-col space-y-4 text-center pb-10 pt-4">
+          <div className="text-slate-500 text-xs font-bold uppercase tracking-widest">
+            Already a member?{' '}
+            <Link to="/login" className="text-orange-500 hover:text-orange-400 transition-colors font-black underline underline-offset-4">
+              Return To Login
             </Link>
           </div>
         </CardFooter>
