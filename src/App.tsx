@@ -7,7 +7,10 @@ import { Login } from '@/pages/Login';
 import { Register } from '@/pages/Register';
 import { PlayerDashboard } from '@/pages/PlayerDashboard';
 import { AdminDashboard } from '@/pages/AdminDashboard';
+import { SystemVerifications } from '@/pages/SystemVerifications';
+import { AdminAuditLogs } from '@/pages/AdminAuditLogs';
 import { CoachDashboard } from '@/pages/CoachDashboard';
+import { TeamManagement } from '@/pages/TeamManagement';
 import { TournamentManagement } from '@/pages/TournamentManagement';
 import { LiveMatch } from '@/pages/LiveMatch';
 import { MyAchievements } from '@/pages/MyAchievements';
@@ -45,10 +48,13 @@ function App() {
               <Route element={<ProtectedRoute requiredRole="Admin" />}>
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/tournaments" element={<TournamentManagement />} />
+                <Route path="/admin/verifications" element={<SystemVerifications />} />
+                <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
               </Route>
               
               <Route element={<ProtectedRoute requiredRole="Coach" />}>
                 <Route path="/coach" element={<CoachDashboard />} />
+                <Route path="/coach/teams" element={<TeamManagement />} />
               </Route>
               
               <Route element={<ProtectedRoute requiredRole="Player" />}>

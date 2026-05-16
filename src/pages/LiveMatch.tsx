@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
@@ -49,49 +49,90 @@ export const LiveMatch = () => {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
   const [isAwarding, setIsAwarding] = useState(false);
   const [awardedMVP, setAwardedMVP] = useState<string | null>(null);
+  
+  const broadcastChannelRef = useRef<any>(null);
 
   const isAuthorized = role === 'Admin' || role === 'Coach';
 
   useEffect(() => {
-    if (!matchId) return;
+    if (!matchId) {
+      console.log("⏳ Waiting for Match ID before connecting to Realtime...");
+      return;
+    }
 
     fetchInitialData();
+    console.log(`🔌 Connecting to Realtime for Match ID: ${matchId}`);
 
-    // Subscribe to Match Updates (Score changes)
-    const matchSubscription = supabase
-      .channel(`match-${matchId}`)
+    let isMounted = true;
+
+    const broadcastChannel = supabase
+      .channel(`match-broadcast:${matchId}`)
+      .on(
+        'broadcast',
+        { event: 'score_update' },
+        (payload) => {
+          if (!isMounted) return;
+          console.log('🔥 Broadcast score received:', payload);
+          const { team_a_score, team_b_score } = payload.payload;
+          setMatch(prev => prev ? { ...prev, team_a_score, team_b_score } : prev);
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Broadcast channel status:', status);
+      });
+      
+    broadcastChannelRef.current = broadcastChannel;
+
+    const channel = supabase
+      .channel(`realtime:matches:${matchId}`)
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` },
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'matches',
+          filter: `id=eq.${matchId}`
+        },
         (payload) => {
-          setMatch(payload.new as Match);
+          console.log("🔥 GLOBAL REALTIME PAYLOAD (matches) RECEIVED:", payload);
+          setMatch((prev) => prev ? { ...prev, ...payload.new } : (payload.new as Match));
         }
       )
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'player_stars', filter: `match_id=eq.${matchId}` },
-        () => {
-          // Re-fetch to get the name and lock the UI
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'player_stars',
+          filter: `match_id=eq.${matchId}`
+        },
+        (payload) => {
+          console.log("🔥 GLOBAL REALTIME PAYLOAD (player_stars) RECEIVED:", payload);
           fetchInitialData();
         }
       )
-      .subscribe();
-
-    // Subscribe to New Match Events (Live Commentary)
-    const eventSubscription = supabase
-      .channel('match-events')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'match_events', filter: `match_id=eq.${matchId}` },
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'match_events',
+          filter: `match_id=eq.${matchId}`
+        },
         (payload) => {
+          console.log("🔥 GLOBAL REALTIME PAYLOAD (match_events) RECEIVED:", payload);
           setEvents((prev) => [payload.new as MatchEvent, ...prev]);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`📡 Status for ${matchId}:`, status);
+      });
 
     return () => {
-      supabase.removeChannel(matchSubscription);
-      supabase.removeChannel(eventSubscription);
+      isMounted = false;
+      supabase.removeChannel(channel);
+      supabase.removeChannel(broadcastChannel);
+      broadcastChannelRef.current = null;
     };
   }, [matchId]);
 
@@ -177,18 +218,37 @@ export const LiveMatch = () => {
     if (!isAuthorized || !match || match.status === 'Completed') return;
     setIsSubmitting(true);
 
-    const newScore = team === 'a' ? match.team_a_score + points : match.team_b_score + points;
+    const newScoreA = team === 'a' ? match.team_a_score + points : match.team_a_score;
+    const newScoreB = team === 'b' ? match.team_b_score + points : match.team_b_score;
     const teamName = team === 'a' ? match.team_a?.name : match.team_b?.name;
 
     const { error: updateError } = await supabase
       .from('matches')
-      .update({ [team === 'a' ? 'team_a_score' : 'team_b_score']: newScore })
-      .eq('id', match.id);
+      .update({ team_a_score: newScoreA, team_b_score: newScoreB })
+      .eq('id', match.id)
+      .select()
+      .single();
 
     if (updateError) {
       toast.error('Failed to update score: ' + updateError.message);
       setIsSubmitting(false);
       return;
+    }
+
+    // Optimistically update local state for the sender
+    setMatch(prev => prev ? { ...prev, team_a_score: newScoreA, team_b_score: newScoreB } : prev);
+
+    if (broadcastChannelRef.current) {
+      await broadcastChannelRef.current.send({
+        type: 'broadcast',
+        event: 'score_update',
+        payload: {
+          match_id: matchId,
+          team_a_score: newScoreA,
+          team_b_score: newScoreB,
+          updated_at: new Date().toISOString(),
+        },
+      });
     }
 
     await supabase.from('match_events').insert({
@@ -204,7 +264,9 @@ export const LiveMatch = () => {
     const { error } = await supabase
       .from('matches')
       .update({ status: newStatus })
-      .eq('id', match.id);
+      .eq('id', match.id)
+      .select()
+      .single();
 
     if (error) {
       toast.error('Failed to update status: ' + error.message);
@@ -272,23 +334,26 @@ export const LiveMatch = () => {
   return (
     <div className="space-y-8 pb-12">
       {/* Dynamic Arena Header */}
-      <div className="bg-slate-900 text-white p-8 rounded-3xl shadow-xl border border-white/5 relative overflow-hidden">
+      <div className="bg-slate-950 text-white py-6 md:py-8 px-6 md:px-10 rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden group">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-6">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full bg-white/10 hover:bg-white/20 text-white border-none">
               <ChevronLeft className="size-6" />
             </Button>
             <div>
-              <h1 className="text-3xl font-black tracking-tighter italic uppercase leading-none">
+              <div className="flex items-center gap-2 mb-2">
+                <Activity className="w-5 h-5 text-orange-500" />
+                <span className="text-orange-500 font-bold text-xs tracking-[0.2em] uppercase">
+                  {match.status === 'Completed' ? 'Post-Game Record' : 'Live Match Control'}
+                </span>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-sans font-black tracking-tight uppercase leading-tight">
                 {match.status === 'Completed' ? (
                   <>POST-GAME <span className="text-orange-500">BOX SCORE</span></>
                 ) : (
                   <>MATCH <span className="text-orange-500">CONTROL</span></>
                 )}
               </h1>
-              <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-1 opacity-70">
-                {match.status === 'Completed' ? 'Official PSU Historical Match Record' : 'Official PSU Match Execution Interface'}
-              </p>
             </div>
           </div>
           
@@ -454,7 +519,7 @@ export const LiveMatch = () => {
                 <CardContent className="max-w-md mx-auto space-y-4 pb-8 text-center">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block text-left">Select MVP Player</label>
-                    <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
+                    <Select value={selectedPlayerId} onValueChange={(val) => setSelectedPlayerId(val || '')}>
                       <SelectTrigger className="w-full bg-white border-slate-200">
                         <SelectValue placeholder="Select a player..." />
                       </SelectTrigger>

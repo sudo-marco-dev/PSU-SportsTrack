@@ -9,7 +9,8 @@ import {
   X,
   ShieldCheck,
   UserCheck,
-  Globe
+  Globe,
+  ClipboardList
 } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -32,10 +33,11 @@ export const AppLayout = () => {
     },
     ...(role === 'Admin' ? [
       { name: 'Tournaments', href: '/admin/tournaments', icon: Trophy },
-      { name: 'System Verifications', href: '/admin', icon: ShieldCheck },
+      { name: 'System Verifications', href: '/admin/verifications', icon: ShieldCheck },
+      { name: 'System Audit', href: '/admin/audit-logs', icon: ClipboardList },
     ] : []),
     ...(role === 'Coach' ? [
-      { name: 'My Teams', href: '/coach', icon: UserCheck },
+      { name: 'My Teams', href: '/coach/teams', icon: UserCheck },
     ] : []),
     ...(role === 'Player' ? [
       { name: 'My Achievements', href: '/achievements', icon: Trophy },
