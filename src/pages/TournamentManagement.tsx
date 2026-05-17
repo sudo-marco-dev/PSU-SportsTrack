@@ -64,12 +64,15 @@ export const TournamentManagement = () => {
   const [wizardStep, setWizardStep] = useState(1);
   const [isPublishing, setIsPublishing] = useState(false);
   const [proposedMatches, setProposedMatches] = useState<{
-    team_a_id: string;
+    team_a_id: string | null;
     team_a_name: string;
     team_b_id: string | null;
     team_b_name: string;
     round: string;
     match_time: string;
+    local_id: string;
+    next_match_local_id?: string;
+    next_match_slot?: 'team_a' | 'team_b';
   }[]>([]);
 
   // MVP Awards State
@@ -305,7 +308,7 @@ export const TournamentManagement = () => {
     setIsAwardingGold(false);
   };
 
-  // --- Wizard: Auto-Seeding Algorithm (Fisher-Yates Shuffle) ---
+  // --- Wizard: Auto-Seeding Algorithm (Fisher-Yates Shuffle & Multi-Round Bracket Seeding) ---
   const generateSeededMatches = () => {
     if (approvedTeams.length < 2) {
       toast.error('Need at least 2 approved teams to generate a bracket.');
@@ -319,36 +322,108 @@ export const TournamentManagement = () => {
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
 
-    const proposed: typeof proposedMatches = [];
-    // Default match time: tournament start_date at 9AM, incremented by 1hr per match
     const baseDate = selectedTournamentForBracket?.start_date 
       ? new Date(selectedTournamentForBracket.start_date + 'T09:00')
       : new Date();
 
-    for (let i = 0; i < shuffled.length; i += 2) {
-      const teamA = shuffled[i];
-      const teamB = shuffled[i + 1] || null;
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const formatDate = (date: Date) => {
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    };
 
-      const matchDate = new Date(baseDate);
-      matchDate.setHours(matchDate.getHours() + Math.floor(i / 2));
+    const N = shuffled.length;
+    const totalRounds = Math.ceil(Math.log2(N));
+    
+    // Group proposed matches by round number (1-indexed)
+    const matchesByRound: { [r: number]: any[] } = {};
 
-      // Format for datetime-local input: YYYY-MM-DDTHH:MM
-      const pad = (n: number) => n.toString().padStart(2, '0');
-      const dateStr = `${matchDate.getFullYear()}-${pad(matchDate.getMonth() + 1)}-${pad(matchDate.getDate())}T${pad(matchDate.getHours())}:${pad(matchDate.getMinutes())}`;
+    // Step 1: Create all placeholders for all rounds
+    for (let r = 1; r <= totalRounds; r++) {
+      matchesByRound[r] = [];
+      const numMatches = Math.pow(2, totalRounds - r);
+      for (let j = 0; j < numMatches; j++) {
+        // Calculate date for the round and match
+        const matchDate = new Date(baseDate);
+        // Advance by (r - 1) days
+        matchDate.setDate(matchDate.getDate() + (r - 1));
+        // Advance by j hours within that day
+        matchDate.setHours(matchDate.getHours() + j);
 
-      proposed.push({
-        team_a_id: teamA.id,
-        team_a_name: teamA.name,
-        team_b_id: teamB?.id || null,
-        team_b_name: teamB?.name || 'BYE',
-        round: 'Round 1',
-        match_time: dateStr,
-      });
+        matchesByRound[r].push({
+          team_a_id: null,
+          team_a_name: 'TBD',
+          team_b_id: null,
+          team_b_name: 'TBD',
+          round: r === totalRounds ? 'Finals' : r === totalRounds - 1 ? 'Semifinals' : `Round ${r}`,
+          match_time: formatDate(matchDate),
+          local_id: `${r}-${j}`,
+        });
+      }
     }
 
-    setProposedMatches(proposed);
+    // Step 2: Seed Round 1
+    const round1Matches = matchesByRound[1];
+    for (let i = 0; i < N; i++) {
+      const matchIdx = Math.floor(i / 2);
+      const isEven = i % 2 === 0;
+      const team = shuffled[i];
+
+      if (isEven) {
+        round1Matches[matchIdx].team_a_id = team.id;
+        round1Matches[matchIdx].team_a_name = team.name;
+      } else {
+        round1Matches[matchIdx].team_b_id = team.id;
+        round1Matches[matchIdx].team_b_name = team.name;
+      }
+    }
+
+    // Handle Round 1 BYEs
+    for (let j = 0; j < round1Matches.length; j++) {
+      if (round1Matches[j].team_a_id && !round1Matches[j].team_b_id) {
+        round1Matches[j].team_b_name = 'BYE';
+      }
+    }
+
+    // Step 3: Link parent/child matches
+    for (let r = 1; r < totalRounds; r++) {
+      const currentRoundMatches = matchesByRound[r];
+      for (let j = 0; j < currentRoundMatches.length; j++) {
+        const parentIdx = Math.floor(j / 2);
+        const parentSlot = j % 2 === 0 ? 'team_a' : 'team_b';
+        currentRoundMatches[j].next_match_local_id = `${r + 1}-${parentIdx}`;
+        currentRoundMatches[j].next_match_slot = parentSlot;
+      }
+    }
+
+    // Step 4: Auto-advance Round 1 BYE winners to Round 2
+    if (totalRounds > 1) {
+      const r1Matches = matchesByRound[1];
+      const r2Matches = matchesByRound[2];
+      for (let j = 0; j < r1Matches.length; j++) {
+        if (r1Matches[j].team_b_name === 'BYE') {
+          const parentIdx = Math.floor(j / 2);
+          const parentSlot = r1Matches[j].next_match_slot;
+          
+          if (parentSlot === 'team_a') {
+            r2Matches[parentIdx].team_a_id = r1Matches[j].team_a_id;
+            r2Matches[parentIdx].team_a_name = r1Matches[j].team_a_name;
+          } else {
+            r2Matches[parentIdx].team_b_id = r1Matches[j].team_a_id;
+            r2Matches[parentIdx].team_b_name = r1Matches[j].team_a_name;
+          }
+        }
+      }
+    }
+
+    // Flatten all matches into a single list in chronological / round order
+    const flatProposed: typeof proposedMatches = [];
+    for (let r = 1; r <= totalRounds; r++) {
+      flatProposed.push(...matchesByRound[r]);
+    }
+
+    setProposedMatches(flatProposed);
     setWizardStep(2);
-    toast.success(`Auto-seeded ${proposed.length} matchups. Review & schedule below.`);
+    toast.success(`Generated a full ${totalRounds}-round tournament tree (${flatProposed.length} matches total). Review & schedule below.`);
   };
 
   const handleUpdateMatchTime = (index: number, newTime: string) => {
@@ -360,7 +435,7 @@ export const TournamentManagement = () => {
       if (i !== index) return m;
       return {
         ...m,
-        team_a_id: m.team_b_id!,
+        team_a_id: m.team_b_id,
         team_a_name: m.team_b_name,
         team_b_id: m.team_a_id,
         team_b_name: m.team_a_name,
@@ -372,39 +447,86 @@ export const TournamentManagement = () => {
     setProposedMatches(prev => prev.filter((_, i) => i !== index));
   };
 
-  // --- Wizard: Batch Publish to Supabase ---
+  // --- Wizard: Batch Publish to Supabase (2-Pass Batch Insert) ---
   const handlePublishBracket = async () => {
     if (!selectedTournamentForBracket || proposedMatches.length === 0) return;
     setIsPublishing(true);
 
-    const payload = proposedMatches.map(m => ({
-      tournament_id: selectedTournamentForBracket.id,
-      team_a_id: m.team_a_id,
-      team_b_id: m.team_b_id,
-      round: m.round,
-      status: 'Scheduled' as const,
-      match_time: m.match_time ? new Date(m.match_time).toISOString() : null,
-    }));
+    try {
+      // Pass 1: Batch Insert all matches to get database-generated IDs
+      const payload = proposedMatches.map(m => {
+        const isByeMatch = m.team_b_name === 'BYE';
+        return {
+          tournament_id: selectedTournamentForBracket.id,
+          team_a_id: m.team_a_id,
+          team_b_id: m.team_b_id,
+          round: m.round,
+          status: isByeMatch ? ('Completed' as const) : ('Scheduled' as const),
+          team_a_score: isByeMatch ? 1 : 0,
+          team_b_score: 0,
+          match_time: m.match_time ? new Date(m.match_time).toISOString() : null,
+        };
+      });
 
-    const { error } = await supabase.from('matches').insert(payload);
+      const { data: insertedData, error: insertError } = await supabase
+        .from('matches')
+        .insert(payload)
+        .select();
 
-    if (error) {
-      toast.error('Failed to publish bracket: ' + error.message);
-    } else {
-      toast.success(`Published ${payload.length} matches to the bracket!`);
+      if (insertError) {
+        throw insertError;
+      }
+
+      if (!insertedData || insertedData.length !== proposedMatches.length) {
+        throw new Error('Inserted match count does not match generated count.');
+      }
+
+      // Map local_id to database UUID
+      const localIdToDbId: { [localId: string]: string } = {};
+      insertedData.forEach((dbMatch, idx) => {
+        const localMatch = proposedMatches[idx];
+        localIdToDbId[localMatch.local_id] = dbMatch.id;
+      });
+
+      // Pass 2: Batch Update next_match_id pointer links in parallel
+      const updates = proposedMatches
+        .filter(m => m.next_match_local_id && localIdToDbId[m.next_match_local_id])
+        .map(m => {
+          const dbId = localIdToDbId[m.local_id];
+          const nextDbId = localIdToDbId[m.next_match_local_id!];
+          return supabase
+            .from('matches')
+            .update({
+              next_match_id: nextDbId,
+              next_match_slot: m.next_match_slot
+            })
+            .eq('id', dbId);
+        });
+
+      if (updates.length > 0) {
+        const updateResults = await Promise.all(updates);
+        for (const res of updateResults) {
+          if (res.error) throw res.error;
+        }
+      }
+
+      toast.success(`Published full multi-round bracket (${proposedMatches.length} matches)!`);
       
       logAudit({
         action: 'GENERATE_BRACKET',
         entity_type: 'matches',
         entity_id: selectedTournamentForBracket.id,
-        details: `Published ${payload.length} seeded matches for ${selectedTournamentForBracket.name}`
+        details: `Published ${proposedMatches.length} matches across multi-round bracket for tournament: ${selectedTournamentForBracket.name}`
       });
 
       setProposedMatches([]);
       setWizardStep(1);
       fetchBracketData(selectedTournamentForBracket.id);
+    } catch (err: any) {
+      toast.error('Failed to publish bracket: ' + err.message);
+    } finally {
+      setIsPublishing(false);
     }
-    setIsPublishing(false);
   };
 
   const openWizard = (tournament: Tournament) => {
@@ -455,7 +577,7 @@ export const TournamentManagement = () => {
                   <Label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">Event Name</Label>
                   <Input placeholder="e.g., PSU Intramurals 2024" value={newTournament.name} onChange={(e) => setNewTournament({...newTournament, name: e.target.value})} className="h-14 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 focus:ring-orange-500 rounded-2xl font-bold placeholder:font-normal" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-3">
                     <Label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">Sport Category</Label>
                     <Input placeholder="e.g., Basketball" value={newTournament.sport} onChange={(e) => setNewTournament({...newTournament, sport: e.target.value})} className="h-14 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 focus:ring-orange-500 rounded-2xl font-bold placeholder:font-normal" />
@@ -474,7 +596,7 @@ export const TournamentManagement = () => {
                     </Select>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-3">
                     <Label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">Kickoff Date</Label>
                     <Input type="date" value={newTournament.start_date} onChange={(e) => setNewTournament({...newTournament, start_date: e.target.value})} className="h-14 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-2xl font-bold" />
@@ -1002,7 +1124,11 @@ export const TournamentManagement = () => {
                     >
                       <SelectTrigger className="border-2 h-16 rounded-2xl bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-white/5 font-black uppercase italic tracking-tight text-lg focus:ring-orange-500 transition-all disabled:opacity-30">
                         <SelectValue placeholder={selectedTournamentId ? "Select MVP Candidate..." : "Select tournament first"}>
-                          {selectedPlayerForGoldId && (tournamentPlayers || []).find(p => p.player_id === selectedPlayerForGoldId)?.users?.full_name}
+                          {selectedPlayerForGoldId && (() => {
+                            const p = (tournamentPlayers || []).find(p => p.player_id === selectedPlayerForGoldId);
+                            if (!p) return null;
+                            return Array.isArray(p.users) ? p.users[0]?.full_name : p.users?.full_name;
+                          })()}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl">

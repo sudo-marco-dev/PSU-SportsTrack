@@ -97,7 +97,7 @@ export const Login = () => {
                       <Input 
                         placeholder="m.delacruz@psu.edu.ph" 
                         {...field} 
-                        className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus:ring-orange-500 rounded-xl"
+                        className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
                       />
                     </FormControl>
                     <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
@@ -136,8 +136,8 @@ export const Login = () => {
             </form>
           </Form>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-4 text-center pb-10 pt-4">
-          <div className="text-slate-500 text-xs font-bold uppercase tracking-widest">
+        <CardFooter className="flex flex-col space-y-4 text-center pb-10 pt-4 bg-transparent border-t-0">
+          <div className="text-slate-400 text-xs font-bold uppercase tracking-widest">
             Don't have an account?{' '}
             <Link to="/register" className="text-orange-500 hover:text-orange-400 transition-colors font-black underline underline-offset-4">
               Join The Roster

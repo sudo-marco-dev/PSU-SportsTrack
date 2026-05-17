@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Users, UserPlus, ClipboardList, Search, LayoutGrid, List, CheckCircle2 } from 'lucide-react';
+import { Users, UserPlus, ClipboardList } from 'lucide-react';
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
 
@@ -44,6 +44,7 @@ type RosterMember = {
   player_id: string;
   users: {
     full_name: string;
+    colleges?: { college_name: string } | { college_name: string }[];
   } | null;
 };
 
@@ -170,7 +171,7 @@ export const TeamManagement = () => {
     setIsLoadingRoster(true);
     const { data, error } = await supabase
       .from('team_roster')
-      .select('id, status, player_id, users(full_name)')
+      .select('id, status, player_id, users(full_name, colleges(college_name))')
       .eq('team_id', teamId);
 
     if (error) {
@@ -260,7 +261,12 @@ export const TeamManagement = () => {
                     <label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">Target Tournament</label>
                     <Select value={selectedTournament} onValueChange={(val) => setSelectedTournament(val || '')}>
                       <SelectTrigger className="h-14 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-2xl font-bold">
-                        <SelectValue placeholder="Select a tournament" />
+                        <SelectValue placeholder="Select a tournament">
+                          {selectedTournament && (() => {
+                            const tournament = (tournaments || []).find(t => t.id === selectedTournament);
+                            return tournament ? tournament.name : selectedTournament;
+                          })()}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl">
                         {tournaments.map((tournament) => (
@@ -373,7 +379,7 @@ export const TeamManagement = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTeams.map((team, idx) => (
+                    {filteredTeams.map((team) => (
                       <tr key={team.id} className="border-b border-slate-50 dark:border-white/5 last:border-none hover:bg-orange-50/30 dark:hover:bg-orange-500/5 transition-colors group">
                         <td className="py-4 px-8 font-black italic uppercase tracking-tighter text-lg">{team.name}</td>
                         <td className="py-4 px-8 font-bold text-slate-500 uppercase text-[10px] tracking-widest">{team.tournaments?.name}</td>
@@ -459,7 +465,7 @@ export const TeamManagement = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredPlayers.map((player, idx) => (
+                    {filteredPlayers.map((player) => (
                       <tr key={player.id} className="border-b border-slate-50 dark:border-white/5 last:border-none hover:bg-orange-50/30 dark:hover:bg-orange-500/5 transition-colors group">
                         <td className="py-4 px-8">
                           <div className="flex items-center gap-3">
@@ -508,34 +514,47 @@ export const TeamManagement = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {rosterMembers.map((member) => (
-                  <div key={member.id} className="flex items-center justify-between p-5 border-2 border-slate-100 dark:border-white/5 rounded-2xl bg-white dark:bg-slate-900 group hover:border-orange-500/30 transition-all duration-300">
-                    <div className="flex items-center gap-4">
-                      <div className="size-10 rounded-xl bg-slate-50 dark:bg-white/5 flex items-center justify-center font-black text-slate-500 group-hover:bg-orange-500 group-hover:text-white transition-all">
-                        {(Array.isArray(member.users) ? member.users[0]?.full_name : member.users?.full_name || '?')[0]}
-                      </div>
-                      <div>
-                        <div className="font-black italic uppercase tracking-tighter text-lg leading-none mb-1">
-                          {Array.isArray(member.users) ? member.users[0]?.full_name : member.users?.full_name || 'Unknown Player'}
+                {rosterMembers.map((member) => {
+                  const colleges = Array.isArray(member.users)
+                    ? member.users[0]?.colleges
+                    : member.users?.colleges;
+                  const collegeName = Array.isArray(colleges)
+                    ? colleges[0]?.college_name
+                    : colleges?.college_name || 'N/A';
+
+                  return (
+                    <div key={member.id} className="flex items-center justify-between p-5 border-2 border-slate-100 dark:border-white/5 rounded-2xl bg-white dark:bg-slate-900 group hover:border-orange-500/30 transition-all duration-300">
+                      <div className="flex items-center gap-4">
+                        <div className="size-10 rounded-xl bg-slate-50 dark:bg-white/5 flex items-center justify-center font-black text-slate-500 group-hover:bg-orange-500 group-hover:text-white transition-all">
+                          {(Array.isArray(member.users) ? member.users[0]?.full_name : member.users?.full_name || '?')[0]}
                         </div>
-                        <Badge 
-                          variant={member.status === 'Approved' ? 'default' : 'secondary'}
-                          className="text-[9px] font-black uppercase px-2 py-0"
-                        >
-                          {member.status}
-                        </Badge>
+                        <div>
+                          <div className="font-black italic uppercase tracking-tighter text-lg leading-none mb-1">
+                            {Array.isArray(member.users) ? member.users[0]?.full_name : member.users?.full_name || 'Unknown Player'}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{collegeName}</span>
+                            <span className="text-slate-300">•</span>
+                            <Badge 
+                              variant={member.status === 'Approved' ? 'default' : 'secondary'}
+                              className="text-[9px] font-black uppercase px-2 py-0"
+                            >
+                              {member.status}
+                            </Badge>
+                          </div>
+                        </div>
                       </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-destructive font-black uppercase text-[10px] tracking-widest hover:bg-destructive/10 h-10 px-4 rounded-xl"
+                        onClick={() => handleRemoveFromRoster(member.id)}
+                      >
+                        Remove
+                      </Button>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-destructive font-black uppercase text-[10px] tracking-widest hover:bg-destructive/10 h-10 px-4 rounded-xl"
-                      onClick={() => handleRemoveFromRoster(member.id)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -556,7 +575,12 @@ export const TeamManagement = () => {
               <label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">Target Team</label>
               <Select value={selectedTeamToInvite} onValueChange={(val) => setSelectedTeamToInvite(val || '')}>
                 <SelectTrigger className="h-14 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-2xl font-bold">
-                  <SelectValue placeholder="Select one of your teams" />
+                  <SelectValue placeholder="Select one of your teams">
+                    {selectedTeamToInvite && (() => {
+                      const team = (teams || []).find(t => t.id === selectedTeamToInvite);
+                      return team ? `${team.name} (${team.tournaments?.name || 'Tournament'})` : selectedTeamToInvite;
+                    })()}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl">
                   {teams.length === 0 ? (

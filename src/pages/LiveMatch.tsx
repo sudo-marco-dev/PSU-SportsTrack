@@ -21,6 +21,8 @@ type Match = {
   team_a: { name: string } | null;
   team_b: { name: string } | null;
   tournament_id: string;
+  next_match_id?: string | null;
+  next_match_slot?: 'team_a' | 'team_b' | null;
 };
 
 type EligiblePlayer = {
@@ -292,6 +294,15 @@ export const LiveMatch = () => {
 
   const handleUpdateStatus = async (newStatus: string) => {
     if (!isAuthorized || !match) return;
+
+    // Tie Guard: Single elimination matches cannot end in a tie
+    if (newStatus === 'Completed') {
+      if (match.team_a_score === match.team_b_score) {
+        toast.error('Cannot complete a match with a tie score! Please break the tie first.');
+        return;
+      }
+    }
+
     const { error } = await supabase
       .from('matches')
       .update({ status: newStatus })
@@ -303,6 +314,33 @@ export const LiveMatch = () => {
       toast.error('Failed to update status: ' + error.message);
     } else {
       toast.success(`Match status updated to ${newStatus}`);
+
+      // Bracket progression winner advancement logic
+      if (newStatus === 'Completed') {
+        const isTeamAWinner = match.team_a_score > match.team_b_score;
+        const winnerId = isTeamAWinner ? match.team_a_id : match.team_b_id;
+        const winnerName = isTeamAWinner ? (match.team_a?.name || 'TBD') : (match.team_b?.name || 'TBD');
+
+        if (match.next_match_id) {
+          const nextMatchField = match.next_match_slot === 'team_a' ? 'team_a_id' : 'team_b_id';
+          const { error: advanceError } = await supabase
+            .from('matches')
+            .update({ [nextMatchField]: winnerId })
+            .eq('id', match.next_match_id);
+
+          if (advanceError) {
+            toast.error('Failed to advance winner: ' + advanceError.message);
+          } else {
+            toast.success(`Winner ${winnerName} automatically advanced to the next round!`);
+          }
+        } else {
+          // Final match of the tournament - champion celebration!
+          toast.success(`🎉 ${winnerName} is the Tournament Champion! 🏆`, {
+            duration: 10000,
+          });
+        }
+      }
+
       const { data: eventData, error: eventError } = await supabase.from('match_events').insert({
         match_id: match.id,
         description: `Match status changed to ${newStatus}`
@@ -584,7 +622,13 @@ export const LiveMatch = () => {
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block text-left">Select MVP Player</label>
                     <Select value={selectedPlayerId} onValueChange={(val) => setSelectedPlayerId(val || '')}>
                       <SelectTrigger className="w-full bg-white border-slate-200">
-                        <SelectValue placeholder="Select a player..." />
+                        <SelectValue placeholder="Select a player...">
+                          {selectedPlayerId && (() => {
+                            const player = (eligiblePlayers || []).find(p => p.player_id === selectedPlayerId);
+                            const users = player?.users as any;
+                            return Array.isArray(users) ? users[0]?.full_name : users?.full_name;
+                          })()}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {(eligiblePlayers || []).map((player) => {

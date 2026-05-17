@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { TrendingUp, Users, UserPlus, Clock, ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
+import { TrendingUp, Users, UserPlus, Clock, ArrowUpRight, Activity } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Stats = {

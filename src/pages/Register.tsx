@@ -118,7 +118,7 @@ export const Register = () => {
                       <Input 
                         placeholder="Juan Dela Cruz" 
                         {...field} 
-                        className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus:ring-orange-500 rounded-xl"
+                        className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
                       />
                     </FormControl>
                     <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
@@ -135,7 +135,7 @@ export const Register = () => {
                       <Input 
                         placeholder="m.delacruz@psu.edu.ph" 
                         {...field} 
-                        className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus:ring-orange-500 rounded-xl"
+                        className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
                       />
                     </FormControl>
                     <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
@@ -169,17 +169,19 @@ export const Register = () => {
                 )}
               />
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="role"
                   render={({ field }) => (
                     <FormItem className="space-y-1">
                       <FormLabel className="text-xs font-black uppercase text-slate-400 tracking-widest">Designation</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="h-12 bg-white/5 border-white/10 text-white rounded-xl">
-                            <SelectValue placeholder="Role" />
+                            <SelectValue placeholder="Role">
+                              {field.value}
+                            </SelectValue>
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="bg-slate-800 border-white/10 text-white">
@@ -198,10 +200,12 @@ export const Register = () => {
                   render={({ field }) => (
                     <FormItem className="space-y-1">
                       <FormLabel className="text-xs font-black uppercase text-slate-400 tracking-widest">Department</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="h-12 bg-white/5 border-white/10 text-white rounded-xl">
-                            <SelectValue placeholder="College" />
+                            <SelectValue placeholder="College">
+                              {field.value && colleges.find((c) => c.id === field.value)?.college_name}
+                            </SelectValue>
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="bg-slate-800 border-white/10 text-white">
@@ -222,8 +226,8 @@ export const Register = () => {
             </form>
           </Form>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-4 text-center pb-10 pt-4">
-          <div className="text-slate-500 text-xs font-bold uppercase tracking-widest">
+        <CardFooter className="flex flex-col space-y-4 text-center pb-10 pt-4 bg-transparent border-t-0">
+          <div className="text-slate-400 text-xs font-bold uppercase tracking-widest">
             Already a member?{' '}
             <Link to="/login" className="text-orange-500 hover:text-orange-400 transition-colors font-black underline underline-offset-4">
               Return To Login

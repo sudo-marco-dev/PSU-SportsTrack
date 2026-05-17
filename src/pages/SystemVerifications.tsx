@@ -30,7 +30,8 @@ type PendingDocument = {
   users: {
     full_name: string;
     role: string;
-  };
+    colleges?: { college_name: string } | { college_name: string }[];
+  } | null;
 };
 
 export const SystemVerifications = () => {
@@ -49,7 +50,7 @@ export const SystemVerifications = () => {
   const fetchPendingDocuments = async () => {
     const { data, error } = await supabase
       .from('verification_documents')
-      .select('*, users(full_name, role)')
+      .select('*, users(full_name, role, colleges(college_name))')
       .eq('status', 'Pending')
       .order('created_at', { ascending: false });
 
@@ -216,47 +217,54 @@ export const SystemVerifications = () => {
           </Card>
         ) : viewMode === 'grid' ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredDocuments.map((doc, idx) => (
-              <Card key={doc.id} className="group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl rounded-3xl overflow-hidden border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: `${idx * 50}ms` }}>
-                <div className="p-8">
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-2xl group-hover:bg-orange-500 transition-colors duration-500">
-                      <FileText className="size-6 text-slate-400 group-hover:text-white" />
+            {filteredDocuments.map((doc, idx) => {
+              const colleges = doc.users?.colleges;
+              const collegeName = Array.isArray(colleges)
+                ? colleges[0]?.college_name
+                : colleges?.college_name || 'N/A';
+
+              return (
+                <Card key={doc.id} className="group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl rounded-3xl overflow-hidden border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: `${idx * 50}ms` }}>
+                  <div className="p-8">
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-2xl group-hover:bg-orange-500 transition-colors duration-500">
+                        <FileText className="size-6 text-slate-400 group-hover:text-white" />
+                      </div>
+                      <Badge className="bg-orange-500 text-[10px] font-black uppercase tracking-widest py-1 px-3 rounded-full shadow-lg shadow-orange-500/10">
+                        {doc.document_type}
+                      </Badge>
                     </div>
-                    <Badge className="bg-orange-500 text-[10px] font-black uppercase tracking-widest py-1 px-3 rounded-full shadow-lg shadow-orange-500/10">
-                      {doc.document_type}
-                    </Badge>
-                  </div>
-                  <h3 className="text-2xl font-black italic uppercase tracking-tighter group-hover:text-orange-500 transition-colors">{doc.users?.full_name || 'Unknown'}</h3>
-                  <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest mt-1 mb-6">{doc.users?.role || 'Unknown'} • {new Date(doc.created_at).toLocaleDateString()}</p>
-                  
-                  <div className="space-y-3">
-                    <Button 
-                      variant="outline"
-                      className="w-full h-12 rounded-xl font-black uppercase italic tracking-widest text-[10px] border-2 border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5"
-                      onClick={() => handleViewDocument(doc.storage_path)}
-                    >
-                      <ExternalLink className="size-4 mr-2" /> View Document
-                    </Button>
-                    <div className="grid grid-cols-2 gap-3">
+                    <h3 className="text-2xl font-black italic uppercase tracking-tighter group-hover:text-orange-500 transition-colors">{doc.users?.full_name || 'Unknown'}</h3>
+                    <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest mt-1 mb-6">{doc.users?.role || 'Unknown'} • {collegeName} • {new Date(doc.created_at).toLocaleDateString()}</p>
+                    
+                    <div className="space-y-3">
                       <Button 
-                        className="h-12 bg-green-500 hover:bg-green-600 text-white rounded-xl font-black uppercase italic tracking-widest text-[10px] shadow-lg shadow-green-500/10"
-                        onClick={() => handleApprove(doc.id, doc.user_id)}
+                        variant="outline"
+                        className="w-full h-12 rounded-xl font-black uppercase italic tracking-widest text-[10px] border-2 border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5"
+                        onClick={() => handleViewDocument(doc.storage_path)}
                       >
-                        Approve
+                        <ExternalLink className="size-4 mr-2" /> View Document
                       </Button>
-                      <Button 
-                        variant="destructive"
-                        className="h-12 rounded-xl font-black uppercase italic tracking-widest text-[10px] shadow-lg shadow-red-500/10"
-                        onClick={() => handleReject(doc.id)}
-                      >
-                        Reject
-                      </Button>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button 
+                          className="h-12 bg-green-500 hover:bg-green-600 text-white rounded-xl font-black uppercase italic tracking-widest text-[10px] shadow-lg shadow-green-500/10"
+                          onClick={() => handleApprove(doc.id, doc.user_id)}
+                        >
+                          Approve
+                        </Button>
+                        <Button 
+                          variant="destructive"
+                          className="h-12 rounded-xl font-black uppercase italic tracking-widest text-[10px] shadow-lg shadow-red-500/10"
+                          onClick={() => handleReject(doc.id)}
+                        >
+                          Reject
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         ) : (
           <Card className="rounded-[2rem] border-2 border-slate-100 dark:border-white/5 overflow-hidden shadow-2xl">
@@ -271,20 +279,29 @@ export const SystemVerifications = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredDocuments.map((doc, idx) => (
-                  <TableRow 
-                    key={doc.id} 
-                    className="hover:bg-orange-50/30 dark:hover:bg-orange-500/5 transition-colors border-slate-100 dark:border-white/5 group animate-in fade-in slide-in-from-bottom-2 fill-mode-both"
-                    style={{ animationDelay: `${idx * 40}ms` }}
-                  >
-                    <TableCell className="font-black italic uppercase tracking-tighter text-lg pl-8 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="size-8 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center font-black text-xs text-slate-500">
-                          {doc.users?.full_name?.charAt(0) || '?'}
+                {filteredDocuments.map((doc, idx) => {
+                  const colleges = doc.users?.colleges;
+                  const collegeName = Array.isArray(colleges)
+                    ? colleges[0]?.college_name
+                    : colleges?.college_name || 'N/A';
+
+                  return (
+                    <TableRow 
+                      key={doc.id} 
+                      className="hover:bg-orange-50/30 dark:hover:bg-orange-500/5 transition-colors border-slate-100 dark:border-white/5 group animate-in fade-in slide-in-from-bottom-2 fill-mode-both"
+                      style={{ animationDelay: `${idx * 40}ms` }}
+                    >
+                      <TableCell className="font-black italic uppercase tracking-tighter text-lg pl-8 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="size-8 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center font-black text-xs text-slate-500">
+                            {doc.users?.full_name?.charAt(0) || '?'}
+                          </div>
+                          <div className="flex flex-col">
+                            <span>{doc.users?.full_name || 'Unknown'}</span>
+                            <span className="text-[10px] text-slate-500 font-bold tracking-widest uppercase not-italic">{collegeName}</span>
+                          </div>
                         </div>
-                        {doc.users?.full_name || 'Unknown'}
-                      </div>
-                    </TableCell>
+                      </TableCell>
                     <TableCell className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">{doc.users?.role || 'Unknown'}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tighter px-2 border-orange-500/20 text-orange-600">
@@ -321,7 +338,8 @@ export const SystemVerifications = () => {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </Card>
