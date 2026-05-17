@@ -77,6 +77,26 @@ export const LiveMatch = () => {
           setMatch(prev => prev ? { ...prev, team_a_score, team_b_score } : prev);
         }
       )
+      .on(
+        'broadcast',
+        { event: 'event_update' },
+        (payload) => {
+          if (!isMounted) return;
+          console.log('🔥 Broadcast event received:', payload);
+          const newEvent = payload.payload as MatchEvent;
+          // Check if event already exists to prevent duplicate optimistic updates
+          setEvents(prev => prev.some(e => e.id === newEvent.id) ? prev : [newEvent, ...prev]);
+        }
+      )
+      .on(
+        'broadcast',
+        { event: 'mvp_update' },
+        (payload) => {
+          if (!isMounted) return;
+          console.log('🔥 Broadcast MVP received:', payload);
+          setAwardedMVP(payload.payload.mvpName);
+        }
+      )
       .subscribe((status) => {
         console.log('📡 Broadcast channel status:', status);
       });
@@ -251,10 +271,21 @@ export const LiveMatch = () => {
       });
     }
 
-    await supabase.from('match_events').insert({
+    const { data: eventData, error: eventError } = await supabase.from('match_events').insert({
       match_id: match.id,
       description: `${teamName} scored ${points} point${points > 1 ? 's' : ''}!`
-    });
+    }).select().single();
+
+    if (!eventError && eventData) {
+      setEvents(prev => [eventData as MatchEvent, ...prev]);
+      if (broadcastChannelRef.current) {
+        await broadcastChannelRef.current.send({
+          type: 'broadcast',
+          event: 'event_update',
+          payload: eventData
+        });
+      }
+    }
 
     setIsSubmitting(false);
   };
@@ -272,10 +303,21 @@ export const LiveMatch = () => {
       toast.error('Failed to update status: ' + error.message);
     } else {
       toast.success(`Match status updated to ${newStatus}`);
-      await supabase.from('match_events').insert({
+      const { data: eventData, error: eventError } = await supabase.from('match_events').insert({
         match_id: match.id,
         description: `Match status changed to ${newStatus}`
-      });
+      }).select().single();
+
+      if (!eventError && eventData) {
+        setEvents(prev => [eventData as MatchEvent, ...prev]);
+        if (broadcastChannelRef.current) {
+          await broadcastChannelRef.current.send({
+            type: 'broadcast',
+            event: 'event_update',
+            payload: eventData
+          });
+        }
+      }
     }
   };
 
@@ -283,15 +325,25 @@ export const LiveMatch = () => {
     if (!isAuthorized || !match || !customEvent.trim()) return;
     setIsSubmitting(true);
 
-    const { error } = await supabase.from('match_events').insert({
+    const { data: eventData, error } = await supabase.from('match_events').insert({
       match_id: match.id,
       description: customEvent.trim()
-    });
+    }).select().single();
 
     if (error) {
       toast.error('Failed to log event: ' + error.message);
     } else {
       setCustomEvent('');
+      if (eventData) {
+        setEvents(prev => [eventData as MatchEvent, ...prev]);
+        if (broadcastChannelRef.current) {
+          await broadcastChannelRef.current.send({
+            type: 'broadcast',
+            event: 'event_update',
+            payload: eventData
+          });
+        }
+      }
     }
     setIsSubmitting(false);
   };
@@ -322,7 +374,18 @@ export const LiveMatch = () => {
       const player = (eligiblePlayers || []).find(p => p.player_id === selectedPlayerId);
       const users = player?.users as any;
       const selectedPlayerName = Array.isArray(users) ? users[0]?.full_name : users?.full_name;
-      setAwardedMVP(selectedPlayerName || 'Unknown Player');
+      const finalMvpName = selectedPlayerName || 'Unknown Player';
+      
+      setAwardedMVP(finalMvpName);
+      
+      if (broadcastChannelRef.current) {
+        await broadcastChannelRef.current.send({
+          type: 'broadcast',
+          event: 'mvp_update',
+          payload: { mvpName: finalMvpName }
+        });
+      }
+      
       setIsAwarding(false);
       setSelectedPlayerId('');
     }
