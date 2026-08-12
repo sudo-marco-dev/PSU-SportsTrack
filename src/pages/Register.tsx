@@ -94,7 +94,7 @@ export const Register = () => {
       {/* Decorative Background Elements */}
       <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-600/20 blur-[120px] rounded-full animate-pulse" />
       <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-600/10 blur-[120px] rounded-full" />
-      
+
       <Card className="w-full max-w-lg bg-white/5 backdrop-blur-xl border-white/10 shadow-2xl relative z-10 overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-orange-500" />
         <CardHeader className="space-y-2 text-center pb-8 pt-10">
@@ -115,9 +115,9 @@ export const Register = () => {
                   <FormItem className="space-y-1">
                     <FormLabel className="text-xs font-black uppercase text-slate-400 tracking-widest">Full Name</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="Juan Dela Cruz" 
-                        {...field} 
+                      <Input
+                        placeholder="Juan Dela Cruz"
+                        {...field}
                         className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
                       />
                     </FormControl>
@@ -132,9 +132,9 @@ export const Register = () => {
                   <FormItem className="space-y-1">
                     <FormLabel className="text-xs font-black uppercase text-slate-400 tracking-widest">University Email</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="m.delacruz@psu.edu.ph" 
-                        {...field} 
+                      <Input
+                        placeholder="202381234@psu.palawan.edu.ph"
+                        {...field}
                         className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
                       />
                     </FormControl>
@@ -150,9 +150,9 @@ export const Register = () => {
                     <FormLabel className="text-xs font-black uppercase text-slate-400 tracking-widest">Security Password</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Input 
-                          type={showPassword ? "text" : "password"} 
-                          {...field} 
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          {...field}
                           className="h-12 bg-white/5 border-white/10 text-white focus:ring-orange-500 rounded-xl"
                         />
                         <button
@@ -168,7 +168,7 @@ export const Register = () => {
                   </FormItem>
                 )}
               />
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -193,7 +193,7 @@ export const Register = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="collegeId"

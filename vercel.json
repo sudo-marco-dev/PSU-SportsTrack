@@ -1,0 +1,45 @@
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/coach/teams",
+      "destination": "/coach",
+      "permanent": false
+    },
+    {
+      "source": "/coach/tournaments",
+      "destination": "/coach",
+      "permanent": false
+    },
+    {
+      "source": "/coach/events",
+      "destination": "/coach",
+      "permanent": false
+    },
+    {
+      "source": "/admin/users",
+      "destination": "/admin",
+      "permanent": false
+    },
+    {
+      "source": "/admin/verification",
+      "destination": "/admin",
+      "permanent": false
+    },
+    {
+      "source": "/admin/reports",
+      "destination": "/admin",
+      "permanent": false
+    },
+    {
+      "source": "/admin/settings",
+      "destination": "/admin",
+      "permanent": false
+    }
+  ]
+}

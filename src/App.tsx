@@ -16,6 +16,8 @@ import { LiveMatch } from '@/pages/LiveMatch';
 import { MyAchievements } from '@/pages/MyAchievements';
 import { TournamentExplorer } from '@/pages/TournamentExplorer';
 import { AppLayout } from '@/components/AppLayout';
+import { NotFound } from '@/pages/NotFound';
+import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 
 const RootRedirect = () => {
   const { role, isLoading } = useAuth();
@@ -30,42 +32,54 @@ const RootRedirect = () => {
   }
 };
 
+function AppRoutes() {
+  // This hook handles legacy route redirects
+  useAuthRedirect();
+
+  return (
+    <Routes>
+      {/* Public Standalone Routes */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      
+      {/* Protected Routes inside App Shell */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<RootRedirect />} />
+          
+          {/* Role-Specific Routes */}
+          <Route element={<ProtectedRoute requiredRole="Admin" />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/tournaments" element={<TournamentManagement />} />
+            <Route path="/admin/verifications" element={<SystemVerifications />} />
+            <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
+          </Route>
+          
+          <Route element={<ProtectedRoute requiredRole="Coach" />}>
+            <Route path="/coach" element={<CoachDashboard />} />
+            <Route path="/coach/teams" element={<TeamManagement />} />
+          </Route>
+          
+          <Route element={<ProtectedRoute requiredRole="Player" />}>
+            <Route path="/player" element={<PlayerDashboard />} />
+            <Route path="/achievements" element={<MyAchievements />} />
+          </Route>
+          <Route path="/match/:matchId" element={<LiveMatch />} />
+          <Route path="/explorer" element={<TournamentExplorer />} />
+        </Route>
+      </Route>
+
+      {/* 404 Catch-All Route (Must be last) */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
+
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
-          {/* Public Standalone Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          
-          {/* Protected Routes inside App Shell */}
-          <Route element={<ProtectedRoute />}>
-            <Route element={<AppLayout />}>
-              <Route path="/" element={<RootRedirect />} />
-              
-              {/* Role-Specific Routes */}
-              <Route element={<ProtectedRoute requiredRole="Admin" />}>
-                <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/admin/tournaments" element={<TournamentManagement />} />
-                <Route path="/admin/verifications" element={<SystemVerifications />} />
-                <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
-              </Route>
-              
-              <Route element={<ProtectedRoute requiredRole="Coach" />}>
-                <Route path="/coach" element={<CoachDashboard />} />
-                <Route path="/coach/teams" element={<TeamManagement />} />
-              </Route>
-              
-              <Route element={<ProtectedRoute requiredRole="Player" />}>
-                <Route path="/player" element={<PlayerDashboard />} />
-                <Route path="/achievements" element={<MyAchievements />} />
-              </Route>
-              <Route path="/match/:matchId" element={<LiveMatch />} />
-              <Route path="/explorer" element={<TournamentExplorer />} />
-            </Route>
-          </Route>
-        </Routes>
+        <AppRoutes />
       </BrowserRouter>
       <Toaster />
     </AuthProvider>
