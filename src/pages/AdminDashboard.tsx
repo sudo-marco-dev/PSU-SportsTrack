@@ -31,6 +31,7 @@ export const AdminDashboard = () => {
     total: 0
   });
   const [recentMatches, setRecentMatches] = useState<any[]>([]);
+  const [draftTournaments, setDraftTournaments] = useState<any[]>([]);
 
   useEffect(() => {
     fetchStats();
@@ -45,14 +46,16 @@ export const AdminDashboard = () => {
         { count: pendingCount },
         { count: approvedCount },
         { count: rejectedCount },
-        { count: playerCount }
+        { count: playerCount },
+        { data: draftData }
       ] = await Promise.all([
-        supabase.from('tournaments').select('*', { count: 'exact', head: true }),
+        supabase.from('tournaments').select('*', { count: 'exact', head: true }).eq('status', 'Active'),
         supabase.from('matches').select('*', { count: 'exact', head: true }).eq('status', 'Live'),
         supabase.from('verification_documents').select('*', { count: 'exact', head: true }).eq('status', 'Pending'),
         supabase.from('verification_documents').select('*', { count: 'exact', head: true }).eq('status', 'Approved'),
         supabase.from('verification_documents').select('*', { count: 'exact', head: true }).eq('status', 'Rejected'),
-        supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'Player')
+        supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'Player'),
+        supabase.from('tournaments').select('*').eq('status', 'Draft').order('created_at', { ascending: false })
       ]);
 
       const totalVerifications = (pendingCount || 0) + (approvedCount || 0) + (rejectedCount || 0);
@@ -63,6 +66,8 @@ export const AdminDashboard = () => {
         pendingVerifications: pendingCount || 0,
         totalPlayers: playerCount || 0
       });
+
+      setDraftTournaments(draftData || []);
 
       setVerificationBreakdown({
         pending: pendingCount || 0,
@@ -152,6 +157,66 @@ export const AdminDashboard = () => {
         {/* Abstract Background Element */}
         <div className="absolute -right-20 -top-20 size-[30rem] bg-orange-500/10 rounded-full blur-[120px] group-hover:bg-orange-500/20 transition-all duration-1000" />
       </div>
+
+      {/* Coming Soon / Draft Events Showcase Banner */}
+      {draftTournaments.length > 0 && (
+        <div className="bg-gradient-to-r from-orange-500/15 via-orange-500/5 to-slate-900 border-2 border-orange-500/30 rounded-[2.5rem] p-6 md:p-8 relative overflow-hidden shadow-xl animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-orange-500 rounded-2xl text-white shadow-lg shadow-orange-500/30">
+                <Trophy className="size-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-orange-500 text-white text-[9px] font-black uppercase tracking-widest animate-pulse">
+                    Coming Soon • Draft Phase
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    {draftTournaments.length} Event{draftTournaments.length > 1 ? 's' : ''} Open for Team Applications
+                  </span>
+                </div>
+                <h3 className="text-xl md:text-2xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white mt-1">
+                  Upcoming Tournament Arena Pipeline
+                </h3>
+              </div>
+            </div>
+            <Button
+              onClick={() => navigate('/admin/tournaments')}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-xs h-11 px-6 rounded-xl shadow-lg shadow-orange-500/20 shrink-0 self-start md:self-auto gap-2"
+            >
+              Review & Setup Brackets <ChevronRight className="size-4" />
+            </Button>
+          </div>
+
+          {/* Draft Tournament Horizontal Scroller / Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 relative z-10">
+            {draftTournaments.slice(0, 8).map((t) => (
+              <div
+                key={t.id}
+                className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-orange-500/20 rounded-2xl p-4 flex flex-col justify-between hover:border-orange-500/50 transition-all group"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 dark:text-orange-400 font-bold text-[9px] uppercase tracking-wider">
+                      {t.sport}
+                    </span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                      Draft
+                    </span>
+                  </div>
+                  <h4 className="font-black text-sm uppercase italic tracking-tight text-slate-900 dark:text-white truncate group-hover:text-orange-500 transition-colors">
+                    {t.name}
+                  </h4>
+                </div>
+                <div className="mt-3 pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[10px] text-slate-500 font-medium">
+                  <span>Kickoff: {new Date(t.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                  <span className="text-orange-500 font-bold">Awaiting Teams</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid - 2x2 Refactored for Density */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 relative z-10">

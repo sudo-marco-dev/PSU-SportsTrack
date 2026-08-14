@@ -44,7 +44,54 @@ export const Login = () => {
     },
   });
 
+  const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
+  const [failedAttempts, setFailedAttempts] = useState<number>(0);
+
+  // Check and restore cooldown / attempts from localStorage
+  useEffect(() => {
+    const checkCooldown = () => {
+      const attempts = parseInt(localStorage.getItem('login_attempts') || '0', 10);
+      setFailedAttempts(attempts);
+
+      const lockUntilStr = localStorage.getItem('login_lockout_until');
+      if (lockUntilStr) {
+        const lockUntil = parseInt(lockUntilStr, 10);
+        const now = Date.now();
+        if (now < lockUntil) {
+          setCooldownRemaining(Math.ceil((lockUntil - now) / 1000));
+        } else {
+          localStorage.removeItem('login_lockout_until');
+          localStorage.removeItem('login_attempts');
+          setCooldownRemaining(0);
+          setFailedAttempts(0);
+        }
+      }
+    };
+
+    checkCooldown();
+    const interval = setInterval(checkCooldown, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   async function onSubmit(values: z.infer<typeof loginSchema>) {
+    const lockUntilStr = localStorage.getItem('login_lockout_until');
+    if (lockUntilStr) {
+      const lockUntil = parseInt(lockUntilStr, 10);
+      const now = Date.now();
+      if (now < lockUntil) {
+        const remainingSeconds = Math.ceil((lockUntil - now) / 1000);
+        const minutes = Math.floor(remainingSeconds / 60);
+        const seconds = remainingSeconds % 60;
+        toast.error(`Too many failed attempts. Please try again in ${minutes}m ${seconds}s.`);
+        return;
+      } else {
+        localStorage.removeItem('login_lockout_until');
+        localStorage.removeItem('login_attempts');
+        setCooldownRemaining(0);
+        setFailedAttempts(0);
+      }
+    }
+
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -53,8 +100,26 @@ export const Login = () => {
       });
 
       if (error) {
-        toast.error(error.message);
+        const currentAttempts = parseInt(localStorage.getItem('login_attempts') || '0', 10) + 1;
+        const maxAttempts = 3;
+        setFailedAttempts(currentAttempts);
+
+        if (currentAttempts >= maxAttempts) {
+          const lockTimeMs = 5 * 60 * 1000; // 5 minutes
+          const lockUntil = Date.now() + lockTimeMs;
+          localStorage.setItem('login_lockout_until', lockUntil.toString());
+          localStorage.setItem('login_attempts', currentAttempts.toString());
+          setCooldownRemaining(300);
+          toast.error('Too many failed attempts (3/3). Account temporarily locked for 5 minutes.');
+        } else {
+          localStorage.setItem('login_attempts', currentAttempts.toString());
+          const remainingAttempts = maxAttempts - currentAttempts;
+          toast.error(`${error.message} (${remainingAttempts} attempt${remainingAttempts > 1 ? 's' : ''} remaining)`);
+        }
       } else {
+        localStorage.removeItem('login_attempts');
+        localStorage.removeItem('login_lockout_until');
+        setFailedAttempts(0);
         toast.success('Logged in successfully');
         navigate('/');
       }
@@ -130,8 +195,27 @@ export const Login = () => {
                   </FormItem>
                 )}
               />
-              <Button className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98] mt-4" type="submit" disabled={isLoading}>
-                {isLoading ? 'Processing Access...' : 'Sign In To Portal'}
+              {/* Attempts & Cooldown Notice Text */}
+              {cooldownRemaining > 0 ? (
+                <p className="text-[11px] font-bold uppercase tracking-wider text-red-400 text-center">
+                  Too many failed attempts. Account temporarily locked.
+                </p>
+              ) : failedAttempts > 0 ? (
+                <p className="text-[11px] font-bold uppercase tracking-wider text-orange-400 text-center">
+                  {3 - failedAttempts} attempt{(3 - failedAttempts) > 1 ? 's' : ''} remaining before cooldown
+                </p>
+              ) : null}
+
+              <Button 
+                className="w-full h-12 bg-orange-500 hover:bg-orange-600 disabled:bg-slate-700 disabled:text-slate-400 text-white font-black uppercase italic tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98] mt-4" 
+                type="submit" 
+                disabled={isLoading || cooldownRemaining > 0}
+              >
+                {isLoading 
+                  ? 'Processing Access...' 
+                  : cooldownRemaining > 0 
+                    ? `Try again in ${Math.floor(cooldownRemaining / 60)}m ${cooldownRemaining % 60}s` 
+                    : 'Sign In To Portal'}
               </Button>
             </form>
           </Form>

@@ -10,7 +10,8 @@ import {
   ShieldCheck,
   UserCheck,
   Globe,
-  ClipboardList
+  ClipboardList,
+  Medal
 } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -30,6 +31,11 @@ export const AppLayout = () => {
       name: 'Match Center', 
       href: '/explorer', 
       icon: Globe 
+    },
+    { 
+      name: 'Ranking', 
+      href: '/ranking', 
+      icon: Medal 
     },
     ...(role === 'Admin' ? [
       { name: 'Tournaments', href: '/admin/tournaments', icon: Trophy },

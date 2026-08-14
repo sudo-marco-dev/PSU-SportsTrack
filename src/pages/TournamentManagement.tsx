@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,8 +11,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { toast } from 'sonner';
-import { Trophy, Users, CheckCircle2, XCircle, LayoutGrid, Shuffle, Plus, Star, CalendarDays, ChevronRight } from 'lucide-react';
+import { 
+  Trophy, 
+  Users, 
+  CheckCircle2, 
+  XCircle, 
+  LayoutGrid, 
+  Shuffle, 
+  Plus, 
+  Star, 
+  CalendarDays, 
+  ChevronRight, 
+  Trash2, 
+  AlertTriangle,
+  Sparkles,
+  Check,
+  Info,
+  Lightbulb,
+  ArrowRight,
+  Radio
+} from 'lucide-react';
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
 import { logAudit } from '@/lib/audit';
@@ -38,6 +57,16 @@ type PendingTeam = {
   } | null;
 };
 
+const BINTURUNGAN_DEFAULT_SPORTS = [
+  { name: 'Basketball', icon: '🏀', category: 'Court' },
+  { name: 'Volleyball', icon: '🏐', category: 'Court' },
+  { name: 'Soccer', icon: '⚽', category: 'Pitch' },
+  { name: 'Badminton', icon: '🏸', category: 'Racket' },
+  { name: 'Baseball', icon: '⚾', category: 'Diamond' },
+  { name: 'Futsal', icon: '🥅', category: 'Indoor' },
+  { name: 'Table Tennis', icon: '🏓', category: 'Paddle' },
+];
+
 export const TournamentManagement = () => {
   const navigate = useNavigate();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -45,15 +74,22 @@ export const TournamentManagement = () => {
   const [isLoadingTournaments, setIsLoadingTournaments] = useState(true);
   const [isLoadingTeams, setIsLoadingTeams] = useState(true);
 
-  // Create Tournament State
+  // Create Tournament State - Wide Binturungan One-Click Setup
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [newTournament, setNewTournament] = useState({
-    name: '',
-    sport: '',
-    type: 'Binturungan',
-    start_date: '',
-    end_date: '',
-  });
+  const [creationMode, setCreationMode] = useState<'binturungan' | 'single'>('binturungan');
+  const [selectedSports, setSelectedSports] = useState<string[]>(BINTURUNGAN_DEFAULT_SPORTS.map(s => s.name));
+  const [eventName, setEventName] = useState('PSU Binturungan 2026');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [singleSport, setSingleSport] = useState('Basketball');
+  const [singleType, setSingleType] = useState('Binturungan');
+  const [isCreatingTournaments, setIsCreatingTournaments] = useState(false);
+
+  // Delete Tournament State
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [tournamentToDelete, setTournamentToDelete] = useState<Tournament | null>(null);
+  const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
+  const [isDeletingTournament, setIsDeletingTournament] = useState(false);
 
   // Bracket / Wizard State
   const [isBracketOpen, setIsBracketOpen] = useState(false);
@@ -63,6 +99,7 @@ export const TournamentManagement = () => {
   const [isLoadingBracket, setIsLoadingBracket] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [selectedBracketType, setSelectedBracketType] = useState<'single' | 'round_robin' | 'double'>('single');
   const [proposedMatches, setProposedMatches] = useState<{
     team_a_id: string | null;
     team_a_name: string;
@@ -139,7 +176,7 @@ export const TournamentManagement = () => {
     setIsLoadingTeams(true);
     const { data, error } = await supabase
       .from('teams')
-      .select('id, name, status, users(full_name), tournaments(name)')
+      .select('id, name, status, users(full_name), tournaments(id, name, status, sport)')
       .eq('status', 'Pending');
 
     if (error) {
@@ -150,41 +187,200 @@ export const TournamentManagement = () => {
     setIsLoadingTeams(false);
   };
 
+  const toggleSport = (sport: string) => {
+    setSelectedSports(prev => 
+      prev.includes(sport) ? prev.filter(s => s !== sport) : [...prev, sport]
+    );
+  };
+
   const handleCreateTournament = async () => {
-    if (!newTournament.name || !newTournament.sport || !newTournament.start_date || !newTournament.end_date) {
-      toast.error('Please fill in all required fields.');
+    const trimmedName = eventName.trim();
+    if (!trimmedName) {
+      toast.error('Please specify the event master name.');
+      return;
+    }
+    if (!startDate || !endDate) {
+      toast.error('Please specify both kickoff and finals dates.');
+      return;
+    }
+    if (new Date(startDate) > new Date(endDate)) {
+      toast.error('Kickoff date cannot be scheduled after the finals date.');
       return;
     }
 
-    const { error } = await supabase.from('tournaments').insert({
-      ...newTournament,
-      status: 'Draft',
-    });
+    setIsCreatingTournaments(true);
+    try {
+      // 1. Duplicate Event Name Prevention (Case-Insensitive)
+      const proposedNames = creationMode === 'binturungan'
+        ? selectedSports.map(sport => `${trimmedName} - ${sport}`)
+        : [trimmedName];
 
-    if (error) {
-      toast.error('Error creating tournament: ' + error.message);
-    } else {
-      toast.success('Tournament created successfully.');
-      
-      logAudit({
-        action: 'CREATE_TOURNAMENT',
-        entity_type: 'tournaments',
-        details: `Created new tournament: ${newTournament.name}`
-      });
+      if (creationMode === 'binturungan' && selectedSports.length === 0) {
+        toast.error('Please select at least one sport for the Binturungan event.');
+        setIsCreatingTournaments(false);
+        return;
+      }
 
+      // Check existing tournament names
+      const { data: existingTournaments, error: checkError } = await supabase
+        .from('tournaments')
+        .select('name');
+
+      if (checkError) throw checkError;
+
+      const existingNamesLower = new Set(
+        (existingTournaments || []).map(t => t.name.trim().toLowerCase())
+      );
+
+      // Check if any proposed tournament name already exists
+      const duplicate = proposedNames.find(name => existingNamesLower.has(name.toLowerCase()));
+      if (duplicate) {
+        toast.error(`An event named "${duplicate}" already exists. Please choose a unique event name.`);
+        setIsCreatingTournaments(false);
+        return;
+      }
+
+      if (creationMode === 'binturungan') {
+        // Batch create tournament records for each selected sport in Draft mode
+        const payloads = selectedSports.map(sport => ({
+          name: `${trimmedName} - ${sport}`,
+          sport: sport,
+          type: 'Binturungan',
+          status: 'Draft',
+          start_date: startDate,
+          end_date: endDate,
+        }));
+
+        const { error } = await supabase.from('tournaments').insert(payloads);
+        if (error) throw error;
+
+        toast.success(`Successfully initialized ${selectedSports.length} Binturungan sport tournaments in Draft mode!`);
+        
+        logAudit({
+          action: 'CREATE_TOURNAMENT',
+          entity_type: 'tournaments',
+          details: `Initialized Binturungan event "${trimmedName}" across ${selectedSports.length} sports (${selectedSports.join(', ')}) in Draft mode`
+        });
+      } else {
+        // Single Event Creation
+        const { error } = await supabase.from('tournaments').insert({
+          name: trimmedName,
+          sport: singleSport,
+          type: singleType,
+          status: 'Draft',
+          start_date: startDate,
+          end_date: endDate,
+        });
+
+        if (error) throw error;
+        toast.success(`Tournament "${trimmedName}" created in Draft mode.`);
+        
+        logAudit({
+          action: 'CREATE_TOURNAMENT',
+          entity_type: 'tournaments',
+          details: `Created single tournament "${trimmedName}" (${singleSport}) in Draft mode`
+        });
+      }
+
+      // Automatically remove/close popup after confirm and reset form
       setIsCreateOpen(false);
-      setNewTournament({
-        name: '',
-        sport: '',
-        type: 'Binturungan',
-        start_date: '',
-        end_date: '',
-      });
+      setEventName('PSU Binturungan 2026');
+      setStartDate('');
+      setEndDate('');
+      setSelectedSports(BINTURUNGAN_DEFAULT_SPORTS.map(s => s.name));
       fetchTournaments();
+    } catch (err: any) {
+      toast.error('Error creating tournament(s): ' + err.message);
+    } finally {
+      setIsCreatingTournaments(false);
+    }
+  };
+
+  const promptDeleteTournament = (tournament: Tournament) => {
+    setTournamentToDelete(tournament);
+    setDeleteConfirmationInput('');
+    setIsDeleteOpen(true);
+  };
+
+  const handleDeleteTournament = async () => {
+    if (!tournamentToDelete) return;
+    setIsDeletingTournament(true);
+
+    try {
+      const tournamentId = tournamentToDelete.id;
+
+      // 1. Break self-referencing pointer links on matches
+      await supabase
+        .from('matches')
+        .update({ next_match_id: null })
+        .eq('tournament_id', tournamentId);
+
+      // 2. Fetch all match IDs in this tournament
+      const { data: matchesData } = await supabase
+        .from('matches')
+        .select('id')
+        .eq('tournament_id', tournamentId);
+
+      if (matchesData && matchesData.length > 0) {
+        const matchIds = matchesData.map(m => m.id);
+        // Delete match events referencing these matches
+        await supabase.from('match_events').delete().in('match_id', matchIds);
+        // Delete player stars referencing these matches
+        await supabase.from('player_stars').delete().in('match_id', matchIds);
+      }
+
+      // 3. Delete player stars associated directly with the tournament
+      await supabase.from('player_stars').delete().eq('tournament_id', tournamentId);
+
+      // 4. Delete matches in tournament
+      await supabase.from('matches').delete().eq('tournament_id', tournamentId);
+
+      // 5. Find teams in tournament to remove rosters and then teams
+      const { data: teamsData } = await supabase.from('teams').select('id').eq('tournament_id', tournamentId);
+      if (teamsData && teamsData.length > 0) {
+        const teamIds = teamsData.map(t => t.id);
+        await supabase.from('team_roster').delete().in('team_id', teamIds);
+        await supabase.from('teams').delete().eq('tournament_id', tournamentId);
+      }
+
+      // 6. Delete the tournament itself
+      const { error } = await supabase.from('tournaments').delete().eq('id', tournamentId);
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success(`Tournament "${tournamentToDelete.name}" has been permanently terminated.`);
+
+      logAudit({
+        action: 'DELETE_TOURNAMENT',
+        entity_type: 'tournaments',
+        entity_id: tournamentId,
+        details: `Terminated and deleted tournament: ${tournamentToDelete.name}`
+      });
+
+      setIsDeleteOpen(false);
+      setTournamentToDelete(null);
+      setDeleteConfirmationInput('');
+      fetchTournaments();
+      fetchPendingTeams();
+    } catch (err: any) {
+      toast.error('Failed to delete tournament: ' + err.message);
+    } finally {
+      setIsDeletingTournament(false);
     }
   };
 
   const handleApproveTeam = async (teamId: string) => {
+    // Check if the team's tournament is in Draft mode
+    const pendingTeam = pendingTeams.find(t => t.id === teamId);
+    const tournamentStatus = (pendingTeam?.tournaments as any)?.status;
+
+    if (tournamentStatus && tournamentStatus !== 'Draft') {
+      toast.error(`Team approvals are only permitted during the Draft phase. This tournament is already "${tournamentStatus}".`);
+      return;
+    }
+
     const { error } = await supabase
       .from('teams')
       .update({ status: 'Approved' })
@@ -199,7 +395,7 @@ export const TournamentManagement = () => {
         action: 'APPROVE_TEAM',
         entity_type: 'teams',
         entity_id: teamId,
-        details: `Approved team ${teamId}`
+        details: `Approved team ${teamId} for tournament ${(pendingTeam?.tournaments as any)?.name || 'Draft tournament'}`
       });
 
       fetchPendingTeams();
@@ -447,7 +643,37 @@ export const TournamentManagement = () => {
     setProposedMatches(prev => prev.filter((_, i) => i !== index));
   };
 
-  // --- Wizard: Batch Publish to Supabase (2-Pass Batch Insert) ---
+  // Bracket Recommendation Logic based on participant team count
+  const getBracketRecommendation = (teamCount: number) => {
+    if (teamCount < 2) {
+      return {
+        type: 'single' as const,
+        title: 'Need at least 2 teams',
+        reason: 'Recruit and approve more teams during the draft phase to generate a bracket.'
+      };
+    }
+    if (teamCount <= 4) {
+      return {
+        type: 'round_robin' as const,
+        title: 'Round Robin Recommended',
+        reason: `With ${teamCount} teams, a Round Robin format guarantees every squad plays each other before finals.`
+      };
+    }
+    if (teamCount >= 5 && teamCount <= 16) {
+      return {
+        type: 'single' as const,
+        title: 'Single Elimination Recommended',
+        reason: `Optimal for ${teamCount} teams. High-intensity knockout tree with auto-handled BYEs.`
+      };
+    }
+    return {
+      type: 'double' as const,
+      title: 'Multi-Pool Elimination Recommended',
+      reason: `With ${teamCount} teams, multiple pools or double elimination provides the fairest championship progression.`
+    };
+  };
+
+  // --- Wizard: Batch Publish to Supabase (2-Pass Batch Insert & Activate Tournament) ---
   const handlePublishBracket = async () => {
     if (!selectedTournamentForBracket || proposedMatches.length === 0) return;
     setIsPublishing(true);
@@ -510,18 +736,30 @@ export const TournamentManagement = () => {
         }
       }
 
-      toast.success(`Published full multi-round bracket (${proposedMatches.length} matches)!`);
+      // Pass 3: Transition Tournament status from 'Draft' to 'Active' so everyone can see!
+      const { error: statusError } = await supabase
+        .from('tournaments')
+        .update({ status: 'Active' })
+        .eq('id', selectedTournamentForBracket.id);
+
+      if (statusError) {
+        console.warn('Could not update tournament status:', statusError);
+      }
+
+      toast.success(`Published full bracket (${proposedMatches.length} matches) and set tournament to ACTIVE!`);
       
       logAudit({
         action: 'GENERATE_BRACKET',
         entity_type: 'matches',
         entity_id: selectedTournamentForBracket.id,
-        details: `Published ${proposedMatches.length} matches across multi-round bracket for tournament: ${selectedTournamentForBracket.name}`
+        details: `Published ${proposedMatches.length} matches and activated tournament: ${selectedTournamentForBracket.name}`
       });
 
       setProposedMatches([]);
       setWizardStep(1);
+      setIsBracketOpen(false);
       fetchBracketData(selectedTournamentForBracket.id);
+      fetchTournaments();
     } catch (err: any) {
       toast.error('Failed to publish bracket: ' + err.message);
     } finally {
@@ -567,49 +805,221 @@ export const TournamentManagement = () => {
                 </Button>
               }
             />
-            <DialogContent className="max-w-md rounded-[2rem] border-slate-200 dark:border-white/10 p-8">
-              <DialogHeader>
-                <DialogTitle className="text-3xl font-black italic uppercase tracking-tighter">Host <span className="text-orange-500">Tournament</span></DialogTitle>
-                <DialogDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-2">Define the rules and schedule for your upcoming event.</DialogDescription>
+            <DialogContent className="w-full sm:max-w-2xl max-w-[95vw] rounded-3xl border-slate-200 dark:border-white/10 p-6 shadow-2xl bg-white dark:bg-slate-950">
+              <DialogHeader className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-orange-500 rounded-lg text-white shadow-sm shadow-orange-500/20">
+                      <Sparkles className="size-3.5" />
+                    </div>
+                    <DialogTitle className="text-2xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white">
+                      Host <span className="text-orange-500">Tournament</span>
+                    </DialogTitle>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 text-[10px] font-black uppercase tracking-wider border border-orange-500/20">
+                    Draft Phase
+                  </span>
+                </div>
+                <DialogDescription className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest">
+                  Initialized tournaments enter Draft status ("Coming Soon") for team enrollment.
+                </DialogDescription>
               </DialogHeader>
-              <div className="space-y-6 py-6">
-                <div className="space-y-3">
-                  <Label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">Event Name</Label>
-                  <Input placeholder="e.g., PSU Intramurals 2024" value={newTournament.name} onChange={(e) => setNewTournament({...newTournament, name: e.target.value})} className="h-14 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 focus:ring-orange-500 rounded-2xl font-bold placeholder:font-normal" />
+
+              {/* Mode Selector */}
+              <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl gap-1.5 border border-slate-200/60 dark:border-white/5 my-1">
+                <button
+                  type="button"
+                  onClick={() => { setCreationMode('binturungan'); setEventName('PSU Binturungan 2026'); }}
+                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-black uppercase italic tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                    creationMode === 'binturungan' 
+                      ? 'bg-orange-500 text-white shadow-sm shadow-orange-500/20 scale-[1.01]' 
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+                  }`}
+                >
+                  <Trophy className="size-3.5" /> One-Click Binturungan (All Sports)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setCreationMode('single'); setEventName('PSU Friendly Games'); }}
+                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-black uppercase italic tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                    creationMode === 'single' 
+                      ? 'bg-orange-500 text-white shadow-sm shadow-orange-500/20 scale-[1.01]' 
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+                  }`}
+                >
+                  <Plus className="size-3.5" /> Custom Single Sport
+                </button>
+              </div>
+
+              <div className="space-y-3.5 py-1">
+                {/* Event Name */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-[0.2em]">
+                      Event Master Name
+                    </Label>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-orange-500">Unique Name</span>
+                  </div>
+                  <Input 
+                    placeholder="e.g., PSU Binturungan 2026" 
+                    value={eventName} 
+                    onChange={(e) => setEventName(e.target.value)} 
+                    className="h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 focus:ring-orange-500 rounded-xl font-bold text-sm text-slate-900 dark:text-white transition-all" 
+                  />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-3">
-                    <Label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">Sport Category</Label>
-                    <Input placeholder="e.g., Basketball" value={newTournament.sport} onChange={(e) => setNewTournament({...newTournament, sport: e.target.value})} className="h-14 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 focus:ring-orange-500 rounded-2xl font-bold placeholder:font-normal" />
+
+                {creationMode === 'binturungan' ? (
+                  /* ===== BINTURUNGAN SPORTS CHECKLIST ===== */
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-[0.2em] flex items-center gap-1">
+                        <CheckCircle2 className="size-3 text-orange-500" /> 
+                        Sports Checklist
+                        <span className="ml-1 px-1.5 py-0.2 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 text-[9px] font-black">
+                          {selectedSports.length}/{BINTURUNGAN_DEFAULT_SPORTS.length}
+                        </span>
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          type="button" 
+                          onClick={() => setSelectedSports(BINTURUNGAN_DEFAULT_SPORTS.map(s => s.name))} 
+                          className="text-[10px] font-black uppercase text-orange-500 hover:underline tracking-wider transition-colors"
+                        >
+                          Select All
+                        </button>
+                        <span className="text-slate-300 dark:text-slate-700">|</span>
+                        <button 
+                          type="button" 
+                          onClick={() => setSelectedSports([])} 
+                          className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 tracking-wider transition-colors"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-white/10">
+                      {BINTURUNGAN_DEFAULT_SPORTS.map((sport) => {
+                        const isChecked = selectedSports.includes(sport.name);
+                        return (
+                          <button
+                            type="button"
+                            key={sport.name}
+                            onClick={() => toggleSport(sport.name)}
+                            className={`flex items-center justify-between px-2.5 py-2 rounded-xl border text-left transition-all duration-200 active:scale-95 ${
+                              isChecked 
+                                ? 'bg-orange-500 text-white border-orange-500 shadow-sm shadow-orange-500/20 font-bold' 
+                                : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-white/5 text-slate-700 dark:text-slate-300 hover:border-orange-500/40 hover:bg-orange-50/50 dark:hover:bg-slate-800'
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-sm leading-none select-none">{sport.icon}</span>
+                              <span className="text-xs font-black uppercase tracking-tight truncate">{sport.name}</span>
+                            </div>
+                            <div className={`size-3.5 rounded flex items-center justify-center border shrink-0 ml-1 ${
+                              isChecked ? 'bg-white text-orange-500 border-white' : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900'
+                            }`}>
+                              {isChecked && <Check className="size-2.5 stroke-[3]" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="space-y-3">
-                    <Label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">Competition Format</Label>
-                    <Select value={newTournament.type} onValueChange={(val) => setNewTournament({...newTournament, type: val ?? 'Binturungan'})}>
-                      <SelectTrigger className="h-14 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-2xl font-bold">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-2xl">
-                        <SelectItem value="Binturungan" className="rounded-xl">Binturungan</SelectItem>
-                        <SelectItem value="STRASUC" className="rounded-xl">STRASUC</SelectItem>
-                        <SelectItem value="Faculty and Staff Friendly Games" className="rounded-xl">Friendly Games</SelectItem>
-                      </SelectContent>
-                    </Select>
+                ) : (
+                  /* ===== SINGLE SPORT SELECTOR ===== */
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-[0.2em]">Sport Discipline</Label>
+                      <Select value={singleSport} onValueChange={setSingleSport}>
+                        <SelectTrigger className="h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-xl font-bold text-xs text-slate-900 dark:text-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          {BINTURUNGAN_DEFAULT_SPORTS.map(s => (
+                            <SelectItem key={s.name} value={s.name} className="rounded-lg font-bold text-xs">
+                              {s.icon} {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-[0.2em]">Tournament Format</Label>
+                      <Select value={singleType} onValueChange={setSingleType}>
+                        <SelectTrigger className="h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-xl font-bold text-xs text-slate-900 dark:text-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          <SelectItem value="Binturungan" className="rounded-lg font-bold text-xs">Binturungan</SelectItem>
+                          <SelectItem value="STRASUC" className="rounded-lg font-bold text-xs">STRASUC</SelectItem>
+                          <SelectItem value="Faculty and Staff Friendly Games" className="rounded-lg font-bold text-xs">Friendly Games</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
+                )}
+
+                {/* Dates */}
+                <div className="space-y-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-[0.2em]">Kickoff Date</Label>
+                      <Input 
+                        type="date" 
+                        value={startDate} 
+                        onChange={(e) => setStartDate(e.target.value)} 
+                        className="h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-xl font-bold text-xs text-slate-900 dark:text-white" 
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-[0.2em]">Finals Date</Label>
+                      <Input 
+                        type="date" 
+                        value={endDate} 
+                        onChange={(e) => setEndDate(e.target.value)} 
+                        className="h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-xl font-bold text-xs text-slate-900 dark:text-white" 
+                      />
+                    </div>
+                  </div>
+                  {startDate && endDate && new Date(startDate) > new Date(endDate) && (
+                    <div className="flex items-center gap-1.5 text-red-500 text-[11px] font-bold px-1 pt-0.5 animate-in fade-in">
+                      <AlertTriangle className="size-3 shrink-0" />
+                      <span>Kickoff date cannot be after finals date.</span>
+                    </div>
+                  )}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-3">
-                    <Label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">Kickoff Date</Label>
-                    <Input type="date" value={newTournament.start_date} onChange={(e) => setNewTournament({...newTournament, start_date: e.target.value})} className="h-14 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-2xl font-bold" />
-                  </div>
-                  <div className="space-y-3">
-                    <Label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">Finals Date</Label>
-                    <Input type="date" value={newTournament.end_date} onChange={(e) => setNewTournament({...newTournament, end_date: e.target.value})} className="h-14 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-2xl font-bold" />
-                  </div>
+
+                {/* Status Notice */}
+                <div className="py-2 px-3 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center gap-2">
+                  <Info className="size-4 text-orange-500 shrink-0" />
+                  <p className="text-[11px] text-orange-600 dark:text-orange-400 font-medium">
+                    Events launch in <strong>Draft Status ("Coming Soon")</strong>. Coaches can immediately enroll squads.
+                  </p>
                 </div>
               </div>
-              <DialogFooter className="gap-3 pt-4">
-                <Button variant="ghost" onClick={() => setIsCreateOpen(false)} className="h-14 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-100 dark:hover:bg-white/5">Cancel</Button>
-                <Button onClick={handleCreateTournament} className="h-14 flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-black uppercase italic tracking-[0.1em] shadow-lg shadow-orange-500/20">Launch Event</Button>
+
+              <DialogFooter className="gap-2 pt-3 border-t border-slate-100 dark:border-white/5">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setIsCreateOpen(false)} 
+                  className="h-11 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-slate-100 dark:hover:bg-white/5 transition-all"
+                  disabled={isCreatingTournaments}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleCreateTournament} 
+                  disabled={isCreatingTournaments}
+                  className="h-11 flex-1 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-xl font-black uppercase italic tracking-wider text-xs shadow-md shadow-orange-500/20 gap-2 transition-all active:scale-[0.98]"
+                >
+                  {isCreatingTournaments ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white" />
+                  ) : (
+                    <Trophy className="size-4" />
+                  )}
+                  {isCreatingTournaments ? 'Initializing Events...' : creationMode === 'binturungan' ? `Launch ${selectedSports.length} Binturungan Events (Draft)` : 'Launch Event (Draft)'}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -702,13 +1112,24 @@ export const TournamentManagement = () => {
                       <CalendarDays className="size-4 text-orange-500" />
                       {new Date(t.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - {new Date(t.end_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </div>
-                    <Button 
-                      className="w-full h-14 flex items-center justify-center gap-3 bg-slate-900 hover:bg-orange-500 text-white font-black uppercase italic tracking-[0.1em] rounded-2xl shadow-xl transition-all duration-300 group-hover:shadow-orange-500/20"
-                      onClick={() => openWizard(t)}
-                    >
-                      <LayoutGrid className="size-5" />
-                      Setup Bracket
-                    </Button>
+                    <div className="flex items-center gap-3">
+                      <Button 
+                        className="flex-1 h-14 flex items-center justify-center gap-3 bg-slate-900 hover:bg-orange-500 text-white font-black uppercase italic tracking-[0.1em] rounded-2xl shadow-xl transition-all duration-300 group-hover:shadow-orange-500/20"
+                        onClick={() => openWizard(t)}
+                      >
+                        <LayoutGrid className="size-5" />
+                        Setup Bracket
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-14 w-14 rounded-2xl text-slate-400 hover:text-red-500 hover:bg-red-500/10 transition-colors shrink-0"
+                        title="Terminate Tournament"
+                        onClick={() => promptDeleteTournament(t)}
+                      >
+                        <Trash2 className="size-5" />
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -736,19 +1157,30 @@ export const TournamentManagement = () => {
                       <TableCell className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">{t.sport}</TableCell>
                       <TableCell>
                         <Badge variant={t.status === 'Completed' ? 'default' : 'secondary'} className="text-[9px] font-black uppercase tracking-tighter px-2">
-                          {t.status}
+                           {t.status}
                         </Badge>
                       </TableCell>
                       <TableCell className="font-bold text-xs text-slate-400">{new Date(t.start_date).toLocaleDateString()}</TableCell>
                       <TableCell className="text-right pr-8">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="font-black uppercase italic tracking-widest text-[10px] text-orange-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-500/10"
-                          onClick={() => openWizard(t)}
-                        >
-                          Manage <ChevronRight className="size-3 ml-1" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="font-black uppercase italic tracking-widest text-[10px] text-orange-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-500/10"
+                            onClick={() => openWizard(t)}
+                          >
+                            Manage <ChevronRight className="size-3 ml-1" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-slate-400 hover:text-red-500 hover:bg-red-500/10"
+                            title="Terminate Tournament"
+                            onClick={() => promptDeleteTournament(t)}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -795,21 +1227,83 @@ export const TournamentManagement = () => {
                 ) : wizardStep === 1 ? (
                   /* ===== STEP 1: Format & Teams ===== */
                   <div className="space-y-6">
-                    {/* Format Card */}
-                    <div className="flex gap-4">
-                      <div className="flex-1 p-5 rounded-2xl border-2 border-orange-500 bg-orange-50/50 dark:bg-orange-500/5 relative">
-                        <div className="absolute top-3 right-3">
-                          <CheckCircle2 className="size-5 text-orange-500" />
+                    {/* System Recommendation Banner */}
+                    {(() => {
+                      const rec = getBracketRecommendation(approvedTeams.length);
+                      return (
+                        <div className="p-5 rounded-2xl bg-gradient-to-r from-orange-500/10 via-orange-500/5 to-transparent border border-orange-500/30 flex items-start gap-4">
+                          <div className="p-3 bg-orange-500 rounded-xl text-white shadow-lg shadow-orange-500/20 shrink-0">
+                            <Lightbulb className="size-6" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">System Recommendation</span>
+                              <Badge className="bg-orange-500 text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5">
+                                {approvedTeams.length} Teams Ready
+                              </Badge>
+                            </div>
+                            <h4 className="font-black italic uppercase text-lg text-slate-900 dark:text-white mt-0.5">
+                              {rec.title}
+                            </h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium leading-relaxed">
+                              {rec.reason}
+                            </p>
+                          </div>
                         </div>
+                      );
+                    })()}
+
+                    {/* Format Selector Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Single Elimination */}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBracketType('single')}
+                        className={`p-5 rounded-2xl border-2 text-left relative transition-all ${
+                          selectedBracketType === 'single'
+                            ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-500/5 shadow-md shadow-orange-500/10'
+                            : 'border-slate-200 dark:border-white/5 hover:border-orange-500/30 bg-white dark:bg-slate-900'
+                        }`}
+                      >
+                        {selectedBracketType === 'single' && (
+                          <div className="absolute top-3 right-3">
+                            <CheckCircle2 className="size-5 text-orange-500" />
+                          </div>
+                        )}
                         <LayoutGrid className="size-8 text-orange-500 mb-3" />
-                        <h4 className="font-black uppercase italic tracking-tight text-lg text-slate-900 dark:text-white">Single Elimination</h4>
-                        <p className="text-slate-500 text-xs font-medium mt-1">Lose once and you're out. Standard knockout format.</p>
-                      </div>
-                      <div className="flex-1 p-5 rounded-2xl border-2 border-slate-100 dark:border-white/5 opacity-40 cursor-not-allowed">
-                        <LayoutGrid className="size-8 text-slate-300 mb-3" />
-                        <h4 className="font-black uppercase italic tracking-tight text-lg text-slate-400">Double Elimination</h4>
-                        <p className="text-slate-400 text-xs font-medium mt-1">Coming soon in a future update.</p>
-                      </div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-black uppercase italic tracking-tight text-lg text-slate-900 dark:text-white">Single Elimination</h4>
+                          {approvedTeams.length >= 4 && approvedTeams.length <= 16 && (
+                            <Badge className="bg-orange-500 text-white text-[8px] font-black uppercase">Suggested</Badge>
+                          )}
+                        </div>
+                        <p className="text-slate-500 text-xs font-medium mt-1">Standard knockout tree. Loser is eliminated, winners advance.</p>
+                      </button>
+
+                      {/* Round Robin */}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBracketType('round_robin')}
+                        className={`p-5 rounded-2xl border-2 text-left relative transition-all ${
+                          selectedBracketType === 'round_robin'
+                            ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-500/5 shadow-md shadow-orange-500/10'
+                            : 'border-slate-200 dark:border-white/5 hover:border-orange-500/30 bg-white dark:bg-slate-900'
+                        }`}
+                      >
+                        {selectedBracketType === 'round_robin' && (
+                          <div className="absolute top-3 right-3">
+                            <CheckCircle2 className="size-5 text-orange-500" />
+                          </div>
+                        )}
+                        <Shuffle className="size-8 text-orange-500 mb-3" />
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-black uppercase italic tracking-tight text-lg text-slate-900 dark:text-white">Round Robin / Pools</h4>
+                          {approvedTeams.length > 0 && approvedTeams.length <= 4 && (
+                            <Badge className="bg-emerald-600 text-white text-[8px] font-black uppercase">Suggested</Badge>
+                          )}
+                        </div>
+                        <p className="text-slate-500 text-xs font-medium mt-1">All vs All format. Every squad battles each team before finals.</p>
+                      </button>
                     </div>
 
                     {/* Approved Teams Count */}
@@ -1169,6 +1663,60 @@ export const TournamentManagement = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Delete / Terminate Tournament Modal */}
+      <Dialog open={isDeleteOpen} onOpenChange={(open) => { setIsDeleteOpen(open); if (!open) { setTournamentToDelete(null); setDeleteConfirmationInput(''); } }}>
+        <DialogContent className="w-full sm:max-w-md max-w-[95vw] rounded-3xl border-rose-200 dark:border-rose-500/20 p-6 shadow-2xl bg-white dark:bg-slate-950">
+          <DialogHeader className="space-y-2">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-xl border border-rose-500/20">
+                <AlertTriangle className="size-5" />
+              </div>
+              <DialogTitle className="text-xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white">
+                Terminate <span className="text-rose-600">Tournament</span>
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+              Are you sure you want to permanently terminate <strong className="text-slate-900 dark:text-white font-bold">{tournamentToDelete?.name}</strong>? This action will purge all registered teams, brackets, matches, and player records for this event.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="my-2 p-3 bg-rose-500/5 rounded-2xl border border-rose-500/15 space-y-2">
+            <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
+              Type <span className="font-mono font-black text-rose-700 dark:text-rose-300">DELETE</span> to confirm:
+            </p>
+            <Input
+              placeholder="DELETE"
+              value={deleteConfirmationInput}
+              onChange={(e) => setDeleteConfirmationInput(e.target.value)}
+              className="h-10 bg-white dark:bg-slate-900 border-rose-200 dark:border-rose-500/30 rounded-xl font-mono font-bold text-xs uppercase tracking-widest text-slate-900 dark:text-white"
+            />
+          </div>
+
+          <DialogFooter className="gap-2 pt-2 border-t border-slate-100 dark:border-white/5">
+            <Button
+              variant="ghost"
+              onClick={() => { setIsDeleteOpen(false); setTournamentToDelete(null); }}
+              className="h-10 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-slate-100 dark:hover:bg-white/5"
+              disabled={isDeletingTournament}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteTournament}
+              disabled={deleteConfirmationInput.trim().toUpperCase() !== 'DELETE' || isDeletingTournament}
+              className="h-10 flex-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl font-black uppercase italic tracking-wider text-xs shadow-md shadow-rose-600/20 gap-2 transition-all active:scale-[0.98]"
+            >
+              {isDeletingTournament ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white" />
+              ) : (
+                <Trash2 className="size-3.5" />
+              )}
+              {isDeletingTournament ? 'Terminating...' : 'Confirm Termination'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

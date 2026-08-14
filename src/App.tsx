@@ -15,6 +15,7 @@ import { TournamentManagement } from '@/pages/TournamentManagement';
 import { LiveMatch } from '@/pages/LiveMatch';
 import { MyAchievements } from '@/pages/MyAchievements';
 import { TournamentExplorer } from '@/pages/TournamentExplorer';
+import { Ranking } from '@/pages/Ranking';
 import { AppLayout } from '@/components/AppLayout';
 import { NotFound } from '@/pages/NotFound';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
@@ -66,6 +67,7 @@ function AppRoutes() {
           </Route>
           <Route path="/match/:matchId" element={<LiveMatch />} />
           <Route path="/explorer" element={<TournamentExplorer />} />
+          <Route path="/ranking" element={<Ranking />} />
         </Route>
       </Route>
 

@@ -47,6 +47,7 @@ export const PlayerDashboard = () => {
   const [invites, setInvites] = useState<RosterInvite[]>([]);
   const [myTeams, setMyTeams] = useState<RosterInvite[]>([]);
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
+  const [draftTournaments, setDraftTournaments] = useState<any[]>([]);
   const [stars, setStars] = useState<PlayerStar[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -149,6 +150,17 @@ export const PlayerDashboard = () => {
     
     if (starsData) {
       setStars(starsData as unknown as PlayerStar[]);
+    }
+
+    // Fetch Draft / Coming Soon Tournaments
+    const { data: draftData } = await supabase
+      .from('tournaments')
+      .select('*')
+      .eq('status', 'Draft')
+      .order('created_at', { ascending: false });
+
+    if (draftData) {
+      setDraftTournaments(draftData);
     }
 
     setIsLoading(false);
@@ -283,6 +295,51 @@ export const PlayerDashboard = () => {
           </CardContent>
         </Card>
       </section>
+
+      {/* Coming Soon • Upcoming Tournaments Banner */}
+      {draftTournaments.length > 0 && (
+        <section className="space-y-4 animate-in fade-in slide-in-from-bottom-3 duration-500">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2 w-2 rounded-full bg-orange-500 animate-ping" />
+              <h2 className="text-xl font-black uppercase italic tracking-tight text-slate-900 flex items-center gap-2">
+                <Clock className="size-5 text-orange-500" /> Coming Soon • Upcoming Tournaments
+              </h2>
+            </div>
+            <span className="px-2.5 py-0.5 rounded-full bg-orange-500/10 text-orange-600 font-black text-[10px] uppercase tracking-wider border border-orange-500/20">
+              Draft & Recruitment Phase
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {draftTournaments.map((t) => (
+              <div 
+                key={t.id}
+                onClick={() => navigate('/matches')}
+                className="p-5 rounded-2xl bg-gradient-to-br from-white via-orange-50/20 to-orange-50/40 border-2 border-orange-500/20 hover:border-orange-500 hover:shadow-lg transition-all duration-300 cursor-pointer group relative overflow-hidden"
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="px-2 py-0.5 rounded-md bg-orange-500 text-white font-bold text-[9px] uppercase tracking-wider">
+                    {t.sport}
+                  </span>
+                  <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest bg-orange-500/10 px-2 py-0.5 rounded-full">
+                    Coming Soon
+                  </span>
+                </div>
+                <h4 className="font-black text-base uppercase italic tracking-tight text-slate-900 truncate group-hover:text-orange-500 transition-colors">
+                  {t.name}
+                </h4>
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-semibold">
+                  <span>Kickoff: {new Date(t.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  <span className="text-orange-600 font-black uppercase tracking-wider group-hover:translate-x-1 transition-transform inline-flex items-center gap-0.5">
+                    View Arena →
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Live & Upcoming Games Section */}
       <section className="space-y-4">

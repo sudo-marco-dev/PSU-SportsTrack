@@ -36,6 +36,8 @@ type Player = {
 type Tournament = {
   id: string;
   name: string;
+  sport?: string;
+  status?: string;
 };
 
 type RosterMember = {
@@ -118,7 +120,7 @@ export const TeamManagement = () => {
   };
 
   const fetchTournaments = async () => {
-    const { data } = await supabase.from('tournaments').select('id, name');
+    const { data } = await supabase.from('tournaments').select('id, name, sport, status').eq('status', 'Draft');
     if (data) setTournaments(data as Tournament[]);
   };
 
@@ -258,24 +260,37 @@ export const TeamManagement = () => {
                     />
                   </div>
                   <div className="space-y-3">
-                    <label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">Target Tournament</label>
-                    <Select value={selectedTournament} onValueChange={(val) => setSelectedTournament(val || '')}>
-                      <SelectTrigger className="h-14 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-2xl font-bold">
-                        <SelectValue placeholder="Select a tournament">
-                          {selectedTournament && (() => {
-                            const tournament = (tournaments || []).find(t => t.id === selectedTournament);
-                            return tournament ? tournament.name : selectedTournament;
-                          })()}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className="rounded-2xl">
-                        {tournaments.map((tournament) => (
-                          <SelectItem key={tournament.id} value={tournament.id} className="rounded-xl">
-                            {tournament.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1 flex items-center gap-1.5">
+                      <span className="inline-flex px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 font-black text-[8px] uppercase tracking-wider border border-orange-500/20">Registration Open</span>
+                      Target Tournament (Draft Phase Only)
+                    </label>
+                    {tournaments.length === 0 ? (
+                      <div className="h-14 flex items-center gap-3 px-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-400 text-sm font-medium">
+                        <span className="text-orange-500">⚠</span>
+                        No draft tournaments available for registration right now.
+                      </div>
+                    ) : (
+                      <Select value={selectedTournament} onValueChange={(val) => setSelectedTournament(val || '')}>
+                        <SelectTrigger className="h-14 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-2xl font-bold">
+                          <SelectValue placeholder="Select a tournament (Registration Open)">
+                            {selectedTournament && (() => {
+                              const tournament = (tournaments || []).find(t => t.id === selectedTournament);
+                              return tournament ? `${tournament.name}${tournament.sport ? ` (${tournament.sport})` : ''}` : selectedTournament;
+                            })()}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="rounded-2xl">
+                          {tournaments.map((tournament) => (
+                            <SelectItem key={tournament.id} value={tournament.id} className="rounded-xl">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="font-black text-sm">{tournament.name}</span>
+                                {tournament.sport && <span className="text-[10px] text-slate-400 font-medium">{tournament.sport} • Registration Open</span>}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                 </div>
                 <DialogFooter className="gap-3 pt-4">

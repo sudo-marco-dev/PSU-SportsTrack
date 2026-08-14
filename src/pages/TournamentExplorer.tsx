@@ -158,26 +158,36 @@ export const TournamentExplorer = () => {
                 </div>
               </Button>
               <div className="h-px bg-slate-100 my-2 mx-4" />
-              {tournaments?.map((t, index) => (
-                <Button
-                  key={t.id}
-                  variant={selectedTournamentId === t.id ? 'default' : 'outline'}
-                  className={`justify-start text-left h-auto py-4 px-5 rounded-2xl border-2 transition-all duration-300 animate-in fade-in slide-in-from-left-2 fill-mode-both ${
-                    selectedTournamentId === t.id 
-                    ? 'bg-slate-950 text-white border-slate-950 shadow-xl shadow-slate-950/20 scale-[1.02]' 
-                    : 'bg-white border-slate-100 hover:border-orange-500/30 hover:bg-slate-50 text-slate-600'
-                  }`}
-                  style={{ animationDelay: `${index * 50}ms` }}
-                  onClick={() => setSelectedTournamentId(t.id)}
-                >
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-black uppercase italic tracking-tight text-sm truncate max-w-[180px]">{t?.name || 'Unnamed'}</span>
-                    <span className="text-[9px] font-bold opacity-50 uppercase tracking-widest">
-                      EST. {t?.start_date ? new Date(t.start_date).getFullYear() : 'N/A'}
-                    </span>
-                  </div>
-                </Button>
-              ))}
+              {tournaments?.map((t, index) => {
+                const isDraft = t?.status === 'Draft';
+                return (
+                  <Button
+                    key={t.id}
+                    variant={selectedTournamentId === t.id ? 'default' : 'outline'}
+                    className={`justify-start text-left h-auto py-4 px-5 rounded-2xl border-2 transition-all duration-300 animate-in fade-in slide-in-from-left-2 fill-mode-both relative group ${
+                      selectedTournamentId === t.id 
+                      ? 'bg-slate-950 text-white border-slate-950 shadow-xl shadow-slate-950/20 scale-[1.02]' 
+                      : 'bg-white border-slate-100 hover:border-orange-500/30 hover:bg-slate-50 text-slate-600'
+                    }`}
+                    style={{ animationDelay: `${index * 50}ms` }}
+                    onClick={() => setSelectedTournamentId(t.id)}
+                  >
+                    <div className="flex flex-col gap-1 w-full">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-black uppercase italic tracking-tight text-sm truncate max-w-[140px]">{t?.name || 'Unnamed'}</span>
+                        {isDraft && (
+                          <span className="px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-600 font-black text-[8px] uppercase tracking-wider shrink-0 border border-orange-500/20">
+                            Coming Soon
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[9px] font-bold opacity-50 uppercase tracking-widest">
+                        {isDraft ? 'Registration Open' : `EST. ${t?.start_date ? new Date(t.start_date).getFullYear() : 'N/A'}`}
+                      </span>
+                    </div>
+                  </Button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -204,72 +214,107 @@ export const TournamentExplorer = () => {
             </div>
 
             <TabsContent value="live" className="w-full outline-none mt-0 space-y-12">
-              {Object.keys(liveGroups).length === 0 ? (
-                <Card className="border-dashed border-2 py-20 text-center bg-slate-50/50">
-                  <Clock className="size-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500 font-medium italic">No live or upcoming matches scheduled for this selection.</p>
-                </Card>
-              ) : (
-                Object.entries(liveGroups).map(([date, dateMatches]) => (
-                  <div key={date} className="relative border-l-2 border-slate-200 pl-6 ml-3 mb-8 space-y-4">
-                    <div className="absolute -left-[11px] top-0 bg-orange-500 w-5 h-5 rounded-full border-4 border-slate-50 flex items-center justify-center"></div>
-                    <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest pt-0.5 mb-6 flex items-center gap-3">
-                      {date}
-                      <span className="h-px flex-1 bg-slate-100" />
-                    </h4>
-                    
-                    <div className="space-y-3">
-                      {dateMatches.map((match) => (
-                        <div key={match.id} className="flex flex-col md:flex-row items-center justify-between bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all group/card">
-                          {/* Status/Time */}
-                          <div className="flex items-center gap-4 w-full md:w-40 mb-4 md:mb-0">
-                            {match.status === 'Ongoing' ? (
-                              <div className="flex items-center gap-2 px-2 py-1 bg-red-500 text-white rounded-md animate-pulse shadow-lg shadow-red-500/20">
-                                <span className="flex h-1.5 w-1.5 rounded-full bg-white animate-ping" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">LIVE NOW</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2 px-3 py-1 bg-slate-50 border border-slate-100 rounded-md">
-                                <Clock className="size-3 text-slate-400" />
-                                <span className="text-slate-600 font-bold text-xs tabular-nums">
-                                  {match.match_time ? new Date(match.match_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'TBD'}
-                                </span>
-                              </div>
-                            )}
-                            <div className="md:hidden flex-1 h-px bg-slate-100" />
-                          </div>
+              {(() => {
+                const selectedTourObj = tournaments.find(t => t.id === selectedTournamentId);
+                const isSelectedDraft = selectedTourObj?.status === 'Draft';
 
-                          {/* Matchup */}
-                          <div className="flex items-center justify-center gap-4 flex-1 mb-4 md:mb-0">
-                            <div className="flex-1 text-right">
-                              <span className="text-lg font-black text-slate-900 uppercase italic tracking-tight">{match.team_a?.name || 'TBD'}</span>
-                            </div>
-                            <div className="px-3 py-1 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-3">
-                              <span className="text-lg font-black text-slate-300 tabular-nums">{match.team_a_score || 0}</span>
-                              <span className="text-[10px] font-black text-slate-200 italic tracking-widest">VS</span>
-                              <span className="text-lg font-black text-slate-300 tabular-nums">{match.team_b_score || 0}</span>
-                            </div>
-                            <div className="flex-1 text-left">
-                              <span className="text-lg font-black text-slate-900 uppercase italic tracking-tight">{match.team_b?.name || 'TBD'}</span>
-                            </div>
-                          </div>
+                if (isSelectedDraft) {
+                  return (
+                    <Card className="border-2 border-dashed border-orange-500/30 py-16 px-8 text-center bg-gradient-to-b from-orange-500/10 via-orange-500/5 to-transparent rounded-[2.5rem]">
+                      <div className="size-16 rounded-3xl bg-orange-500/10 text-orange-500 flex items-center justify-center mx-auto mb-4 border border-orange-500/20 shadow-lg shadow-orange-500/10">
+                        <Clock className="size-8 animate-pulse" />
+                      </div>
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest mb-3">
+                        Draft Phase • Coming Soon
+                      </div>
+                      <h3 className="text-2xl font-black italic uppercase tracking-tight text-slate-900 mb-2">
+                        {selectedTourObj?.name}
+                      </h3>
+                      <p className="text-slate-500 font-medium text-sm max-w-md mx-auto mb-6">
+                        This tournament is currently in the <strong>Draft Phase</strong>. Coaches are actively submitting team applications. Live brackets and match schedules will be broadcast as soon as recruitment completes.
+                      </p>
+                      <div className="flex items-center justify-center gap-4 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                        <span>Status: <span className="text-orange-500">Draft / Open</span></span>
+                        <span>•</span>
+                        <span>Estimated Kickoff: <span className="text-slate-700">{selectedTourObj?.start_date ? new Date(selectedTourObj.start_date).toLocaleDateString() : 'TBD'}</span></span>
+                      </div>
+                    </Card>
+                  );
+                }
 
-                          {/* Action */}
-                          <div className="w-full md:w-auto ml-0 md:ml-6">
-                            <Button 
-                              variant="outline" 
-                              className="w-full md:w-auto border-orange-500 text-orange-600 hover:bg-orange-50 font-black uppercase italic tracking-widest text-[10px] h-10 px-6 rounded-xl transition-all"
-                              onClick={() => navigate(`/match/${match.id}`)}
-                            >
-                              Matchroom
-                            </Button>
-                          </div>
+                if (Object.keys(liveGroups).length === 0) {
+                  return (
+                    <Card className="border-dashed border-2 py-20 text-center bg-slate-50/50 rounded-[2rem]">
+                      <Clock className="size-12 text-slate-300 mx-auto mb-4" />
+                      <p className="text-slate-500 font-medium italic">No live or upcoming matches scheduled for this selection.</p>
+                    </Card>
+                  );
+                }
+
+                return (
+                  <>
+                    {Object.entries(liveGroups).map(([date, dateMatches]) => (
+                      <div key={date} className="relative border-l-2 border-slate-200 pl-6 ml-3 mb-8 space-y-4">
+                        <div className="absolute -left-[11px] top-0 bg-orange-500 w-5 h-5 rounded-full border-4 border-slate-50 flex items-center justify-center"></div>
+                        <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest pt-0.5 mb-6 flex items-center gap-3">
+                          {date}
+                          <span className="h-px flex-1 bg-slate-100" />
+                        </h4>
+                        
+                        <div className="space-y-3">
+                          {dateMatches.map((match) => (
+                            <div key={match.id} className="flex flex-col md:flex-row items-center justify-between bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all group/card">
+                              {/* Status/Time */}
+                              <div className="flex items-center gap-4 w-full md:w-40 mb-4 md:mb-0">
+                                {match.status === 'Ongoing' ? (
+                                  <div className="flex items-center gap-2 px-2 py-1 bg-red-500 text-white rounded-md animate-pulse shadow-lg shadow-red-500/20">
+                                    <span className="flex h-1.5 w-1.5 rounded-full bg-white animate-ping" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">LIVE NOW</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2 px-3 py-1 bg-slate-50 border border-slate-100 rounded-md">
+                                    <Clock className="size-3 text-slate-400" />
+                                    <span className="text-slate-600 font-bold text-xs tabular-nums">
+                                      {match.match_time ? new Date(match.match_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'TBD'}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="md:hidden flex-1 h-px bg-slate-100" />
+                              </div>
+
+                              {/* Matchup */}
+                              <div className="flex items-center justify-center gap-4 flex-1 mb-4 md:mb-0">
+                                <div className="flex-1 text-right">
+                                  <span className="text-lg font-black text-slate-900 uppercase italic tracking-tight">{match.team_a?.name || 'TBD'}</span>
+                                </div>
+                                <div className="px-3 py-1 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-3">
+                                  <span className="text-lg font-black text-slate-300 tabular-nums">{match.team_a_score || 0}</span>
+                                  <span className="text-[10px] font-black text-slate-200 italic tracking-widest">VS</span>
+                                  <span className="text-lg font-black text-slate-300 tabular-nums">{match.team_b_score || 0}</span>
+                                </div>
+                                <div className="flex-1 text-left">
+                                  <span className="text-lg font-black text-slate-900 uppercase italic tracking-tight">{match.team_b?.name || 'TBD'}</span>
+                                </div>
+                              </div>
+
+                              {/* Action */}
+                              <div className="w-full md:w-auto ml-0 md:ml-6">
+                                <Button 
+                                  variant="outline" 
+                                  className="w-full md:w-auto border-orange-500 text-orange-600 hover:bg-orange-50 font-black uppercase italic tracking-widest text-[10px] h-10 px-6 rounded-xl transition-all"
+                                  onClick={() => navigate(`/match/${match.id}`)}
+                                >
+                                  Matchroom
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                ))
-              )}
+                      </div>
+                    ))}
+                  </>
+                );
+              })()}
             </TabsContent>
 
             <TabsContent value="history" className="w-full outline-none mt-0 space-y-12">
