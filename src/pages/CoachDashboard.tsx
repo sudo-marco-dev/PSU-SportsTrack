@@ -3,7 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TrendingUp, Users, UserPlus, Clock, ArrowUpRight, Activity, Trophy, ChevronRight, Sparkles } from 'lucide-react';
+import { TrendingUp, Users, UserPlus, Clock, ArrowUpRight, Activity, Trophy, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 

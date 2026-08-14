@@ -111,6 +111,25 @@ export const Login = () => {
           localStorage.setItem('login_attempts', currentAttempts.toString());
           setCooldownRemaining(300);
           toast.error('Too many failed attempts (3/3). Account temporarily locked for 5 minutes.');
+
+          // Auto-trigger password reset email on max attempts, with confirmation
+          const email = values.email;
+          if (email) {
+            // Delay the prompt slightly so the user sees the lockout toast first
+            setTimeout(() => {
+              if (window.confirm(`Would you like us to send a password recovery link to ${email}?`)) {
+                supabase.auth.resetPasswordForEmail(email, {
+                  redirectTo: `${window.location.origin}/reset-password`,
+                }).then(({ error: resetError }) => {
+                  if (resetError) {
+                    toast.error('Failed to send reset link: ' + resetError.message);
+                  } else {
+                    toast.success('A password reset link has been sent to your email.');
+                  }
+                });
+              }
+            }, 500);
+          }
         } else {
           localStorage.setItem('login_attempts', currentAttempts.toString());
           const remainingAttempts = maxAttempts - currentAttempts;
@@ -197,9 +216,14 @@ export const Login = () => {
               />
               {/* Attempts & Cooldown Notice Text */}
               {cooldownRemaining > 0 ? (
-                <p className="text-[11px] font-bold uppercase tracking-wider text-red-400 text-center">
-                  Too many failed attempts. Account temporarily locked.
-                </p>
+                <div className="space-y-2 text-center">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-red-400">
+                    Too many failed attempts. Account temporarily locked.
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    A password reset link has been sent to your email.
+                  </p>
+                </div>
               ) : failedAttempts > 0 ? (
                 <p className="text-[11px] font-bold uppercase tracking-wider text-orange-400 text-center">
                   {3 - failedAttempts} attempt{(3 - failedAttempts) > 1 ? 's' : ''} remaining before cooldown
@@ -219,6 +243,16 @@ export const Login = () => {
               </Button>
             </form>
           </Form>
+
+          {/* Forgot Password Link */}
+          <div className="text-center mt-4">
+            <Link 
+              to="/reset-password" 
+              className="text-[11px] font-bold uppercase tracking-widest text-slate-500 hover:text-orange-500 transition-colors underline underline-offset-4"
+            >
+              Forgot your password?
+            </Link>
+          </div>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4 text-center pb-10 pt-4 bg-transparent border-t-0">
           <div className="text-slate-400 text-xs font-bold uppercase tracking-widest">

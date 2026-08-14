@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trophy, Medal, Award, Filter, Sparkles, TrendingUp, Calendar, Zap, Shield, RotateCcw } from 'lucide-react';
+import { Trophy, Medal, Filter, Sparkles, Shield, RotateCcw } from 'lucide-react';
 
 export const Ranking = () => {
   // Filter States
@@ -79,7 +79,7 @@ export const Ranking = () => {
               <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
                 Tournament Category
               </label>
-              <Select value={tournamentType} onValueChange={setTournamentType}>
+              <Select value={tournamentType} onValueChange={(v) => v && setTournamentType(v)}>
                 <SelectTrigger className="h-10 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-none hover:border-slate-300 dark:hover:border-slate-700 focus:ring-1 focus:ring-slate-400 transition-colors">
                   <SelectValue placeholder="All Tournaments" />
                 </SelectTrigger>
@@ -97,7 +97,7 @@ export const Ranking = () => {
               <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
                 Sport Discipline
               </label>
-              <Select value={sportCategory} onValueChange={setSportCategory}>
+              <Select value={sportCategory} onValueChange={(v) => v && setSportCategory(v)}>
                 <SelectTrigger className="h-10 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-none hover:border-slate-300 dark:hover:border-slate-700 focus:ring-1 focus:ring-slate-400 transition-colors">
                   <SelectValue placeholder="All Sports" />
                 </SelectTrigger>
@@ -119,7 +119,7 @@ export const Ranking = () => {
               <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
                 Ranking Criterion
               </label>
-              <Select value={winMetric} onValueChange={setWinMetric}>
+              <Select value={winMetric} onValueChange={(v) => v && setWinMetric(v)}>
                 <SelectTrigger className="h-10 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-none hover:border-slate-300 dark:hover:border-slate-700 focus:ring-1 focus:ring-slate-400 transition-colors">
                   <SelectValue placeholder="Most Wins" />
                 </SelectTrigger>
@@ -137,7 +137,7 @@ export const Ranking = () => {
               <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
                 Academic Period
               </label>
-              <Select value={academicYear} onValueChange={setAcademicYear}>
+              <Select value={academicYear} onValueChange={(v) => v && setAcademicYear(v)}>
                 <SelectTrigger className="h-10 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-none hover:border-slate-300 dark:hover:border-slate-700 focus:ring-1 focus:ring-slate-400 transition-colors">
                   <SelectValue placeholder="Current Season" />
                 </SelectTrigger>

@@ -19,17 +19,15 @@ import {
   LayoutGrid, 
   Shuffle, 
   Plus, 
-  Star, 
+  Trash2,
   CalendarDays, 
-  ChevronRight, 
-  Trash2, 
-  AlertTriangle,
-  Sparkles,
   Check,
-  Info,
-  Lightbulb,
-  ArrowRight,
-  Radio
+  ChevronRight, 
+  Info, 
+  AlertTriangle,
+  Star,
+  Sparkles,
+  Lightbulb
 } from 'lucide-react';
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
@@ -931,7 +929,7 @@ export const TournamentManagement = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <Label className="text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-[0.2em]">Sport Discipline</Label>
-                      <Select value={singleSport} onValueChange={setSingleSport}>
+                      <Select value={singleSport} onValueChange={(v) => v && setSingleSport(v)}>
                         <SelectTrigger className="h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-xl font-bold text-xs text-slate-900 dark:text-white">
                           <SelectValue />
                         </SelectTrigger>
@@ -946,7 +944,7 @@ export const TournamentManagement = () => {
                     </div>
                     <div className="space-y-1">
                       <Label className="text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-[0.2em]">Tournament Format</Label>
-                      <Select value={singleType} onValueChange={setSingleType}>
+                      <Select value={singleType} onValueChange={(v) => v && setSingleType(v)}>
                         <SelectTrigger className="h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-xl font-bold text-xs text-slate-900 dark:text-white">
                           <SelectValue />
                         </SelectTrigger>
