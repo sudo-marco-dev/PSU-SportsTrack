@@ -29,6 +29,9 @@
 - [x] Phase 3.3 Live Scoring & Commentary Control
 - [x] Phase 4 MVP Star System (Red & Gold Stars)
 - [x] Phase 5.1 Realtime Dashboard Polish (WebSockets)
+- [x] Phase 5.2 Custom 404 Page & Smart Role-Based Redirects
+- [x] Phase 5.3 Supabase Auth Production Routes (Email Confirm & Password Reset)
+- [x] Phase 5.4 Vercel Deployment Configuration (SPA Rewrites & Legacy Redirects)
 
 ## 🛠️ Recent Modifications & Change Log
 

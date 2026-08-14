@@ -18,6 +18,8 @@ import { TournamentExplorer } from '@/pages/TournamentExplorer';
 import { Ranking } from '@/pages/Ranking';
 import { AppLayout } from '@/components/AppLayout';
 import { NotFound } from '@/pages/NotFound';
+import { AuthConfirm } from '@/pages/AuthConfirm';
+import { ResetPassword } from '@/pages/ResetPassword';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 
 const RootRedirect = () => {
@@ -42,6 +44,8 @@ function AppRoutes() {
       {/* Public Standalone Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/auth/confirm" element={<AuthConfirm />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       
       {/* Protected Routes inside App Shell */}
       <Route element={<ProtectedRoute />}>
