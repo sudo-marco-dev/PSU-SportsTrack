@@ -1,9 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-// Map old routes to new routes
 const REDIRECT_MAP: Record<string, string> = {
-  '/coach/teams': '/coach',
   '/coach/tournaments': '/coach',
   '/coach/events': '/coach',
   '/admin/users': '/admin',

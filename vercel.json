@@ -7,11 +7,6 @@
   ],
   "redirects": [
     {
-      "source": "/coach/teams",
-      "destination": "/coach",
-      "permanent": false
-    },
-    {
       "source": "/coach/tournaments",
       "destination": "/coach",
       "permanent": false
