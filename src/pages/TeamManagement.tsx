@@ -648,13 +648,13 @@ export const TeamManagement = () => {
                     })()}
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl">
+                <SelectContent className="rounded-2xl w-[var(--radix-select-trigger-width)]">
                   {teams.length === 0 ? (
                     <div className="p-4 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest">No teams created yet</div>
                   ) : (
                     teams.map((team) => (
                       <SelectItem key={team.id} value={team.id} className="rounded-xl">
-                        {team.name} ({team.tournaments?.name || 'Tournament'}${team.tournaments?.sport ? ` - ${team.tournaments.sport}` : ''})
+                        {team.name} ({team.tournaments?.name || 'Tournament'}{team.tournaments?.sport ? ` - ${team.tournaments.sport}` : ''})
                       </SelectItem>
                     ))
                   )}
