@@ -127,7 +127,7 @@ export const AdminAuditLogs = () => {
 
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
           <div className="w-full sm:w-48">
-            <Select value={timeFilter} onValueChange={setTimeFilter}>
+            <Select value={timeFilter} onValueChange={(val) => setTimeFilter(val || 'all')}>
               <SelectTrigger className="h-12 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 rounded-xl font-bold text-xs">
                 <div className="flex items-center gap-2 text-slate-500">
                   <CalendarIcon className="size-4" />

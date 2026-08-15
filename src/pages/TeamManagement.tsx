@@ -21,6 +21,7 @@ type Team = {
   created_at: string;
   tournaments: {
     name: string;
+    sport?: string;
   };
 };
 
@@ -90,7 +91,7 @@ export const TeamManagement = () => {
     setIsLoadingTeams(true);
     const { data, error } = await supabase
       .from('teams')
-      .select('*, tournaments(name)')
+      .select('*, tournaments(name, sport)')
       .eq('coach_id', user?.id)
       .order('created_at', { ascending: false });
 
@@ -152,6 +153,45 @@ export const TeamManagement = () => {
     if (!invitePlayerId || !selectedTeamToInvite) {
       toast.error('Please select a team to invite the player to.');
       return;
+    }
+
+    const selectedTeam = teams.find(t => t.id === selectedTeamToInvite);
+    // Handle both array and single object formats from Supabase joins
+    const tournamentData = Array.isArray(selectedTeam?.tournaments) 
+      ? selectedTeam?.tournaments[0] 
+      : selectedTeam?.tournaments;
+    const targetSport = tournamentData?.sport;
+
+    if (targetSport) {
+      // Check if player is already in a team for this sport
+      const { data: existingRosters, error: checkError } = await supabase
+        .from('team_roster')
+        .select(`
+          id,
+          teams (
+            tournaments (
+              sport
+            )
+          )
+        `)
+        .eq('player_id', invitePlayerId)
+        .neq('status', 'Rejected');
+
+      if (checkError) {
+        toast.error('Error verifying player eligibility: ' + checkError.message);
+        return;
+      }
+
+      const isDuplicate = existingRosters?.some((roster: any) => {
+        const teamData = Array.isArray(roster.teams) ? roster.teams[0] : roster.teams;
+        const tourneyData = Array.isArray(teamData?.tournaments) ? teamData.tournaments[0] : teamData?.tournaments;
+        return tourneyData?.sport === targetSport;
+      });
+
+      if (isDuplicate) {
+        toast.error(`Cannot recruit: Player is already in a team for ${targetSport}.`);
+        return;
+      }
     }
 
     const { error } = await supabase.from('team_roster').insert({
