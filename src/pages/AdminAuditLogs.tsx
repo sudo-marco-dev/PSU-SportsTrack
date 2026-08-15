@@ -10,8 +10,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ClipboardList, Search, Clock, User, Activity } from 'lucide-react';
+import { ClipboardList, Search, Clock, User, Activity, Calendar as CalendarIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
 type AuditLog = {
@@ -30,6 +31,7 @@ export const AdminAuditLogs = () => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [timeFilter, setTimeFilter] = useState('all');
 
   useEffect(() => {
     fetchLogs();
@@ -58,11 +60,34 @@ export const AdminAuditLogs = () => {
     setIsLoading(false);
   };
 
-  const filteredLogs = logs.filter(log => 
-    log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.details?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.admin?.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredLogs = logs.filter(log => {
+    // 1. Text Search Filter
+    const matchesSearch = 
+      log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.details?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.admin?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // 2. Time Filter
+    let matchesTime = true;
+    if (timeFilter !== 'all') {
+      const logDate = new Date(log.created_at);
+      const now = new Date();
+      
+      if (timeFilter === 'today') {
+        matchesTime = logDate.toDateString() === now.toDateString();
+      } else if (timeFilter === 'week') {
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(now.getDate() - 7);
+        matchesTime = logDate >= oneWeekAgo;
+      } else if (timeFilter === 'month') {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(now.getMonth() - 1);
+        matchesTime = logDate >= oneMonthAgo;
+      }
+    }
+
+    return matchesSearch && matchesTime;
+  });
 
   return (
     <div className="space-y-6 relative min-h-screen max-w-[1600px] mx-auto px-4">
@@ -99,9 +124,29 @@ export const AdminAuditLogs = () => {
             className="pl-11 h-12 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 rounded-xl font-bold"
           />
         </div>
-        <div className="flex items-center gap-3 bg-slate-100 dark:bg-white/5 px-4 py-2 rounded-xl border border-slate-200 dark:border-white/10">
-          <Activity className="size-4 text-orange-500" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Live Monitoring Active</span>
+
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+          <div className="w-full sm:w-48">
+            <Select value={timeFilter} onValueChange={setTimeFilter}>
+              <SelectTrigger className="h-12 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 rounded-xl font-bold text-xs">
+                <div className="flex items-center gap-2 text-slate-500">
+                  <CalendarIcon className="size-4" />
+                  <SelectValue placeholder="Filter by Time" />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-slate-100 dark:border-white/5">
+                <SelectItem value="all" className="font-bold text-xs">All Time</SelectItem>
+                <SelectItem value="today" className="font-bold text-xs">Today</SelectItem>
+                <SelectItem value="week" className="font-bold text-xs">Past 7 Days</SelectItem>
+                <SelectItem value="month" className="font-bold text-xs">Past 30 Days</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-3 bg-slate-100 dark:bg-white/5 px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
+            <Activity className="size-4 text-orange-500" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Live Monitoring</span>
+          </div>
         </div>
       </div>
 
