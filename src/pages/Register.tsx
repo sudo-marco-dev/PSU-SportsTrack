@@ -23,8 +23,12 @@ const registerSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name is required' }),
   email: z.string().email({ message: 'Invalid email address' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+  confirmPassword: z.string(),
   role: z.enum(['Player', 'Coach'] as const, { message: 'Role is required' }),
   collegeId: z.string().optional(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
 });
 
 export const Register = () => {
@@ -46,6 +50,7 @@ export const Register = () => {
       fullName: '',
       email: '',
       password: '',
+      confirmPassword: '',
       role: 'Player',
       collegeId: '',
     },
@@ -162,6 +167,25 @@ export const Register = () => {
                         >
                           {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                         </button>
+                      </div>
+                    </FormControl>
+                    <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem className="space-y-1">
+                    <FormLabel className="text-xs font-black uppercase text-slate-400 tracking-widest">Confirm Password</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          {...field}
+                          className="h-12 bg-white/5 border-white/10 text-white focus:ring-orange-500 rounded-xl"
+                        />
                       </div>
                     </FormControl>
                     <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
