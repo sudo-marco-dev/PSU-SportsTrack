@@ -404,7 +404,15 @@ export const TeamManagement = () => {
                       </Badge>
                     </div>
                     <CardTitle className="text-2xl font-black italic uppercase tracking-tighter group-hover:text-orange-500 transition-colors">{team.name}</CardTitle>
-                    <CardDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-1">{team.tournaments?.name}</CardDescription>
+                    <CardDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-1 flex items-center gap-2">
+                      <span>{team.tournaments?.name}</span>
+                      {team.tournaments?.sport && (
+                        <>
+                          <span className="text-slate-300">•</span>
+                          <span className="text-orange-500">{team.tournaments.sport}</span>
+                        </>
+                      )}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="p-8 pt-4">
                     <Button 
@@ -437,7 +445,10 @@ export const TeamManagement = () => {
                     {filteredTeams.map((team) => (
                       <tr key={team.id} className="border-b border-slate-50 dark:border-white/5 last:border-none hover:bg-orange-50/30 dark:hover:bg-orange-500/5 transition-colors group">
                         <td className="py-4 px-8 font-black italic uppercase tracking-tighter text-lg">{team.name}</td>
-                        <td className="py-4 px-8 font-bold text-slate-500 uppercase text-[10px] tracking-widest">{team.tournaments?.name}</td>
+                        <td className="py-4 px-8 font-bold text-slate-500 uppercase text-[10px] tracking-widest">
+                          {team.tournaments?.name}
+                          {team.tournaments?.sport && <span className="text-orange-500 ml-2">({team.tournaments.sport})</span>}
+                        </td>
                         <td className="py-4 px-8">
                           <Badge variant={team.status === 'Approved' ? 'default' : 'secondary'} className="text-[9px] font-black uppercase tracking-tighter px-2">
                             {team.status}
@@ -633,7 +644,7 @@ export const TeamManagement = () => {
                   <SelectValue placeholder="Select one of your teams">
                     {selectedTeamToInvite && (() => {
                       const team = (teams || []).find(t => t.id === selectedTeamToInvite);
-                      return team ? `${team.name} (${team.tournaments?.name || 'Tournament'})` : selectedTeamToInvite;
+                      return team ? `${team.name} (${team.tournaments?.name || 'Tournament'}${team.tournaments?.sport ? ` - ${team.tournaments.sport}` : ''})` : selectedTeamToInvite;
                     })()}
                   </SelectValue>
                 </SelectTrigger>
@@ -643,7 +654,7 @@ export const TeamManagement = () => {
                   ) : (
                     teams.map((team) => (
                       <SelectItem key={team.id} value={team.id} className="rounded-xl">
-                        {team.name} ({team.tournaments?.name || 'Tournament'})
+                        {team.name} ({team.tournaments?.name || 'Tournament'}${team.tournaments?.sport ? ` - ${team.tournaments.sport}` : ''})
                       </SelectItem>
                     ))
                   )}
