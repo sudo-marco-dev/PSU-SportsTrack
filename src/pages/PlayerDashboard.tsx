@@ -6,8 +6,9 @@ import { supabase } from '@/lib/supabase';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Activity, Trophy, Clock, Star, User } from 'lucide-react';
+import { Activity, Trophy, Clock, Star, User, CalendarDays, Dumbbell, Swords, MapPin } from 'lucide-react';
 
 type RosterInvite = {
   id: string;
@@ -50,6 +51,7 @@ export const PlayerDashboard = () => {
   const [draftTournaments, setDraftTournaments] = useState<any[]>([]);
   const [stars, setStars] = useState<PlayerStar[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedTournament, setSelectedTournament] = useState<any | null>(null);
 
   useEffect(() => {
     if (user && !isVerified) {
@@ -210,28 +212,28 @@ export const PlayerDashboard = () => {
 
   return (
     <div className="space-y-12">
-      <div className="bg-slate-950 py-6 md:py-8 px-6 md:px-10 rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden">
+      <div className="bg-slate-950 py-5 md:py-8 px-5 md:px-10 rounded-2xl md:rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <User className="w-5 h-5 text-orange-500" />
+              <User className="w-4 h-4 md:w-5 md:h-5 text-orange-500" />
               <span className="text-orange-500 font-bold text-xs tracking-[0.2em] uppercase">
                 Athlete Hub
               </span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white uppercase italic leading-none">
+            <h1 className="text-2xl md:text-4xl font-black tracking-tight text-white uppercase italic leading-none">
               PLAYER <span className="text-orange-500">HUB</span>
             </h1>
-            <p className="text-slate-400 text-sm font-medium mt-2 max-w-md">
+            <p className="text-slate-400 text-xs md:text-sm font-medium mt-2 max-w-md">
               Track your progress, accept invitations, and follow live university matches.
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="px-4 py-2 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Stars</p>
+            <div className="px-3.5 py-2 bg-white/5 rounded-xl md:rounded-2xl border border-white/10 backdrop-blur-md">
+              <p className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Stars</p>
               <div className="flex items-center gap-1.5">
                 <Star className="size-3 text-orange-500 fill-orange-500" />
-                <p className="text-xl font-black text-white leading-none">{stars.length}</p>
+                <p className="text-lg md:text-xl font-black text-white leading-none">{stars.length}</p>
               </div>
             </div>
           </div>
@@ -246,34 +248,34 @@ export const PlayerDashboard = () => {
             <Trophy className="size-5 text-orange-500" /> My Achievements
           </h2>
         </div>
-        <Card className="bg-white border-2 border-slate-100 overflow-hidden shadow-xl rounded-[2rem]">
-          <CardContent className="p-8">
+        <Card className="bg-white border-2 border-slate-100 overflow-hidden shadow-xl rounded-2xl md:rounded-[2rem]">
+          <CardContent className="p-4 md:p-8">
             {stars.length === 0 ? (
-              <div className="text-center py-10 space-y-4 opacity-50">
+              <div className="text-center py-8 space-y-3 opacity-50">
                 <div className="flex justify-center gap-3">
-                  <Star className="size-8 text-slate-200" />
-                  <Star className="size-10 text-slate-300 -translate-y-2" />
-                  <Star className="size-8 text-slate-200" />
+                  <Star className="size-7 text-slate-200" />
+                  <Star className="size-9 text-slate-300 -translate-y-2" />
+                  <Star className="size-7 text-slate-200" />
                 </div>
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Trophy Case Empty</p>
+                <p className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em] text-slate-400">Trophy Case Empty</p>
               </div>
             ) : (
-              <div className="space-y-6">
-                <div className="flex items-center gap-6 p-6 rounded-[1.5rem] bg-slate-50 border border-slate-100 group hover:border-orange-500/30 transition-all duration-300">
-                  <div className={`p-5 rounded-2xl shadow-lg ${
+              <div className="space-y-4 md:space-y-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 md:gap-6 p-4 md:p-6 rounded-xl md:rounded-[1.5rem] bg-slate-50 border border-slate-100 group hover:border-orange-500/30 transition-all duration-300">
+                  <div className={`p-4 md:p-5 rounded-2xl shadow-lg shrink-0 ${
                     stars[0].star_type === 'Red' ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'
                   }`}>
-                    <Star className={`size-10 ${stars[0].star_type === 'Red' ? 'fill-white' : 'fill-white'}`} />
+                    <Star className={`size-8 md:size-10 ${stars[0].star_type === 'Red' ? 'fill-white' : 'fill-white'}`} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">Latest Honor</span>
+                      <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">Latest Honor</span>
                       <div className="h-px flex-1 bg-slate-200" />
                     </div>
-                    <p className="font-black text-2xl uppercase italic tracking-tight leading-none mb-1">
+                    <p className="font-black text-xl md:text-2xl uppercase italic tracking-tight leading-none mb-1">
                       {stars[0].star_type === 'Red' ? 'Match MVP' : 'Tournament MVP'}
                     </p>
-                    <p className="text-sm font-bold text-slate-500">
+                    <p className="text-xs md:text-sm font-bold text-slate-500 truncate">
                       {stars[0].tournaments?.name}
                     </p>
                   </div>
@@ -284,7 +286,7 @@ export const PlayerDashboard = () => {
 
                 <Button 
                   variant="outline" 
-                  className="w-full h-14 border-2 border-slate-100 font-black uppercase italic tracking-widest hover:bg-slate-950 hover:text-white hover:border-slate-950 transition-all rounded-2xl group shadow-sm"
+                  className="w-full h-12 md:h-14 border-2 border-slate-100 font-black uppercase italic tracking-widest text-xs md:text-sm hover:bg-slate-950 hover:text-white hover:border-slate-950 transition-all rounded-xl md:rounded-2xl group shadow-sm"
                   onClick={() => navigate('/achievements')}
                 >
                   <span className="group-hover:translate-x-1 transition-transform inline-block mr-2">View Full Trophy Room</span>
@@ -299,14 +301,14 @@ export const PlayerDashboard = () => {
       {/* Coming Soon • Upcoming Tournaments Banner */}
       {draftTournaments.length > 0 && (
         <section className="space-y-4 animate-in fade-in slide-in-from-bottom-3 duration-500">
-          <div className="flex items-center justify-between px-1">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
             <div className="flex items-center gap-2">
               <span className="flex h-2 w-2 rounded-full bg-orange-500 animate-ping" />
-              <h2 className="text-xl font-black uppercase italic tracking-tight text-slate-900 flex items-center gap-2">
-                <Clock className="size-5 text-orange-500" /> Coming Soon • Upcoming Tournaments
+              <h2 className="text-lg md:text-xl font-black uppercase italic tracking-tight text-slate-900 flex items-center gap-2">
+                <Clock className="size-4 md:size-5 text-orange-500" /> Coming Soon • Upcoming Events
               </h2>
             </div>
-            <span className="px-2.5 py-0.5 rounded-full bg-orange-500/10 text-orange-600 font-black text-[10px] uppercase tracking-wider border border-orange-500/20">
+            <span className="self-start sm:self-auto px-2.5 py-0.5 rounded-full bg-orange-500/10 text-orange-600 font-black text-[9px] md:text-[10px] uppercase tracking-wider border border-orange-500/20">
               Draft & Recruitment Phase
             </span>
           </div>
@@ -315,7 +317,7 @@ export const PlayerDashboard = () => {
             {draftTournaments.map((t) => (
               <div 
                 key={t.id}
-                onClick={() => navigate('/matches')}
+                onClick={() => setSelectedTournament(t)}
                 className="p-5 rounded-2xl bg-gradient-to-br from-white via-orange-50/20 to-orange-50/40 border-2 border-orange-500/20 hover:border-orange-500 hover:shadow-lg transition-all duration-300 cursor-pointer group relative overflow-hidden"
               >
                 <div className="flex items-center justify-between gap-2 mb-2">
@@ -332,7 +334,7 @@ export const PlayerDashboard = () => {
                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-semibold">
                   <span>Kickoff: {new Date(t.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                   <span className="text-orange-600 font-black uppercase tracking-wider group-hover:translate-x-1 transition-transform inline-flex items-center gap-0.5">
-                    View Arena →
+                    View Details →
                   </span>
                 </div>
               </div>
@@ -484,6 +486,98 @@ export const PlayerDashboard = () => {
           </div>
         )}
       </section>
+
+      {/* Coming Soon Tournament Detail Dialog */}
+      <Dialog open={!!selectedTournament} onOpenChange={(open) => { if (!open) setSelectedTournament(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          {selectedTournament && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="px-2 py-0.5 rounded-md bg-orange-500 text-white font-bold text-[9px] uppercase tracking-wider">
+                    {selectedTournament.sport}
+                  </span>
+                  <Badge variant="secondary" className="font-black uppercase text-[9px] tracking-widest">
+                    {selectedTournament.status}
+                  </Badge>
+                </div>
+                <DialogTitle className="text-xl font-black uppercase italic tracking-tight">
+                  {selectedTournament.name}
+                </DialogTitle>
+                <DialogDescription>
+                  This tournament is currently in the recruitment phase. Teams are being assembled — stay tuned for the official kickoff!
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-3 py-2">
+                {/* Sport */}
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="p-2 rounded-lg bg-orange-100 text-orange-600">
+                    <Dumbbell className="size-4" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sport</p>
+                    <p className="font-bold text-sm text-slate-900">{selectedTournament.sport}</p>
+                  </div>
+                </div>
+
+                {/* Format / Type */}
+                {selectedTournament.type && (
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                    <div className="p-2 rounded-lg bg-orange-100 text-orange-600">
+                      <Swords className="size-4" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Format</p>
+                      <p className="font-bold text-sm text-slate-900">{selectedTournament.type}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Start Date */}
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="p-2 rounded-lg bg-orange-100 text-orange-600">
+                    <CalendarDays className="size-4" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Start Date</p>
+                    <p className="font-bold text-sm text-slate-900">
+                      {new Date(selectedTournament.start_date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+
+                {/* End Date */}
+                {selectedTournament.end_date && (
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                    <div className="p-2 rounded-lg bg-slate-200 text-slate-600">
+                      <CalendarDays className="size-4" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">End Date</p>
+                      <p className="font-bold text-sm text-slate-900">
+                        {new Date(selectedTournament.end_date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter>
+                <Button
+                  className="w-full font-black uppercase italic tracking-widest h-11 rounded-xl"
+                  onClick={() => {
+                    setSelectedTournament(null);
+                    navigate('/matches');
+                  }}
+                >
+                  Go to Match Arena
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -72,6 +72,23 @@
   - `src/pages/TournamentExplorer.tsx`: Coming Soon badges and Draft Phase hero state.
   - `PROJECT_STATE.md`: Documented dashboard updates.
 
+### Mobile Responsiveness Refactoring Across All Dashboards & Components
+- **Description**: Comprehensive UI/UX mobile responsiveness refactor for all recent features:
+  1. **Admin Dashboard (`/admin`)**: Made Coming Soon pipeline banner flex wrapping & mobile-friendly, optimized stat cards to 2-column mobile grid, made verification breakdown progress bar & legends stack cleanly on small screens.
+  2. **Coach Dashboard (`/coach`)**: Compact header padding & icon sizes, mobile full-width action buttons, responsive analytics card padding and typography.
+  3. **Player Dashboard (`/player`)**: Responsive athlete hub banner, achievement preview flex wrapping, Coming Soon recruitment cards layout & inline details modal.
+  4. **Match Center (`/explorer`)**: Responsive hero header, mobile tab bar layout with centered text/icons, matchup card layout.
+  5. **Leaderboard & Ranking (`/ranking`)**: Responsive header banner, mobile-safe podium cards (`scale-100` on mobile to prevent overflow), responsive filter toolbar.
+  6. **Tournament Arena (`/admin/tournaments`)**: Added `overflow-x-auto` horizontal scrolling container for table view.
+- **Files Modified**:
+  - `src/pages/AdminDashboard.tsx`
+  - `src/pages/CoachDashboard.tsx`
+  - `src/pages/PlayerDashboard.tsx`
+  - `src/pages/TournamentExplorer.tsx`
+  - `src/pages/Ranking.tsx`
+  - `src/pages/TournamentManagement.tsx`
+  - `PROJECT_STATE.md`
+
 ## 🎯 Future Goals
 - [x] Phase 4: MVP Star System (Red & Gold Stars).
 - [x] Phase 4.1: Binturungan One-Click Multi-Sport Creation & Draft Lifecycle.

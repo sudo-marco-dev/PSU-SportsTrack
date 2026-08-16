@@ -22,18 +22,18 @@ export const Ranking = () => {
   return (
     <div className="space-y-8 pb-12 animate-in fade-in duration-500">
       {/* Header Banner */}
-      <div className="bg-slate-950 text-white py-8 px-6 md:px-10 rounded-[2.5rem] shadow-2xl border border-white/5 relative overflow-hidden group">
+      <div className="bg-slate-950 text-white py-5 md:py-8 px-5 md:px-10 rounded-2xl md:rounded-[2.5rem] shadow-2xl border border-white/5 relative overflow-hidden group">
         <div className="relative z-10 max-w-3xl">
-          <div className="flex items-center gap-2 mb-3">
-            <Medal className="w-5 h-5 text-orange-500" />
-            <span className="text-orange-500 font-bold text-xs tracking-[0.2em] uppercase">
+          <div className="flex items-center gap-2 mb-2 md:mb-3">
+            <Medal className="w-4 h-4 md:w-5 md:h-5 text-orange-500" />
+            <span className="text-orange-500 font-bold text-[10px] md:text-xs tracking-[0.2em] uppercase">
               Official Leaderboard & Standings
             </span>
           </div>
-          <h1 className="text-3xl md:text-5xl font-black uppercase italic tracking-tighter leading-none mb-3">
+          <h1 className="text-2xl md:text-5xl font-black uppercase italic tracking-tighter leading-none mb-2 md:mb-3">
             LEADERBOARD <span className="text-orange-500">& RANKINGS</span>
           </h1>
-          <p className="text-slate-400 font-medium text-sm leading-relaxed max-w-2xl opacity-90">
+          <p className="text-slate-400 font-medium text-xs md:text-sm leading-relaxed max-w-2xl opacity-90">
             Institutional sports performance standings, championship tier lists, and athlete win analytics across PSU sports tournaments.
           </p>
         </div>
@@ -185,14 +185,14 @@ export const Ranking = () => {
         </Card>
 
         {/* Rank 1 - Gold */}
-        <Card className="rounded-[2.5rem] border-2 border-orange-500/40 bg-gradient-to-b from-orange-500/10 to-transparent dark:from-orange-500/10 dark:to-slate-900/60 backdrop-blur-sm p-8 text-center relative overflow-hidden shadow-2xl shadow-orange-500/10 order-1 md:order-2 scale-105 border-t-4 border-t-orange-500">
-          <div className="size-20 rounded-3xl bg-orange-500 flex items-center justify-center mx-auto mb-4 text-white font-black text-3xl shadow-xl shadow-orange-500/30">
-            <Medal className="size-10 text-white" />
+        <Card className="rounded-2xl md:rounded-[2.5rem] border-2 border-orange-500/40 bg-gradient-to-b from-orange-500/10 to-transparent dark:from-orange-500/10 dark:to-slate-900/60 backdrop-blur-sm p-6 md:p-8 text-center relative overflow-hidden shadow-2xl shadow-orange-500/10 order-1 md:order-2 scale-100 md:scale-105 border-t-4 border-t-orange-500">
+          <div className="size-16 md:size-20 rounded-2xl md:rounded-3xl bg-orange-500 flex items-center justify-center mx-auto mb-4 text-white font-black text-2xl md:text-3xl shadow-xl shadow-orange-500/30">
+            <Medal className="size-8 md:size-10 text-white" />
           </div>
           <Badge className="bg-orange-500 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 mb-2">
             Top Seed
           </Badge>
-          <h4 className="font-black italic uppercase tracking-tight text-2xl text-slate-900 dark:text-white">Champion Tier</h4>
+          <h4 className="font-black italic uppercase tracking-tight text-xl md:text-2xl text-slate-900 dark:text-white">Champion Tier</h4>
           <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mt-1">First Place Leaderboard</p>
           <div className="mt-6 py-6 border-t border-dashed border-orange-200 dark:border-orange-500/20">
             <span className="text-xs font-bold text-orange-500/80 italic">Awaiting tournament match dataset</span>

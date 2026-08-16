@@ -97,20 +97,20 @@ export const CoachDashboard = () => {
   return (
     <div className="space-y-8 pb-20">
       {/* Header Section */}
-      <div className="bg-slate-950 text-white py-6 md:py-8 px-6 md:px-10 rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden group">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-center gap-6">
-            <div className="p-4 bg-orange-500 rounded-2xl shadow-lg shadow-orange-500/20 group-hover:rotate-6 transition-transform duration-500">
-              <TrendingUp className="size-8 text-white" />
+      <div className="bg-slate-950 text-white py-5 md:py-8 px-5 md:px-10 rounded-2xl md:rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden group">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
+          <div className="flex items-center gap-4 md:gap-6">
+            <div className="p-3 md:p-4 bg-orange-500 rounded-xl md:rounded-2xl shadow-lg shadow-orange-500/20 group-hover:rotate-6 transition-transform duration-500 shrink-0">
+              <TrendingUp className="size-6 md:size-8 text-white" />
             </div>
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Activity className="w-5 h-5 text-orange-500" />
-                <span className="text-orange-500 font-bold text-xs tracking-[0.2em] uppercase">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1 md:mb-2">
+                <Activity className="w-4 h-4 md:w-5 md:h-5 text-orange-500" />
+                <span className="text-orange-500 font-bold text-[10px] md:text-xs tracking-[0.2em] uppercase">
                   Coach Analytics
                 </span>
               </div>
-              <h1 className="text-3xl md:text-4xl font-sans font-black tracking-tight uppercase leading-tight">
+              <h1 className="text-2xl md:text-4xl font-sans font-black tracking-tight uppercase leading-tight">
                 PERFORMANCE <span className="text-orange-500">OVERVIEW</span>
               </h1>
             </div>
@@ -121,29 +121,29 @@ export const CoachDashboard = () => {
 
       {/* Coming Soon Tournaments / Registration Banner */}
       {draftTournaments.length > 0 && (
-        <div className="bg-gradient-to-r from-orange-500/15 via-orange-500/5 to-slate-900 border-2 border-orange-500/30 rounded-[2.5rem] p-6 md:p-8 relative overflow-hidden shadow-xl">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-orange-500 rounded-2xl text-white shadow-lg shadow-orange-500/30">
-                <Trophy className="size-6" />
+        <div className="bg-gradient-to-r from-orange-500/15 via-orange-500/5 to-slate-900 border-2 border-orange-500/30 rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 relative overflow-hidden shadow-xl">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10 mb-4 md:mb-6">
+            <div className="flex items-start md:items-center gap-3">
+              <div className="p-2.5 md:p-3 bg-orange-500 rounded-xl md:rounded-2xl text-white shadow-lg shadow-orange-500/30 shrink-0">
+                <Trophy className="size-5 md:size-6" />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full bg-orange-500 text-white text-[9px] font-black uppercase tracking-widest animate-pulse">
-                    Coming Soon • Registration Open
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
+                  <span className="px-2 py-0.5 rounded-full bg-orange-500 text-white text-[8px] md:text-[9px] font-black uppercase tracking-widest animate-pulse">
+                    Coming Soon
                   </span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                     Draft Tournament Phase
                   </span>
                 </div>
-                <h3 className="text-xl md:text-2xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white mt-1">
-                  Enrolling Teams for Upcoming Events
+                <h3 className="text-lg md:text-2xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white mt-1">
+                  Enrolling Teams for Events
                 </h3>
               </div>
             </div>
             <Button
               onClick={() => navigate('/coach/teams')}
-              className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-xs h-11 px-6 rounded-xl shadow-lg shadow-orange-500/20 shrink-0 self-start md:self-auto gap-2"
+              className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-[10px] md:text-xs h-10 md:h-11 px-4 md:px-6 rounded-xl shadow-lg shadow-orange-500/20 shrink-0 self-stretch md:self-auto gap-2 w-full md:w-auto"
             >
               Apply Your Team Now <ChevronRight className="size-4" />
             </Button>
@@ -186,19 +186,19 @@ export const CoachDashboard = () => {
       {/* Analytics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Active Teams */}
-        <Card className="bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 rounded-[2rem] overflow-hidden group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-8">
-            <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Current Reach</p>
-              <CardTitle className="text-lg font-black uppercase italic tracking-tight">Active Teams Managed</CardTitle>
+        <Card className="bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 rounded-2xl md:rounded-[2rem] overflow-hidden group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-5 md:p-8">
+            <div className="space-y-1 min-w-0">
+              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Current Reach</p>
+              <CardTitle className="text-base md:text-lg font-black uppercase italic tracking-tight">Active Teams</CardTitle>
             </div>
-            <div className="p-3 bg-orange-50 dark:bg-orange-500/10 rounded-2xl">
-              <Users className="size-6 text-orange-500" />
+            <div className="p-2.5 md:p-3 bg-orange-50 dark:bg-orange-500/10 rounded-xl md:rounded-2xl shrink-0">
+              <Users className="size-5 md:size-6 text-orange-500" />
             </div>
           </CardHeader>
-          <CardContent className="p-8 pt-0">
-            <div className="flex items-baseline gap-3">
-              <span className="text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
+          <CardContent className="p-5 md:p-8 pt-0">
+            <div className="flex items-baseline gap-2 md:gap-3">
+              <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
                 {isLoading ? '---' : stats.activeTeams}
               </span>
               <div className="flex items-center gap-1 text-emerald-500 font-bold text-xs uppercase tracking-widest bg-emerald-500/10 px-2 py-1 rounded-lg">
@@ -211,19 +211,19 @@ export const CoachDashboard = () => {
         </Card>
 
         {/* Total Roster */}
-        <Card className="bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 rounded-[2rem] overflow-hidden group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-8">
-            <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Personnel</p>
-              <CardTitle className="text-lg font-black uppercase italic tracking-tight">Total Roster Size</CardTitle>
+        <Card className="bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 rounded-2xl md:rounded-[2rem] overflow-hidden group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-5 md:p-8">
+            <div className="space-y-1 min-w-0">
+              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Personnel</p>
+              <CardTitle className="text-base md:text-lg font-black uppercase italic tracking-tight">Roster Size</CardTitle>
             </div>
-            <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-2xl">
-              <UserPlus className="size-6 text-blue-500" />
+            <div className="p-2.5 md:p-3 bg-blue-50 dark:bg-blue-500/10 rounded-xl md:rounded-2xl shrink-0">
+              <UserPlus className="size-5 md:size-6 text-blue-500" />
             </div>
           </CardHeader>
-          <CardContent className="p-8 pt-0">
-            <div className="flex items-baseline gap-3">
-              <span className="text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
+          <CardContent className="p-5 md:p-8 pt-0">
+            <div className="flex items-baseline gap-2 md:gap-3">
+              <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
                 {isLoading ? '---' : stats.totalRoster}
               </span>
               <div className="text-slate-400 font-bold text-xs uppercase tracking-widest">Approved</div>
@@ -233,19 +233,19 @@ export const CoachDashboard = () => {
         </Card>
 
         {/* Pending Invitations */}
-        <Card className="bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 rounded-[2rem] overflow-hidden group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-8">
-            <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Recruitment</p>
-              <CardTitle className="text-lg font-black uppercase italic tracking-tight">Pending Invitations</CardTitle>
+        <Card className="bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 rounded-2xl md:rounded-[2rem] overflow-hidden group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-5 md:p-8">
+            <div className="space-y-1 min-w-0">
+              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Recruitment</p>
+              <CardTitle className="text-base md:text-lg font-black uppercase italic tracking-tight">Pending Invites</CardTitle>
             </div>
-            <div className="p-3 bg-amber-50 dark:bg-amber-500/10 rounded-2xl">
-              <Clock className="size-6 text-amber-500" />
+            <div className="p-2.5 md:p-3 bg-amber-50 dark:bg-amber-500/10 rounded-xl md:rounded-2xl shrink-0">
+              <Clock className="size-5 md:size-6 text-amber-500" />
             </div>
           </CardHeader>
-          <CardContent className="p-8 pt-0">
-            <div className="flex items-baseline gap-3">
-              <span className="text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
+          <CardContent className="p-5 md:p-8 pt-0">
+            <div className="flex items-baseline gap-2 md:gap-3">
+              <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
                 {isLoading ? '---' : stats.pendingInvites}
               </span>
               <div className="text-amber-500 font-bold text-xs uppercase tracking-widest bg-amber-500/10 px-2 py-1 rounded-lg">Action Req.</div>
@@ -255,19 +255,19 @@ export const CoachDashboard = () => {
         </Card>
 
         {/* Upcoming Matches */}
-        <Card className="bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 rounded-[2rem] overflow-hidden group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-8">
-            <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Execution</p>
-              <CardTitle className="text-lg font-black uppercase italic tracking-tight">Upcoming Matches</CardTitle>
+        <Card className="bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 rounded-2xl md:rounded-[2rem] overflow-hidden group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-5 md:p-8">
+            <div className="space-y-1 min-w-0">
+              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Execution</p>
+              <CardTitle className="text-base md:text-lg font-black uppercase italic tracking-tight">Upcoming Matches</CardTitle>
             </div>
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl">
-              <Activity className="size-6 text-emerald-500" />
+            <div className="p-2.5 md:p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl md:rounded-2xl shrink-0">
+              <Activity className="size-5 md:size-6 text-emerald-500" />
             </div>
           </CardHeader>
-          <CardContent className="p-8 pt-0">
-            <div className="flex items-baseline gap-3">
-              <span className="text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
+          <CardContent className="p-5 md:p-8 pt-0">
+            <div className="flex items-baseline gap-2 md:gap-3">
+              <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
                 {isLoading ? '---' : stats.upcomingMatches}
               </span>
               <div className="flex items-center gap-1 text-emerald-500 font-bold text-xs uppercase tracking-widest bg-emerald-500/10 px-2 py-1 rounded-lg">

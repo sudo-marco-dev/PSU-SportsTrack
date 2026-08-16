@@ -138,7 +138,7 @@ export const AdminDashboard = () => {
       <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.01] mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/p6.png')]" />
 
       {/* Header - Simplified & Production Ready */}
-      <div className="bg-slate-950 text-white py-6 md:py-8 px-8 md:px-12 rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden group">
+      <div className="bg-slate-950 text-white py-5 md:py-8 px-5 md:px-12 rounded-2xl md:rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden group">
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-2">
             <LayoutDashboard className="w-5 h-5 text-orange-500" />
@@ -160,36 +160,36 @@ export const AdminDashboard = () => {
 
       {/* Coming Soon / Draft Events Showcase Banner */}
       {draftTournaments.length > 0 && (
-        <div className="bg-gradient-to-r from-orange-500/15 via-orange-500/5 to-slate-900 border-2 border-orange-500/30 rounded-[2.5rem] p-6 md:p-8 relative overflow-hidden shadow-xl animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-orange-500 rounded-2xl text-white shadow-lg shadow-orange-500/30">
-                <Trophy className="size-6" />
+        <div className="bg-gradient-to-r from-orange-500/15 via-orange-500/5 to-slate-900 border-2 border-orange-500/30 rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 relative overflow-hidden shadow-xl animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10 mb-4 md:mb-6">
+            <div className="flex items-start md:items-center gap-3">
+              <div className="p-2.5 md:p-3 bg-orange-500 rounded-xl md:rounded-2xl text-white shadow-lg shadow-orange-500/30 shrink-0">
+                <Trophy className="size-5 md:size-6" />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full bg-orange-500 text-white text-[9px] font-black uppercase tracking-widest animate-pulse">
-                    Coming Soon • Draft Phase
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
+                  <span className="px-2 py-0.5 rounded-full bg-orange-500 text-white text-[8px] md:text-[9px] font-black uppercase tracking-widest animate-pulse">
+                    Coming Soon
                   </span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    {draftTournaments.length} Event{draftTournaments.length > 1 ? 's' : ''} Open for Team Applications
+                  <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    {draftTournaments.length} Event{draftTournaments.length > 1 ? 's' : ''} Open
                   </span>
                 </div>
-                <h3 className="text-xl md:text-2xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white mt-1">
-                  Upcoming Tournament Arena Pipeline
+                <h3 className="text-lg md:text-2xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white mt-1">
+                  Upcoming Tournament Pipeline
                 </h3>
               </div>
             </div>
             <Button
               onClick={() => navigate('/admin/tournaments')}
-              className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-xs h-11 px-6 rounded-xl shadow-lg shadow-orange-500/20 shrink-0 self-start md:self-auto gap-2"
+              className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-[10px] md:text-xs h-10 md:h-11 px-4 md:px-6 rounded-xl shadow-lg shadow-orange-500/20 shrink-0 self-stretch md:self-auto gap-2 w-full md:w-auto"
             >
               Review & Setup Brackets <ChevronRight className="size-4" />
             </Button>
           </div>
 
           {/* Draft Tournament Horizontal Scroller / Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 relative z-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-3.5 relative z-10">
             {draftTournaments.slice(0, 8).map((t) => (
               <div
                 key={t.id}
@@ -219,18 +219,18 @@ export const AdminDashboard = () => {
       )}
 
       {/* Stats Grid - 2x2 Refactored for Density */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 relative z-10">
+      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:gap-6 relative z-10">
         {statCards.map((stat, idx) => (
           <Card key={stat.label} className="group hover:border-orange-500/30 transition-all duration-500 shadow-sm hover:shadow-xl rounded-3xl overflow-hidden border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: `${idx * 75}ms` }}>
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex justify-between items-center">
-                <div className="flex items-center gap-5">
-                  <div className={`p-4 ${stat.bg} rounded-2xl group-hover:scale-105 transition-transform duration-500`}>
-                    <stat.icon className={`size-7 ${stat.color}`} />
+                <div className="flex items-center gap-3 md:gap-5">
+                  <div className={`p-2.5 md:p-4 ${stat.bg} rounded-xl md:rounded-2xl group-hover:scale-105 transition-transform duration-500`}>
+                    <stat.icon className={`size-5 md:size-7 ${stat.color}`} />
                   </div>
-                  <div>
-                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 mb-1 leading-none">{stat.label}</p>
-                    <p className="text-4xl md:text-5xl font-black italic tracking-tighter text-slate-900 dark:text-white leading-none">{stat.value}</p>
+                  <div className="min-w-0">
+                    <p className="text-[9px] md:text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 mb-1 leading-none truncate">{stat.label}</p>
+                    <p className="text-2xl md:text-5xl font-black italic tracking-tighter text-slate-900 dark:text-white leading-none">{stat.value}</p>
                   </div>
                 </div>
                 <div className="hidden sm:flex flex-col items-end">
@@ -247,11 +247,11 @@ export const AdminDashboard = () => {
 
       {/* Verification Breakdown - Tailwind Visual Chart */}
       <Card className="rounded-[2rem] border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 overflow-hidden relative z-10">
-        <CardContent className="p-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <div>
-              <h3 className="text-xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">System Verifications Breakdown</h3>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mt-1">Audit of user eligibility and institutional security clearance</p>
+        <CardContent className="p-4 md:p-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 mb-6 md:mb-8">
+            <div className="min-w-0">
+              <h3 className="text-base md:text-xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">Verifications Breakdown</h3>
+              <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.15em] md:tracking-[0.2em] text-slate-500 mt-1 truncate">User eligibility & security clearance</p>
             </div>
             <div className="text-right">
               <p className="text-2xl font-black italic text-slate-900 dark:text-white leading-none">{verificationBreakdown.total}</p>
@@ -260,7 +260,7 @@ export const AdminDashboard = () => {
           </div>
 
           {/* Stacked Progress Bar */}
-          <div className="h-6 w-full flex rounded-full overflow-hidden bg-slate-100 dark:bg-white/5 mb-8 border border-slate-200 dark:border-white/10 shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)]">
+          <div className="h-4 md:h-6 w-full flex rounded-full overflow-hidden bg-slate-100 dark:bg-white/5 mb-6 md:mb-8 border border-slate-200 dark:border-white/10 shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)]">
             <div 
               style={{ width: `${getPercentage(verificationBreakdown.approved)}%` }}
               className="h-full bg-emerald-500 transition-all duration-1000 ease-out relative group"
@@ -282,26 +282,26 @@ export const AdminDashboard = () => {
           </div>
 
           {/* Legend */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-            <div className="flex items-center gap-4 bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-100 dark:border-white/5">
-              <div className="size-4 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/20" />
-              <div>
-                <p className="text-lg font-black text-slate-900 dark:text-white leading-none mb-1">{verificationBreakdown.approved}</p>
-                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Approved</p>
+          <div className="grid grid-cols-3 gap-3 md:gap-8">
+            <div className="flex flex-col sm:flex-row items-center gap-2 md:gap-4 bg-slate-50 dark:bg-white/5 p-3 md:p-4 rounded-xl md:rounded-2xl border border-slate-100 dark:border-white/5">
+              <div className="size-3 md:size-4 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/20" />
+              <div className="text-center sm:text-left">
+                <p className="text-base md:text-lg font-black text-slate-900 dark:text-white leading-none mb-1">{verificationBreakdown.approved}</p>
+                <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Approved</p>
               </div>
             </div>
-            <div className="flex items-center gap-4 bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-100 dark:border-white/5">
-              <div className="size-4 rounded-full bg-orange-500 shadow-lg shadow-orange-500/20" />
-              <div>
-                <p className="text-lg font-black text-slate-900 dark:text-white leading-none mb-1">{verificationBreakdown.pending}</p>
-                <p className="text-[10px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400">Pending</p>
+            <div className="flex flex-col sm:flex-row items-center gap-2 md:gap-4 bg-slate-50 dark:bg-white/5 p-3 md:p-4 rounded-xl md:rounded-2xl border border-slate-100 dark:border-white/5">
+              <div className="size-3 md:size-4 rounded-full bg-orange-500 shadow-lg shadow-orange-500/20" />
+              <div className="text-center sm:text-left">
+                <p className="text-base md:text-lg font-black text-slate-900 dark:text-white leading-none mb-1">{verificationBreakdown.pending}</p>
+                <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400">Pending</p>
               </div>
             </div>
-            <div className="flex items-center gap-4 bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-100 dark:border-white/5">
-              <div className="size-4 rounded-full bg-rose-500 shadow-lg shadow-rose-500/20" />
-              <div>
-                <p className="text-lg font-black text-slate-900 dark:text-white leading-none mb-1">{verificationBreakdown.rejected}</p>
-                <p className="text-[10px] font-black uppercase tracking-widest text-rose-600 dark:text-rose-400">Rejected</p>
+            <div className="flex flex-col sm:flex-row items-center gap-2 md:gap-4 bg-slate-50 dark:bg-white/5 p-3 md:p-4 rounded-xl md:rounded-2xl border border-slate-100 dark:border-white/5">
+              <div className="size-3 md:size-4 rounded-full bg-rose-500 shadow-lg shadow-rose-500/20" />
+              <div className="text-center sm:text-left">
+                <p className="text-base md:text-lg font-black text-slate-900 dark:text-white leading-none mb-1">{verificationBreakdown.rejected}</p>
+                <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-rose-600 dark:text-rose-400">Rejected</p>
               </div>
             </div>
           </div>

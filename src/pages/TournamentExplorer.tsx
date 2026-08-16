@@ -115,20 +115,20 @@ export const TournamentExplorer = () => {
   return (
     <div className="space-y-8 pb-20">
       {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-[2rem] bg-slate-950 text-white py-6 md:py-8 px-8 md:px-12 shadow-2xl border border-white/5">
+      <div className="relative overflow-hidden rounded-2xl md:rounded-[2rem] bg-slate-950 text-white py-5 md:py-8 px-5 md:px-12 shadow-2xl border border-white/5">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 size-64 bg-orange-500/10 rounded-full blur-3xl" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Globe className="w-5 h-5 text-orange-500" />
-              <span className="text-orange-500 font-bold text-xs tracking-[0.2em] uppercase">
+            <div className="flex items-center gap-2 mb-1.5 md:mb-2">
+              <Globe className="w-4 h-4 md:w-5 md:h-5 text-orange-500" />
+              <span className="text-orange-500 font-bold text-[10px] md:text-xs tracking-[0.2em] uppercase">
                 Official Match Center
               </span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-sans font-black tracking-tight uppercase leading-tight">
+            <h1 className="text-2xl md:text-4xl font-sans font-black tracking-tight uppercase leading-tight">
               TOURNAMENT <span className="text-orange-500">EXPLORER</span>
             </h1>
-            <p className="text-slate-400 font-sans font-medium text-sm tracking-wide mt-2 max-w-2xl opacity-80">
+            <p className="text-slate-400 font-sans font-medium text-xs md:text-sm tracking-wide mt-1.5 md:mt-2 max-w-2xl opacity-80">
               Browse all official PSU tournaments, track live scores, and relive historical match moments.
             </p>
           </div>
@@ -196,19 +196,19 @@ export const TournamentExplorer = () => {
         <div className="w-full lg:w-3/4 flex flex-col max-w-full">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200 fill-mode-both">
             <div className="sticky top-0 z-20 pb-4 -mx-2 px-2 bg-background/80 backdrop-blur-sm">
-              <TabsList className="p-1 h-14 bg-slate-950/5 border border-slate-200/50 backdrop-blur-xl rounded-2xl w-full md:w-auto flex items-stretch">
+              <TabsList className="p-1 h-12 md:h-14 bg-slate-950/5 border border-slate-200/50 backdrop-blur-xl rounded-xl md:rounded-2xl w-full flex items-stretch">
                 <TabsTrigger 
                   value="live" 
-                  className="px-8 font-black uppercase italic tracking-tight data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-lg rounded-xl transition-all flex items-center gap-2"
+                  className="flex-1 px-3 md:px-8 font-black uppercase italic tracking-tight text-xs md:text-sm data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-lg rounded-lg md:rounded-xl transition-all flex items-center justify-center gap-1.5 md:gap-2"
                 >
-                  <Clock className="size-4" /> Live & Upcoming
+                  <Clock className="size-3.5 md:size-4" /> Live & Upcoming
                 </TabsTrigger>
                 
                 <TabsTrigger 
                   value="history" 
-                  className="px-8 font-black uppercase italic tracking-tight data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-lg rounded-xl transition-all flex items-center gap-2"
+                  className="flex-1 px-3 md:px-8 font-black uppercase italic tracking-tight text-xs md:text-sm data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-lg rounded-lg md:rounded-xl transition-all flex items-center justify-center gap-1.5 md:gap-2"
                 >
-                  <History className="size-4" /> Match History
+                  <History className="size-3.5 md:size-4" /> Match History
                 </TabsTrigger>
               </TabsList>
             </div>

@@ -1133,7 +1133,7 @@ export const TournamentManagement = () => {
               ))}
             </div>
           ) : (
-            <Card className="rounded-[2rem] border-2 border-slate-100 dark:border-white/5 overflow-hidden shadow-2xl">
+            <Card className="rounded-[2rem] border-2 border-slate-100 dark:border-white/5 overflow-x-auto shadow-2xl">
               <Table>
                 <TableHeader className="bg-slate-50 dark:bg-white/5">
                   <TableRow className="hover:bg-transparent border-none">
