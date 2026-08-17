@@ -160,7 +160,7 @@ export const AdminDashboard = () => {
 
       {/* Coming Soon / Draft Events Showcase Banner */}
       {draftTournaments.length > 0 && (
-        <div className="bg-gradient-to-r from-orange-500/15 via-orange-500/5 to-slate-900 border-2 border-orange-500/30 rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 relative overflow-hidden shadow-xl animate-in fade-in slide-in-from-top-4 duration-500">
+        <div className="bg-slate-950 border border-white/5 rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 relative overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10 mb-4 md:mb-6">
             <div className="flex items-start md:items-center gap-3">
               <div className="p-2.5 md:p-3 bg-orange-500 rounded-xl md:rounded-2xl text-white shadow-lg shadow-orange-500/30 shrink-0">
@@ -175,8 +175,8 @@ export const AdminDashboard = () => {
                     {draftTournaments.length} Event{draftTournaments.length > 1 ? 's' : ''} Open
                   </span>
                 </div>
-                <h3 className="text-lg md:text-2xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white mt-1">
-                  Upcoming Tournament Pipeline
+                <h3 className="text-lg md:text-2xl font-black italic uppercase tracking-tight text-white mt-1">
+                  Upcoming Tournament Arena Pipeline
                 </h3>
               </div>
             </div>
@@ -193,7 +193,7 @@ export const AdminDashboard = () => {
             {draftTournaments.slice(0, 8).map((t) => (
               <div
                 key={t.id}
-                className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-orange-500/20 rounded-2xl p-4 flex flex-col justify-between hover:border-orange-500/50 transition-all group"
+                className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col justify-between hover:border-orange-500/50 transition-all group"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
@@ -204,11 +204,11 @@ export const AdminDashboard = () => {
                       Draft
                     </span>
                   </div>
-                  <h4 className="font-black text-sm uppercase italic tracking-tight text-slate-900 dark:text-white truncate group-hover:text-orange-500 transition-colors">
+                  <h4 className="font-black text-sm uppercase italic tracking-tight text-white truncate group-hover:text-orange-500 transition-colors">
                     {t.name}
                   </h4>
                 </div>
-                <div className="mt-3 pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[10px] text-slate-500 font-medium">
+                <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-400 font-medium">
                   <span>Kickoff: {new Date(t.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                   <span className="text-orange-500 font-bold">Awaiting Teams</span>
                 </div>

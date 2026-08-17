@@ -4,10 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LogOut, User as UserIcon } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export const Navbar = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const [showSignOutPrompt, setShowSignOutPrompt] = useState(false);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -47,7 +50,7 @@ export const Navbar = () => {
           <Button 
             variant="ghost" 
             size="sm" 
-            onClick={handleSignOut}
+            onClick={() => setShowSignOutPrompt(true)}
             className="flex items-center gap-2 hover:bg-destructive/10 hover:text-destructive transition-colors"
           >
             <LogOut className="size-4" />
@@ -55,6 +58,33 @@ export const Navbar = () => {
           </Button>
         </div>
       </div>
+
+      <Dialog open={showSignOutPrompt} onOpenChange={setShowSignOutPrompt}>
+        <DialogContent className="max-w-sm rounded-[2rem] p-8 border-slate-100 dark:border-white/5">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter">
+              Sign <span className="text-orange-500">Out</span>
+            </DialogTitle>
+            <DialogDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-2">
+              Are you sure you want to sign out of PSU SportsTrack?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-3 mt-4">
+            <Button variant="ghost" onClick={() => setShowSignOutPrompt(false)} className="h-12 rounded-2xl font-black uppercase tracking-widest text-xs">
+              Cancel
+            </Button>
+            <Button 
+              className="h-12 flex-1 bg-destructive hover:bg-destructive/90 text-white rounded-2xl font-black uppercase italic tracking-[0.1em]"
+              onClick={() => {
+                setShowSignOutPrompt(false);
+                handleSignOut();
+              }}
+            >
+              Sign Out
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </nav>
   );
 };

@@ -14,12 +14,14 @@ import {
   Medal
 } from 'lucide-react';
 import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 
 export const AppLayout = () => {
   const { user, role, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showSignOutPrompt, setShowSignOutPrompt] = useState(false);
 
   const navigation = [
     { 
@@ -102,7 +104,7 @@ export const AppLayout = () => {
           <Button 
             variant="ghost" 
             className="w-full justify-start gap-3 text-slate-400 hover:text-orange-400 hover:bg-orange-500/5 transition-colors font-bold rounded-xl"
-            onClick={handleSignOut}
+            onClick={() => setShowSignOutPrompt(true)}
           >
             <LogOut className="size-5" />
             Sign Out
@@ -172,7 +174,10 @@ export const AppLayout = () => {
                 <Button 
                   variant="ghost" 
                   className="w-full justify-start gap-4 text-slate-400 h-14 px-6 hover:text-orange-500 font-bold text-lg"
-                  onClick={handleSignOut}
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    setShowSignOutPrompt(true);
+                  }}
                 >
                   <LogOut className="size-6" />
                   Sign Out
@@ -192,6 +197,33 @@ export const AppLayout = () => {
           </div>
         </main>
       </div>
+
+      <Dialog open={showSignOutPrompt} onOpenChange={setShowSignOutPrompt}>
+        <DialogContent className="max-w-sm rounded-[2rem] p-8 border-slate-100 dark:border-white/5">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter">
+              Sign <span className="text-orange-500">Out</span>
+            </DialogTitle>
+            <DialogDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-2">
+              Are you sure you want to sign out of PSU SportsTrack?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-3 mt-4">
+            <Button variant="ghost" onClick={() => setShowSignOutPrompt(false)} className="h-12 rounded-2xl font-black uppercase tracking-widest text-xs">
+              Cancel
+            </Button>
+            <Button 
+              className="h-12 flex-1 bg-destructive hover:bg-destructive/90 text-white rounded-2xl font-black uppercase italic tracking-[0.1em]"
+              onClick={() => {
+                setShowSignOutPrompt(false);
+                handleSignOut();
+              }}
+            >
+              Sign Out
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

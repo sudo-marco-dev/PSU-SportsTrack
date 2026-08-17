@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
 const loginSchema = z.object({
@@ -29,6 +30,8 @@ export const Login = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showRecoveryPrompt, setShowRecoveryPrompt] = useState(false);
+  const [recoveryEmail, setRecoveryEmail] = useState('');
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -117,17 +120,8 @@ export const Login = () => {
           if (email) {
             // Delay the prompt slightly so the user sees the lockout toast first
             setTimeout(() => {
-              if (window.confirm(`Would you like us to send a password recovery link to ${email}?`)) {
-                supabase.auth.resetPasswordForEmail(email, {
-                  redirectTo: `${window.location.origin}/reset-password`,
-                }).then(({ error: resetError }) => {
-                  if (resetError) {
-                    toast.error('Failed to send reset link: ' + resetError.message);
-                  } else {
-                    toast.success('A password reset link has been sent to your email.');
-                  }
-                });
-              }
+              setRecoveryEmail(email);
+              setShowRecoveryPrompt(true);
             }, 500);
           }
         } else {
@@ -220,9 +214,6 @@ export const Login = () => {
                   <p className="text-[11px] font-bold uppercase tracking-wider text-red-400">
                     Too many failed attempts. Account temporarily locked.
                   </p>
-                  <p className="text-[10px] text-slate-400">
-                    A password reset link has been sent to your email.
-                  </p>
                 </div>
               ) : failedAttempts > 0 ? (
                 <p className="text-[11px] font-bold uppercase tracking-wider text-orange-400 text-center">
@@ -263,6 +254,41 @@ export const Login = () => {
           </div>
         </CardFooter>
       </Card>
+
+      <Dialog open={showRecoveryPrompt} onOpenChange={setShowRecoveryPrompt}>
+        <DialogContent className="max-w-md rounded-[2rem] p-8 border-slate-100 dark:border-white/5">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter">
+              Account <span className="text-orange-500">Locked</span>
+            </DialogTitle>
+            <DialogDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-2">
+              Would you like us to send a password recovery link to {recoveryEmail}?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-3 mt-4">
+            <Button variant="ghost" onClick={() => setShowRecoveryPrompt(false)} className="h-12 rounded-2xl font-black uppercase tracking-widest text-xs">
+              Cancel
+            </Button>
+            <Button 
+              className="h-12 flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-black uppercase italic tracking-[0.1em]"
+              onClick={() => {
+                setShowRecoveryPrompt(false);
+                supabase.auth.resetPasswordForEmail(recoveryEmail, {
+                  redirectTo: `${window.location.origin}/reset-password`,
+                }).then(({ error: resetError }) => {
+                  if (resetError) {
+                    toast.error('Failed to send reset link: ' + resetError.message);
+                  } else {
+                    toast.success('A password reset link has been sent to your email.');
+                  }
+                });
+              }}
+            >
+              Send Recovery Link
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
