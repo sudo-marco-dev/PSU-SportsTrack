@@ -32,6 +32,8 @@ const registerSchema = z.object({
 });
 
 export const Register = () => {
+  const navigate = useNavigate();
+  const { openLoginModal } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [colleges, setColleges] = useState<{ id: string; college_name: string }[]>([]);
@@ -253,9 +255,16 @@ export const Register = () => {
         <CardFooter className="flex flex-col space-y-4 text-center pb-10 pt-4 bg-transparent border-t-0">
           <div className="text-slate-400 text-xs font-bold uppercase tracking-widest">
             Already a member?{' '}
-            <Link to="/login" className="text-orange-500 hover:text-orange-400 transition-colors font-black underline underline-offset-4">
-              Return To Login
-            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                navigate('/');
+                openLoginModal();
+              }}
+              className="text-orange-500 hover:text-orange-400 transition-colors font-black underline underline-offset-4 cursor-pointer"
+            >
+              Sign In Now
+            </button>
           </div>
         </CardFooter>
       </Card>

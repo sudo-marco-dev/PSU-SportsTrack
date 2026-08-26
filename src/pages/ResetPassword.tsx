@@ -265,10 +265,10 @@ export const ResetPassword = () => {
               </Form>
               <div className="text-center mt-6">
                 <Link
-                  to="/login"
+                  to="/"
                   className="text-[11px] font-bold uppercase tracking-widest text-slate-500 hover:text-orange-500 transition-colors underline underline-offset-4"
                 >
-                  ← Back to Login
+                  ← Return To Home
                 </Link>
               </div>
             </CardContent>
@@ -298,10 +298,10 @@ export const ResetPassword = () => {
                 </p>
               </div>
               <Link
-                to="/login"
+                to="/"
                 className="inline-flex items-center justify-center w-full px-6 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition duration-200 shadow-sm uppercase tracking-wider text-sm"
               >
-                Back to Login
+                Return To Dashboard
               </Link>
             </div>
           </Card>
@@ -327,10 +327,10 @@ export const ResetPassword = () => {
                 <p className="text-sm text-red-400 font-medium">{errorMessage}</p>
               </div>
               <Link
-                to="/login"
+                to="/"
                 className="inline-flex items-center justify-center w-full px-6 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition duration-200 shadow-sm uppercase tracking-wider text-sm"
               >
-                Back to Login
+                Return To Dashboard
               </Link>
             </div>
           </Card>

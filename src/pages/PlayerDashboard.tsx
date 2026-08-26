@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Activity, Trophy, Clock, Star, User, CalendarDays, Dumbbell, Swords } from 'lucide-react';
+import { Activity, Trophy, Clock, Star, User, CalendarDays, Dumbbell, Swords, MapPin } from 'lucide-react';
 
 type RosterInvite = {
   id: string;
@@ -27,6 +27,7 @@ type LiveMatch = {
   team_b_score: number;
   status: string;
   round: string;
+  venue?: string | null;
   team_a: { name: string } | null;
   team_b: { name: string } | null;
 };
@@ -67,18 +68,11 @@ export const PlayerDashboard = () => {
         });
     }
 
-    if (user && isVerified) {
-      fetchDashboardData();
-    }
+    fetchDashboardData();
   }, [user, isVerified]);
 
   useEffect(() => {
-    if (!user || !isVerified) {
-      console.log("⏳ Waiting for User/Verification before connecting to Dashboard Realtime...");
-      return;
-    }
-
-    console.log(`🔌 Connecting to Dashboard Realtime for User: ${user.id}`);
+    if (!user) return;
 
     const matchSubscription = supabase
       .channel('dashboard-live-matches')
@@ -86,7 +80,6 @@ export const PlayerDashboard = () => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'matches' },
         (payload) => {
-          console.log("🔥 DASHBOARD REALTIME PAYLOAD RECEIVED:", payload);
           if (payload.eventType === 'UPDATE') {
             setLiveMatches((prev) => 
               prev.map(match => 
@@ -105,56 +98,56 @@ export const PlayerDashboard = () => {
           }
         }
       )
-      .subscribe((status) => {
-        console.log(`📡 Dashboard Realtime Status:`, status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(matchSubscription);
     };
-  }, [user, isVerified]);
+  }, [user]);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
     
-    // Fetch Roster Data
-    const { data: rosterData, error: rosterError } = await supabase
-      .from('team_roster')
-      .select('id, status, teams(name, tournaments(name))')
-      .eq('player_id', user?.id);
+    // Fetch Roster Data only if logged in
+    if (user?.id) {
+      const { data: rosterData } = await supabase
+        .from('team_roster')
+        .select('id, status, teams(name, tournaments(name))')
+        .eq('player_id', user.id);
 
-    if (rosterError) {
-      toast.error('Failed to load roster data: ' + rosterError.message);
+      if (rosterData) {
+        const formattedRoster = (rosterData as unknown) as RosterInvite[];
+        setInvites(formattedRoster.filter((i) => i.status === 'Pending'));
+        setMyTeams(formattedRoster.filter((i) => i.status === 'Approved'));
+      }
+
+      // Fetch MVP Stars
+      const { data: starsData } = await supabase
+        .from('player_stars')
+        .select('*, matches(round), tournaments(name)')
+        .eq('player_id', user.id);
+      
+      if (starsData) {
+        setStars(starsData as unknown as PlayerStar[]);
+      }
     } else {
-      const formattedRoster = (rosterData as unknown) as RosterInvite[];
-      setInvites(formattedRoster.filter((i) => i.status === 'Pending'));
-      setMyTeams(formattedRoster.filter((i) => i.status === 'Approved'));
+      setInvites([]);
+      setMyTeams([]);
+      setStars([]);
     }
 
-    // Fetch Live/Upcoming Matches
-    const { data: matchData, error: matchError } = await supabase
+    // Fetch Live/Upcoming Matches (Public)
+    const { data: matchData } = await supabase
       .from('matches')
-      .select('id, team_a_score, team_b_score, status, round, team_a:team_a_id(name), team_b:team_b_id(name)')
+      .select('id, team_a_score, team_b_score, status, round, venue, team_a:team_a_id(name), team_b:team_b_id(name)')
       .in('status', ['Scheduled', 'Ongoing'])
-      .order('status', { ascending: false }); // Ongoing first
+      .order('status', { ascending: false });
 
-    if (matchError) {
-      toast.error('Failed to load live matches: ' + matchError.message);
-    } else {
+    if (matchData) {
       setLiveMatches(matchData as unknown as LiveMatch[]);
     }
 
-    // Fetch MVP Stars
-    const { data: starsData } = await supabase
-      .from('player_stars')
-      .select('*, matches(round), tournaments(name)')
-      .eq('player_id', user?.id);
-    
-    if (starsData) {
-      setStars(starsData as unknown as PlayerStar[]);
-    }
-
-    // Fetch Draft / Coming Soon Tournaments
+    // Fetch Draft / Coming Soon Tournaments (Public)
     const { data: draftData } = await supabase
       .from('tournaments')
       .select('*')
@@ -182,7 +175,7 @@ export const PlayerDashboard = () => {
     }
   };
 
-  if (!isVerified) {
+  if (user && !isVerified) {
     if (hasPendingDocuments) {
       return (
         <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center bg-white rounded-3xl border border-slate-200 shadow-sm">
@@ -202,7 +195,7 @@ export const PlayerDashboard = () => {
     );
   }
 
-  if (isLoading && isVerified) {
+  if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <p className="text-lg text-muted-foreground animate-pulse">Loading dashboard...</p>
@@ -212,91 +205,98 @@ export const PlayerDashboard = () => {
 
   return (
     <div className="space-y-12">
+      {/* Hero Banner */}
       <div className="bg-slate-950 py-5 md:py-8 px-5 md:px-10 rounded-2xl md:rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <User className="w-4 h-4 md:w-5 md:h-5 text-orange-500" />
               <span className="text-orange-500 font-bold text-xs tracking-[0.2em] uppercase">
-                Athlete Hub
+                {user ? 'Athlete Hub' : 'Official Portal'}
               </span>
             </div>
             <h1 className="text-2xl md:text-4xl font-black tracking-tight text-white uppercase italic leading-none">
-              PLAYER <span className="text-orange-500">HUB</span>
+              {user ? 'PLAYER ' : 'SPORTS '}<span className="text-orange-500">HUB</span>
             </h1>
             <p className="text-slate-400 text-xs md:text-sm font-medium mt-2 max-w-md">
-              Track your progress, accept invitations, and follow live university matches.
+              {user 
+                ? 'Track your progress, accept team invitations, and follow live university matches.'
+                : 'Explore live university matches, upcoming tournaments, and official PSU sports action.'}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="px-3.5 py-2 bg-white/5 rounded-xl md:rounded-2xl border border-white/10 backdrop-blur-md">
-              <p className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Stars</p>
-              <div className="flex items-center gap-1.5">
-                <Star className="size-3 text-orange-500 fill-orange-500" />
-                <p className="text-lg md:text-xl font-black text-white leading-none">{stars.length}</p>
+          {user && (
+            <div className="flex items-center gap-3">
+              <div className="px-3.5 py-2 bg-white/5 rounded-xl md:rounded-2xl border border-white/10 backdrop-blur-md">
+                <p className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Stars</p>
+                <div className="flex items-center gap-1.5">
+                  <Star className="size-3 text-orange-500 fill-orange-500" />
+                  <p className="text-lg md:text-xl font-black text-white leading-none">{stars.length}</p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
         <div className="absolute right-0 top-0 h-full w-64 bg-gradient-to-l from-orange-500/10 to-transparent -skew-x-12 translate-x-32" />
       </div>
 
-      {/* MVP Stars / Achievements Preview */}
-      <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200 fill-mode-both">
-        <div className="flex items-center justify-between px-2">
-          <h2 className="text-xl font-black uppercase italic tracking-tight flex items-center gap-2">
-            <Trophy className="size-5 text-orange-500" /> My Achievements
-          </h2>
-        </div>
-        <Card className="bg-white border-2 border-slate-100 overflow-hidden shadow-xl rounded-2xl md:rounded-[2rem]">
-          <CardContent className="p-4 md:p-8">
-            {stars.length === 0 ? (
-              <div className="text-center py-8 space-y-3 opacity-50">
-                <div className="flex justify-center gap-3">
-                  <Star className="size-7 text-slate-200" />
-                  <Star className="size-9 text-slate-300 -translate-y-2" />
-                  <Star className="size-7 text-slate-200" />
-                </div>
-                <p className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em] text-slate-400">Trophy Case Empty</p>
-              </div>
-            ) : (
-              <div className="space-y-4 md:space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 md:gap-6 p-4 md:p-6 rounded-xl md:rounded-[1.5rem] bg-slate-50 border border-slate-100 group hover:border-orange-500/30 transition-all duration-300">
-                  <div className={`p-4 md:p-5 rounded-2xl shadow-lg shrink-0 ${
-                    stars[0].star_type === 'Red' ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'
-                  }`}>
-                    <Star className={`size-8 md:size-10 ${stars[0].star_type === 'Red' ? 'fill-white' : 'fill-white'}`} />
+      {/* MVP Stars / Achievements Preview (Only visible when logged in) */}
+      {user && (
+        <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200 fill-mode-both">
+          <div className="flex items-center justify-between px-2">
+            <h2 className="text-xl font-black uppercase italic tracking-tight flex items-center gap-2">
+              <Trophy className="size-5 text-orange-500" /> My Achievements
+            </h2>
+          </div>
+          <Card className="bg-white border-2 border-slate-100 overflow-hidden shadow-xl rounded-2xl md:rounded-[2rem]">
+            <CardContent className="p-4 md:p-8">
+              {stars.length === 0 ? (
+                <div className="text-center py-8 space-y-3 opacity-50">
+                  <div className="flex justify-center gap-3">
+                    <Star className="size-7 text-slate-200" />
+                    <Star className="size-9 text-slate-300 -translate-y-2" />
+                    <Star className="size-7 text-slate-200" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">Latest Honor</span>
-                      <div className="h-px flex-1 bg-slate-200" />
+                  <p className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em] text-slate-400">Trophy Case Empty</p>
+                </div>
+              ) : (
+                <div className="space-y-4 md:space-y-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 md:gap-6 p-4 md:p-6 rounded-xl md:rounded-[1.5rem] bg-slate-50 border border-slate-100 group hover:border-orange-500/30 transition-all duration-300">
+                    <div className={`p-4 md:p-5 rounded-2xl shadow-lg shrink-0 ${
+                      stars[0].star_type === 'Red' ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'
+                    }`}>
+                      <Star className={`size-8 md:size-10 ${stars[0].star_type === 'Red' ? 'fill-white' : 'fill-white'}`} />
                     </div>
-                    <p className="font-black text-xl md:text-2xl uppercase italic tracking-tight leading-none mb-1">
-                      {stars[0].star_type === 'Red' ? 'Match MVP' : 'Tournament MVP'}
-                    </p>
-                    <p className="text-xs md:text-sm font-bold text-slate-500 truncate">
-                      {stars[0].tournaments?.name}
-                    </p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">Latest Honor</span>
+                        <div className="h-px flex-1 bg-slate-200" />
+                      </div>
+                      <p className="font-black text-xl md:text-2xl uppercase italic tracking-tight leading-none mb-1">
+                        {stars[0].star_type === 'Red' ? 'Match MVP' : 'Tournament MVP'}
+                      </p>
+                      <p className="text-xs md:text-sm font-bold text-slate-500 truncate">
+                        {stars[0].tournaments?.name}
+                      </p>
+                    </div>
+                    <div className="hidden md:block">
+                      <Badge variant="outline" className="font-black uppercase tracking-widest border-2 px-3 py-1 text-[10px]">{new Date(stars[0].created_at).toLocaleDateString()}</Badge>
+                    </div>
                   </div>
-                  <div className="hidden md:block">
-                    <Badge variant="outline" className="font-black uppercase tracking-widest border-2 px-3 py-1 text-[10px]">{new Date(stars[0].created_at).toLocaleDateString()}</Badge>
-                  </div>
-                </div>
 
-                <Button 
-                  variant="outline" 
-                  className="w-full h-12 md:h-14 border-2 border-slate-100 font-black uppercase italic tracking-widest text-xs md:text-sm hover:bg-slate-950 hover:text-white hover:border-slate-950 transition-all rounded-xl md:rounded-2xl group shadow-sm"
-                  onClick={() => navigate('/achievements')}
-                >
-                  <span className="group-hover:translate-x-1 transition-transform inline-block mr-2">View Full Trophy Room</span>
-                  <Trophy className="size-4 opacity-50" />
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
+                  <Button 
+                    variant="outline" 
+                    className="w-full h-12 md:h-14 border-2 border-slate-100 font-black uppercase italic tracking-widest text-xs md:text-sm hover:bg-slate-950 hover:text-white hover:border-slate-950 transition-all rounded-xl md:rounded-2xl group shadow-sm"
+                    onClick={() => navigate('/profile')}
+                  >
+                    <span className="group-hover:translate-x-1 transition-transform inline-block mr-2">View Full Trophy Room</span>
+                    <Trophy className="size-4 opacity-50" />
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       {/* Coming Soon • Upcoming Tournaments Banner */}
       {draftTournaments.length > 0 && (
@@ -377,6 +377,12 @@ export const PlayerDashboard = () => {
                     <span className="text-slate-300 text-xs mx-2">VS</span>
                     <span className="truncate">{match.team_b?.name || 'BYE'}</span>
                   </CardTitle>
+                  {match.venue && (
+                    <div className="flex items-center gap-1 mt-2 text-[10px] font-black text-slate-500 uppercase tracking-wider truncate">
+                      <MapPin className="size-3 text-orange-500 shrink-0" />
+                      <span className="truncate">{match.venue}</span>
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {match.status === 'Ongoing' && (
@@ -405,8 +411,8 @@ export const PlayerDashboard = () => {
         )}
       </section>
 
-      {/* Pending Invites Section */}
-      {invites.length > 0 && (
+      {/* Pending Invites Section (Only visible when logged in) */}
+      {user && invites.length > 0 && (
         <section className="space-y-4">
           <h2 className="text-xl font-semibold flex items-center gap-2">
             Active Team Invites
@@ -452,40 +458,42 @@ export const PlayerDashboard = () => {
         </section>
       )}
 
-      {/* My Teams Section */}
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold">My Teams</h2>
-        {myTeams.length === 0 ? (
-          <div className="p-8 border border-dashed rounded-lg text-center text-muted-foreground">
-            You are not currently part of any teams. Wait for an invitation from a coach.
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {myTeams.map((roster, index) => (
-              <Card 
-                key={roster.id} 
-                className="group border-2 border-slate-100 hover:border-slate-300 transition-all rounded-2xl animate-in fade-in slide-in-from-bottom-4 fill-mode-both"
-                style={{ animationDelay: `${index * 75}ms` }}
-              >
-                <CardHeader>
-                  <CardTitle className="font-black uppercase italic tracking-tight">
-                    {Array.isArray(roster.teams) ? roster.teams[0]?.name : roster.teams?.name ?? 'Unknown Team'}
-                  </CardTitle>
-                  <CardDescription className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                    {(() => {
-                      const team = Array.isArray(roster.teams) ? roster.teams[0] : roster.teams;
-                      return Array.isArray(team?.tournaments) ? team?.tournaments[0]?.name : team?.tournaments?.name ?? 'Unknown Tournament';
-                    })()}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Badge className="font-black uppercase tracking-widest text-[9px] bg-slate-900">Official Roster Member</Badge>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </section>
+      {/* My Teams Section (Only visible when logged in) */}
+      {user && (
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold">My Teams</h2>
+          {myTeams.length === 0 ? (
+            <div className="p-8 border border-dashed rounded-lg text-center text-muted-foreground">
+              You are not currently part of any teams. Wait for an invitation from a coach.
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {myTeams.map((roster, index) => (
+                <Card 
+                  key={roster.id} 
+                  className="group border-2 border-slate-100 hover:border-slate-300 transition-all rounded-2xl animate-in fade-in slide-in-from-bottom-4 fill-mode-both"
+                  style={{ animationDelay: `${index * 75}ms` }}
+                >
+                  <CardHeader>
+                    <CardTitle className="font-black uppercase italic tracking-tight">
+                      {Array.isArray(roster.teams) ? roster.teams[0]?.name : roster.teams?.name ?? 'Unknown Team'}
+                    </CardTitle>
+                    <CardDescription className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                      {(() => {
+                        const team = Array.isArray(roster.teams) ? roster.teams[0] : roster.teams;
+                        return Array.isArray(team?.tournaments) ? team?.tournaments[0]?.name : team?.tournaments?.name ?? 'Unknown Tournament';
+                      })()}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Badge className="font-black uppercase tracking-widest text-[9px] bg-slate-900">Official Roster Member</Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Coming Soon Tournament Detail Dialog */}
       <Dialog open={!!selectedTournament} onOpenChange={(open) => { if (!open) setSelectedTournament(null); }}>

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Trophy, ChevronLeft, Activity, Send, Clock, AlertCircle, Star } from 'lucide-react';
+import { Trophy, ChevronLeft, Activity, Send, Clock, AlertCircle, Star, MapPin } from 'lucide-react';
 
 type Match = {
   id: string;
@@ -18,6 +18,7 @@ type Match = {
   team_b_score: number;
   status: 'Scheduled' | 'Ongoing' | 'Completed';
   round: string;
+  venue?: string | null;
   team_a: { name: string } | null;
   team_b: { name: string } | null;
   tournament_id: string;
@@ -315,30 +316,9 @@ export const LiveMatch = () => {
     } else {
       toast.success(`Match status updated to ${newStatus}`);
 
-      // Bracket progression winner advancement logic
+      // Require Admin confirmation in Tournament Arena before bracket progression
       if (newStatus === 'Completed') {
-        const isTeamAWinner = match.team_a_score > match.team_b_score;
-        const winnerId = isTeamAWinner ? match.team_a_id : match.team_b_id;
-        const winnerName = isTeamAWinner ? (match.team_a?.name || 'TBD') : (match.team_b?.name || 'TBD');
-
-        if (match.next_match_id) {
-          const nextMatchField = match.next_match_slot === 'team_a' ? 'team_a_id' : 'team_b_id';
-          const { error: advanceError } = await supabase
-            .from('matches')
-            .update({ [nextMatchField]: winnerId })
-            .eq('id', match.next_match_id);
-
-          if (advanceError) {
-            toast.error('Failed to advance winner: ' + advanceError.message);
-          } else {
-            toast.success(`Winner ${winnerName} automatically advanced to the next round!`);
-          }
-        } else {
-          // Final match of the tournament - champion celebration!
-          toast.success(`🎉 ${winnerName} is the Tournament Champion! 🏆`, {
-            duration: 10000,
-          });
-        }
+        toast.info(`Match completed! Result recorded. Awaiting Admin confirmation in Tournament Arena to advance winner.`);
       }
 
       const { data: eventData, error: eventError } = await supabase.from('match_events').insert({
@@ -475,8 +455,16 @@ export const LiveMatch = () => {
         {/* Scoreboard */}
         <Card className="bg-primary text-primary-foreground shadow-2xl overflow-hidden border-none">
           <CardContent className="p-0">
-            <div className="bg-black/20 p-4 text-center text-xs font-bold uppercase tracking-widest opacity-80">
-              {match.round} • Live Scoring
+            <div className="bg-black/20 p-4 text-center text-xs font-bold uppercase tracking-widest opacity-80 flex items-center justify-center gap-2">
+              <span>{match.round}</span>
+              {match.venue && (
+                <>
+                  <span>•</span>
+                  <span className="flex items-center gap-1"><MapPin className="size-3 text-orange-400" /> {match.venue}</span>
+                </>
+              )}
+              <span>•</span>
+              <span>Live Scoring</span>
             </div>
             <div className="flex items-center justify-between p-8 md:p-12">
               <div className="flex-1 text-center">

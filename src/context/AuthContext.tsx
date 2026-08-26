@@ -13,8 +13,14 @@ interface AuthContextType {
   profile: {
     full_name: string | null;
     role: UserRole | null;
+    college_id?: string | null;
+    college_name?: string | null;
   } | null;
+  isLoginModalOpen: boolean;
+  openLoginModal: () => void;
+  closeLoginModal: () => void;
   signOut: () => Promise<void>;
+  refetchProfile?: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -24,6 +30,9 @@ const AuthContext = createContext<AuthContextType>({
   isVerified: false,
   isLoading: true,
   profile: null,
+  isLoginModalOpen: false,
+  openLoginModal: () => {},
+  closeLoginModal: () => {},
   signOut: async () => {},
 });
 
@@ -34,6 +43,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isVerified, setIsVerified] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<AuthContextType['profile']>(null);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  const openLoginModal = () => setIsLoginModalOpen(true);
+  const closeLoginModal = () => setIsLoginModalOpen(false);
 
   useEffect(() => {
     // Fetch initial session
@@ -74,7 +87,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('role, is_verified, full_name')
+        .select('role, is_verified, full_name, college_id, colleges(college_name)')
         .eq('id', userId)
         .single();
 
@@ -83,9 +96,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else if (data) {
         setRole(data.role as UserRole);
         setIsVerified(data.is_verified);
+        // Handle joined colleges array or single object from Supabase
+        const collegeData = Array.isArray(data.colleges) ? data.colleges[0] : data.colleges;
         setProfile({
           full_name: data.full_name,
           role: data.role as UserRole,
+          college_id: data.college_id,
+          college_name: collegeData?.college_name || null,
         });
       }
     } catch (err) {
@@ -95,12 +112,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const refetchProfile = async () => {
+    if (user?.id) {
+      await fetchUserProfile(user.id);
+    }
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, isVerified, isLoading, profile, signOut }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      role, 
+      isVerified, 
+      isLoading, 
+      profile, 
+      isLoginModalOpen, 
+      openLoginModal, 
+      closeLoginModal, 
+      signOut,
+      refetchProfile
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -111,10 +111,10 @@ export const AuthConfirm = () => {
                 <p className="text-sm text-red-700 font-medium">{errorMessage}</p>
               </div>
               <Link
-                to="/login"
+                to="/"
                 className="inline-flex items-center justify-center w-full px-6 py-3 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 transition duration-200 shadow-sm uppercase tracking-wider text-sm"
               >
-                Back to Login
+                Return to Dashboard
               </Link>
             </>
           )}

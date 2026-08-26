@@ -1,9 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { AuthProvider } from '@/context/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Toaster } from '@/components/ui/sonner';
 
-import { Login } from '@/pages/Login';
 import { Register } from '@/pages/Register';
 import { PlayerDashboard } from '@/pages/PlayerDashboard';
 import { AdminDashboard } from '@/pages/AdminDashboard';
@@ -13,7 +12,7 @@ import { CoachDashboard } from '@/pages/CoachDashboard';
 import { TeamManagement } from '@/pages/TeamManagement';
 import { TournamentManagement } from '@/pages/TournamentManagement';
 import { LiveMatch } from '@/pages/LiveMatch';
-import { MyAchievements } from '@/pages/MyAchievements';
+import { Profile } from '@/pages/Profile';
 import { TournamentExplorer } from '@/pages/TournamentExplorer';
 import { Ranking } from '@/pages/Ranking';
 import { AppLayout } from '@/components/AppLayout';
@@ -22,35 +21,30 @@ import { AuthConfirm } from '@/pages/AuthConfirm';
 import { ResetPassword } from '@/pages/ResetPassword';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 
-const RootRedirect = () => {
-  const { role, isLoading } = useAuth();
-  
-  if (isLoading) return <div className="flex h-screen items-center justify-center">Loading...</div>;
-  
-  switch (role) {
-    case 'Admin': return <Navigate to="/admin" replace />;
-    case 'Coach': return <Navigate to="/coach" replace />;
-    case 'Player': return <Navigate to="/player" replace />;
-    default: return <Navigate to="/login" replace />;
-  }
-};
-
 function AppRoutes() {
   // This hook handles legacy route redirects
   useAuthRedirect();
 
   return (
     <Routes>
-      {/* Public Standalone Routes */}
-      <Route path="/login" element={<Login />} />
+      {/* Public Standalone Auth Routes */}
+      <Route path="/login" element={<Navigate to="/" replace />} />
       <Route path="/register" element={<Register />} />
       <Route path="/auth/confirm" element={<AuthConfirm />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       
-      {/* Protected Routes inside App Shell */}
-      <Route element={<ProtectedRoute />}>
-        <Route element={<AppLayout />}>
-          <Route path="/" element={<RootRedirect />} />
+      {/* App Shell Layout */}
+      <Route element={<AppLayout />}>
+        {/* Public Views Accessible to Everyone */}
+        <Route path="/" element={<PlayerDashboard />} />
+        <Route path="/explorer" element={<TournamentExplorer />} />
+        <Route path="/ranking" element={<Ranking />} />
+        <Route path="/match/:matchId" element={<LiveMatch />} />
+        
+        {/* Protected Routes Requiring Authentication */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/achievements" element={<Navigate to="/profile" replace />} />
           
           {/* Role-Specific Routes */}
           <Route element={<ProtectedRoute requiredRole="Admin" />}>
@@ -67,11 +61,7 @@ function AppRoutes() {
           
           <Route element={<ProtectedRoute requiredRole="Player" />}>
             <Route path="/player" element={<PlayerDashboard />} />
-            <Route path="/achievements" element={<MyAchievements />} />
           </Route>
-          <Route path="/match/:matchId" element={<LiveMatch />} />
-          <Route path="/explorer" element={<TournamentExplorer />} />
-          <Route path="/ranking" element={<Ranking />} />
         </Route>
       </Route>
 
@@ -93,3 +83,4 @@ function App() {
 }
 
 export default App;
+

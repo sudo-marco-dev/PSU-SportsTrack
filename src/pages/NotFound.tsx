@@ -14,11 +14,8 @@ export function NotFound() {
 
   const handleSmartRedirect = () => {
     if (!user) {
-      // Not authenticated → redirect to login
-      navigate('/login', { 
-        replace: true,
-        state: { from: location.pathname }
-      });
+      // Not authenticated → redirect to public dashboard
+      navigate('/', { replace: true });
     } else if (role === 'Admin') {
       // Admin → redirect to admin dashboard
       navigate('/admin', { replace: true });
