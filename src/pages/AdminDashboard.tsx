@@ -1,23 +1,36 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { 
-  Trophy, 
-  Activity, 
-  ShieldAlert, 
-  Users, 
-  Plus, 
-  ChevronRight, 
+import {
+  Trophy,
+  Activity,
+  ShieldAlert,
+  Users,
+  Plus,
+  ChevronRight,
   LayoutDashboard,
   ShieldCheck,
   TrendingUp,
-  History
+  History,
+  RotateCcw,
+  AlertTriangle,
+  Sparkles,
+  Loader2
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { resetDemoState } from '@/lib/demoReset';
 
 export const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { isSuperAdmin } = useAuth();
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [resetConfirmationText, setResetConfirmationText] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
   const [stats, setStats] = useState({
     tournaments: 0,
     liveMatches: 0,
@@ -54,7 +67,7 @@ export const AdminDashboard = () => {
         supabase.from('verification_documents').select('*', { count: 'exact', head: true }).eq('status', 'Pending'),
         supabase.from('verification_documents').select('*', { count: 'exact', head: true }).eq('status', 'Approved'),
         supabase.from('verification_documents').select('*', { count: 'exact', head: true }).eq('status', 'Rejected'),
-        supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'Player'),
+        supabase.from('users').select('*', { count: 'exact', head: true }).in('role', ['player_student', 'player_faculty', 'Player']),
         supabase.from('tournaments').select('*').eq('status', 'Draft').order('created_at', { ascending: false })
       ]);
 
@@ -95,36 +108,56 @@ export const AdminDashboard = () => {
     }
   };
 
+  const handleResetDemoArena = async () => {
+    if (resetConfirmationText !== 'RESET DEMO') return;
+    setIsResetting(true);
+    try {
+      const res = await resetDemoState(supabase);
+      if (res.success) {
+        toast.success('🎉 Demo Arena successfully reset! 4 squads, championship bracket & live match ready.');
+        setIsResetDialogOpen(false);
+        setResetConfirmationText('');
+        fetchStats();
+      } else {
+        toast.error('Failed to reset demo: ' + res.error);
+      }
+    } catch (err: any) {
+      toast.error('Demo reset failed: ' + err.message);
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   const statCards = [
-    { 
-      label: 'Active Events', 
-      value: stats.tournaments, 
-      icon: Trophy, 
-      color: 'text-orange-600', 
+    {
+      label: 'Active Events',
+      value: stats.tournaments,
+      icon: Trophy,
+      color: 'text-orange-600',
       bg: 'bg-orange-500/10',
-      trend: '+2 this week' 
+      trend: '+2 this week'
     },
-    { 
-      label: 'Live Matches', 
-      value: stats.liveMatches, 
-      icon: Activity, 
-      color: 'text-emerald-600', 
+    {
+      label: 'Live Matches',
+      value: stats.liveMatches,
+      icon: Activity,
+      color: 'text-emerald-600',
       bg: 'bg-emerald-500/10',
       trend: 'Real-time'
     },
-    { 
-      label: 'Pending Clearance', 
-      value: stats.pendingVerifications, 
-      icon: ShieldAlert, 
-      color: 'text-rose-600', 
+    {
+      label: 'Pending Clearance',
+      value: stats.pendingVerifications,
+      icon: ShieldAlert,
+      color: 'text-rose-600',
       bg: 'bg-rose-500/10',
       trend: 'Action Required'
     },
-    { 
-      label: 'Total Athletes', 
-      value: stats.totalPlayers, 
-      icon: Users, 
-      color: 'text-indigo-600', 
+    {
+      label: 'Total Athletes',
+      value: stats.totalPlayers,
+      icon: Users,
+      color: 'text-indigo-600',
       bg: 'bg-indigo-500/10',
       trend: 'Registered'
     }
@@ -133,7 +166,7 @@ export const AdminDashboard = () => {
   const getPercentage = (value: number) => (value / verificationBreakdown.total) * 100;
 
   return (
-    <div className="space-y-6 relative min-h-screen max-w-[1400px] mx-auto px-4 pb-12">
+    <div className="space-y-6 relative max-w-[1400px] mx-auto px-4 pb-6">
       {/* Subtle Grain Texture Overlay */}
       <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.01] mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/p6.png')]" />
 
@@ -153,7 +186,7 @@ export const AdminDashboard = () => {
             Institutional Orchestration Hub. Monitor tournament lifecycle, user eligibility, and live match execution.
           </p>
         </div>
-        
+
         {/* Abstract Background Element */}
         <div className="absolute -right-20 -top-20 size-[30rem] bg-orange-500/10 rounded-full blur-[120px] group-hover:bg-orange-500/20 transition-all duration-1000" />
       </div>
@@ -261,19 +294,19 @@ export const AdminDashboard = () => {
 
           {/* Stacked Progress Bar */}
           <div className="h-4 md:h-6 w-full flex rounded-full overflow-hidden bg-slate-100 dark:bg-white/5 mb-6 md:mb-8 border border-slate-200 dark:border-white/10 shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)]">
-            <div 
+            <div
               style={{ width: `${getPercentage(verificationBreakdown.approved)}%` }}
               className="h-full bg-emerald-500 transition-all duration-1000 ease-out relative group"
             >
               <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <div 
+            <div
               style={{ width: `${getPercentage(verificationBreakdown.pending)}%` }}
               className="h-full bg-orange-500 transition-all duration-1000 ease-out relative group"
             >
               <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <div 
+            <div
               style={{ width: `${getPercentage(verificationBreakdown.rejected)}%` }}
               className="h-full bg-rose-500 transition-all duration-1000 ease-out relative group"
             >
@@ -315,9 +348,9 @@ export const AdminDashboard = () => {
             <h2 className="text-xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">Quick Operations</h2>
             <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest text-orange-500">Settings</Button>
           </div>
-          
+
           <div className="grid sm:grid-cols-2 gap-4">
-            <Button 
+            <Button
               onClick={() => navigate('/admin/tournaments')}
               className="h-20 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-500/5 rounded-3xl flex items-center justify-between px-6 group transition-all"
             >
@@ -333,7 +366,7 @@ export const AdminDashboard = () => {
               <ChevronRight className="size-4 text-slate-300 group-hover:text-orange-500 transition-colors" />
             </Button>
 
-            <Button 
+            <Button
               onClick={() => navigate('/admin/verifications')}
               className="h-20 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-500/5 rounded-3xl flex items-center justify-between px-6 group transition-all"
             >
@@ -349,7 +382,7 @@ export const AdminDashboard = () => {
               <ChevronRight className="size-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
             </Button>
 
-            <Button 
+            <Button
               onClick={() => navigate('/explorer')}
               className="h-20 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-500/5 rounded-3xl flex items-center justify-between px-6 group transition-all"
             >
@@ -365,7 +398,8 @@ export const AdminDashboard = () => {
               <ChevronRight className="size-4 text-slate-300 group-hover:text-emerald-500 transition-colors" />
             </Button>
 
-            <Button 
+            <Button
+              onClick={() => navigate('/admin/audit-logs')}
               className="h-20 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-500/5 rounded-3xl flex items-center justify-between px-6 group transition-all"
             >
               <div className="flex items-center gap-4">
@@ -382,12 +416,39 @@ export const AdminDashboard = () => {
           </div>
         </div>
 
+        {/* Capstone Showcase Demo Tool - Only visible to SuperAdmin */}
+        {isSuperAdmin && (
+          <div className="bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent border-2 border-orange-500/20 rounded-[2.5rem] p-6 shadow-lg flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3.5 bg-orange-500 rounded-2xl shadow-md shadow-orange-500/30 text-white">
+                <Sparkles className="size-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-black uppercase italic tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                  Capstone Demonstration Arena
+                  <span className="text-[9px] font-black uppercase tracking-widest bg-orange-500 text-white px-2 py-0.5 rounded-full">SUPERADMIN</span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  Instant reset to standard demo scenario: 4 campus squads, active Binturungan tournament, 3rd-place bronze bracket, and an ongoing basketball match with live commentary.
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setIsResetDialogOpen(true)}
+              className="h-12 px-6 bg-orange-500 hover:bg-orange-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-orange-500/20 gap-2 shrink-0 transition-transform active:scale-95"
+            >
+              <RotateCcw className="size-4" />
+              Reset Demo Arena
+            </Button>
+          </div>
+        )}
+
         {/* Recent Activity */}
         <div className="space-y-6">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">Recent Activity</h2>
           </div>
-          
+
           <div className="bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 rounded-[2.5rem] p-6 shadow-xl space-y-4">
             {recentMatches.length === 0 ? (
               <div className="py-12 text-center">
@@ -422,6 +483,68 @@ export const AdminDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Reset Demo Arena Confirmation Dialog */}
+      <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+        <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/10 rounded-3xl p-6 shadow-2xl">
+          <DialogHeader>
+            <div className="size-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center mb-2">
+              <AlertTriangle className="size-6" />
+            </div>
+            <DialogTitle className="text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
+              Reset Demo Arena?
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 space-y-2 pt-1">
+              <p>
+                This action will rebuild the <strong>PSU Palaro 2026 - Men's Basketball</strong> tournament with 4 collegiate squads, re-link the playoff tree (including the 3rd-Place Bronze Playoff), and reset an ongoing live match with commentary.
+              </p>
+              <p className="font-bold text-red-600 dark:text-red-400">
+                To confirm, please type <span className="underline font-mono">RESET DEMO</span> below:
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-2">
+            <Input
+              value={resetConfirmationText}
+              onChange={(e) => setResetConfirmationText(e.target.value)}
+              placeholder="Type RESET DEMO"
+              className="font-mono text-center uppercase tracking-widest font-black text-sm h-11 bg-slate-50 dark:bg-slate-950 border-2 border-slate-200 dark:border-white/10 rounded-xl"
+            />
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:gap-0 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsResetDialogOpen(false);
+                setResetConfirmationText('');
+              }}
+              disabled={isResetting}
+              className="rounded-xl font-black text-xs uppercase tracking-wider"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleResetDemoArena}
+              disabled={resetConfirmationText !== 'RESET DEMO' || isResetting}
+              className="bg-red-600 hover:bg-red-700 text-white rounded-xl font-black text-xs uppercase tracking-wider gap-2 shadow-lg shadow-red-600/20"
+            >
+              {isResetting ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Resetting Demo...
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="size-4" />
+                  Confirm Reset
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

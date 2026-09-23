@@ -1,25 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { 
-  Eye, 
-  EyeOff, 
-  Trophy, 
-  LogIn, 
-  Lock, 
-  Mail, 
-  AlertCircle, 
-  ShieldCheck, 
-  Activity, 
-  CheckCircle2, 
-  Sparkles, 
-  Star, 
-  ChevronRight,
-  User,
-  UserPlus,
-  ArrowRight,
-  ArrowLeft,
-  Building,
-  Check
+import {
+  Eye,
+  EyeOff,
+  Trophy,
+  LogIn,
+  Lock,
+  Mail,
+  AlertCircle,
+  ShieldCheck,
+  Activity,
+  CheckCircle2,
+  Sparkles,
+  Star,
+  UserPlus
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -50,7 +44,7 @@ const registerSchema = z.object({
   email: z.string().email({ message: 'Invalid university email' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
   confirmPassword: z.string(),
-  role: z.enum(['Player', 'Coach'] as const, { message: 'Role is required' }),
+  role: z.enum(['Player', 'player_faculty', 'faculty', 'Coach'] as const, { message: 'Role is required' }),
   collegeId: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -64,7 +58,7 @@ export const LoginModal = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
-  const [failedAttempts, setFailedAttempts] = useState<number>(0);
+  const [, setFailedAttempts] = useState<number>(0);
   const [colleges, setColleges] = useState<{ id: string; college_name: string }[]>([]);
 
   // Login Form
@@ -220,49 +214,43 @@ export const LoginModal = () => {
   return (
     <Dialog open={isLoginModalOpen} onOpenChange={(open) => { if (!open) closeLoginModal(); }}>
       <DialogContent className="w-full sm:max-w-5xl lg:max-w-6xl max-w-[96vw] min-h-[680px] max-h-[92vh] overflow-y-auto rounded-[2.5rem] md:rounded-[3rem] border border-white/10 p-0 shadow-2xl bg-slate-950 text-white relative">
-        <div className={`flex flex-col lg:flex-row min-h-[680px] w-full transition-all duration-700 ease-in-out ${
-          authMode === 'register' ? 'lg:flex-row-reverse' : ''
-        }`}>
-          {/* FORM PANEL (SIGN IN / SIGN UP) */}
-          <div className={`w-full lg:w-5/12 p-6 sm:p-8 md:p-10 lg:p-12 flex flex-col justify-between bg-slate-950 border-white/5 transition-all duration-700 ease-in-out ${
-            authMode === 'login' ? 'border-r' : 'border-l'
+        <div className={`flex flex-col lg:flex-row min-h-[680px] w-full transition-all duration-700 ease-in-out ${authMode === 'register' ? 'lg:flex-row-reverse' : ''
           }`}>
+          {/* FORM PANEL (SIGN IN / SIGN UP) */}
+          <div className={`w-full lg:w-5/12 p-6 sm:p-8 md:p-10 lg:p-12 flex flex-col justify-between bg-slate-950 border-white/5 transition-all duration-700 ease-in-out ${authMode === 'login' ? 'border-r' : 'border-l'
+            }`}>
             <div>
               {/* Header Badge */}
               <div className="flex items-center justify-between mb-6">
-                <div className="size-11 sm:size-12 rounded-2xl bg-orange-500 flex items-center justify-center text-white shadow-xl shadow-orange-500/20">
-                  {authMode === 'login' ? <Trophy className="size-6" /> : <UserPlus className="size-6" />}
+                <div className="size-11 sm:size-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 shadow-sm">
+                  {authMode === 'login' ? <Trophy className="size-5 sm:size-6" /> : <UserPlus className="size-5 sm:size-6" />}
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-                  className="text-xs font-black uppercase tracking-wider text-orange-500 hover:text-orange-400 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500/10 border border-orange-500/20 transition-all hover:scale-105"
+                  className="text-xs font-semibold text-slate-200 hover:text-white flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all active:scale-[0.98]"
                 >
-                  {authMode === 'login' ? (
-                    <><span>Create Account</span> <ArrowRight className="size-3.5" /></>
-                  ) : (
-                    <><ArrowLeft className="size-3.5" /> <span>Back to Sign In</span></>
-                  )}
+                  {authMode === 'login' ? 'Create Account' : 'Sign In'}
                 </button>
               </div>
 
               {/* Title & Description */}
               <div className="animate-in fade-in duration-300">
-                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-orange-500 block mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 block mb-1.5">
                   PALAWAN STATE UNIVERSITY
                 </span>
-                <DialogTitle className="text-2xl sm:text-3xl font-black uppercase italic tracking-tight text-white leading-none">
+                <DialogTitle className="text-2xl sm:text-3xl font-bold text-white tracking-tight leading-none">
                   {authMode === 'login' ? (
                     <>Sign In <span className="text-orange-500">Portal</span></>
                   ) : (
                     <>Create <span className="text-orange-500">Account</span></>
                   )}
                 </DialogTitle>
-                <DialogDescription className="text-slate-400 text-xs font-medium mt-2 leading-relaxed">
-                  {authMode === 'login' 
-                    ? 'Enter your university email and password to access your dashboard.' 
-                    : 'Register your official athlete or coach profile to join tournament rosters.'}
+                <DialogDescription className="text-slate-400 text-xs font-normal mt-2 leading-relaxed">
+                  {authMode === 'login'
+                    ? 'Enter your university email and password to access your dashboard.'
+                    : 'Register your official student, coach, or faculty profile to access PSU tournaments.'}
                 </DialogDescription>
               </div>
 
@@ -270,8 +258,8 @@ export const LoginModal = () => {
               {authMode === 'login' && cooldownRemaining > 0 && (
                 <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3">
                   <AlertCircle className="size-5 text-red-400 shrink-0" />
-                  <div className="text-xs text-red-200 font-bold">
-                    Account locked. Cooldown: <span className="font-mono text-red-400 font-black">{Math.floor(cooldownRemaining / 60)}m {cooldownRemaining % 60}s</span>
+                  <div className="text-xs text-red-200 font-medium">
+                    Account locked. Cooldown: <span className="font-mono text-red-400 font-bold">{Math.floor(cooldownRemaining / 60)}m {cooldownRemaining % 60}s</span>
                   </div>
                 </div>
               )}
@@ -285,20 +273,20 @@ export const LoginModal = () => {
                       name="email"
                       render={({ field }) => (
                         <FormItem className="space-y-1">
-                          <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Email Address</FormLabel>
+                          <FormLabel className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 ml-1">Email Address</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-slate-500" />
                               <Input
                                 placeholder="athlete@psu.edu.ph"
                                 type="email"
-                                className="h-12 sm:h-13 pl-11 bg-slate-900 border-white/10 rounded-2xl font-bold text-sm text-white placeholder:text-slate-600 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
+                                className="h-11 sm:h-12 pl-11 bg-slate-900 border-white/10 rounded-xl font-medium text-sm text-white placeholder:text-slate-600 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all"
                                 {...field}
                                 disabled={isLoading || cooldownRemaining > 0}
                               />
                             </div>
                           </FormControl>
-                          <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
+                          <FormMessage className="text-[10px] font-medium text-red-400 ml-1" />
                         </FormItem>
                       )}
                     />
@@ -309,16 +297,16 @@ export const LoginModal = () => {
                       render={({ field }) => (
                         <FormItem className="space-y-1">
                           <div className="flex items-center justify-between">
-                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Password</FormLabel>
+                            <FormLabel className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 ml-1">Password</FormLabel>
                             <button
                               type="button"
                               onClick={() => {
                                 closeLoginModal();
                                 navigate('/reset-password');
                               }}
-                              className="text-[10px] font-black uppercase tracking-wider text-orange-500 hover:underline transition-colors"
+                              className="text-[11px] font-medium text-orange-500 hover:text-orange-400 hover:underline transition-colors"
                             >
-                              Forgot Password?
+                              Forgot password?
                             </button>
                           </div>
                           <FormControl>
@@ -327,7 +315,7 @@ export const LoginModal = () => {
                               <Input
                                 placeholder="••••••••"
                                 type={showPassword ? 'text' : 'password'}
-                                className="h-12 sm:h-13 pl-11 pr-11 bg-slate-900 border-white/10 rounded-2xl font-bold text-sm text-white placeholder:text-slate-600 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
+                                className="h-11 sm:h-12 pl-11 pr-11 bg-slate-900 border-white/10 rounded-xl font-medium text-sm text-white placeholder:text-slate-600 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all"
                                 {...field}
                                 disabled={isLoading || cooldownRemaining > 0}
                               />
@@ -340,22 +328,22 @@ export const LoginModal = () => {
                               </button>
                             </div>
                           </FormControl>
-                          <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
+                          <FormMessage className="text-[10px] font-medium text-red-400 ml-1" />
                         </FormItem>
                       )}
                     />
 
                     <Button
                       type="submit"
-                      className="w-full h-13 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-[0.1em] text-sm sm:text-base rounded-2xl shadow-xl shadow-orange-500/20 gap-2 transition-all hover:scale-[1.01] active:scale-95 disabled:grayscale mt-2"
+                      className="w-full h-11 sm:h-12 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm rounded-xl shadow-md shadow-orange-500/20 gap-2 transition-all active:scale-[0.99] disabled:opacity-50 mt-2"
                       disabled={isLoading || cooldownRemaining > 0}
                     >
                       {isLoading ? (
-                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
                       ) : (
                         <>
-                          <LogIn className="size-5" />
-                          Sign In to SportsTrack
+                          <LogIn className="size-4" />
+                          Sign In
                         </>
                       )}
                     </Button>
@@ -458,12 +446,19 @@ export const LoginModal = () => {
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger className="h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-bold">
-                                  <SelectValue placeholder="Role">{field.value}</SelectValue>
+                                  <SelectValue placeholder="Role">
+                                    {field.value === 'player_faculty' || field.value === 'faculty'
+                                      ? 'Faculty'
+                                      : field.value === 'Coach'
+                                      ? 'Coach'
+                                      : 'Student'}
+                                  </SelectValue>
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent className="bg-slate-900 border-white/10 text-white font-bold text-xs rounded-xl">
-                                <SelectItem value="Player">Player</SelectItem>
+                                <SelectItem value="Player">Student</SelectItem>
                                 <SelectItem value="Coach">Coach</SelectItem>
+                                <SelectItem value="player_faculty">Faculty</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
@@ -499,7 +494,7 @@ export const LoginModal = () => {
 
                     <Button
                       type="submit"
-                      className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-[0.1em] text-xs sm:text-sm rounded-xl shadow-xl shadow-orange-500/20 gap-2 transition-all hover:scale-[1.01] active:scale-95 disabled:grayscale mt-2"
+                      className="w-full h-11 sm:h-12 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm rounded-xl shadow-md shadow-orange-500/20 gap-2 transition-all active:scale-[0.99] disabled:opacity-50 mt-2"
                       disabled={isLoading}
                     >
                       {isLoading ? (
@@ -507,7 +502,7 @@ export const LoginModal = () => {
                       ) : (
                         <>
                           <UserPlus className="size-4" />
-                          Complete Registration
+                          Create Account
                         </>
                       )}
                     </Button>
@@ -518,16 +513,16 @@ export const LoginModal = () => {
 
             {/* Footer Auth Mode Toggle Prompt */}
             <div className="mt-6 pt-4 border-t border-white/5">
-              <p className="text-xs font-bold text-slate-400 text-center">
+              <p className="text-xs font-normal text-slate-400 text-center">
                 {authMode === 'login' ? (
                   <>
                     New to PSU SportsTrack?{' '}
                     <button
                       type="button"
                       onClick={() => setAuthMode('register')}
-                      className="text-orange-500 hover:underline font-black uppercase italic tracking-wider transition-colors ml-1"
+                      className="text-orange-500 hover:text-orange-400 hover:underline font-semibold transition-colors ml-1"
                     >
-                      Create Account →
+                      Create Account
                     </button>
                   </>
                 ) : (
@@ -536,9 +531,9 @@ export const LoginModal = () => {
                     <button
                       type="button"
                       onClick={() => setAuthMode('login')}
-                      className="text-orange-500 hover:underline font-black uppercase italic tracking-wider transition-colors ml-1"
+                      className="text-orange-500 hover:text-orange-400 hover:underline font-semibold transition-colors ml-1"
                     >
-                      Sign In Now →
+                      Sign In
                     </button>
                   </>
                 )}
@@ -550,62 +545,59 @@ export const LoginModal = () => {
           <div className="w-full lg:w-7/12 p-6 sm:p-8 md:p-10 lg:p-12 bg-slate-900/90 flex flex-col justify-between relative overflow-hidden transition-all duration-700 ease-in-out">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <span className="size-2.5 rounded-full bg-orange-500 animate-ping" />
-                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-orange-500">
+                <span className="size-2 rounded-full bg-orange-500" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-orange-400">
                   Official Athletic Management Platform
                 </span>
               </div>
 
-              <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black italic uppercase tracking-tight text-white leading-tight mb-3 sm:mb-4">
-                DIGITAL ARENA FOR <span className="text-orange-500">PSU ATHLETICS</span> & COMPETITIONS
+              <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-white leading-tight mb-3 sm:mb-4">
+                Digital Arena for <span className="text-orange-500">PSU Athletics</span> &amp; Competitions
               </h3>
 
-              <p className="text-slate-400 text-xs sm:text-sm font-medium leading-relaxed mb-6 sm:mb-8">
+              <p className="text-slate-400 text-xs sm:text-sm font-normal leading-relaxed mb-6 sm:mb-8">
                 PSU SportsTrack connects student-athletes, coaches, and university athletic administrators in an integrated digital hub for campus sports, live scores, and official tournament records.
               </p>
 
               {/* Website Info Cards */}
               <div className="space-y-3 sm:space-y-4">
-                <div className="flex items-start gap-3.5 p-4 sm:p-5 rounded-2xl bg-slate-950 border border-white/5 hover:border-orange-500/30 transition-all group">
-                  <div className="p-3 rounded-xl bg-orange-500/10 text-orange-500 shrink-0 group-hover:bg-orange-500 group-hover:text-white transition-colors duration-300">
-                    <Activity className="size-5" />
+                <div className="flex items-start gap-3.5 p-4 sm:p-5 rounded-2xl bg-slate-950/80 border border-white/5 transition-colors">
+                  <div className="size-9 rounded-lg border border-orange-500/30 bg-orange-500/10 text-orange-400 flex items-center justify-center shrink-0">
+                    <Activity className="size-4" />
                   </div>
                   <div>
-                    <h4 className="font-black uppercase italic text-xs sm:text-sm text-white tracking-tight flex items-center justify-between">
-                      Live Matchroom & Real-Time Tracking
-                      <ChevronRight className="size-4 text-slate-600 group-hover:text-orange-500 transition-colors" />
+                    <h4 className="font-semibold text-xs sm:text-sm text-white tracking-normal">
+                      Live Matchroom &amp; Real-Time Tracking
                     </h4>
-                    <p className="text-[11px] sm:text-xs text-slate-400 font-medium mt-0.5 leading-relaxed">
+                    <p className="text-[11px] sm:text-xs text-slate-400 font-normal mt-0.5 leading-relaxed">
                       Instant point scoring, live referee play-by-play events, and public leaderboard streams across all campus disciplines.
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3.5 p-4 sm:p-5 rounded-2xl bg-slate-950 border border-white/5 hover:border-orange-500/30 transition-all group">
-                  <div className="p-3 rounded-xl bg-orange-500/10 text-orange-500 shrink-0 group-hover:bg-orange-500 group-hover:text-white transition-colors duration-300">
-                    <Trophy className="size-5" />
+                <div className="flex items-start gap-3.5 p-4 sm:p-5 rounded-2xl bg-slate-950/80 border border-white/5 transition-colors">
+                  <div className="size-9 rounded-lg border border-orange-500/30 bg-orange-500/10 text-orange-400 flex items-center justify-center shrink-0">
+                    <Trophy className="size-4" />
                   </div>
                   <div>
-                    <h4 className="font-black uppercase italic text-xs sm:text-sm text-white tracking-tight flex items-center justify-between">
-                      Tournament Arena & Bracket Seeding
-                      <ChevronRight className="size-4 text-slate-600 group-hover:text-orange-500 transition-colors" />
+                    <h4 className="font-semibold text-xs sm:text-sm text-white tracking-normal">
+                      Tournament Arena &amp; Bracket Seeding
                     </h4>
-                    <p className="text-[11px] sm:text-xs text-slate-400 font-medium mt-0.5 leading-relaxed">
+                    <p className="text-[11px] sm:text-xs text-slate-400 font-normal mt-0.5 leading-relaxed">
                       Automated single-elimination trees, round-robin pools, match venue slotting, and official admin result verification.
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3.5 p-4 sm:p-5 rounded-2xl bg-slate-950 border border-white/5 hover:border-orange-500/30 transition-all group">
-                  <div className="p-3 rounded-xl bg-orange-500/10 text-orange-500 shrink-0 group-hover:bg-orange-500 group-hover:text-white transition-colors duration-300">
-                    <Star className="size-5" />
+                <div className="flex items-start gap-3.5 p-4 sm:p-5 rounded-2xl bg-slate-950/80 border border-white/5 transition-colors">
+                  <div className="size-9 rounded-lg border border-orange-500/30 bg-orange-500/10 text-orange-400 flex items-center justify-center shrink-0">
+                    <Star className="size-4" />
                   </div>
                   <div>
-                    <h4 className="font-black uppercase italic text-xs sm:text-sm text-white tracking-tight flex items-center justify-between">
-                      Roster Verification & Hall of Fame MVPs
-                      <ChevronRight className="size-4 text-slate-600 group-hover:text-orange-500 transition-colors" />
+                    <h4 className="font-semibold text-xs sm:text-sm text-white tracking-normal">
+                      Roster Verification &amp; Hall of Fame MVPs
                     </h4>
-                    <p className="text-[11px] sm:text-xs text-slate-400 font-medium mt-0.5 leading-relaxed">
+                    <p className="text-[11px] sm:text-xs text-slate-400 font-normal mt-0.5 leading-relaxed">
                       Verified team application screening, eligibility badges, and Gold/Red Star MVP honors on athlete profiles.
                     </p>
                   </div>
@@ -615,14 +607,14 @@ export const LoginModal = () => {
 
             {/* Bottom Info Badges */}
             <div className="flex flex-wrap items-center gap-2.5 pt-4 sm:pt-6 mt-6 sm:mt-8 border-t border-white/5">
-              <span className="px-3.5 py-1.5 bg-slate-950 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                <CheckCircle2 className="size-3.5 text-orange-500" /> Real-time Scores
+              <span className="px-3 py-1.5 bg-white/[0.04] border border-white/10 rounded-lg text-xs font-medium text-slate-300 flex items-center gap-2 select-none">
+                <CheckCircle2 className="size-3.5 text-slate-400" /> Real-time Scores
               </span>
-              <span className="px-3.5 py-1.5 bg-slate-950 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                <ShieldCheck className="size-3.5 text-orange-500" /> Verified PSU Athletes
+              <span className="px-3 py-1.5 bg-white/[0.04] border border-white/10 rounded-lg text-xs font-medium text-slate-300 flex items-center gap-2 select-none">
+                <ShieldCheck className="size-3.5 text-slate-400" /> Verified PSU Athletes
               </span>
-              <span className="px-3.5 py-1.5 bg-slate-950 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                <Sparkles className="size-3.5 text-orange-500" /> Official Brackets
+              <span className="px-3 py-1.5 bg-white/[0.04] border border-white/10 rounded-lg text-xs font-medium text-slate-300 flex items-center gap-2 select-none">
+                <Sparkles className="size-3.5 text-slate-400" /> Official Brackets
               </span>
             </div>
           </div>

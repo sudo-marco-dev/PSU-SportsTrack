@@ -72,15 +72,15 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
           <Label htmlFor="cor">Certificate of Registration (COR)</Label>
           <Input id="cor" type="file" onChange={(e) => setCorFile(e.target.files?.[0] || null)} />
         </div>
-        
+
         <div className="space-y-2">
           <Label htmlFor="id">Valid PSU ID</Label>
           <Input id="id" type="file" onChange={(e) => setIdFile(e.target.files?.[0] || null)} />
         </div>
 
-        <Button 
-          className="w-full" 
-          onClick={handleUpload} 
+        <Button
+          className="w-full"
+          onClick={handleUpload}
           disabled={!corFile || !idFile || isUploading}
         >
           {isUploading ? 'Uploading...' : 'Upload Documents'}

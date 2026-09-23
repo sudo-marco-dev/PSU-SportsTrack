@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Navigate } from 'react-router-dom';
@@ -12,12 +12,12 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
-import { ShieldCheck, FileText, ExternalLink, CheckCircle, XCircle, ShieldAlert } from 'lucide-react';
+import { ShieldCheck, FileText, ExternalLink, CheckCircle, XCircle, ShieldAlert, RotateCcw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { useMemo } from 'react';
 import { logAudit } from '@/lib/audit';
 
 type PendingDocument = {
@@ -30,27 +30,30 @@ type PendingDocument = {
   users: {
     full_name: string;
     role: string;
+    account_status?: string;
     colleges?: { college_name: string } | { college_name: string }[];
   } | null;
 };
 
 export const SystemVerifications = () => {
-  const { role, isLoading } = useAuth();
+  const { isSuperAdmin, isLoading } = useAuth();
   const [documents, setDocuments] = useState<PendingDocument[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [isRevalidateModalOpen, setIsRevalidateModalOpen] = useState(false);
+  const [isRevalidating, setIsRevalidating] = useState(false);
 
   useEffect(() => {
-    if (role === 'Admin') {
+    if (isSuperAdmin) {
       fetchPendingDocuments();
     }
-  }, [role]);
+  }, [isSuperAdmin]);
 
   const fetchPendingDocuments = async () => {
     const { data, error } = await supabase
       .from('verification_documents')
-      .select('*, users(full_name, role, colleges(college_name))')
+      .select('*, users(full_name, role, account_status, colleges(college_name))')
       .eq('status', 'Pending')
       .order('created_at', { ascending: false });
 
@@ -95,7 +98,7 @@ export const SystemVerifications = () => {
       if (userError) throw userError;
 
       toast.success('Document approved and user verified successfully.');
-      
+
       // Audit Log
       logAudit({
         action: 'APPROVE_DOCUMENT',
@@ -121,7 +124,7 @@ export const SystemVerifications = () => {
       if (error) throw error;
 
       toast.success('Document rejected successfully.');
-      
+
       // Audit Log
       logAudit({
         action: 'REJECT_DOCUMENT',
@@ -136,23 +139,70 @@ export const SystemVerifications = () => {
     }
   };
 
+  const handleTriggerAnnualRevalidation = async () => {
+    setIsRevalidating(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          account_status: 'inactive',
+          is_verified: false,
+          revalidated_at: new Date().toISOString()
+        })
+        .in('role', ['player_student', 'player_faculty', 'Player']);
+
+      if (error) throw error;
+
+      await logAudit({
+        action: 'ANNUAL_REVALIDATION',
+        entity_type: 'users',
+        details: 'Super Admin triggered annual revalidation cycle: all student and faculty athletes set to inactive status awaiting credential renewal.'
+      });
+
+      toast.success('Annual Revalidation triggered! Student and Faculty athletes marked inactive until updated credentials are submitted.');
+      setIsRevalidateModalOpen(false);
+      fetchPendingDocuments();
+    } catch (err: any) {
+      toast.error('Failed to trigger revalidation: ' + err.message);
+    } finally {
+      setIsRevalidating(false);
+    }
+  };
+
+  const formatRole = (r?: string) => {
+    if (!r) return 'Unknown';
+    if (r === 'player_student' || r === 'Player') return 'Student';
+    if (r === 'player_faculty' || r === 'faculty' || r === 'Faculty') return 'Faculty';
+    if (r === 'coach' || r === 'Coach') return 'Coach';
+    if (r === 'facilitator') return 'Facilitator';
+    if (r === 'super_admin' || r === 'Admin') return 'Super Admin';
+    return r;
+  };
+
   const filteredDocuments = useMemo(() => {
     return documents.filter(doc => {
-      const matchesSearch = doc.users?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            doc.document_type.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = doc.users?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        doc.document_type.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = statusFilter === 'all' || doc.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
   }, [documents, searchQuery, statusFilter]);
 
-  if (isLoading) return <div className="p-8">Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="flex flex-col justify-center items-center h-[50vh] w-full gap-4 animate-in fade-in duration-300">
+        <div className="animate-spin rounded-full h-11 w-11 border-3 border-orange-500/20 border-t-orange-500" />
+        <p className="text-slate-500 font-bold tracking-widest uppercase text-xs">Loading Verification Records...</p>
+      </div>
+    );
+  }
 
-  if (role !== 'Admin') {
+  if (!isSuperAdmin) {
     return <Navigate to="/" replace />;
   }
 
   return (
-    <div className="space-y-6 relative min-h-screen max-w-[1600px] mx-auto px-4">
+    <div className="space-y-6 relative max-w-[1600px] mx-auto px-4 pb-6">
       {/* Subtle Grain Texture Overlay */}
       <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.015] mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/p6.png')]" />
 
@@ -181,7 +231,7 @@ export const SystemVerifications = () => {
       </div>
 
       <div className="relative z-10 space-y-6">
-        <DataToolbar 
+        <DataToolbar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           filterValue={statusFilter}
@@ -194,14 +244,25 @@ export const SystemVerifications = () => {
             { value: 'Rejected', label: 'Rejected' }
           ]}
           actions={
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => fetchPendingDocuments()}
-              className="h-10 rounded-xl font-bold uppercase tracking-widest text-[10px]"
-            >
-              Refresh Data
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setIsRevalidateModalOpen(true)}
+                className="h-10 rounded-xl font-bold uppercase tracking-widest text-[10px] gap-2 shadow-lg shadow-red-500/10"
+              >
+                <RotateCcw className="size-3.5" />
+                Annual Revalidation
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => fetchPendingDocuments()}
+                className="h-10 rounded-xl font-bold uppercase tracking-widest text-[10px]"
+              >
+                Refresh Data
+              </Button>
+            </div>
           }
         >
           <ViewToggle view={viewMode} onViewChange={setViewMode} />
@@ -236,9 +297,9 @@ export const SystemVerifications = () => {
                     </div>
                     <h3 className="text-2xl font-black italic uppercase tracking-tighter group-hover:text-orange-500 transition-colors">{doc.users?.full_name || 'Unknown'}</h3>
                     <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest mt-1 mb-6">{doc.users?.role || 'Unknown'} • {collegeName} • {new Date(doc.created_at).toLocaleDateString()}</p>
-                    
+
                     <div className="space-y-3">
-                      <Button 
+                      <Button
                         variant="outline"
                         className="w-full h-12 rounded-xl font-black uppercase italic tracking-widest text-[10px] border-2 border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5"
                         onClick={() => handleViewDocument(doc.storage_path)}
@@ -246,13 +307,13 @@ export const SystemVerifications = () => {
                         <ExternalLink className="size-4 mr-2" /> View Document
                       </Button>
                       <div className="grid grid-cols-2 gap-3">
-                        <Button 
+                        <Button
                           className="h-12 bg-green-500 hover:bg-green-600 text-white rounded-xl font-black uppercase italic tracking-widest text-[10px] shadow-lg shadow-green-500/10"
                           onClick={() => handleApprove(doc.id, doc.user_id)}
                         >
                           Approve
                         </Button>
-                        <Button 
+                        <Button
                           variant="destructive"
                           className="h-12 rounded-xl font-black uppercase italic tracking-widest text-[10px] shadow-lg shadow-red-500/10"
                           onClick={() => handleReject(doc.id)}
@@ -286,8 +347,8 @@ export const SystemVerifications = () => {
                     : colleges?.college_name || 'N/A';
 
                   return (
-                    <TableRow 
-                      key={doc.id} 
+                    <TableRow
+                      key={doc.id}
                       className="hover:bg-orange-50/30 dark:hover:bg-orange-500/5 transition-colors border-slate-100 dark:border-white/5 group animate-in fade-in slide-in-from-bottom-2 fill-mode-both"
                       style={{ animationDelay: `${idx * 40}ms` }}
                     >
@@ -302,42 +363,49 @@ export const SystemVerifications = () => {
                           </div>
                         </div>
                       </TableCell>
-                    <TableCell className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">{doc.users?.role || 'Unknown'}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tighter px-2 border-orange-500/20 text-orange-600">
-                        {doc.document_type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-bold text-xs text-slate-400">{new Date(doc.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right pr-8">
-                      <div className="flex justify-end gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="h-10 w-10 p-0 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10"
-                          onClick={() => handleViewDocument(doc.storage_path)}
-                        >
-                          <ExternalLink className="size-4 text-slate-400" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="h-10 w-10 p-0 rounded-xl hover:bg-green-50 dark:hover:bg-green-500/10 text-green-600"
-                          onClick={() => handleApprove(doc.id, doc.user_id)}
-                        >
-                          <CheckCircle className="size-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="h-10 w-10 p-0 rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 text-red-600"
-                          onClick={() => handleReject(doc.id)}
-                        >
-                          <XCircle className="size-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                      <TableCell className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">
+                        <div className="flex items-center gap-1.5">
+                          <span>{formatRole(doc.users?.role)}</span>
+                          {doc.users?.account_status === 'inactive' && (
+                            <Badge variant="destructive" className="text-[8px] px-1 py-0 uppercase">Inactive</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tighter px-2 border-orange-500/20 text-orange-600">
+                          {doc.document_type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-bold text-xs text-slate-400">{new Date(doc.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right pr-8">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-10 w-10 p-0 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10"
+                            onClick={() => handleViewDocument(doc.storage_path)}
+                          >
+                            <ExternalLink className="size-4 text-slate-400" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-10 w-10 p-0 rounded-xl hover:bg-green-50 dark:hover:bg-green-500/10 text-green-600"
+                            onClick={() => handleApprove(doc.id, doc.user_id)}
+                          >
+                            <CheckCircle className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-10 w-10 p-0 rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 text-red-600"
+                            onClick={() => handleReject(doc.id)}
+                          >
+                            <XCircle className="size-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
               </TableBody>
@@ -345,6 +413,41 @@ export const SystemVerifications = () => {
           </Card>
         )}
       </div>
+
+      {/* Annual Revalidation Confirmation Modal */}
+      <Dialog open={isRevalidateModalOpen} onOpenChange={setIsRevalidateModalOpen}>
+        <DialogContent className="sm:max-w-md rounded-3xl p-6">
+          <DialogHeader className="space-y-2">
+            <div className="size-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center mb-2">
+              <RotateCcw className="size-6 animate-spin-reverse" />
+            </div>
+            <DialogTitle className="text-xl font-black uppercase tracking-tight">
+              Trigger Annual Revalidation
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 font-medium leading-relaxed">
+              This institutional action will set all student and faculty athlete accounts to <span className="font-bold text-red-600">Inactive</span> and revoke their active eligibility. They will be restricted from tournament drafting until fresh enrollment documents (COR or Faculty ID) are submitted and approved.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
+            <Button
+              variant="outline"
+              className="w-full sm:w-1/2 rounded-xl font-bold h-11"
+              onClick={() => setIsRevalidateModalOpen(false)}
+              disabled={isRevalidating}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              className="w-full sm:w-1/2 bg-red-600 hover:bg-red-700 font-bold h-11 rounded-xl shadow-lg shadow-red-500/20"
+              onClick={handleTriggerAnnualRevalidation}
+              disabled={isRevalidating}
+            >
+              {isRevalidating ? 'Processing...' : 'Confirm Revalidation'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

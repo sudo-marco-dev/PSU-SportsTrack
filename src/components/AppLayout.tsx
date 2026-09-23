@@ -6,14 +6,14 @@ import {
   Trophy,
   LogOut,
   LogIn,
-  User,
   Menu,
   X,
   ShieldCheck,
   UserCheck,
   Globe,
   ClipboardList,
-  Medal
+  Medal,
+  Activity
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
@@ -21,16 +21,34 @@ import { LoginModal } from '@/components/auth/LoginModal';
 import { toast } from 'sonner';
 
 export const AppLayout = () => {
-  const { user, role, signOut, openLoginModal } = useAuth();
+  const { user, role, isSuperAdmin, isFacilitator, isCoach, isPlayer, signOut, openLoginModal } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showSignOutPrompt, setShowSignOutPrompt] = useState(false);
 
+  const formatRole = (r: string | null) => {
+    if (!r) return 'Spectator';
+    if (r === 'super_admin' || r === 'Admin') return 'Super Admin';
+    if (r === 'facilitator') return 'Facilitator';
+    if (r === 'coach' || r === 'Coach') return 'Coach';
+    if (r === 'player_student' || r === 'Player') return 'Student';
+    if (r === 'player_faculty' || r === 'faculty' || r === 'Faculty') return 'Faculty';
+    return r;
+  };
+
+  const getDashboardHref = () => {
+    if (!user) return '/';
+    if (isSuperAdmin) return '/admin';
+    if (isCoach) return '/coach';
+    if (isPlayer) return '/player';
+    return '/explorer';
+  };
+
   const navigation = [
     {
       name: 'Dashboard',
-      href: user ? (role === 'Admin' ? '/admin' : role === 'Coach' ? '/coach' : '/player') : '/',
+      href: getDashboardHref(),
       icon: LayoutDashboard
     },
     {
@@ -43,12 +61,15 @@ export const AppLayout = () => {
       href: '/ranking',
       icon: Medal
     },
-    ...(role === 'Admin' ? [
+    ...(isSuperAdmin ? [
       { name: 'Tournaments', href: '/admin/tournaments', icon: Trophy },
       { name: 'System Verifications', href: '/admin/verifications', icon: ShieldCheck },
       { name: 'System Audit', href: '/admin/audit-logs', icon: ClipboardList },
     ] : []),
-    ...(role === 'Coach' ? [
+    ...(isFacilitator && !isSuperAdmin ? [
+      { name: 'Live Scorer', href: '/explorer', icon: Activity },
+    ] : []),
+    ...(isCoach ? [
       { name: 'My Teams', href: '/coach/teams', icon: UserCheck },
     ] : []),
   ];
@@ -65,7 +86,7 @@ export const AppLayout = () => {
     <div className="flex min-h-screen w-full bg-slate-50">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-slate-900 text-white sticky top-0 h-screen shadow-xl border-r border-white/5">
-        <div className="p-8">
+        <div className="p-6">
           <Link to="/" className="flex items-center gap-2 font-black text-2xl tracking-tighter">
             <span className="text-orange-500 italic">PSU</span>
             <span className="text-white">SportsTrack</span>
@@ -76,29 +97,29 @@ export const AppLayout = () => {
           </div>
         </div>
 
-        <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto scrollbar-hide">
+        <nav className="flex-1 px-3 space-y-1 overflow-y-auto scrollbar-hide">
           {navigation.map((item) => (
             <Link
               key={item.name}
               to={item.href}
-              className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all duration-300 group ${isActive(item.href)
-                  ? 'bg-orange-500/10 text-orange-500 shadow-[inset_4px_0_0_0_#f97316]'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-150 active:scale-[0.99] group ${isActive(item.href)
+                ? 'bg-orange-500/10 text-orange-400 font-semibold shadow-[inset_3px_0_0_0_#f97316]'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
             >
-              <item.icon className={`size-5 transition-transform duration-300 ${isActive(item.href) ? 'scale-110' : 'group-hover:scale-110'}`} />
+              <item.icon className={`size-4.5 transition-transform duration-150 ${isActive(item.href) ? 'scale-105' : 'group-hover:scale-105'}`} />
               {item.name}
             </Link>
           ))}
         </nav>
 
-        <div className="p-6 border-t border-white/5 bg-black/20">
+        <div className="p-4 border-t border-white/5 bg-black/20">
           {user ? (
             <>
               <button
                 type="button"
                 onClick={() => navigate('/profile')}
-                className="w-full flex items-center gap-3 p-2.5 mb-3 rounded-2xl bg-white/5 hover:bg-orange-500/10 border border-white/5 hover:border-orange-500/30 transition-all text-left group cursor-pointer"
+                className="w-full flex items-center gap-3 p-2 mb-2 rounded-xl bg-white/5 hover:bg-orange-500/10 border border-white/5 hover:border-orange-500/30 transition-all duration-150 active:scale-[0.98] text-left group cursor-pointer"
                 title="Open Profile Page"
               >
                 <div className="size-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-orange-500/20 group-hover:scale-105 transition-transform shrink-0">
@@ -107,7 +128,7 @@ export const AppLayout = () => {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold truncate text-slate-200 group-hover:text-white transition-colors">{user?.email?.split('@')[0]}</p>
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] text-orange-500/90 uppercase font-black tracking-widest">{role}</p>
+                    <p className="text-[10px] text-orange-500/90 uppercase font-black tracking-widest">{formatRole(role)}</p>
                     <span className="text-[9px] font-bold text-slate-400 group-hover:text-orange-400 transition-colors">Profile →</span>
                   </div>
                 </div>
@@ -133,41 +154,31 @@ export const AppLayout = () => {
         </div>
       </aside>
 
-      {/* Mobile Layout Wrapper */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+      {/* Layout Content Wrapper */}
+      <div className="flex-1 min-w-0 flex flex-col relative">
         {/* Mobile Topbar */}
-        <header className="md:hidden flex h-16 items-center justify-between bg-slate-900 text-white px-4 shadow-lg z-30 border-b border-white/5">
+        <header className="md:hidden sticky top-0 flex h-16 items-center justify-between bg-slate-900 text-white px-4 shadow-lg z-30 border-b border-white/5">
           <Link to="/" className="flex items-center gap-2 font-black text-xl">
             <span className="text-orange-500 italic">PSU</span>
-            <span>SportsTrack</span>
+            <span className="text-white">SportsTrack</span>
           </Link>
           <div className="flex items-center gap-2">
-            {!user && (
-              <Button
-                size="sm"
-                className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase text-xs tracking-wider rounded-xl h-9 px-3"
-                onClick={openLoginModal}
-              >
-                <LogIn className="size-4 mr-1" />
-                Log In
-              </Button>
-            )}
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="hover:bg-white/10"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="text-slate-300 hover:text-white hover:bg-white/10"
             >
-              <Menu className="size-6 text-orange-500" />
+              {isMobileMenuOpen ? <X className="size-6" /> : <Menu className="size-6" />}
             </Button>
           </div>
         </header>
 
-        {/* Mobile Menu Overlay */}
+        {/* Mobile Navigation Drawer */}
         {isMobileMenuOpen && (
-          <div className="fixed inset-0 z-50 md:hidden">
+          <div className="fixed inset-0 z-50 md:hidden animate-in fade-in duration-300">
             <div
-              className="fixed inset-0 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm"
               onClick={() => setIsMobileMenuOpen(false)}
             />
             <div className="fixed inset-y-0 right-0 w-72 bg-slate-900 text-white shadow-2xl animate-in slide-in-from-right duration-500 border-l border-white/5 flex flex-col">
@@ -192,8 +203,8 @@ export const AppLayout = () => {
                     to={item.href}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={`flex items-center gap-4 px-6 py-4 rounded-2xl text-base font-bold transition-all duration-300 ${isActive(item.href)
-                        ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30 translate-x-2'
-                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                      ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30 translate-x-2'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
                       }`}
                   >
                     <item.icon className="size-6" />
@@ -211,14 +222,14 @@ export const AppLayout = () => {
                         setIsMobileMenuOpen(false);
                         navigate('/profile');
                       }}
-                      className="w-full flex items-center gap-3 p-3 rounded-2xl bg-white/5 hover:bg-orange-500/10 border border-white/5 text-left group cursor-pointer"
+                      className="w-full flex items-center gap-3 p-3 rounded-2xl bg-white/5 hover:bg-orange-500/10 border border-white/5 transition-all duration-150 active:scale-[0.98] text-left group cursor-pointer"
                     >
                       <div className="size-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-sm shrink-0">
                         {user?.email?.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold truncate text-slate-200">{user?.email?.split('@')[0]}</p>
-                        <p className="text-[10px] text-orange-500 uppercase font-black tracking-widest">{role} • View Profile →</p>
+                        <p className="text-[10px] text-orange-500 uppercase font-black tracking-widest">{formatRole(role)} • View Profile →</p>
                       </div>
                     </button>
                     <Button
@@ -229,13 +240,13 @@ export const AppLayout = () => {
                         setShowSignOutPrompt(true);
                       }}
                     >
-                      <LogOut className="size-5" />
+                      <LogOut className="size-6" />
                       Sign Out
                     </Button>
                   </>
                 ) : (
                   <Button
-                    className="w-full justify-center gap-3 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider h-14 px-6 rounded-2xl text-base font-bold shadow-lg shadow-orange-500/20"
+                    className="w-full justify-center gap-3 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider h-14 rounded-2xl transition-all shadow-lg shadow-orange-500/20 text-base"
                     onClick={() => {
                       setIsMobileMenuOpen(false);
                       openLoginModal();
@@ -250,36 +261,36 @@ export const AppLayout = () => {
           </div>
         )}
 
-        {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto scroll-smooth bg-slate-50 relative">
-          <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-50" />
-          <div className="relative p-6 md:p-10 lg:p-12">
-            <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <Outlet />
-            </div>
-          </div>
+        {/* Main Routed Content Area */}
+        <main className="flex-1 px-4 py-8 md:px-10 md:py-10 max-w-7xl mx-auto w-full">
+          <Outlet />
         </main>
       </div>
 
+      {/* Global Sign Out Confirmation Dialog */}
       <Dialog open={showSignOutPrompt} onOpenChange={setShowSignOutPrompt}>
-        <DialogContent className="max-w-sm rounded-[2rem] p-8 border-slate-100 dark:border-white/5">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter">
-              Sign <span className="text-orange-500">Out</span>
+        <DialogContent className="sm:max-w-[425px] rounded-3xl p-6">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-2xl font-black uppercase italic tracking-tight text-slate-900">
+              Confirm Sign Out
             </DialogTitle>
-            <DialogDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-2">
-              Are you sure you want to sign out of PSU SportsTrack?
+            <DialogDescription className="text-slate-500 text-sm font-medium">
+              Are you sure you want to end your active session? You will be switched to public viewer mode.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-3 mt-4">
-            <Button variant="ghost" onClick={() => setShowSignOutPrompt(false)} className="h-12 rounded-2xl font-black uppercase tracking-widest text-xs">
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
+            <Button
+              variant="outline"
+              className="w-full sm:w-1/2 rounded-xl font-bold h-11"
+              onClick={() => setShowSignOutPrompt(false)}
+            >
               Cancel
             </Button>
             <Button
-              className="h-12 flex-1 bg-destructive hover:bg-destructive/90 text-white rounded-2xl font-black uppercase italic tracking-[0.1em]"
-              onClick={() => {
+              className="w-full sm:w-1/2 bg-orange-500 hover:bg-orange-600 text-white font-bold h-11 rounded-xl shadow-lg shadow-orange-500/20"
+              onClick={async () => {
                 setShowSignOutPrompt(false);
-                handleSignOut();
+                await handleSignOut();
               }}
             >
               Sign Out
@@ -288,9 +299,8 @@ export const AppLayout = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Global Log In Pop-Up Modal */}
+      {/* Global Login Dialog Component */}
       <LoginModal />
     </div>
   );
 };
-
