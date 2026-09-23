@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Trophy, ChevronLeft, Activity, Send, Clock, AlertCircle, Star, MapPin } from 'lucide-react';
 
+import { offlineQueue } from '@/lib/offlineQueue';
+
 type Match = {
   id: string;
   team_a_id: string;
@@ -24,6 +26,10 @@ type Match = {
   tournament_id: string;
   next_match_id?: string | null;
   next_match_slot?: 'team_a' | 'team_b' | null;
+  loser_next_match_id?: string | null;
+  loser_next_match_slot?: 'team_a' | 'team_b' | null;
+  active_scorekeeper_id?: string | null;
+  lease_expires_at?: string | null;
 };
 
 type EligiblePlayer = {
@@ -42,7 +48,7 @@ type MatchEvent = {
 export const LiveMatch = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
-  const { role, user } = useAuth();
+  const { role, user, isSuperAdmin, isFacilitator } = useAuth();
   const [match, setMatch] = useState<Match | null>(null);
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,10 +58,17 @@ export const LiveMatch = () => {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
   const [isAwarding, setIsAwarding] = useState(false);
   const [awardedMVP, setAwardedMVP] = useState<string | null>(null);
-  
+
+  // Facilitator Lease State
+  const [isHoldingLease, setIsHoldingLease] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [pendingOfflineCount, setPendingOfflineCount] = useState(0);
+
   const broadcastChannelRef = useRef<any>(null);
 
-  const isAuthorized = role === 'Admin' || role === 'Coach';
+  // Strict Governance: ONLY Facilitators and Superadmins can score games. Coaches are strictly read-only!
+  const isAuthorizedScorekeeper = isFacilitator || isSuperAdmin || role === 'facilitator' || role === 'super_admin' || role === 'Admin';
+  const isAuthorized = isAuthorizedScorekeeper && (isHoldingLease || isSuperAdmin);
 
   useEffect(() => {
     if (!matchId) {
@@ -103,16 +116,16 @@ export const LiveMatch = () => {
       .subscribe((status) => {
         console.log('📡 Broadcast channel status:', status);
       });
-      
+
     broadcastChannelRef.current = broadcastChannel;
 
     const channel = supabase
       .channel(`realtime:matches:${matchId}`)
       .on(
         'postgres_changes',
-        { 
-          event: 'UPDATE', 
-          schema: 'public', 
+        {
+          event: 'UPDATE',
+          schema: 'public',
           table: 'matches',
           filter: `id=eq.${matchId}`
         },
@@ -123,9 +136,9 @@ export const LiveMatch = () => {
       )
       .on(
         'postgres_changes',
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
+        {
+          event: 'INSERT',
+          schema: 'public',
           table: 'player_stars',
           filter: `match_id=eq.${matchId}`
         },
@@ -136,9 +149,9 @@ export const LiveMatch = () => {
       )
       .on(
         'postgres_changes',
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
+        {
+          event: 'INSERT',
+          schema: 'public',
           table: 'match_events',
           filter: `match_id=eq.${matchId}`
         },
@@ -162,7 +175,7 @@ export const LiveMatch = () => {
   const fetchInitialData = async () => {
     if (!matchId) return;
     setIsLoading(true);
-    
+
     try {
       // Fetch match, events, and star in parallel
       // We fetch star player_id only to avoid ambiguous join issues
@@ -187,8 +200,17 @@ export const LiveMatch = () => {
 
       if (matchRes.error) throw matchRes.error;
 
-      setMatch(matchRes.data);
+      const matchData = matchRes.data as Match;
+      setMatch(matchData);
       if (eventsRes.data) setEvents(eventsRes.data);
+
+      // Check lease status
+      if (matchData.active_scorekeeper_id === user?.id) {
+        const isExpired = matchData.lease_expires_at ? new Date(matchData.lease_expires_at) < new Date() : false;
+        setIsHoldingLease(!isExpired);
+      } else {
+        setIsHoldingLease(false);
+      }
 
       // Fetch eligible players for the match roster first
       let currentRoster: EligiblePlayer[] = [];
@@ -198,7 +220,7 @@ export const LiveMatch = () => {
           .select('player_id, users(full_name)')
           .in('team_id', [matchRes.data.team_a_id, matchRes.data.team_b_id])
           .eq('status', 'Approved');
-        
+
         if (rosterData) {
           currentRoster = (rosterData as unknown) as EligiblePlayer[];
           setEligiblePlayers(currentRoster);
@@ -209,7 +231,7 @@ export const LiveMatch = () => {
       if (starRes.data) {
         const star = starRes.data;
         const playerInRoster = currentRoster.find(p => p.player_id === star.player_id);
-        
+
         if (playerInRoster) {
           const users = playerInRoster.users as any;
           const mvpName = Array.isArray(users) ? users[0]?.full_name : users?.full_name;
@@ -230,20 +252,150 @@ export const LiveMatch = () => {
     } catch (error: any) {
       console.error("Error fetching match data:", error);
       if (error.code !== 'PGRST116') {
-         toast.error("Failed to load match details");
+        toast.error("Failed to load match details");
       }
     } finally {
       setIsLoading(false);
     }
   };
 
+  // 15-second heartbeat for active facilitator lease holder
+  useEffect(() => {
+    if (!isHoldingLease || !matchId || !user?.id) return;
+
+    const heartbeat = setInterval(async () => {
+      try {
+        await supabase
+          .from('matches')
+          .update({
+            active_scorekeeper_id: user.id,
+            lease_expires_at: new Date(Date.now() + 90000).toISOString()
+          })
+          .eq('id', matchId);
+        console.log('💓 [Lease] Extended facilitator lease by 90s');
+      } catch (err) {
+        console.warn('Lease heartbeat ping failed:', err);
+      }
+    }, 15000);
+
+    return () => clearInterval(heartbeat);
+  }, [isHoldingLease, matchId, user?.id]);
+
+  // Offline and Online network event listeners
+  useEffect(() => {
+    if (matchId) {
+      setPendingOfflineCount(offlineQueue.getPendingCount(matchId));
+    }
+
+    const handleOnline = async () => {
+      setIsOnline(true);
+      if (!matchId) return;
+      toast.info("Network restored! Synchronizing court-side offline queue...");
+      const res = await offlineQueue.flush(matchId, supabase);
+      if (res.success) {
+        toast.success(`Cloud synchronized: ${res.syncedEvents} match events updated.`);
+        setPendingOfflineCount(0);
+        fetchInitialData();
+      }
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      toast.warning("Network connection lost. Court-side offline buffering active.");
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [matchId]);
+
+  const handleClaimLease = async (force: boolean = false) => {
+    if (!isAuthorizedScorekeeper || !user || !matchId) return;
+
+    const { error } = await supabase
+      .from('matches')
+      .update({
+        active_scorekeeper_id: user.id,
+        lease_expires_at: new Date(Date.now() + 90000).toISOString()
+      })
+      .eq('id', matchId);
+
+    if (error) {
+      toast.error("Failed to claim scoring console: " + error.message);
+    } else {
+      setIsHoldingLease(true);
+      setMatch(prev => prev ? {
+        ...prev,
+        active_scorekeeper_id: user.id,
+        lease_expires_at: new Date(Date.now() + 90000).toISOString()
+      } : prev);
+      toast.success(force ? "Superadmin force-claimed scoring console!" : "Scoring console lease acquired!");
+    }
+  };
+
+  const handleReleaseLease = async () => {
+    if (!user || !matchId) return;
+    await supabase
+      .from('matches')
+      .update({
+        active_scorekeeper_id: null,
+        lease_expires_at: null
+      })
+      .eq('id', matchId);
+
+    setIsHoldingLease(false);
+    setMatch(prev => prev ? {
+      ...prev,
+      active_scorekeeper_id: null,
+      lease_expires_at: null
+    } : prev);
+    toast.info("Scoring console lease released.");
+  };
+
+  const handleManualSync = async () => {
+    if (!matchId) return;
+    setIsSubmitting(true);
+    const res = await offlineQueue.flush(matchId, supabase);
+    setIsSubmitting(false);
+    if (res.success) {
+      toast.success(`Cloud synchronized: ${res.syncedEvents} match events updated.`);
+      setPendingOfflineCount(0);
+      fetchInitialData();
+    } else {
+      toast.error("Failed to sync offline events. Check connection.");
+    }
+  };
+
   const handleUpdateScore = async (team: 'a' | 'b', points: number) => {
-    if (!isAuthorized || !match || match.status === 'Completed') return;
+    if (!isAuthorizedScorekeeper || !match || match.status === 'Completed') return;
+    
+    // Check lease requirement
+    if (!isHoldingLease && !isSuperAdmin) {
+      toast.error("You must claim the scoring lease before updating the scoreboard.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     const newScoreA = team === 'a' ? match.team_a_score + points : match.team_a_score;
     const newScoreB = team === 'b' ? match.team_b_score + points : match.team_b_score;
     const teamName = team === 'a' ? match.team_a?.name : match.team_b?.name;
+
+    // Offline Buffering Guard
+    if (!navigator.onLine) {
+      offlineQueue.bufferScore(match.id, newScoreA, newScoreB);
+      const offlineEvt = offlineQueue.bufferEvent(match.id, `${teamName} scored ${points} point${points > 1 ? 's' : ''}!`);
+      setMatch(prev => prev ? { ...prev, team_a_score: newScoreA, team_b_score: newScoreB } : prev);
+      setEvents(prev => [offlineEvt, ...prev]);
+      setPendingOfflineCount(offlineQueue.getPendingCount(match.id));
+      toast.warning("Offline Mode: Points buffered locally. Will sync upon reconnection.");
+      setIsSubmitting(false);
+      return;
+    }
 
     const { error: updateError } = await supabase
       .from('matches')
@@ -294,7 +446,7 @@ export const LiveMatch = () => {
   };
 
   const handleUpdateStatus = async (newStatus: string) => {
-    if (!isAuthorized || !match) return;
+    if (!isAuthorizedScorekeeper || !match) return;
 
     // Tie Guard: Single elimination matches cannot end in a tie
     if (newStatus === 'Completed') {
@@ -302,6 +454,15 @@ export const LiveMatch = () => {
         toast.error('Cannot complete a match with a tie score! Please break the tie first.');
         return;
       }
+    }
+
+    // Offline completion handling
+    if (!navigator.onLine && newStatus === 'Completed') {
+      offlineQueue.bufferScore(match.id, match.team_a_score, match.team_b_score, true);
+      setMatch(prev => prev ? { ...prev, status: 'Completed' } : prev);
+      setPendingOfflineCount(offlineQueue.getPendingCount(match.id));
+      toast.warning("Match completed offline. Bracket advancement will sync when reconnected.");
+      return;
     }
 
     const { error } = await supabase
@@ -393,9 +554,9 @@ export const LiveMatch = () => {
       const users = player?.users as any;
       const selectedPlayerName = Array.isArray(users) ? users[0]?.full_name : users?.full_name;
       const finalMvpName = selectedPlayerName || 'Unknown Player';
-      
+
       setAwardedMVP(finalMvpName);
-      
+
       if (broadcastChannelRef.current) {
         await broadcastChannelRef.current.send({
           type: 'broadcast',
@@ -403,32 +564,53 @@ export const LiveMatch = () => {
           payload: { mvpName: finalMvpName }
         });
       }
-      
+
       setIsAwarding(false);
       setSelectedPlayerId('');
     }
   };
 
-  if (isLoading) return <div className="p-8 text-center">Loading match...</div>;
-  if (!match) return <div className="p-8 text-center text-destructive">Match not found.</div>;
+  if (isLoading) {
+    return (
+      <div className="flex flex-col justify-center items-center h-[50vh] w-full gap-4 animate-in fade-in duration-300">
+        <div className="animate-spin rounded-full h-11 w-11 border-3 border-orange-500/20 border-t-orange-500"></div>
+        <p className="text-slate-500 font-bold tracking-widest uppercase text-xs">Loading Match Data...</p>
+      </div>
+    );
+  }
+
+  if (!match) {
+    return (
+      <div className="py-16 px-4 text-center max-w-md mx-auto animate-in fade-in duration-300">
+        <div className="size-16 rounded-3xl bg-red-50 dark:bg-red-500/10 text-red-500 flex items-center justify-center mx-auto mb-4">
+          <AlertCircle className="size-8" />
+        </div>
+        <h2 className="text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white">Match Not Found</h2>
+        <p className="text-xs text-slate-500 font-medium mt-1 mb-6">The requested fixture either does not exist or has been removed from the schedule.</p>
+        <Button variant="outline" onClick={() => navigate(-1)} className="rounded-xl font-bold uppercase text-xs tracking-wider gap-2">
+          <ChevronLeft className="size-4" /> Go Back
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-6 pb-8">
       {/* Dynamic Arena Header */}
-      <div className="bg-slate-950 text-white py-6 md:py-8 px-6 md:px-10 rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden group">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-center gap-6">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full bg-white/10 hover:bg-white/20 text-white border-none">
-              <ChevronLeft className="size-6" />
+      <div className="bg-slate-950 text-white py-5 md:py-6 px-5 md:px-8 rounded-2xl shadow-xl border border-white/5 relative overflow-hidden group">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
+          <div className="flex items-center gap-4 sm:gap-6">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full bg-white/10 hover:bg-white/20 text-white border-none shrink-0">
+              <ChevronLeft className="size-5 sm:size-6" />
             </Button>
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Activity className="w-5 h-5 text-orange-500" />
+              <div className="flex items-center gap-2 mb-1">
+                <Activity className="w-4 h-4 text-orange-500" />
                 <span className="text-orange-500 font-bold text-xs tracking-[0.2em] uppercase">
                   {match.status === 'Completed' ? 'Post-Game Record' : 'Live Match Control'}
                 </span>
               </div>
-              <h1 className="text-3xl md:text-4xl font-sans font-black tracking-tight uppercase leading-tight">
+              <h1 className="text-2xl md:text-3xl font-sans font-black tracking-tight uppercase leading-tight">
                 {match.status === 'Completed' ? (
                   <>POST-GAME <span className="text-orange-500">BOX SCORE</span></>
                 ) : (
@@ -437,13 +619,13 @@ export const LiveMatch = () => {
               </h1>
             </div>
           </div>
-          
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10">
-              <Activity className="size-4 text-orange-500 animate-pulse" />
-              <span className="font-black text-xs uppercase tracking-widest">{match.status}</span>
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3.5 py-1.5 bg-white/5 rounded-full border border-white/10 text-xs">
+              <Activity className="size-3.5 text-orange-500 animate-pulse" />
+              <span className="font-bold uppercase tracking-wider">{match.status}</span>
             </div>
-            <Badge variant={match.status === 'Completed' ? 'secondary' : 'destructive'} className="h-10 px-6 rounded-full font-black text-sm uppercase tracking-tighter italic animate-pulse">
+            <Badge variant={match.status === 'Completed' ? 'secondary' : 'destructive'} className="h-9 px-4 rounded-full font-bold text-xs uppercase tracking-tight animate-pulse">
               {match.status === 'Ongoing' ? 'LIVE' : match.status}
             </Badge>
           </div>
@@ -451,11 +633,11 @@ export const LiveMatch = () => {
         <div className="absolute right-0 top-0 h-full w-64 bg-orange-500/10 -skew-x-12 translate-x-32" />
       </div>
 
-      <div className="max-w-5xl mx-auto space-y-8">
+      <div className="max-w-5xl mx-auto space-y-6">
         {/* Scoreboard */}
-        <Card className="bg-primary text-primary-foreground shadow-2xl overflow-hidden border-none">
+        <Card className="bg-primary text-primary-foreground shadow-xl overflow-hidden border-none rounded-2xl">
           <CardContent className="p-0">
-            <div className="bg-black/20 p-4 text-center text-xs font-bold uppercase tracking-widest opacity-80 flex items-center justify-center gap-2">
+            <div className="bg-black/20 px-4 py-2.5 text-center text-xs font-bold uppercase tracking-widest opacity-80 flex items-center justify-center gap-2">
               <span>{match.round}</span>
               {match.venue && (
                 <>
@@ -466,28 +648,29 @@ export const LiveMatch = () => {
               <span>•</span>
               <span>Live Scoring</span>
             </div>
-            <div className="flex items-center justify-between p-8 md:p-12">
+            <div className="flex items-center justify-between p-6 md:p-8">
               <div className="flex-1 text-center">
-                <h2 className="text-xl md:text-2xl font-bold mb-2 uppercase">{match.team_a?.name || 'Team A'}</h2>
-                <div className="text-6xl md:text-8xl font-black tabular-nums">{match.team_a_score}</div>
+                <h2 className="text-lg md:text-xl font-bold mb-1 uppercase">{match.team_a?.name || 'Team A'}</h2>
+                <div className="text-5xl md:text-7xl font-black tabular-nums">{match.team_a_score}</div>
               </div>
-              
-              <div className="px-8 text-4xl font-black italic opacity-40">VS</div>
-              
+
+              <div className="px-6 text-3xl font-black italic opacity-40">VS</div>
+
               <div className="flex-1 text-center">
-                <h2 className="text-xl md:text-2xl font-bold mb-2 uppercase">{match.team_b?.name || 'BYE'}</h2>
-                <div className="text-6xl md:text-8xl font-black tabular-nums">{match.team_b_score}</div>
+                <h2 className="text-lg md:text-xl font-bold mb-1 uppercase">{match.team_b?.name || 'BYE'}</h2>
+                <div className="text-5xl md:text-7xl font-black tabular-nums">{match.team_b_score}</div>
               </div>
             </div>
-            {isAuthorized && (
-              <div className="bg-black/10 p-6 flex justify-center gap-4">
+            {/* Facilitator Action Bar on Scoreboard */}
+            {isAuthorizedScorekeeper && (
+              <div className="bg-black/10 p-4 flex flex-wrap items-center justify-center gap-3">
                 {match.status === 'Scheduled' && (
-                  <Button variant="secondary" className="bg-white text-primary hover:bg-white/90" onClick={() => handleUpdateStatus('Ongoing')}>
+                  <Button variant="secondary" className="bg-white text-primary hover:bg-white/90 font-bold" onClick={() => handleUpdateStatus('Ongoing')}>
                     Start Match
                   </Button>
                 )}
                 {match.status === 'Ongoing' && (
-                  <Button variant="secondary" className="bg-white text-primary hover:bg-white/90" onClick={() => handleUpdateStatus('Completed')}>
+                  <Button variant="secondary" className="bg-white text-primary hover:bg-white/90 font-bold" onClick={() => handleUpdateStatus('Completed')}>
                     End Match
                   </Button>
                 )}
@@ -499,16 +682,78 @@ export const LiveMatch = () => {
                 )}
               </div>
             )}
-            {!isAuthorized && match.status === 'Completed' && (
-              <div className="bg-black/10 p-6 flex justify-center gap-4">
-                <div className="flex items-center gap-2 text-sm font-bold">
-                  <Trophy className="size-5 text-yellow-400" />
-                  Winner: {match.team_a_score > match.team_b_score ? match.team_a?.name : match.team_b?.name || 'N/A'}
-                </div>
+            {!isAuthorizedScorekeeper && (
+              <div className="bg-black/10 p-3 flex items-center justify-center gap-2 text-xs font-semibold text-white/80">
+                <Activity className="size-3.5 text-orange-400 animate-pulse" />
+                <span>Spectator Mode • Official Match Scoring Managed Exclusively by PSU Facilitators</span>
+                {match.status === 'Completed' && (
+                  <span className="font-bold text-yellow-300 ml-2">
+                    (Final Winner: {match.team_a_score > match.team_b_score ? match.team_a?.name : match.team_b?.name})
+                  </span>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Facilitator Lease & Court-Side Network Controls (Only for Facilitator/Admin) */}
+        {isAuthorizedScorekeeper && (
+          <div className="space-y-3">
+            {/* Offline Alert & Sync Bar */}
+            {(!isOnline || pendingOfflineCount > 0) && (
+              <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="size-4 shrink-0 text-amber-600 animate-pulse" />
+                  <span>
+                    <strong>{!isOnline ? 'Offline Court-Side Mode:' : 'Pending Offline Changes:'}</strong> Scoring & events are buffered locally. ({pendingOfflineCount} queued)
+                  </span>
+                </div>
+                {isOnline && pendingOfflineCount > 0 && (
+                  <Button size="sm" variant="outline" className="h-7 text-xs border-amber-500/40 hover:bg-amber-500/20" onClick={handleManualSync} disabled={isSubmitting}>
+                    Sync Cloud Now
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Lease Status Card */}
+            <div className="p-3.5 bg-slate-900 border border-slate-800 rounded-xl text-white flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5">
+                <div className={`size-2.5 rounded-full ${isHoldingLease ? 'bg-emerald-500 animate-ping' : 'bg-amber-400'}`} />
+                <div>
+                  <span className="font-bold uppercase tracking-wider text-[11px] block">
+                    {isHoldingLease ? 'Active Scoring Console Lease (You are Presiding)' : 'Facilitator Console Status'}
+                  </span>
+                  <span className="text-slate-400 text-[11px]">
+                    {isHoldingLease
+                      ? 'Heartbeat active (renewed every 15s). You hold exclusive rights to record points.'
+                      : match.active_scorekeeper_id
+                        ? 'Console is assigned to another official. Read-only view active.'
+                        : 'No facilitator currently holds this console. Claim to begin scoring.'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {!isHoldingLease && (!match.active_scorekeeper_id || (match.lease_expires_at && new Date(match.lease_expires_at) < new Date())) && (
+                  <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white font-bold h-7 text-xs" onClick={() => handleClaimLease(false)}>
+                    Claim Scoring Console
+                  </Button>
+                )}
+                {isHoldingLease && (
+                  <Button size="sm" variant="ghost" className="text-slate-400 hover:text-white h-7 text-xs" onClick={handleReleaseLease}>
+                    Release Console
+                  </Button>
+                )}
+                {!isHoldingLease && match.active_scorekeeper_id && isSuperAdmin && (
+                  <Button size="sm" variant="destructive" className="h-7 text-xs font-bold" onClick={() => handleClaimLease(true)}>
+                    Force-Claim (Admin)
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* MVP Recognition Center (Visible to EVERYONE once awarded) */}
         {awardedMVP && (
@@ -545,49 +790,49 @@ export const LiveMatch = () => {
           </Card>
         )}
 
-        {/* Administrative Controls (Admins/Coaches Only) */}
-        {isAuthorized && (
-          <div className="space-y-8">
+        {/* Facilitator Live Scoring Controls (Facilitators / Admins Only) */}
+        {isAuthorizedScorekeeper && (
+          <div className="space-y-6">
             {/* Live Scoring Controls */}
             {match.status === 'Ongoing' && (
-              <div className="grid md:grid-cols-2 gap-8">
+              <div className="grid md:grid-cols-2 gap-5">
                 {/* Team A Controls */}
-                <Card>
-                  <CardHeader className="text-center border-b pb-4">
-                    <CardTitle className="text-primary">{match.team_a?.name}</CardTitle>
+                <Card className="rounded-2xl shadow-sm">
+                  <CardHeader className="text-center border-b pb-3 pt-4">
+                    <CardTitle className="text-primary text-base sm:text-lg">{match.team_a?.name}</CardTitle>
                   </CardHeader>
-                  <CardContent className="p-6 grid grid-cols-3 gap-3">
-                    <Button size="lg" variant="outline" className="flex flex-col h-20 gap-1 border-2" onClick={() => handleUpdateScore('a', 1)}>
-                      <span className="text-xl font-bold">+1</span>
+                  <CardContent className="p-4 sm:p-5 grid grid-cols-3 gap-2.5">
+                    <Button size="lg" variant="outline" className="flex flex-col h-16 sm:h-18 gap-1 border-2 rounded-xl active:scale-95" onClick={() => handleUpdateScore('a', 1)}>
+                      <span className="text-lg font-bold">+1</span>
                       <span className="text-[10px] uppercase opacity-60">FT</span>
                     </Button>
-                    <Button size="lg" variant="outline" className="flex flex-col h-20 gap-1 border-2" onClick={() => handleUpdateScore('a', 2)}>
-                      <span className="text-xl font-bold">+2</span>
+                    <Button size="lg" variant="outline" className="flex flex-col h-16 sm:h-18 gap-1 border-2 rounded-xl active:scale-95" onClick={() => handleUpdateScore('a', 2)}>
+                      <span className="text-lg font-bold">+2</span>
                       <span className="text-[10px] uppercase opacity-60">Field</span>
                     </Button>
-                    <Button size="lg" variant="outline" className="flex flex-col h-20 gap-1 border-2" onClick={() => handleUpdateScore('a', 3)}>
-                      <span className="text-xl font-bold">+3</span>
+                    <Button size="lg" variant="outline" className="flex flex-col h-16 sm:h-18 gap-1 border-2 rounded-xl active:scale-95" onClick={() => handleUpdateScore('a', 3)}>
+                      <span className="text-lg font-bold">+3</span>
                       <span className="text-[10px] uppercase opacity-60">Triple</span>
                     </Button>
                   </CardContent>
                 </Card>
 
                 {/* Team B Controls */}
-                <Card className={!match.team_b_id ? 'opacity-50 pointer-events-none' : ''}>
-                  <CardHeader className="text-center border-b pb-4">
-                    <CardTitle className="text-primary">{match.team_b?.name || 'BYE'}</CardTitle>
+                <Card className={`rounded-2xl shadow-sm ${!match.team_b_id ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <CardHeader className="text-center border-b pb-3 pt-4">
+                    <CardTitle className="text-primary text-base sm:text-lg">{match.team_b?.name || 'BYE'}</CardTitle>
                   </CardHeader>
-                  <CardContent className="p-6 grid grid-cols-3 gap-3">
-                    <Button size="lg" variant="outline" className="flex flex-col h-20 gap-1 border-2" onClick={() => handleUpdateScore('b', 1)}>
-                      <span className="text-xl font-bold">+1</span>
+                  <CardContent className="p-4 sm:p-5 grid grid-cols-3 gap-2.5">
+                    <Button size="lg" variant="outline" className="flex flex-col h-16 sm:h-18 gap-1 border-2 rounded-xl active:scale-95" onClick={() => handleUpdateScore('b', 1)}>
+                      <span className="text-lg font-bold">+1</span>
                       <span className="text-[10px] uppercase opacity-60">FT</span>
                     </Button>
-                    <Button size="lg" variant="outline" className="flex flex-col h-20 gap-1 border-2" onClick={() => handleUpdateScore('b', 2)}>
-                      <span className="text-xl font-bold">+2</span>
+                    <Button size="lg" variant="outline" className="flex flex-col h-16 sm:h-18 gap-1 border-2 rounded-xl active:scale-95" onClick={() => handleUpdateScore('b', 2)}>
+                      <span className="text-lg font-bold">+2</span>
                       <span className="text-[10px] uppercase opacity-60">Field</span>
                     </Button>
-                    <Button size="lg" variant="outline" className="flex flex-col h-20 gap-1 border-2" onClick={() => handleUpdateScore('b', 3)}>
-                      <span className="text-xl font-bold">+3</span>
+                    <Button size="lg" variant="outline" className="flex flex-col h-16 sm:h-18 gap-1 border-2 rounded-xl active:scale-95" onClick={() => handleUpdateScore('b', 3)}>
+                      <span className="text-lg font-bold">+3</span>
                       <span className="text-[10px] uppercase opacity-60">Triple</span>
                     </Button>
                   </CardContent>
@@ -631,7 +876,7 @@ export const LiveMatch = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button 
+                  <Button
                     className="w-full bg-red-500 hover:bg-red-600 text-white font-bold h-12 gap-2"
                     onClick={handleAwardMVP}
                     disabled={!selectedPlayerId || isAwarding}
@@ -660,10 +905,10 @@ export const LiveMatch = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {isAuthorized && (
+            {isAuthorizedScorekeeper && (
               <div className="p-4 border-b flex gap-2">
-                <Input 
-                  placeholder="Log a custom event (e.g., Timeout, Foul, Substitution)..." 
+                <Input
+                  placeholder="Log a custom event (e.g., Timeout, Foul, Substitution)..."
                   value={customEvent}
                   onChange={(e) => setCustomEvent(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleLogCustomEvent()}

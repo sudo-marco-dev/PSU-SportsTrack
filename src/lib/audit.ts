@@ -9,7 +9,12 @@ export type AuditAction =
   | 'APPROVE_TEAM'
   | 'REJECT_TEAM'
   | 'GENERATE_BRACKET'
-  | 'AWARD_STAR';
+  | 'AWARD_STAR'
+  | 'CONFIRM_MATCH_RESULT'
+  | 'SCORE_OVERRIDE'
+  | 'ANNUAL_REVALIDATION'
+  | 'USER_VERIFY'
+  | 'REVALIDATE_TRIGGER';
 
 export const logAudit = async (params: {
   action: AuditAction;
@@ -23,9 +28,11 @@ export const logAudit = async (params: {
 
     await supabase.from('audit_logs').insert({
       admin_id: user.id,
+      actor_id: user.id,
       action: params.action,
       entity_type: params.entity_type,
       entity_id: params.entity_id,
+      target_id: params.entity_id,
       details: params.details,
     });
   } catch (error) {

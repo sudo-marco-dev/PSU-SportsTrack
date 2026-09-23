@@ -20,7 +20,7 @@ export const Ranking = () => {
   };
 
   return (
-    <div className="space-y-8 pb-12 animate-in fade-in duration-500">
+    <div className="space-y-8 pb-2 animate-in fade-in duration-500">
       {/* Header Banner */}
       <div className="bg-slate-950 text-white py-5 md:py-8 px-5 md:px-10 rounded-2xl md:rounded-[2.5rem] shadow-2xl border border-white/5 relative overflow-hidden group">
         <div className="relative z-10 max-w-3xl">
@@ -213,20 +213,22 @@ export const Ranking = () => {
       </div>
 
       {/* Standings Table Placeholder / Awaiting Data Empty State */}
-      <Card className="border-2 border-dashed border-slate-200 dark:border-white/10 rounded-[2.5rem] py-16 px-6 text-center bg-slate-50/50 dark:bg-slate-900/20 relative overflow-hidden">
-        <div className="max-w-md mx-auto space-y-4">
-          <div className="size-16 rounded-3xl bg-slate-100 dark:bg-white/5 flex items-center justify-center mx-auto text-slate-400 shadow-inner">
-            <Sparkles className="size-8 text-orange-500 animate-pulse" />
+      <Card className="border border-dashed border-slate-200 dark:border-white/10 rounded-2xl py-8 px-6 text-center bg-slate-50/50 dark:bg-slate-900/20 max-w-xl mx-auto shadow-sm">
+        <div className="space-y-3">
+          <div className="size-10 rounded-xl bg-orange-500/10 flex items-center justify-center mx-auto text-orange-500">
+            <Sparkles className="size-5 animate-pulse" />
           </div>
-          <h3 className="text-2xl font-black italic uppercase tracking-tight text-slate-800 dark:text-white">
-            Leaderboard Compiling
-          </h3>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
-            Historical and season standings data are currently being aggregated. Live rankings will populate automatically as tournament matches and official records are finalized.
-          </p>
-          <div className="pt-2 flex items-center justify-center gap-2 text-slate-400 text-xs font-semibold">
-            <Shield className="size-4 text-orange-500" />
-            <span className="text-[11px] font-bold uppercase tracking-wider">
+          <div className="space-y-1">
+            <h3 className="text-base font-bold uppercase tracking-tight text-slate-800 dark:text-white">
+              Leaderboard Compiling
+            </h3>
+            <p className="text-xs text-slate-500 font-normal leading-relaxed max-w-md mx-auto">
+              Historical and season standings data are currently being aggregated. Live rankings will populate automatically as tournament matches and official records are finalized.
+            </p>
+          </div>
+          <div className="pt-1 flex items-center justify-center gap-1.5 text-slate-400 text-xs font-medium">
+            <Shield className="size-3.5 text-orange-500" />
+            <span className="text-[11px]">
               Filters configured and ready for live computation
             </span>
           </div>

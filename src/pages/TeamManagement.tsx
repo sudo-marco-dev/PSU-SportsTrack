@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Users, UserPlus, ClipboardList } from 'lucide-react';
+import { Users, UserPlus, ClipboardList, Star } from 'lucide-react';
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
 
@@ -45,6 +45,11 @@ type RosterMember = {
   id: string;
   status: string;
   player_id: string;
+  jersey_number?: number | null;
+  position?: string | null;
+  is_captain?: boolean;
+  is_starter?: boolean;
+  availability_status?: string;
   users: {
     full_name: string;
     colleges?: { college_name: string } | { college_name: string }[];
@@ -56,10 +61,10 @@ export const TeamManagement = () => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  
+
   const [isLoadingTeams, setIsLoadingTeams] = useState(true);
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(true);
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -74,10 +79,12 @@ export const TeamManagement = () => {
   const [invitePlayerId, setInvitePlayerId] = useState<string | null>(null);
   const [selectedTeamToInvite, setSelectedTeamToInvite] = useState('');
 
-  // Manage Roster State
+  // Manage Roster & Lineup State
   const [manageRosterTeamId, setManageRosterTeamId] = useState<string | null>(null);
   const [rosterMembers, setRosterMembers] = useState<RosterMember[]>([]);
   const [isLoadingRoster, setIsLoadingRoster] = useState(false);
+  const [editingJerseyId, setEditingJerseyId] = useState<string | null>(null);
+  const [editingJerseyNum, setEditingJerseyNum] = useState<string>('');
 
   useEffect(() => {
     if (user?.id) {
@@ -107,9 +114,11 @@ export const TeamManagement = () => {
     setIsLoadingPlayers(true);
     const { data, error } = await supabase
       .from('users')
-      .select('id, full_name, is_verified, colleges(college_name)')
-      .eq('role', 'Player')
+      .select('id, full_name, is_verified, role, account_status, colleges(college_name)')
+      .in('role', ['player_student', 'player_faculty', 'Player'])
       .eq('is_verified', true)
+      .neq('account_status', 'inactive')
+      .neq('account_status', 'soft_deleted')
       .order('full_name', { ascending: true });
 
     if (error) {
@@ -157,8 +166,8 @@ export const TeamManagement = () => {
 
     const selectedTeam = teams.find(t => t.id === selectedTeamToInvite);
     // Handle both array and single object formats from Supabase joins
-    const tournamentData = Array.isArray(selectedTeam?.tournaments) 
-      ? selectedTeam?.tournaments[0] 
+    const tournamentData = Array.isArray(selectedTeam?.tournaments)
+      ? selectedTeam?.tournaments[0]
       : selectedTeam?.tournaments;
     const targetSport = tournamentData?.sport;
 
@@ -211,17 +220,86 @@ export const TeamManagement = () => {
 
   const fetchRosterMembers = async (teamId: string) => {
     setIsLoadingRoster(true);
+    
+    // Attempt query with extended game-day lineup columns
     const { data, error } = await supabase
       .from('team_roster')
-      .select('id, status, player_id, users(full_name, colleges(college_name))')
+      .select('id, status, player_id, jersey_number, position, is_captain, is_starter, availability_status, users(full_name, colleges(college_name))')
       .eq('team_id', teamId);
 
-    if (error) {
-      toast.error('Failed to load roster: ' + error.message);
-    } else {
+    if (error && error.code === '42703') {
+      // Graceful fallback if full migration columns are still pending in Supabase
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('team_roster')
+        .select('id, status, player_id, jersey_number, users(full_name, colleges(college_name))')
+        .eq('team_id', teamId);
+
+      if (!fallbackError && fallbackData) {
+        setRosterMembers((fallbackData as unknown) as RosterMember[]);
+      }
+    } else if (!error && data) {
       setRosterMembers((data as unknown) as RosterMember[]);
+    } else if (error) {
+      toast.error('Failed to load roster: ' + error.message);
     }
     setIsLoadingRoster(false);
+  };
+
+  const handleUpdateRosterMember = async (rosterId: string, updates: Record<string, any>) => {
+    try {
+      const { error } = await supabase
+        .from('team_roster')
+        .update(updates)
+        .eq('id', rosterId);
+
+      if (error) {
+        if (error.code === '42703') {
+          // If only jersey_number column exists, update only jersey_number
+          if ('jersey_number' in updates) {
+            await supabase.from('team_roster').update({ jersey_number: updates.jersey_number }).eq('id', rosterId);
+          }
+        } else {
+          toast.error('Failed to update roster: ' + error.message);
+          return;
+        }
+      }
+      toast.success('Roster details updated.');
+      setRosterMembers(prev => prev.map(m => m.id === rosterId ? { ...m, ...updates } : m));
+    } catch (err: any) {
+      toast.error('Update error: ' + err.message);
+    }
+  };
+
+  const handleSaveJersey = async (rosterId: string, value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      await handleUpdateRosterMember(rosterId, { jersey_number: null });
+      setEditingJerseyId(null);
+      return;
+    }
+    const num = parseInt(trimmed, 10);
+    if (isNaN(num) || num < 0 || num > 99) {
+      toast.error("Jersey number must be between 0 and 99.");
+      return;
+    }
+    await handleUpdateRosterMember(rosterId, { jersey_number: num });
+    setEditingJerseyId(null);
+  };
+
+  const handleToggleCaptain = async (member: RosterMember) => {
+    await handleUpdateRosterMember(member.id, { is_captain: !member.is_captain });
+  };
+
+  const handleToggleStarter = async (member: RosterMember) => {
+    await handleUpdateRosterMember(member.id, { is_starter: !member.is_starter });
+  };
+
+  const handleUpdatePosition = async (rosterId: string, position: string) => {
+    await handleUpdateRosterMember(rosterId, { position });
+  };
+
+  const handleUpdateAvailability = async (rosterId: string, availability_status: string) => {
+    await handleUpdateRosterMember(rosterId, { availability_status });
   };
 
   const handleRemoveFromRoster = async (rosterId: string) => {
@@ -240,8 +318,8 @@ export const TeamManagement = () => {
 
   const filteredTeams = useMemo(() => {
     return teams.filter(t => {
-      const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            t.tournaments?.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.tournaments?.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
@@ -250,14 +328,14 @@ export const TeamManagement = () => {
   const filteredPlayers = useMemo(() => {
     return players.filter(p => {
       const collegeName = Array.isArray(p.colleges) ? p.colleges[0]?.college_name : p.colleges?.college_name || '';
-      const matchesSearch = p.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            collegeName.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = p.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        collegeName.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesSearch;
     });
   }, [players, searchQuery]);
 
   return (
-    <div className="space-y-6 relative min-h-screen">
+    <div className="space-y-6 relative pb-6">
       <div className="bg-slate-950 text-white py-6 md:py-8 px-6 md:px-10 rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden group">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
@@ -278,7 +356,7 @@ export const TeamManagement = () => {
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger render={
                 <Button size="lg" className="h-14 bg-orange-500 hover:bg-orange-600 text-white font-black gap-2 px-8 rounded-xl shadow-xl shadow-orange-500/20 uppercase italic tracking-wider transition-all hover:scale-[1.02] active:scale-95 group">
-                  <UserPlus className="size-5 group-hover:rotate-12 transition-transform duration-300" /> 
+                  <UserPlus className="size-5 group-hover:rotate-12 transition-transform duration-300" />
                   <span className="text-base">New Team</span>
                 </Button>
               } />
@@ -346,14 +424,14 @@ export const TeamManagement = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col">
         <TabsList className="w-full flex justify-start overflow-x-auto whitespace-nowrap bg-transparent border-b-2 border-slate-200 dark:border-white/10 rounded-none h-auto p-0 gap-8 scrollbar-hide mb-8">
-          <TabsTrigger 
-            value="my-teams" 
+          <TabsTrigger
+            value="my-teams"
             className="shrink-0 rounded-none pb-5 text-sm font-black uppercase tracking-[0.2em] shadow-none transition-all border-b-4 data-[state=active]:border-orange-500 data-[state=active]:text-orange-600 border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-white bg-transparent"
           >
             My Teams
           </TabsTrigger>
-          <TabsTrigger 
-            value="directory" 
+          <TabsTrigger
+            value="directory"
             className="shrink-0 rounded-none pb-5 text-sm font-black uppercase tracking-[0.2em] shadow-none transition-all border-b-4 data-[state=active]:border-orange-500 data-[state=active]:text-orange-600 border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-white bg-transparent"
           >
             Player Directory
@@ -415,7 +493,7 @@ export const TeamManagement = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-8 pt-4">
-                    <Button 
+                    <Button
                       variant="outline"
                       className="w-full h-14 rounded-2xl font-black uppercase italic tracking-[0.1em] border-2 border-slate-100 dark:border-white/5 hover:bg-orange-50 dark:hover:bg-orange-500/10 hover:border-orange-500/50 transition-all duration-300"
                       onClick={() => {
@@ -455,8 +533,8 @@ export const TeamManagement = () => {
                           </Badge>
                         </td>
                         <td className="py-4 px-8 text-right">
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
                             className="font-black uppercase italic tracking-widest text-[10px] text-orange-500 hover:text-orange-600"
                             onClick={() => {
@@ -509,7 +587,7 @@ export const TeamManagement = () => {
                     </div>
                   </CardHeader>
                   <CardContent className="p-8 pt-4">
-                    <Button 
+                    <Button
                       className="w-full h-14 bg-slate-900 hover:bg-orange-500 text-white font-black uppercase italic tracking-[0.1em] rounded-2xl shadow-xl transition-all duration-300"
                       onClick={() => setInvitePlayerId(player.id)}
                     >
@@ -545,8 +623,8 @@ export const TeamManagement = () => {
                           {Array.isArray(player.colleges) ? player.colleges[0]?.college_name : player.colleges?.college_name || 'N/A'}
                         </td>
                         <td className="py-4 px-8 text-right">
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
                             className="font-black uppercase italic tracking-widest text-[10px] text-orange-500 hover:text-orange-600"
                             onClick={() => setInvitePlayerId(player.id)}
@@ -589,35 +667,145 @@ export const TeamManagement = () => {
                     : colleges?.college_name || 'N/A';
 
                   return (
-                    <div key={member.id} className="flex items-center justify-between p-5 border-2 border-slate-100 dark:border-white/5 rounded-2xl bg-white dark:bg-slate-900 group hover:border-orange-500/30 transition-all duration-300">
-                      <div className="flex items-center gap-4">
-                        <div className="size-10 rounded-xl bg-slate-50 dark:bg-white/5 flex items-center justify-center font-black text-slate-500 group-hover:bg-orange-500 group-hover:text-white transition-all">
-                          {(Array.isArray(member.users) ? member.users[0]?.full_name : member.users?.full_name || '?')[0]}
+                    <div key={member.id} className="p-5 border-2 border-slate-100 dark:border-white/5 rounded-2xl bg-white dark:bg-slate-900 group hover:border-orange-500/30 transition-all duration-300 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="size-10 rounded-xl bg-slate-50 dark:bg-white/5 flex items-center justify-center font-black text-slate-500 group-hover:bg-orange-500 group-hover:text-white transition-all">
+                            {(Array.isArray(member.users) ? member.users[0]?.full_name : member.users?.full_name || '?')[0]}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-black italic uppercase tracking-tighter text-lg leading-none">
+                                {Array.isArray(member.users) ? member.users[0]?.full_name : member.users?.full_name || 'Unknown Player'}
+                              </span>
+                              {member.is_captain && (
+                                <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[9px] font-black uppercase px-2 py-0 gap-1">
+                                  <Star className="size-2.5 fill-amber-500" /> Captain
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{collegeName}</span>
+                              <span className="text-slate-300">•</span>
+                              <Badge
+                                variant={member.status === 'Approved' ? 'default' : 'secondary'}
+                                className="text-[9px] font-black uppercase px-2 py-0"
+                              >
+                                {member.status}
+                              </Badge>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-black italic uppercase tracking-tighter text-lg leading-none mb-1">
-                            {Array.isArray(member.users) ? member.users[0]?.full_name : member.users?.full_name || 'Unknown Player'}
-                          </div>
-                          <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{collegeName}</span>
-                            <span className="text-slate-300">•</span>
-                            <Badge 
-                              variant={member.status === 'Approved' ? 'default' : 'secondary'}
-                              className="text-[9px] font-black uppercase px-2 py-0"
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive font-black uppercase text-[10px] tracking-widest hover:bg-destructive/10 h-8 px-3 rounded-xl"
+                          onClick={() => handleRemoveFromRoster(member.id)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+
+                      {/* Coach Game-Day Lineup & Jersey Operations Row */}
+                      <div className="pt-3 border-t border-slate-100 dark:border-white/5 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50 dark:bg-white/[0.02] -mx-5 -mb-5 p-4 rounded-b-2xl">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {/* Jersey Number Assignment */}
+                          {editingJerseyId === member.id ? (
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs font-black text-slate-400">#</span>
+                              <Input
+                                type="number"
+                                min="0"
+                                max="99"
+                                className="w-16 h-8 text-center text-xs font-black p-1 bg-white dark:bg-slate-950"
+                                value={editingJerseyNum}
+                                onChange={(e) => setEditingJerseyNum(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSaveJersey(member.id, editingJerseyNum);
+                                  if (e.key === 'Escape') setEditingJerseyId(null);
+                                }}
+                                autoFocus
+                              />
+                              <Button size="sm" className="h-8 px-2 text-xs bg-orange-500 hover:bg-orange-600 text-white font-bold" onClick={() => handleSaveJersey(member.id, editingJerseyNum)}>Save</Button>
+                            </div>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 px-2.5 rounded-lg text-xs font-black border-slate-200 dark:border-white/10 hover:border-orange-500 gap-1 bg-white dark:bg-slate-900"
+                              onClick={() => {
+                                setEditingJerseyId(member.id);
+                                setEditingJerseyNum(member.jersey_number ? String(member.jersey_number) : '');
+                              }}
+                              title="Click to assign Jersey #"
                             >
-                              {member.status}
-                            </Badge>
-                          </div>
+                              <span className="text-slate-400">#</span>
+                              <span>{member.jersey_number ?? '--'}</span>
+                            </Button>
+                          )}
+
+                          {/* Captaincy Toggle */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className={`h-8 px-2.5 rounded-lg text-xs font-bold gap-1 bg-white dark:bg-slate-900 ${member.is_captain ? 'bg-amber-500/10 text-amber-600 border-amber-500/40' : 'text-slate-400'}`}
+                            onClick={() => handleToggleCaptain(member)}
+                            title="Toggle Team Captaincy"
+                          >
+                            <Star className={`size-3 ${member.is_captain ? 'fill-amber-500 text-amber-500' : ''}`} />
+                            {member.is_captain ? 'Captain' : 'Captain'}
+                          </Button>
+
+                          {/* Starters Toggle */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className={`h-8 px-2.5 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 ${member.is_starter ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/40 font-black' : 'text-slate-400'}`}
+                            onClick={() => handleToggleStarter(member)}
+                            title="Toggle Starter vs Bench"
+                          >
+                            {member.is_starter ? '⚡ Starter' : 'Bench'}
+                          </Button>
+
+                          {/* Position Selector */}
+                          <Select value={member.position || 'Player'} onValueChange={(val) => val && handleUpdatePosition(member.id, val)}>
+                            <SelectTrigger className="h-8 w-24 text-xs font-bold rounded-lg border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900">
+                              <SelectValue placeholder="Position" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="PG">PG</SelectItem>
+                              <SelectItem value="SG">SG</SelectItem>
+                              <SelectItem value="SF">SF</SelectItem>
+                              <SelectItem value="PF">PF</SelectItem>
+                              <SelectItem value="C">C</SelectItem>
+                              <SelectItem value="Setter">Setter</SelectItem>
+                              <SelectItem value="Spiker">Spiker</SelectItem>
+                              <SelectItem value="Libero">Libero</SelectItem>
+                              <SelectItem value="Striker">Striker</SelectItem>
+                              <SelectItem value="Midfield">Midfield</SelectItem>
+                              <SelectItem value="Defender">Defender</SelectItem>
+                              <SelectItem value="Goalie">Goalie</SelectItem>
+                              <SelectItem value="Player">Player</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Availability Selector */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Status:</span>
+                          <Select value={member.availability_status || 'active'} onValueChange={(val) => val && handleUpdateAvailability(member.id, val)}>
+                            <SelectTrigger className={`h-8 w-28 text-xs font-bold rounded-lg border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 ${member.availability_status === 'injured' ? 'text-red-500 font-black' : member.availability_status === 'benched' ? 'text-amber-500 font-bold' : 'text-emerald-600 font-bold'}`}>
+                              <SelectValue placeholder="Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="active">🟢 Active</SelectItem>
+                              <SelectItem value="benched">🟡 Benched</SelectItem>
+                              <SelectItem value="injured">🔴 Injured</SelectItem>
+                              <SelectItem value="excused">⚪ Excused</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-destructive font-black uppercase text-[10px] tracking-widest hover:bg-destructive/10 h-10 px-4 rounded-xl"
-                        onClick={() => handleRemoveFromRoster(member.id)}
-                      >
-                        Remove
-                      </Button>
                     </div>
                   );
                 })}
@@ -663,7 +851,7 @@ export const TeamManagement = () => {
             </div>
           </div>
           <DialogFooter className="gap-3">
-            <Button variant="ghost" onClick={() => {setInvitePlayerId(null); setSelectedTeamToInvite('');}} className="h-14 rounded-2xl font-black uppercase tracking-widest text-xs">Cancel</Button>
+            <Button variant="ghost" onClick={() => { setInvitePlayerId(null); setSelectedTeamToInvite(''); }} className="h-14 rounded-2xl font-black uppercase tracking-widest text-xs">Cancel</Button>
             <Button onClick={handleInvitePlayer} disabled={!selectedTeamToInvite} className="h-14 flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-black uppercase italic tracking-[0.1em]">Send Recruitment Invite</Button>
           </DialogFooter>
         </DialogContent>

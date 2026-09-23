@@ -32,7 +32,7 @@ function AppRoutes() {
       <Route path="/register" element={<Register />} />
       <Route path="/auth/confirm" element={<AuthConfirm />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-      
+
       {/* App Shell Layout */}
       <Route element={<AppLayout />}>
         {/* Public Views Accessible to Everyone */}
@@ -40,12 +40,12 @@ function AppRoutes() {
         <Route path="/explorer" element={<TournamentExplorer />} />
         <Route path="/ranking" element={<Ranking />} />
         <Route path="/match/:matchId" element={<LiveMatch />} />
-        
+
         {/* Protected Routes Requiring Authentication */}
         <Route element={<ProtectedRoute />}>
           <Route path="/profile" element={<Profile />} />
           <Route path="/achievements" element={<Navigate to="/profile" replace />} />
-          
+
           {/* Role-Specific Routes */}
           <Route element={<ProtectedRoute requiredRole="Admin" />}>
             <Route path="/admin" element={<AdminDashboard />} />
@@ -53,12 +53,12 @@ function AppRoutes() {
             <Route path="/admin/verifications" element={<SystemVerifications />} />
             <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
           </Route>
-          
+
           <Route element={<ProtectedRoute requiredRole="Coach" />}>
             <Route path="/coach" element={<CoachDashboard />} />
             <Route path="/coach/teams" element={<TeamManagement />} />
           </Route>
-          
+
           <Route element={<ProtectedRoute requiredRole="Player" />}>
             <Route path="/player" element={<PlayerDashboard />} />
           </Route>

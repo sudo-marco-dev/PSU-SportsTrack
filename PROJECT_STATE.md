@@ -89,8 +89,28 @@
   - `src/pages/TournamentManagement.tsx`
   - `PROJECT_STATE.md`
 
+### Phase 5: Facilitator Governance, Bronze Brackets & Capstone Readiness
+- **Description**: Implementing the 5 core systems finalized during architectural grilling:
+  1. **Facilitator Scoring Authority & Lease Engine**: Restricting live scoring and match controls strictly to `facilitator` and `super_admin` (removing coach scoring permissions). Single facilitator 90s heartbeat lease engine with Admin override.
+  2. **Coach Pre-Match Lineup & Availability Ops**: Starting lineup selection (Starters vs Bench), jersey number management (`team_roster.jersey_number`), sports positions, and game-day availability check-in (`active`, `injured`, `excused`).
+  3. **Automated 3rd-Place (Bronze Medal) Bracket Engine**: Connecting semi-final losers to a Bronze Playoff fixture (`loser_next_match_id`), and rendering prominently on the tournament bracket canvas.
+  4. **Court-Side Offline Resilience**: IndexedDB event buffering for intermittent campus network dropouts, deferred completion syncing, and atomic batch sync RPC.
+  5. **Capstone Demo Staging Protocol**: Idempotent demo reset script `npm run seed:demo` and triple-guarded Admin Dashboard reset trigger.
+- **Files Modified**:
+  - `CONTEXT.md`
+  - `PROJECT_STATE.md`
+  - `supabase/migrations/20260922_phase5_facilitator_and_bronze_brackets.sql`
+  - `src/pages/LiveMatch.tsx`
+  - `src/pages/TeamManagement.tsx`
+  - `src/pages/TournamentManagement.tsx`
+  - `src/pages/TournamentExplorer.tsx`
+  - `src/pages/AdminDashboard.tsx`
+  - `src/lib/offlineQueue.ts`
+  - `src/lib/demoReset.ts`
+  - `scripts/seed_demo.js`
+  - `package.json`
+
 ## 🎯 Future Goals
 - [x] Phase 4: MVP Star System (Red & Gold Stars).
 - [x] Phase 4.1: Binturungan One-Click Multi-Sport Creation & Draft Lifecycle.
-- Phase 5: Final Polish & Capstone Readiness.
-
+- [x] Phase 5: Final Polish, Facilitator Governance & Capstone Readiness.

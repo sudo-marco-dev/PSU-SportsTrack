@@ -20,7 +20,6 @@ import {
   Lock,
   CheckCircle2,
   Crown,
-  Sparkles,
   ArrowRight
 } from 'lucide-react';
 
@@ -258,17 +257,25 @@ export const TournamentExplorer = () => {
     const quarters: Match[] = [];
     const semis: Match[] = [];
     const finals: Match[] = [];
+    const bronze: Match[] = [];
     const others: Match[] = [];
 
     playoffMatches.forEach(m => {
       const r = (m.round || '').toLowerCase();
-      if (r.includes('quarter')) quarters.push(m);
-      else if (r.includes('semi')) semis.push(m);
-      else if (r.includes('final') || r.includes('championship')) finals.push(m);
-      else others.push(m);
+      if (r.includes('3rd') || r.includes('bronze') || r.includes('consolation')) {
+        bronze.push(m);
+      } else if (r.includes('quarter')) {
+        quarters.push(m);
+      } else if (r.includes('semi')) {
+        semis.push(m);
+      } else if (r.includes('final') || r.includes('championship')) {
+        finals.push(m);
+      } else {
+        others.push(m);
+      }
     });
 
-    return { quarters, semis, finals, others };
+    return { quarters, semis, finals, bronze, others };
   }, [playoffMatches]);
 
   // Identify Champion if Finals match is completed
@@ -334,7 +341,7 @@ export const TournamentExplorer = () => {
   }
 
   return (
-    <div className="space-y-6 md:space-y-8 pb-20 animate-in fade-in duration-500 max-w-full overflow-hidden">
+    <div className="space-y-6 md:space-y-8 pb-4 animate-in fade-in duration-500 max-w-full overflow-hidden">
       {/* Hero Header & Breadcrumb Trail */}
       <div className="relative overflow-hidden rounded-2xl md:rounded-[2.5rem] bg-slate-950 text-white py-5 sm:py-6 md:py-10 px-4 sm:px-6 md:px-12 shadow-2xl border border-white/5">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 size-64 sm:size-80 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -342,16 +349,18 @@ export const TournamentExplorer = () => {
           {/* Breadcrumbs */}
           <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400">
             <button 
+              type="button"
               onClick={() => { setSelectedTournamentId('all'); setSelectedSport('all'); }}
-              className="hover:text-orange-400 flex items-center gap-1 transition-colors"
+              className="hover:text-orange-400 flex items-center gap-1 transition-colors cursor-pointer"
             >
               <Globe className="size-3 sm:size-3.5 text-orange-500" />
               <span>Match Center</span>
             </button>
             <ChevronRight className="size-3 text-slate-600" />
             <button 
+              type="button"
               onClick={() => setSelectedSport('all')}
-              className={`hover:text-orange-400 transition-colors truncate max-w-[140px] sm:max-w-none ${selectedTournamentId !== 'all' ? 'text-slate-200' : 'text-slate-500'}`}
+              className={`hover:text-orange-400 transition-colors cursor-pointer truncate max-w-[140px] sm:max-w-none ${selectedTournamentId !== 'all' ? 'text-slate-200' : 'text-slate-500'}`}
             >
               {selectedTournamentId === 'all' ? 'All Tournaments' : selectedTourObj?.name}
             </button>
@@ -409,7 +418,7 @@ export const TournamentExplorer = () => {
           <button
             type="button"
             onClick={() => setSelectedTournamentId('all')}
-            className={`text-left p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 relative group overflow-hidden flex flex-col justify-between ${
+            className={`text-left p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 cursor-pointer active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 relative group overflow-hidden flex flex-col justify-between ${
               selectedTournamentId === 'all'
                 ? 'bg-slate-950 text-white border-orange-500 shadow-xl shadow-slate-950/20 scale-[1.01]'
                 : 'bg-white border-slate-200/80 hover:border-orange-500/40 hover:bg-slate-50 text-slate-800 shadow-sm'
@@ -444,7 +453,7 @@ export const TournamentExplorer = () => {
                 key={t.id}
                 type="button"
                 onClick={() => setSelectedTournamentId(t.id)}
-                className={`text-left p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 relative group overflow-hidden flex flex-col justify-between ${
+                className={`text-left p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 cursor-pointer active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 relative group overflow-hidden flex flex-col justify-between ${
                   isSelected
                     ? 'bg-slate-950 text-white border-orange-500 shadow-xl shadow-slate-950/20 scale-[1.01]'
                     : 'bg-white border-slate-200/80 hover:border-orange-500/40 hover:bg-slate-50 text-slate-800 shadow-sm'
@@ -491,8 +500,9 @@ export const TournamentExplorer = () => {
           </div>
           {selectedSport !== 'all' && (
             <button
+              type="button"
               onClick={() => setSelectedSport('all')}
-              className="text-[10px] sm:text-xs font-bold text-orange-500 hover:text-orange-600 uppercase tracking-widest"
+              className="text-[10px] sm:text-xs font-bold text-orange-500 hover:text-orange-600 uppercase tracking-widest cursor-pointer transition-colors duration-150 hover:underline"
             >
               Show All →
             </button>
@@ -504,7 +514,7 @@ export const TournamentExplorer = () => {
           <button
             type="button"
             onClick={() => setSelectedSport('all')}
-            className={`px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-black uppercase italic tracking-tight transition-all duration-300 flex items-center gap-1.5 shrink-0 border ${
+            className={`px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-black uppercase italic tracking-tight transition-all duration-200 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 flex items-center gap-1.5 shrink-0 border ${
               selectedSport === 'all'
                 ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20 scale-[1.02]'
                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-orange-500/40'
@@ -527,7 +537,7 @@ export const TournamentExplorer = () => {
                 key={sport.name}
                 type="button"
                 onClick={() => setSelectedSport(sport.name)}
-                className={`px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-black uppercase italic tracking-tight transition-all duration-300 flex items-center gap-1.5 shrink-0 border ${
+                className={`px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-black uppercase italic tracking-tight transition-all duration-200 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 flex items-center gap-1.5 shrink-0 border ${
                   isSelected
                     ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20 scale-[1.02]'
                     : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-orange-500/40'
@@ -563,7 +573,7 @@ export const TournamentExplorer = () => {
             <button
               type="button"
               onClick={() => setActivePhase('elimination')}
-              className={`w-full sm:w-auto py-2.5 px-4 sm:px-5 rounded-xl font-black uppercase italic tracking-tight text-xs transition-all duration-300 flex items-center justify-center gap-2 ${
+              className={`w-full sm:w-auto py-2.5 px-4 sm:px-5 rounded-xl font-black uppercase italic tracking-tight text-xs transition-all duration-200 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 flex items-center justify-center gap-2 ${
                 activePhase === 'elimination'
                   ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -581,7 +591,7 @@ export const TournamentExplorer = () => {
             <button
               type="button"
               onClick={() => setActivePhase('playoffs')}
-              className={`w-full sm:w-auto py-2.5 px-4 sm:px-5 rounded-xl font-black uppercase italic tracking-tight text-xs transition-all duration-300 flex items-center justify-center gap-2 ${
+              className={`w-full sm:w-auto py-2.5 px-4 sm:px-5 rounded-xl font-black uppercase italic tracking-tight text-xs transition-all duration-200 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 flex items-center justify-center gap-2 ${
                 activePhase === 'playoffs'
                   ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -643,7 +653,7 @@ export const TournamentExplorer = () => {
                 {/* Stage / Round Dropdown Filter */}
                 {availableRounds.length > 0 && (
                   <div className="w-full lg:w-56">
-                    <Select value={selectedRound} onValueChange={setSelectedRound}>
+                    <Select value={selectedRound} onValueChange={(val: string | null) => setSelectedRound(val || 'all')}>
                       <SelectTrigger className="h-10 sm:h-11 rounded-xl border-slate-200 bg-slate-50 font-bold text-xs uppercase tracking-wider text-slate-700">
                         <SelectValue placeholder="All Elimination Stages" />
                       </SelectTrigger>
@@ -936,7 +946,7 @@ export const TournamentExplorer = () => {
                     <button
                       type="button"
                       onClick={() => setMobilePlayoffStage('all')}
-                      className={`flex-1 py-2 px-3 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all whitespace-nowrap ${
+                      className={`flex-1 py-2 px-3 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 whitespace-nowrap ${
                         mobilePlayoffStage === 'all' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'
                       }`}
                     >
@@ -946,7 +956,7 @@ export const TournamentExplorer = () => {
                       <button
                         type="button"
                         onClick={() => setMobilePlayoffStage('quarters')}
-                        className={`flex-1 py-2 px-3 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all whitespace-nowrap ${
+                        className={`flex-1 py-2 px-3 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 whitespace-nowrap ${
                           mobilePlayoffStage === 'quarters' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'
                         }`}
                       >
@@ -957,7 +967,7 @@ export const TournamentExplorer = () => {
                       <button
                         type="button"
                         onClick={() => setMobilePlayoffStage('semis')}
-                        className={`flex-1 py-2 px-3 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all whitespace-nowrap ${
+                        className={`flex-1 py-2 px-3 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 whitespace-nowrap ${
                           mobilePlayoffStage === 'semis' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'
                         }`}
                       >
@@ -968,7 +978,7 @@ export const TournamentExplorer = () => {
                       <button
                         type="button"
                         onClick={() => setMobilePlayoffStage('finals')}
-                        className={`flex-1 py-2 px-3 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all whitespace-nowrap ${
+                        className={`flex-1 py-2 px-3 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 whitespace-nowrap ${
                           mobilePlayoffStage === 'finals' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'
                         }`}
                       >
@@ -1025,15 +1035,33 @@ export const TournamentExplorer = () => {
                     )}
 
                     {/* Finals & Championship Column */}
-                    {playoffRoundsGrouped.finals.length > 0 && (mobilePlayoffStage === 'all' || mobilePlayoffStage === 'finals') && (
-                      <div className="flex-1 flex flex-col justify-center gap-4 sm:gap-6 min-w-[260px] sm:min-w-0">
-                        <div className="text-center font-black uppercase italic tracking-widest text-[11px] text-yellow-400 pb-2 border-b border-yellow-400/30 flex items-center justify-center gap-1.5">
-                          <Crown className="size-3.5 text-yellow-400" />
-                          <span>Championship Final</span>
-                        </div>
-                        {playoffRoundsGrouped.finals.map(match => (
-                          <BracketMatchCard key={match.id} match={match} isFinals onNavigate={() => navigate(`/match/${match.id}`)} />
-                        ))}
+                    {(playoffRoundsGrouped.finals.length > 0 || playoffRoundsGrouped.bronze.length > 0) && (mobilePlayoffStage === 'all' || mobilePlayoffStage === 'finals') && (
+                      <div className="flex-1 flex flex-col justify-center gap-6 min-w-[260px] sm:min-w-0">
+                        {/* Championship Finals */}
+                        {playoffRoundsGrouped.finals.length > 0 && (
+                          <div className="space-y-3">
+                            <div className="text-center font-black uppercase italic tracking-widest text-[11px] text-yellow-400 pb-2 border-b border-yellow-400/30 flex items-center justify-center gap-1.5">
+                              <Crown className="size-3.5 text-yellow-400" />
+                              <span>Championship Final</span>
+                            </div>
+                            {playoffRoundsGrouped.finals.map(match => (
+                              <BracketMatchCard key={match.id} match={match} isFinals onNavigate={() => navigate(`/match/${match.id}`)} />
+                            ))}
+                          </div>
+                        )}
+
+                        {/* 3rd Place Bronze Medal Playoff */}
+                        {playoffRoundsGrouped.bronze.length > 0 && (
+                          <div className="space-y-3 pt-4 border-t border-white/10">
+                            <div className="text-center font-black uppercase italic tracking-widest text-[11px] text-amber-500 pb-2 border-b border-amber-500/30 flex items-center justify-center gap-1.5">
+                              <span className="text-sm">🥉</span>
+                              <span>3rd-Place Bronze Playoff</span>
+                            </div>
+                            {playoffRoundsGrouped.bronze.map(match => (
+                              <BracketMatchCard key={match.id} match={match} isBronze onNavigate={() => navigate(`/match/${match.id}`)} />
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1060,7 +1088,7 @@ export const TournamentExplorer = () => {
 };
 
 // Bracket Match Card Helper Component
-const BracketMatchCard = ({ match, isFinals = false, onNavigate }: { match: Match; isFinals?: boolean; onNavigate: () => void }) => {
+const BracketMatchCard = ({ match, isFinals = false, isBronze = false, onNavigate }: { match: Match; isFinals?: boolean; isBronze?: boolean; onNavigate: () => void }) => {
   const isTeamAWinner = match.status === 'Completed' && match.team_a_score > match.team_b_score;
   const isTeamBWinner = match.status === 'Completed' && match.team_b_score > match.team_a_score;
 
@@ -1070,6 +1098,8 @@ const BracketMatchCard = ({ match, isFinals = false, onNavigate }: { match: Matc
       className={`rounded-xl sm:rounded-2xl border transition-all duration-300 p-3 sm:p-4 cursor-pointer relative group overflow-hidden ${
         isFinals 
           ? 'bg-gradient-to-b from-amber-500/10 via-slate-900 to-slate-950 border-amber-500/50 shadow-xl shadow-amber-500/10 hover:border-amber-400' 
+          : isBronze
+          ? 'bg-gradient-to-b from-amber-950/30 via-slate-900 to-slate-950 border-amber-700/50 shadow-lg shadow-amber-950/20 hover:border-amber-600'
           : 'bg-slate-900 border-white/10 hover:border-orange-500/50 hover:bg-slate-850'
       }`}
     >

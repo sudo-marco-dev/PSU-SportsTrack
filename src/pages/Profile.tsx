@@ -69,7 +69,7 @@ type PendingInvitation = {
 };
 
 export const Profile = () => {
-  const { user, role, isVerified, profile, signOut, refetchProfile } = useAuth();
+  const { user, role, isVerified, isSuperAdmin, isCoach, isPlayer, isFacilitator, isFacultyAthlete, profile, signOut, refetchProfile } = useAuth();
   const navigate = useNavigate();
   const [stars, setStars] = useState<PlayerStar[]>([]);
   const [isLoadingStars, setIsLoadingStars] = useState(true);
@@ -103,18 +103,18 @@ export const Profile = () => {
   useEffect(() => {
     fetchColleges();
     if (user) {
-      if (role === 'Player') {
+      if (isPlayer) {
         fetchStars();
         checkVerificationStatus();
         fetchPendingInvitations();
-      } else if (role === 'Admin') {
+      } else if (isSuperAdmin) {
         fetchAdminStats();
-      } else if (role === 'Coach') {
+      } else if (isCoach) {
         fetchCoachStats();
       }
     }
     setIsLoadingStars(false);
-  }, [user, role]);
+  }, [user, role, isPlayer, isSuperAdmin, isCoach]);
 
   const fetchColleges = async () => {
     const { data } = await supabase.from('colleges').select('id, college_name').order('college_name');
@@ -306,55 +306,55 @@ export const Profile = () => {
   };
 
   return (
-    <div className="space-y-8 pb-16">
+    <div className="space-y-6">
       {/* ========================================================================= */}
       {/* 1. ADMIN ROLE PROFILE VIEW */}
       {/* ========================================================================= */}
-      {role === 'Admin' ? (
-        <div className="space-y-8">
+      {isSuperAdmin ? (
+        <div className="space-y-6">
           {/* Admin Hero Header */}
-          <div className="bg-slate-950 py-8 px-6 md:px-10 rounded-[2.5rem] shadow-2xl border border-white/5 relative overflow-hidden">
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-center gap-5">
-                <div className="size-16 md:size-20 rounded-2xl bg-orange-500 flex items-center justify-center text-white font-black text-2xl md:text-3xl shadow-xl shadow-orange-500/20 shrink-0">
-                  <ShieldCheck className="size-10" />
+          <div className="bg-slate-950 py-5 sm:py-6 px-5 sm:px-8 rounded-2xl shadow-xl border border-white/5 relative overflow-hidden">
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+              <div className="flex items-center gap-4 sm:gap-5">
+                <div className="size-14 sm:size-16 rounded-xl bg-orange-500 flex items-center justify-center text-white font-black shadow-lg shadow-orange-500/20 shrink-0">
+                  <ShieldCheck className="size-8 sm:size-9" />
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <Badge className="bg-orange-500/20 text-orange-400 hover:bg-orange-500/20 border-orange-500/30 font-black uppercase text-[10px] tracking-widest">
+                    <Badge className="bg-orange-500/20 text-orange-400 hover:bg-orange-500/20 border-orange-500/30 font-bold uppercase text-[10px] tracking-wider">
                       SYSTEM EXECUTIVE • ADMIN
                     </Badge>
-                    <Badge className="bg-white/10 text-slate-300 border-white/10 font-black uppercase text-[10px] tracking-widest flex items-center gap-1">
-                      <GraduationCap className="size-3.5 text-orange-400" />
+                    <Badge className="bg-white/10 text-slate-300 border-white/10 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1">
+                      <GraduationCap className="size-3 text-orange-400" />
                       {profile?.college_name || 'PSU Main Campus'}
                     </Badge>
-                    <Badge className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/30 font-black uppercase text-[10px] tracking-widest flex items-center gap-1">
+                    <Badge className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/30 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1">
                       <CheckCircle2 className="size-3" /> Full Superuser Access
                     </Badge>
                   </div>
-                  <h1 className="text-2xl md:text-4xl font-black tracking-tighter italic uppercase text-white leading-tight">
+                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight uppercase text-white leading-tight">
                     {profile?.full_name || user?.email?.split('@')[0]}
                   </h1>
-                  <p className="text-slate-400 font-medium text-xs md:text-sm mt-1 flex items-center gap-2">
-                    <Mail className="size-3.5 text-slate-500" /> {user?.email}
+                  <p className="text-slate-400 font-normal text-xs mt-0.5 flex items-center gap-1.5">
+                    <Mail className="size-3 text-slate-500" /> {user?.email}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <Button
                   onClick={() => navigate('/admin')}
-                  className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-xs h-12 px-6 rounded-2xl shadow-lg shadow-orange-500/20"
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs h-10 px-4 rounded-xl shadow-md shadow-orange-500/20 active:scale-[0.98]"
                 >
-                  <Settings className="size-4 mr-2" />
+                  <Settings className="size-3.5 mr-1.5" />
                   Command Center
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => setShowSignOutPrompt(true)}
-                  className="border-white/10 bg-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 text-slate-300 font-black uppercase text-xs tracking-wider h-12 rounded-2xl transition-all"
+                  className="border-white/10 bg-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 text-slate-300 font-semibold text-xs h-10 px-3.5 rounded-xl transition-all"
                 >
-                  <LogOut className="size-4 mr-2" />
+                  <LogOut className="size-3.5 mr-1.5" />
                   Sign Out
                 </Button>
               </div>
@@ -362,57 +362,57 @@ export const Profile = () => {
           </div>
 
           {/* Admin Command Shortcuts Grid */}
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-3">
             <Card 
-              className="border-2 border-slate-100 hover:border-orange-500/30 transition-all duration-300 rounded-[2rem] shadow-lg cursor-pointer group"
+              className="border border-slate-200 hover:border-orange-500/40 transition-all duration-200 rounded-2xl shadow-sm cursor-pointer group"
               onClick={() => navigate('/admin/tournaments')}
             >
-              <CardHeader className="pb-3">
-                <div className="p-3.5 rounded-2xl bg-orange-500/10 text-orange-500 size-fit mb-2 group-hover:bg-orange-500 group-hover:text-white transition-colors duration-300">
-                  <Trophy className="size-6" />
+              <CardHeader className="p-5 pb-2">
+                <div className="p-2.5 rounded-xl bg-orange-500/10 text-orange-500 size-fit mb-2 group-hover:bg-orange-500 group-hover:text-white transition-colors duration-200">
+                  <Trophy className="size-5" />
                 </div>
-                <CardTitle className="text-xl font-black italic uppercase tracking-tight flex items-center justify-between">
+                <CardTitle className="text-base sm:text-lg font-bold uppercase tracking-tight flex items-center justify-between">
                   Tournaments Arena
-                  <ChevronRight className="size-5 text-slate-400 group-hover:text-orange-500 transition-colors" />
+                  <ChevronRight className="size-4 text-slate-400 group-hover:text-orange-500 transition-colors" />
                 </CardTitle>
-                <CardDescription className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">
+                <CardDescription className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
                   Match Slotting & Result Approvals
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-xs text-slate-500 font-medium">
+              <CardContent className="p-5 pt-0">
+                <p className="text-xs text-slate-500 font-normal">
                   Create tournaments, manage match venue dates, and confirm game winners to advance bracket trees.
                 </p>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Active Events</span>
-                  <span className="text-sm font-black text-slate-900">{adminStats.activeTournaments}</span>
+                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Active Events</span>
+                  <span className="text-sm font-bold text-slate-900">{adminStats.activeTournaments}</span>
                 </div>
               </CardContent>
             </Card>
 
             <Card 
-              className="border-2 border-slate-100 hover:border-orange-500/30 transition-all duration-300 rounded-[2rem] shadow-lg cursor-pointer group"
+              className="border border-slate-200 hover:border-orange-500/40 transition-all duration-200 rounded-2xl shadow-sm cursor-pointer group"
               onClick={() => navigate('/admin/verifications')}
             >
-              <CardHeader className="pb-3">
-                <div className="p-3.5 rounded-2xl bg-orange-500/10 text-orange-500 size-fit mb-2 group-hover:bg-orange-500 group-hover:text-white transition-colors duration-300">
-                  <ShieldCheck className="size-6" />
+              <CardHeader className="p-5 pb-2">
+                <div className="p-2.5 rounded-xl bg-orange-500/10 text-orange-500 size-fit mb-2 group-hover:bg-orange-500 group-hover:text-white transition-colors duration-200">
+                  <ShieldCheck className="size-5" />
                 </div>
-                <CardTitle className="text-xl font-black italic uppercase tracking-tight flex items-center justify-between">
+                <CardTitle className="text-base sm:text-lg font-bold uppercase tracking-tight flex items-center justify-between">
                   System Verifications
-                  <ChevronRight className="size-5 text-slate-400 group-hover:text-orange-500 transition-colors" />
+                  <ChevronRight className="size-4 text-slate-400 group-hover:text-orange-500 transition-colors" />
                 </CardTitle>
-                <CardDescription className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">
+                <CardDescription className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
                   Athlete Eligibility Approvals
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-xs text-slate-500 font-medium">
+              <CardContent className="p-5 pt-0">
+                <p className="text-xs text-slate-500 font-normal">
                   Inspect submitted student IDs, verify enrollment status, and authorize athletes for tournament participation.
                 </p>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Pending Review</span>
-                  <Badge className="bg-orange-500 text-white font-black text-xs">
+                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pending Review</span>
+                  <Badge className="bg-orange-500 text-white font-bold text-xs">
                     {adminStats.pendingVerifications} Pending
                   </Badge>
                 </div>
@@ -420,115 +420,115 @@ export const Profile = () => {
             </Card>
 
             <Card 
-              className="border-2 border-slate-100 hover:border-orange-500/30 transition-all duration-300 rounded-[2rem] shadow-lg cursor-pointer group"
+              className="border border-slate-200 hover:border-orange-500/40 transition-all duration-200 rounded-2xl shadow-sm cursor-pointer group"
               onClick={() => navigate('/admin/audit-logs')}
             >
-              <CardHeader className="pb-3">
-                <div className="p-3.5 rounded-2xl bg-orange-500/10 text-orange-500 size-fit mb-2 group-hover:bg-orange-500 group-hover:text-white transition-colors duration-300">
-                  <ClipboardList className="size-6" />
+              <CardHeader className="p-5 pb-2">
+                <div className="p-2.5 rounded-xl bg-orange-500/10 text-orange-500 size-fit mb-2 group-hover:bg-orange-500 group-hover:text-white transition-colors duration-200">
+                  <ClipboardList className="size-5" />
                 </div>
-                <CardTitle className="text-xl font-black italic uppercase tracking-tight flex items-center justify-between">
+                <CardTitle className="text-base sm:text-lg font-bold uppercase tracking-tight flex items-center justify-between">
                   System Audit Logs
-                  <ChevronRight className="size-5 text-slate-400 group-hover:text-orange-500 transition-colors" />
+                  <ChevronRight className="size-4 text-slate-400 group-hover:text-orange-500 transition-colors" />
                 </CardTitle>
-                <CardDescription className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">
+                <CardDescription className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
                   Platform Security Log
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-xs text-slate-500 font-medium">
+              <CardContent className="p-5 pt-0">
+                <p className="text-xs text-slate-500 font-normal">
                   Review complete administrative action logs, match score changes, and system access records.
                 </p>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Total Recorded Logs</span>
-                  <span className="text-sm font-black text-slate-900">{adminStats.auditLogsCount}</span>
+                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Recorded Logs</span>
+                  <span className="text-sm font-bold text-slate-900">{adminStats.auditLogsCount}</span>
                 </div>
               </CardContent>
             </Card>
           </div>
 
           {/* Admin Credentials & Scope Details */}
-          <Card className="border-2 border-slate-100 rounded-[2.5rem] shadow-xl p-6 md:p-8">
-            <CardHeader className="px-0 pt-0 pb-4">
-              <CardTitle className="text-2xl font-black italic uppercase tracking-tight flex items-center gap-2">
-                <Shield className="size-6 text-orange-500" /> Executive Security Credentials
+          <Card className="border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6">
+            <CardHeader className="px-0 pt-0 pb-3">
+              <CardTitle className="text-lg font-bold uppercase tracking-tight flex items-center gap-2">
+                <Shield className="size-5 text-orange-500" /> Executive Security Credentials
               </CardTitle>
-              <CardDescription className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">
+              <CardDescription className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
                 Official Administrative Privileges Overview
               </CardDescription>
             </CardHeader>
-            <CardContent className="px-0 grid gap-4 md:grid-cols-3">
-              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Email Address</p>
+            <CardContent className="px-0 grid gap-3 md:grid-cols-3">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-0.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email Address</p>
                 <p className="font-bold text-slate-900 text-sm truncate">{user?.email}</p>
               </div>
 
-              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">College / Unit Affiliation</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <GraduationCap className="size-4 text-orange-500" />
-                  <span className="font-black text-slate-900 text-sm italic">{profile?.college_name || 'PSU Main Administration'}</span>
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-0.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">College / Unit Affiliation</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <GraduationCap className="size-3.5 text-orange-500" />
+                  <span className="font-bold text-slate-900 text-sm">{profile?.college_name || 'PSU Main Administration'}</span>
                 </div>
               </div>
 
-              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Institution</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <Building className="size-4 text-orange-500" />
-                  <span className="font-black text-slate-900 text-sm uppercase italic">Palawan State University</span>
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-0.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Institution</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <Building className="size-3.5 text-orange-500" />
+                  <span className="font-bold text-slate-900 text-sm uppercase">Palawan State University</span>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
-      ) : role === 'Coach' ? (
+      ) : isCoach ? (
         /* ========================================================================= */
         /* 2. COACH ROLE PROFILE VIEW */
         /* ========================================================================= */
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* Coach Hero Header */}
-          <div className="bg-slate-950 py-8 px-6 md:px-10 rounded-[2.5rem] shadow-2xl border border-white/5 relative overflow-hidden">
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-center gap-5">
-                <div className="size-16 md:size-20 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-2xl md:text-3xl shadow-xl shadow-orange-500/20 shrink-0">
-                  <Users className="size-10" />
+          <div className="bg-slate-950 py-5 sm:py-6 px-5 sm:px-8 rounded-2xl shadow-xl border border-white/5 relative overflow-hidden">
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+              <div className="flex items-center gap-4 sm:gap-5">
+                <div className="size-14 sm:size-16 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-black shadow-lg shadow-orange-500/20 shrink-0">
+                  <Users className="size-8 sm:size-9" />
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <Badge className="bg-orange-500/20 text-orange-400 hover:bg-orange-500/20 border-orange-500/30 font-black uppercase text-[10px] tracking-widest">
+                    <Badge className="bg-orange-500/20 text-orange-400 hover:bg-orange-500/20 border-orange-500/30 font-bold uppercase text-[10px] tracking-wider">
                       ATHLETIC STAFF • LEAD COACH
                     </Badge>
-                    <Badge className="bg-white/10 text-slate-300 border-white/10 font-black uppercase text-[10px] tracking-widest flex items-center gap-1">
-                      <GraduationCap className="size-3.5 text-orange-400" />
+                    <Badge className="bg-white/10 text-slate-300 border-white/10 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1">
+                      <GraduationCap className="size-3 text-orange-400" />
                       {profile?.college_name || 'PSU Athletic Division'}
                     </Badge>
-                    <Badge className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/30 font-black uppercase text-[10px] tracking-widest flex items-center gap-1">
+                    <Badge className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/30 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1">
                       <CheckCircle2 className="size-3" /> Official PSU Coach
                     </Badge>
                   </div>
-                  <h1 className="text-2xl md:text-4xl font-black tracking-tighter italic uppercase text-white leading-tight">
+                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight uppercase text-white leading-tight">
                     Coach {profile?.full_name || user?.email?.split('@')[0]}
                   </h1>
-                  <p className="text-slate-400 font-medium text-xs md:text-sm mt-1 flex items-center gap-2">
-                    <Mail className="size-3.5 text-slate-500" /> {user?.email}
+                  <p className="text-slate-400 font-normal text-xs mt-0.5 flex items-center gap-1.5">
+                    <Mail className="size-3 text-slate-500" /> {user?.email}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <Button
                   onClick={() => navigate('/coach/teams')}
-                  className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-xs h-12 px-6 rounded-2xl shadow-lg shadow-orange-500/20"
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs h-10 px-4 rounded-xl shadow-md shadow-orange-500/20 active:scale-[0.98]"
                 >
-                  <Users className="size-4 mr-2" />
+                  <Users className="size-3.5 mr-1.5" />
                   Manage Teams
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => setShowSignOutPrompt(true)}
-                  className="border-white/10 bg-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 text-slate-300 font-black uppercase text-xs tracking-wider h-12 rounded-2xl transition-all"
+                  className="border-white/10 bg-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 text-slate-300 font-semibold text-xs h-10 px-3.5 rounded-xl transition-all"
                 >
-                  <LogOut className="size-4 mr-2" />
+                  <LogOut className="size-3.5 mr-1.5" />
                   Sign Out
                 </Button>
               </div>
@@ -536,50 +536,50 @@ export const Profile = () => {
           </div>
 
           {/* Coach Management Hub */}
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2">
             <Card 
-              className="border-2 border-slate-100 hover:border-orange-500/30 transition-all duration-300 rounded-[2rem] shadow-lg cursor-pointer group p-6"
+              className="border border-slate-200 hover:border-orange-500/40 transition-all duration-200 rounded-2xl shadow-sm cursor-pointer group p-5 sm:p-6"
               onClick={() => navigate('/coach/teams')}
             >
               <div className="flex items-start justify-between">
-                <div className="p-4 rounded-2xl bg-orange-500/10 text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-colors">
-                  <Users className="size-8" />
+                <div className="p-3 rounded-xl bg-orange-500/10 text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-colors">
+                  <Users className="size-6" />
                 </div>
-                <ChevronRight className="size-6 text-slate-400 group-hover:text-orange-500 transition-colors" />
+                <ChevronRight className="size-5 text-slate-400 group-hover:text-orange-500 transition-colors" />
               </div>
-              <div className="mt-6 space-y-2">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">Roster Management</span>
-                <h3 className="text-2xl font-black uppercase italic tracking-tight text-slate-900">
-                  My Teams & Roster Applications
+              <div className="mt-4 space-y-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-orange-500">Roster Management</span>
+                <h3 className="text-lg sm:text-xl font-bold uppercase tracking-tight text-slate-900">
+                  My Teams &amp; Roster Applications
                 </h3>
-                <p className="text-xs text-slate-500 font-medium">
+                <p className="text-xs text-slate-500 font-normal">
                   Register new athletic teams, manage team player rosters, and submit tournament roster entries.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-black">
-                <span className="text-slate-400 uppercase tracking-widest">Enrolled Squads</span>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span className="text-slate-400 uppercase tracking-wider font-semibold text-[10px]">Enrolled Squads</span>
                 <span className="text-slate-900 font-bold">{coachStats.myTeamsCount} Active Teams</span>
               </div>
             </Card>
 
-            <Card className="border-2 border-slate-100 rounded-[2rem] shadow-lg p-6 space-y-4">
+            <Card className="border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="p-4 rounded-2xl bg-orange-500/10 text-orange-500">
-                  <ShieldCheck className="size-8" />
+                <div className="p-3 rounded-xl bg-orange-500/10 text-orange-500">
+                  <ShieldCheck className="size-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black uppercase italic tracking-tight text-slate-900">Coaching Credentials</h3>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">PSU Athletics Division</p>
+                  <h3 className="text-lg font-bold uppercase tracking-tight text-slate-900">Coaching Credentials</h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">PSU Athletics Division</p>
                 </div>
               </div>
-              <div className="space-y-3 pt-2">
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Email Address</p>
-                  <p className="font-bold text-slate-900 text-sm">{user?.email}</p>
+              <div className="space-y-2 pt-1">
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email Address</p>
+                  <p className="font-bold text-slate-900 text-xs sm:text-sm">{user?.email}</p>
                 </div>
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">College Department</p>
-                  <p className="font-bold text-slate-900 text-sm italic">{profile?.college_name || 'Unassigned College'}</p>
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">College Department</p>
+                  <p className="font-bold text-slate-900 text-xs sm:text-sm">{profile?.college_name || 'Unassigned College'}</p>
                 </div>
               </div>
             </Card>
@@ -589,56 +589,56 @@ export const Profile = () => {
         /* ========================================================================= */
         /* 3. PLAYER / ATHLETE ROLE PROFILE VIEW (DEFAULT) */
         /* ========================================================================= */
-        <div className="space-y-8">
+        <div className="space-y-5">
           {/* Player Hero Header */}
-          <div className="bg-slate-950 py-8 px-6 md:px-10 rounded-[2.5rem] shadow-2xl border border-white/5 relative overflow-hidden">
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-center gap-5">
-                <div className="size-16 md:size-20 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-2xl md:text-3xl shadow-xl shadow-orange-500/20 shrink-0">
+          <div className="bg-slate-950 py-5 sm:py-6 px-5 sm:px-8 rounded-2xl shadow-xl border border-white/5 relative overflow-hidden">
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+              <div className="flex items-center gap-4 sm:gap-5">
+                <div className="size-14 sm:size-16 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-orange-500/20 shrink-0">
                   {user?.email?.charAt(0).toUpperCase() || 'U'}
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <Badge className="bg-orange-500/20 text-orange-400 hover:bg-orange-500/20 border-orange-500/30 font-black uppercase text-[10px] tracking-widest">
+                    <Badge className="bg-orange-500/20 text-orange-400 hover:bg-orange-500/20 border-orange-500/30 font-bold uppercase text-[10px] tracking-wider">
                       STUDENT ATHLETE
                     </Badge>
-                    <Badge className="bg-white/10 text-slate-300 border-white/10 font-black uppercase text-[10px] tracking-widest flex items-center gap-1">
-                      <GraduationCap className="size-3.5 text-orange-400" />
+                    <Badge className="bg-white/10 text-slate-300 border-white/10 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1">
+                      <GraduationCap className="size-3 text-orange-400" />
                       {profile?.college_name || 'Unassigned College'}
                     </Badge>
                     {isVerified ? (
-                      <Badge className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/30 font-black uppercase text-[10px] tracking-widest flex items-center gap-1">
+                      <Badge className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/30 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1">
                         <CheckCircle2 className="size-3" /> Verified Athlete
                       </Badge>
                     ) : hasPendingDoc ? (
-                      <Badge className="bg-amber-500/20 text-amber-400 hover:bg-amber-500/20 border-amber-500/30 font-black uppercase text-[10px] tracking-widest flex items-center gap-1">
+                      <Badge className="bg-amber-500/20 text-amber-400 hover:bg-amber-500/20 border-amber-500/30 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1">
                         <Clock className="size-3" /> Review Pending
                       </Badge>
                     ) : null}
                   </div>
-                  <h1 className="text-2xl md:text-4xl font-black tracking-tighter italic uppercase text-white leading-tight">
+                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight uppercase text-white leading-tight">
                     {profile?.full_name || user?.email?.split('@')[0]}
                   </h1>
-                  <p className="text-slate-400 font-medium text-xs md:text-sm mt-1 flex items-center gap-2">
-                    <Mail className="size-3.5 text-slate-500" /> {user?.email}
+                  <p className="text-slate-400 font-normal text-xs mt-0.5 flex items-center gap-1.5">
+                    <Mail className="size-3 text-slate-500" /> {user?.email}
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="px-4 py-2.5 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">MVP Trophies</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <Star className="size-4 text-orange-500 fill-orange-500" />
-                    <span className="text-xl font-black text-white">{stars.length}</span>
+                <div className="px-3.5 py-1.5 bg-white/5 rounded-xl border border-white/10 backdrop-blur-md">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">MVP Trophies</p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <Star className="size-3.5 text-orange-500 fill-orange-500" />
+                    <span className="text-lg font-bold text-white">{stars.length}</span>
                   </div>
                 </div>
                 <Button
                   variant="outline"
                   onClick={() => setShowSignOutPrompt(true)}
-                  className="border-white/10 bg-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 text-slate-300 font-black uppercase text-xs tracking-wider h-12 rounded-2xl transition-all"
+                  className="border-white/10 bg-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 text-slate-300 font-semibold text-xs h-10 px-3.5 rounded-xl transition-all"
                 >
-                  <LogOut className="size-4 mr-2" />
+                  <LogOut className="size-3.5 mr-1.5" />
                   Sign Out
                 </Button>
               </div>
@@ -647,40 +647,40 @@ export const Profile = () => {
 
           {/* Coach Invitations Banner (If Player has pending invitations) */}
           {invitations.length > 0 && (
-            <Card className="border-2 border-orange-500/30 bg-orange-500/5 rounded-[2rem] p-6 shadow-xl relative overflow-hidden">
+            <Card className="border border-orange-500/30 bg-orange-500/5 rounded-2xl p-5 shadow-sm relative overflow-hidden">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-start gap-4">
-                  <div className="p-3.5 rounded-2xl bg-orange-500 text-white shrink-0 shadow-lg shadow-orange-500/20">
-                    <Users className="size-6" />
+                <div className="flex items-start gap-3.5">
+                  <div className="p-2.5 rounded-xl bg-orange-500 text-white shrink-0 shadow-md shadow-orange-500/20">
+                    <Users className="size-5" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <Badge className="bg-orange-500 text-white font-black text-[10px] uppercase tracking-widest">
+                      <Badge className="bg-orange-500 text-white font-bold text-[10px] uppercase tracking-wider">
                         {invitations.length} Pending Coach Invite{invitations.length > 1 ? 's' : ''}
                       </Badge>
                     </div>
-                    <h3 className="text-xl font-black uppercase italic tracking-tight text-slate-900 mt-1">
+                    <h3 className="text-lg font-bold uppercase tracking-tight text-slate-900 mt-1">
                       Team Join Invitations Received
                     </h3>
-                    <p className="text-xs text-slate-600 font-medium mt-0.5">
-                      Coaches have invited you to join their official PSU tournament squads. You can accept or decline ("Off Invitation").
+                    <p className="text-xs text-slate-600 font-normal mt-0.5">
+                      Coaches have invited you to join their official PSU tournament squads. You can accept or decline (&quot;Off Invitation&quot;).
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6 space-y-3">
+              <div className="mt-4 space-y-2.5">
                 {invitations.map((inv) => (
-                  <div key={inv.id} className="p-4 rounded-2xl bg-white border border-orange-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div key={inv.id} className="p-3.5 rounded-xl bg-white border border-orange-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-black text-slate-900 text-base uppercase italic">{inv.teams?.name || 'Tournament Team'}</span>
-                        <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider text-orange-600 border-orange-200">
+                        <span className="font-bold text-slate-900 text-sm uppercase">{inv.teams?.name || 'Tournament Team'}</span>
+                        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider text-orange-600 border-orange-200">
                           {inv.teams?.tournaments?.sport || 'PSU Sport'}
                         </Badge>
                       </div>
-                      <p className="text-xs font-bold text-slate-500 mt-0.5">
-                        Coach: <span className="text-slate-800 font-black">{inv.teams?.users?.full_name || 'Athletic Coach'}</span> • Event: {inv.teams?.tournaments?.name || 'Tournament'}
+                      <p className="text-xs text-slate-500 mt-0.5 font-normal">
+                        Coach: <span className="text-slate-800 font-semibold">{inv.teams?.users?.full_name || 'Athletic Coach'}</span> • Event: {inv.teams?.tournaments?.name || 'Tournament'}
                       </p>
                     </div>
 
@@ -689,18 +689,18 @@ export const Profile = () => {
                         size="sm"
                         variant="outline"
                         onClick={() => handleDeclineInvitation(inv.id, inv.teams?.name || 'team')}
-                        className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-black uppercase text-xs h-10 px-4 rounded-xl gap-1.5"
+                        className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-semibold text-xs h-9 px-3 rounded-lg gap-1.5"
                       >
-                        <XCircle className="size-4" />
-                        Off Invitation (Decline)
+                        <XCircle className="size-3.5" />
+                        Decline
                       </Button>
                       <Button
                         size="sm"
                         onClick={() => handleAcceptInvitation(inv.id, inv.teams?.name || 'team')}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase text-xs h-10 px-4 rounded-xl gap-1.5 shadow-md"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs h-9 px-3 rounded-lg gap-1.5 shadow-sm"
                       >
-                        <Check className="size-4" />
-                        Accept Invitation
+                        <Check className="size-3.5" />
+                        Accept
                       </Button>
                     </div>
                   </div>
@@ -710,96 +710,99 @@ export const Profile = () => {
           )}
 
           {/* Player Tabs */}
-          <Tabs defaultValue="achievements" className="w-full space-y-6">
-            <TabsList className="p-1 h-14 bg-slate-950/5 border border-slate-200/50 backdrop-blur-xl rounded-2xl w-full max-w-lg flex items-stretch">
+          <Tabs defaultValue="achievements" className="w-full space-y-4">
+            <TabsList className="p-1 h-11 bg-slate-950/5 border border-slate-200/60 rounded-xl w-full sm:w-auto max-w-lg flex items-stretch">
               <TabsTrigger
                 value="achievements"
-                className="flex-1 font-black uppercase italic tracking-tight text-xs md:text-sm data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-lg rounded-xl transition-all flex items-center justify-center gap-2"
+                className="flex-1 font-bold uppercase text-xs data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm rounded-lg transition-all flex items-center justify-center gap-1.5"
               >
-                <Trophy className="size-4 text-orange-500" /> Achievements
+                <Trophy className="size-3.5 text-orange-500" /> Achievements
               </TabsTrigger>
               <TabsTrigger
                 value="invitations"
-                className="flex-1 font-black uppercase italic tracking-tight text-xs md:text-sm data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-lg rounded-xl transition-all flex items-center justify-center gap-2"
+                className="flex-1 font-bold uppercase text-xs data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm rounded-lg transition-all flex items-center justify-center gap-1.5"
               >
-                <Users className="size-4 text-orange-500" /> Team Invites ({invitations.length})
+                <Users className="size-3.5 text-orange-500" /> Team Invites ({invitations.length})
               </TabsTrigger>
               <TabsTrigger
                 value="account"
-                className="flex-1 font-black uppercase italic tracking-tight text-xs md:text-sm data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-lg rounded-xl transition-all flex items-center justify-center gap-2"
+                className="flex-1 font-bold uppercase text-xs data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm rounded-lg transition-all flex items-center justify-center gap-1.5"
               >
-                <User className="size-4 text-orange-500" /> Account & College
+                <User className="size-3.5 text-orange-500" /> Account &amp; College
               </TabsTrigger>
             </TabsList>
 
             {/* Tab 1: Achievements & Trophy Case */}
-            <TabsContent value="achievements" className="outline-none space-y-6">
+            <TabsContent value="achievements" className="outline-none space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-black italic uppercase tracking-tight text-slate-900 flex items-center gap-2">
-                    <Trophy className="size-6 text-orange-500" /> Trophy Case & Honors
+                  <h2 className="text-lg sm:text-xl font-bold uppercase tracking-tight text-slate-900 flex items-center gap-2">
+                    <Trophy className="size-5 text-orange-500" /> Trophy Case &amp; Honors
                   </h2>
-                  <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.2em] mt-1">
+                  <p className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider mt-0.5">
                     Official PSU Athlete Achievements
                   </p>
                 </div>
               </div>
 
               {isLoadingStars ? (
-                <div className="flex flex-col items-center justify-center py-24 gap-4">
-                  <Loader2 className="size-10 text-orange-500 animate-spin" />
-                  <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-[10px]">Loading Trophy Case...</p>
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                  <Loader2 className="size-8 text-orange-500 animate-spin" />
+                  <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Loading Trophy Case...</p>
                 </div>
               ) : stars.length === 0 ? (
-                <Card className="border-2 border-dashed bg-slate-50/50 py-20 text-center rounded-[2.5rem] border-slate-200">
-                  <CardContent className="space-y-6 pt-4">
-                    <div className="flex justify-center gap-4 opacity-30">
-                      <Star className="size-10 text-slate-300" />
-                      <Star className="size-16 -translate-y-4 text-orange-500" />
-                      <Star className="size-10 text-slate-300" />
+                /* Compact, Purposeful Empty State Card */
+                <Card className="border border-dashed bg-slate-50/50 py-8 px-6 text-center rounded-2xl border-slate-200 max-w-lg mx-auto shadow-sm">
+                  <CardContent className="space-y-3 p-0">
+                    <div className="flex justify-center items-center gap-2 opacity-40">
+                      <Star className="size-4 text-slate-400" />
+                      <div className="size-9 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500">
+                        <Star className="size-4 fill-orange-500" />
+                      </div>
+                      <Star className="size-4 text-slate-400" />
                     </div>
-                    <div className="space-y-2">
-                      <h3 className="text-2xl font-black italic uppercase tracking-tighter text-slate-400">Empty Trophy Case</h3>
-                      <p className="text-slate-500 font-medium max-w-md mx-auto text-sm">
+                    <div className="space-y-1">
+                      <h3 className="text-base font-bold uppercase tracking-tight text-slate-700">Empty Trophy Case</h3>
+                      <p className="text-slate-500 font-normal max-w-sm mx-auto text-xs leading-relaxed">
                         Compete in official PSU matches and tournaments to earn MVP distinction stars and expand your trophy showcase.
                       </p>
                     </div>
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {stars.map((star, index) => (
                     <Card 
                       key={star.id || index} 
-                      className="group hover:shadow-2xl transition-all duration-500 border-2 border-slate-100 hover:border-orange-500/30 overflow-hidden rounded-[2rem]"
+                      className="group hover:shadow-lg transition-all duration-300 border border-slate-200 hover:border-orange-500/30 overflow-hidden rounded-2xl"
                     >
-                      <div className={`h-2 ${star.star_type === 'Red' ? 'bg-red-500' : 'bg-orange-500'} shadow-lg`} />
-                      <CardContent className="p-6 md:p-8">
-                        <div className="flex items-start justify-between mb-6">
-                          <div className={`p-4 rounded-2xl shadow-xl ${
+                      <div className={`h-1.5 ${star.star_type === 'Red' ? 'bg-red-500' : 'bg-orange-500'}`} />
+                      <CardContent className="p-5">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className={`p-3 rounded-xl shadow-md ${
                             star.star_type === 'Red' ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'
-                          } group-hover:scale-110 group-hover:rotate-6 transition-all duration-500`}>
-                            <Star className="size-8 fill-white" />
+                          } group-hover:scale-105 transition-all duration-300`}>
+                            <Star className="size-6 fill-white" />
                           </div>
-                          <Award className="size-8 text-slate-200 group-hover:text-orange-300 transition-colors" />
+                          <Award className="size-6 text-slate-300 group-hover:text-orange-400 transition-colors" />
                         </div>
                         
-                        <div className="space-y-2">
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">Honored Distinction</span>
-                          <h3 className="text-2xl font-black uppercase italic tracking-tight leading-none text-slate-900 group-hover:text-orange-600 transition-colors">
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-orange-500">Honored Distinction</span>
+                          <h3 className="text-lg font-bold uppercase tracking-tight leading-none text-slate-900 group-hover:text-orange-600 transition-colors">
                             {star.star_type === 'Red' ? 'Match MVP' : 'Tournament MVP'}
                           </h3>
-                          <p className="text-sm font-bold text-slate-500 uppercase tracking-widest truncate">
+                          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide truncate mt-1">
                             {star.tournaments?.name || 'Official Tournament'}
                           </p>
                           {star.star_type === 'Red' && (
-                            <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 border-none font-black uppercase tracking-[0.2em] text-[9px] mt-2">
+                            <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 border-none font-bold uppercase tracking-wider text-[9px] mt-1">
                               {star.matches?.round || 'Round Completed'}
                             </Badge>
                           )}
                         </div>
 
-                        <div className="mt-6 pt-4 border-t border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center justify-between">
+                        <div className="mt-4 pt-3 border-t border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                           <span>Awarded</span>
                           <span className="text-slate-600">
                             {star.created_at ? new Date(star.created_at).toLocaleDateString() : 'N/A'}
@@ -812,20 +815,20 @@ export const Profile = () => {
               )}
             </TabsContent>
 
-            {/* Tab 2: Coach Team Invitations ("Off Invitation") */}
-            <TabsContent value="invitations" className="outline-none space-y-6">
-              <Card className="border-2 border-slate-100 rounded-[2rem] shadow-lg p-6 md:p-8">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+            {/* Tab 2: Coach Team Invitations */}
+            <TabsContent value="invitations" className="outline-none space-y-4">
+              <Card className="border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-100">
                   <div>
-                    <h3 className="text-2xl font-black italic uppercase tracking-tight text-slate-900 flex items-center gap-2">
-                      <Users className="size-6 text-orange-500" /> Coach Team Invitations
+                    <h3 className="text-lg sm:text-xl font-bold uppercase tracking-tight text-slate-900 flex items-center gap-2">
+                      <Users className="size-5 text-orange-500" /> Coach Team Invitations
                     </h3>
-                    <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest mt-1">
-                      Manage Squad Invites & Invitation Mode
+                    <p className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider mt-0.5">
+                      Manage Squad Invites &amp; Invitation Mode
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2.5">
                     <Button
                       variant={isAcceptingInvites ? "outline" : "secondary"}
                       onClick={() => {
@@ -833,16 +836,16 @@ export const Profile = () => {
                         setIsAcceptingInvites(newStatus);
                         toast.info(newStatus ? 'Team invitations enabled.' : 'Team invitations turned OFF.');
                       }}
-                      className="font-black uppercase text-xs h-10 rounded-xl gap-2"
+                      className="font-bold uppercase text-xs h-9 rounded-xl gap-1.5"
                     >
                       {isAcceptingInvites ? (
                         <>
-                          <Bell className="size-4 text-emerald-500" />
+                          <Bell className="size-3.5 text-emerald-500" />
                           Invitations ON
                         </>
                       ) : (
                         <>
-                          <BellOff className="size-4 text-amber-500" />
+                          <BellOff className="size-3.5 text-amber-500" />
                           Off Invitations Mode
                         </>
                       )}
@@ -850,27 +853,27 @@ export const Profile = () => {
                   </div>
                 </div>
 
-                <div className="pt-6 space-y-4">
+                <div className="pt-4 space-y-3">
                   {isLoadingInvitations ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="size-8 text-orange-500 animate-spin" />
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="size-6 text-orange-500 animate-spin" />
                     </div>
                   ) : invitations.length === 0 ? (
-                    <div className="text-center py-12 space-y-3">
-                      <UserX className="size-12 text-slate-300 mx-auto" />
-                      <h4 className="text-xl font-black italic uppercase text-slate-400">No Pending Invitations</h4>
-                      <p className="text-xs text-slate-500 font-medium max-w-sm mx-auto">
-                        When coaches invite you to join their official PSU athletic teams, invites will appear here for you to accept or decline (Off Invitation).
+                    <div className="text-center py-8 px-4 space-y-2 max-w-sm mx-auto">
+                      <UserX className="size-8 text-slate-300 mx-auto" />
+                      <h4 className="text-base font-bold uppercase text-slate-600">No Pending Invitations</h4>
+                      <p className="text-xs text-slate-500 font-normal leading-relaxed">
+                        When coaches invite you to join their official PSU athletic teams, invites will appear here for you to accept or decline.
                       </p>
                     </div>
                   ) : (
                     invitations.map((inv) => (
-                      <div key={inv.id} className="p-5 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div key={inv.id} className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
                         <div>
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">Coach Invite</span>
-                          <h4 className="text-xl font-black uppercase italic tracking-tight text-slate-900">{inv.teams?.name || 'Tournament Team'}</h4>
-                          <p className="text-xs font-bold text-slate-500 mt-0.5">
-                            Coach: <span className="text-slate-800">{inv.teams?.users?.full_name || 'Athletic Coach'}</span> • Sport: {inv.teams?.tournaments?.sport || 'PSU Sport'}
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-orange-500">Coach Invite</span>
+                          <h4 className="text-base font-bold uppercase tracking-tight text-slate-900">{inv.teams?.name || 'Tournament Team'}</h4>
+                          <p className="text-xs text-slate-500 mt-0.5 font-normal">
+                            Coach: <span className="text-slate-800 font-semibold">{inv.teams?.users?.full_name || 'Athletic Coach'}</span> • Sport: {inv.teams?.tournaments?.sport || 'PSU Sport'}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -878,17 +881,17 @@ export const Profile = () => {
                             size="sm"
                             variant="outline"
                             onClick={() => handleDeclineInvitation(inv.id, inv.teams?.name || 'team')}
-                            className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-black uppercase text-xs h-10 px-4 rounded-xl gap-1.5"
+                            className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-semibold text-xs h-9 px-3 rounded-lg gap-1.5"
                           >
-                            <XCircle className="size-4" />
-                            Off Invitation
+                            <XCircle className="size-3.5" />
+                            Decline
                           </Button>
                           <Button
                             size="sm"
                             onClick={() => handleAcceptInvitation(inv.id, inv.teams?.name || 'team')}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase text-xs h-10 px-4 rounded-xl gap-1.5 shadow-md"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs h-9 px-3 rounded-lg gap-1.5 shadow-sm"
                           >
-                            <Check className="size-4" />
+                            <Check className="size-3.5" />
                             Accept
                           </Button>
                         </div>
@@ -900,53 +903,58 @@ export const Profile = () => {
             </TabsContent>
 
             {/* Tab 3: Account Details, College & Verification */}
-            <TabsContent value="account" className="outline-none space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
+            <TabsContent value="account" className="outline-none space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
                 {/* Account Information Card & College Department Selector */}
-                <Card className="border-2 border-slate-100 rounded-[2rem] shadow-lg">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-xl font-black italic uppercase tracking-tight flex items-center gap-2">
-                      <User className="size-5 text-orange-500" /> Personal & College Details
+                <Card className="border border-slate-200 rounded-2xl shadow-sm">
+                  <CardHeader className="p-5 pb-3">
+                    <CardTitle className="text-lg font-bold uppercase tracking-tight flex items-center gap-2">
+                      <User className="size-4 sm:size-5 text-orange-500" /> Personal &amp; College Details
                     </CardTitle>
-                    <CardDescription className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">
-                      Registered Credentials & College Department
+                    <CardDescription className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
+                      Registered Credentials &amp; College Department
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Email Address</p>
-                      <p className="font-bold text-slate-900 text-sm">{user?.email}</p>
+                  <CardContent className="p-5 pt-0 space-y-3">
+                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-0.5">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email Address</p>
+                      <p className="font-bold text-slate-900 text-xs sm:text-sm">{user?.email}</p>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Account Type / Role</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Shield className="size-4 text-orange-500" />
-                        <span className="font-black text-slate-900 text-sm uppercase italic">{role || 'Student Athlete'}</span>
+                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-0.5">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Account Type / Role</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <Shield className="size-3.5 text-orange-500" />
+                        <span className="font-bold text-slate-900 text-xs sm:text-sm uppercase">
+                          {isSuperAdmin ? 'Super Admin' : isFacilitator ? 'Facilitator' : isCoach ? 'Coach' : isFacultyAthlete ? 'Faculty Athlete' : 'Student Athlete'}
+                        </span>
                       </div>
                     </div>
 
                     {/* College Department Selector / Display */}
-                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
-                        <GraduationCap className="size-4 text-orange-500" /> PSU College Department
+                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <GraduationCap className="size-3.5 text-orange-500" /> PSU College Department
                       </p>
                       {profile?.college_name ? (
-                        <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
-                          <span className="font-black text-slate-900 text-xs italic">{profile.college_name}</span>
-                          <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest text-emerald-600 border-emerald-200">
+                        <div className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+                          <span className="font-bold text-slate-900 text-xs">{profile.college_name}</span>
+                          <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 border-emerald-200">
                             Assigned
                           </Badge>
                         </div>
                       ) : (
-                        <div className="space-y-2 pt-1">
-                          <Select value={selectedCollegeId} onValueChange={setSelectedCollegeId}>
-                            <SelectTrigger className="w-full bg-white border-slate-200 rounded-xl text-xs font-bold h-11">
+                        <div className="space-y-2 pt-0.5">
+                          <Select 
+                            value={selectedCollegeId} 
+                            onValueChange={(val: string | null) => setSelectedCollegeId(val || '')}
+                          >
+                            <SelectTrigger className="w-full bg-white border-slate-200 rounded-xl text-xs font-medium h-10">
                               <SelectValue placeholder="Select your PSU College Department..." />
                             </SelectTrigger>
                             <SelectContent className="max-h-60 rounded-xl">
                               {collegesList.map((col) => (
-                                <SelectItem key={col.id} value={col.id} className="text-xs font-bold">
+                                <SelectItem key={col.id} value={col.id} className="text-xs font-medium">
                                   {col.college_name}
                                 </SelectItem>
                               ))}
@@ -956,7 +964,7 @@ export const Profile = () => {
                             size="sm"
                             disabled={isSavingCollege || !selectedCollegeId}
                             onClick={handleSaveCollege}
-                            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black uppercase text-xs h-10 rounded-xl"
+                            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs h-9 rounded-xl"
                           >
                             {isSavingCollege ? 'Saving...' : 'Save College Department'}
                           </Button>
@@ -964,11 +972,11 @@ export const Profile = () => {
                       )}
                     </div>
 
-                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Athlete Dashboard Link</p>
+                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Athlete Dashboard Link</p>
                       <Button 
                         variant="outline" 
-                        className="w-full mt-2 font-black uppercase italic tracking-widest text-xs h-10 rounded-xl justify-between"
+                        className="w-full mt-1.5 font-semibold uppercase text-xs h-9 rounded-xl justify-between"
                         onClick={() => navigate('/player')}
                       >
                         <span>Open Athlete Dashboard</span>
@@ -979,44 +987,44 @@ export const Profile = () => {
                 </Card>
 
                 {/* Verification Status Card */}
-                <Card className="border-2 border-slate-100 rounded-[2rem] shadow-lg">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-xl font-black italic uppercase tracking-tight flex items-center gap-2">
-                      <ShieldCheck className="size-5 text-orange-500" /> Eligibility Verification
+                <Card className="border border-slate-200 rounded-2xl shadow-sm">
+                  <CardHeader className="p-5 pb-3">
+                    <CardTitle className="text-lg font-bold uppercase tracking-tight flex items-center gap-2">
+                      <ShieldCheck className="size-4 sm:size-5 text-orange-500" /> Eligibility Verification
                     </CardTitle>
-                    <CardDescription className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">
+                    <CardDescription className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
                       PSU Athlete Authorization Status
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="p-5 pt-0 space-y-3">
                     {isVerified ? (
-                      <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 space-y-3">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-emerald-500 text-white rounded-xl">
-                            <CheckCircle2 className="size-6" />
+                      <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 space-y-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-1.5 bg-emerald-500 text-white rounded-lg">
+                            <CheckCircle2 className="size-5" />
                           </div>
                           <div>
-                            <h4 className="font-black uppercase italic tracking-tight text-base">Fully Verified Athlete</h4>
-                            <p className="text-xs text-emerald-700 font-medium">Your PSU student athlete status is active and verified.</p>
+                            <h4 className="font-bold uppercase tracking-tight text-sm">Fully Verified Athlete</h4>
+                            <p className="text-xs text-emerald-700 font-normal">Your PSU student athlete status is active and verified.</p>
                           </div>
                         </div>
                       </div>
                     ) : hasPendingDoc ? (
-                      <div className="p-6 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 space-y-3">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-amber-500 text-white rounded-xl">
-                            <Clock className="size-6 animate-pulse" />
+                      <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 space-y-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-1.5 bg-amber-500 text-white rounded-lg">
+                            <Clock className="size-5 animate-pulse" />
                           </div>
                           <div>
-                            <h4 className="font-black uppercase italic tracking-tight text-base">Documents Under Review</h4>
-                            <p className="text-xs text-amber-700 font-medium">Your submitted verification files are being reviewed by administrators.</p>
+                            <h4 className="font-bold uppercase tracking-tight text-sm">Documents Under Review</h4>
+                            <p className="text-xs text-amber-700 font-normal">Your submitted verification files are being reviewed by administrators.</p>
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-4">
-                        <div className="p-4 rounded-xl bg-orange-50 border border-orange-200 text-orange-900">
-                          <p className="text-xs font-medium">
+                      <div className="space-y-3">
+                        <div className="p-3.5 rounded-xl bg-orange-50 border border-orange-200 text-orange-900">
+                          <p className="text-xs font-normal">
                             Verification is required for players to join team rosters and participate in official PSU tournaments.
                           </p>
                         </div>
@@ -1033,7 +1041,7 @@ export const Profile = () => {
 
       {/* Sign Out Confirmation Dialog */}
       <Dialog open={showSignOutPrompt} onOpenChange={setShowSignOutPrompt}>
-        <DialogContent className="max-w-sm rounded-[2rem] p-8 border-slate-100">
+        <DialogContent className="max-w-sm rounded-2xl p-6 border-slate-100">
           <DialogHeader>
             <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter">
               Sign <span className="text-orange-500">Out</span>
@@ -1043,11 +1051,11 @@ export const Profile = () => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-3 mt-4">
-            <Button variant="ghost" onClick={() => setShowSignOutPrompt(false)} className="h-12 rounded-2xl font-black uppercase tracking-widest text-xs">
+            <Button variant="ghost" onClick={() => setShowSignOutPrompt(false)} className="h-11 rounded-xl font-bold uppercase tracking-wider text-xs">
               Cancel
             </Button>
             <Button 
-              className="h-12 flex-1 bg-destructive hover:bg-destructive/90 text-white rounded-2xl font-black uppercase italic tracking-[0.1em]"
+              className="h-11 flex-1 bg-destructive hover:bg-destructive/90 text-white rounded-xl font-bold uppercase tracking-wider"
               onClick={() => {
                 setShowSignOutPrompt(false);
                 handleSignOut();

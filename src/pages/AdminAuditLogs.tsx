@@ -90,7 +90,7 @@ export const AdminAuditLogs = () => {
   });
 
   return (
-    <div className="space-y-6 relative min-h-screen max-w-[1600px] mx-auto px-4">
+    <div className="space-y-6 relative max-w-[1600px] mx-auto px-4 pb-6">
       {/* Grain Texture */}
       <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.015] mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/p6.png')]" />
 
@@ -174,7 +174,13 @@ export const AdminAuditLogs = () => {
             ) : filteredLogs.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="h-64 text-center">
-                  <p className="text-slate-400 font-bold italic">No audit records found.</p>
+                  <div className="flex flex-col items-center justify-center gap-2 py-8">
+                    <div className="size-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 mb-1">
+                      <ClipboardList className="size-6" />
+                    </div>
+                    <p className="font-bold text-sm text-slate-700 dark:text-slate-300">No Audit Records Found</p>
+                    <p className="text-xs text-slate-400 max-w-xs">No administrative actions match your current filter criteria.</p>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (

@@ -95,7 +95,7 @@ export const CoachDashboard = () => {
   };
 
   return (
-    <div className="space-y-8 pb-20">
+    <div className="space-y-8 pb-4">
       {/* Header Section */}
       <div className="bg-slate-950 text-white py-5 md:py-8 px-5 md:px-10 rounded-2xl md:rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden group">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
@@ -172,7 +172,7 @@ export const CoachDashboard = () => {
                   <span>Starts: {new Date(t.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                   <button 
                     onClick={() => navigate('/coach/teams')} 
-                    className="text-orange-500 hover:text-orange-600 font-black uppercase tracking-wider"
+                    className="text-orange-500 hover:text-orange-600 font-black uppercase tracking-wider cursor-pointer transition-all hover:translate-x-0.5 active:scale-95 duration-150 inline-flex items-center"
                   >
                     Enroll →
                   </button>
@@ -199,7 +199,7 @@ export const CoachDashboard = () => {
           <CardContent className="p-5 md:p-8 pt-0">
             <div className="flex items-baseline gap-2 md:gap-3">
               <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
-                {isLoading ? '---' : stats.activeTeams}
+                {isLoading ? <span className="inline-block h-10 w-16 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" /> : stats.activeTeams}
               </span>
               <div className="flex items-center gap-1 text-emerald-500 font-bold text-xs uppercase tracking-widest bg-emerald-500/10 px-2 py-1 rounded-lg">
                 <ArrowUpRight className="size-3" />
@@ -224,7 +224,7 @@ export const CoachDashboard = () => {
           <CardContent className="p-5 md:p-8 pt-0">
             <div className="flex items-baseline gap-2 md:gap-3">
               <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
-                {isLoading ? '---' : stats.totalRoster}
+                {isLoading ? <span className="inline-block h-10 w-16 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" /> : stats.totalRoster}
               </span>
               <div className="text-slate-400 font-bold text-xs uppercase tracking-widest">Approved</div>
             </div>
@@ -246,7 +246,7 @@ export const CoachDashboard = () => {
           <CardContent className="p-5 md:p-8 pt-0">
             <div className="flex items-baseline gap-2 md:gap-3">
               <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
-                {isLoading ? '---' : stats.pendingInvites}
+                {isLoading ? <span className="inline-block h-10 w-16 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" /> : stats.pendingInvites}
               </span>
               <div className="text-amber-500 font-bold text-xs uppercase tracking-widest bg-amber-500/10 px-2 py-1 rounded-lg">Action Req.</div>
             </div>
@@ -268,7 +268,7 @@ export const CoachDashboard = () => {
           <CardContent className="p-5 md:p-8 pt-0">
             <div className="flex items-baseline gap-2 md:gap-3">
               <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
-                {isLoading ? '---' : stats.upcomingMatches}
+                {isLoading ? <span className="inline-block h-10 w-16 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" /> : stats.upcomingMatches}
               </span>
               <div className="flex items-center gap-1 text-emerald-500 font-bold text-xs uppercase tracking-widest bg-emerald-500/10 px-2 py-1 rounded-lg">
                 <ArrowUpRight className="size-3" />

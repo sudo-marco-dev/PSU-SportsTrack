@@ -178,7 +178,7 @@ export const PlayerDashboard = () => {
   if (user && !isVerified) {
     if (hasPendingDocuments) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center bg-white rounded-3xl border border-slate-200 shadow-sm">
+        <div className="flex flex-col items-center justify-center py-14 sm:py-20 p-8 text-center bg-white rounded-3xl border border-slate-200 shadow-sm max-w-2xl mx-auto">
           <div className="size-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mb-6">
             <Clock className="size-8 animate-pulse" />
           </div>
@@ -197,8 +197,9 @@ export const PlayerDashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <p className="text-lg text-muted-foreground animate-pulse">Loading dashboard...</p>
+      <div className="flex flex-col justify-center items-center h-[50vh] w-full gap-4 animate-in fade-in duration-300">
+        <div className="animate-spin rounded-full h-11 w-11 border-3 border-orange-500/20 border-t-orange-500" />
+        <p className="text-slate-500 font-bold tracking-widest uppercase text-xs">Loading Sports Dashboard...</p>
       </div>
     );
   }
@@ -349,9 +350,13 @@ export const PlayerDashboard = () => {
           <Activity className="size-5 text-primary" /> Live & Upcoming Games
         </h2>
         {liveMatches.length === 0 ? (
-          <div className="p-8 border border-dashed rounded-lg text-center text-muted-foreground">
-            No live or upcoming games at the moment.
-          </div>
+          <Card className="p-10 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-2xl md:rounded-3xl text-center bg-white/50 dark:bg-slate-900/30">
+            <Activity className="size-10 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
+            <h3 className="font-bold text-sm text-slate-700 dark:text-slate-300 uppercase tracking-wider">No Active Fixtures</h3>
+            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+              There are no live or upcoming scheduled matches right now. Check back when tournament rounds begin.
+            </p>
+          </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {liveMatches.map((match, index) => (
@@ -463,9 +468,13 @@ export const PlayerDashboard = () => {
         <section className="space-y-4">
           <h2 className="text-xl font-semibold">My Teams</h2>
           {myTeams.length === 0 ? (
-            <div className="p-8 border border-dashed rounded-lg text-center text-muted-foreground">
-              You are not currently part of any teams. Wait for an invitation from a coach.
-            </div>
+            <Card className="p-10 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-2xl md:rounded-3xl text-center bg-white/50 dark:bg-slate-900/30">
+              <Dumbbell className="size-10 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
+              <h3 className="font-bold text-sm text-slate-700 dark:text-slate-300 uppercase tracking-wider">No Team Roster Membership</h3>
+              <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                You are not currently enrolled in any athletic rosters. Invitations from team coaches will appear above.
+              </p>
+            </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {myTeams.map((roster, index) => (

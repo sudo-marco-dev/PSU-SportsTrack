@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 export function NotFound() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, role } = useAuth();
+  const { user, isSuperAdmin, isCoach, isPlayer, isFacilitator } = useAuth();
 
   useEffect(() => {
     // Log 404 attempts for debugging / analytics
@@ -16,15 +16,18 @@ export function NotFound() {
     if (!user) {
       // Not authenticated → redirect to public dashboard
       navigate('/', { replace: true });
-    } else if (role === 'Admin') {
-      // Admin → redirect to admin dashboard
+    } else if (isSuperAdmin) {
+      // Super Admin → redirect to admin dashboard
       navigate('/admin', { replace: true });
-    } else if (role === 'Coach') {
+    } else if (isCoach) {
       // Coach → redirect to coach dashboard
       navigate('/coach', { replace: true });
-    } else if (role === 'Player') {
+    } else if (isPlayer) {
       // Player → redirect to player dashboard
       navigate('/player', { replace: true });
+    } else if (isFacilitator) {
+      // Facilitator → redirect to match center
+      navigate('/explorer', { replace: true });
     } else {
       // Default fallback
       navigate('/', { replace: true });
@@ -74,32 +77,35 @@ export function NotFound() {
           {/* Action Buttons */}
           <div className="space-y-3">
             <button
+              type="button"
               onClick={handleSmartRedirect}
-              className="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 active:bg-blue-800 transition duration-200 shadow-sm"
+              className="w-full px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/30 cursor-pointer active:scale-[0.98] transition-all duration-150 flex items-center justify-center gap-2"
             >
               {!user 
-                ? '🔐 Go to Login' 
-                : role === 'Admin' 
-                  ? '⚙️ Go to Admin Dashboard'
-                  : role === 'Coach'
-                    ? '🏀 Go to Coach Dashboard'
-                    : role === 'Player'
-                      ? '🏅 Go to Player Dashboard'
-                      : '🏠 Go Home'}
+                ? 'Go to Sign In' 
+                : isSuperAdmin 
+                  ? 'Go to Admin Command Center'
+                  : isCoach 
+                    ? 'Go to Coach Dashboard'
+                    : isPlayer 
+                      ? 'Go to Player Hub'
+                      : 'Go to Match Center'}
             </button>
             
             <button
+              type="button"
               onClick={() => navigate('/', { replace: true })}
-              className="w-full px-6 py-3 bg-slate-200 text-slate-900 font-semibold rounded-lg hover:bg-slate-300 active:bg-slate-400 transition duration-200"
+              className="w-full px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 cursor-pointer active:scale-[0.98] transition-all duration-150 flex items-center justify-center gap-2"
             >
-              🏠 Back to Home
+              Back to Home
             </button>
 
             <button
+              type="button"
               onClick={() => navigate(-1)}
-              className="w-full px-6 py-3 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 active:bg-slate-300 transition duration-200"
+              className="w-full px-6 py-2.5 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-semibold text-xs cursor-pointer active:scale-[0.98] transition-all duration-150"
             >
-              ← Go Back
+              ← Go Back to Previous Page
             </button>
           </div>
 

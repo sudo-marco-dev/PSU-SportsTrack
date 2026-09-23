@@ -29,7 +29,6 @@ import {
   Sparkles,
   Lightbulb,
   MapPin,
-  Building,
   Eye
 } from 'lucide-react';
 import { DataToolbar } from '@/components/admin/DataToolbar';
@@ -112,6 +111,8 @@ export const TournamentManagement = () => {
     local_id: string;
     next_match_local_id?: string;
     next_match_slot?: 'team_a' | 'team_b';
+    loser_next_match_local_id?: string;
+    loser_next_match_slot?: 'team_a' | 'team_b';
   }[]>([]);
 
   // MVP Awards State
@@ -312,10 +313,17 @@ export const TournamentManagement = () => {
       const tournamentId = tournamentToDelete.id;
 
       // 1. Break self-referencing pointer links on matches
-      await supabase
-        .from('matches')
-        .update({ next_match_id: null })
-        .eq('tournament_id', tournamentId);
+      try {
+        await supabase
+          .from('matches')
+          .update({ next_match_id: null, loser_next_match_id: null })
+          .eq('tournament_id', tournamentId);
+      } catch {
+        await supabase
+          .from('matches')
+          .update({ next_match_id: null })
+          .eq('tournament_id', tournamentId);
+      }
 
       // 2. Fetch all match IDs in this tournament
       const { data: matchesData } = await supabase
@@ -468,6 +476,23 @@ export const TournamentManagement = () => {
         toast.success(`🎉 Match result confirmed! ${winnerName} has advanced to the next bracket round!`);
       } else {
         toast.success(`🏆 Tournament Championship Result Confirmed! ${winnerName} is crowned Champion! 🎉`, { duration: 8000 });
+      }
+
+      // Route loser to Bronze Medal match if loser_next_match_id is configured
+      const loserId = isTeamAWinner ? match.team_b_id : match.team_a_id;
+      const loserName = isTeamAWinner ? match.team_b_name : match.team_a_name;
+
+      if (match.loser_next_match_id && loserId && loserName !== 'BYE' && loserName !== 'TBD') {
+        const loserMatchField = match.loser_next_match_slot === 'team_a' ? 'team_a_id' : 'team_b_id';
+        try {
+          await supabase
+            .from('matches')
+            .update({ [loserMatchField]: loserId })
+            .eq('id', match.loser_next_match_id);
+          toast.info(`🥉 ${loserName} routed to Bronze Medal Playoff!`);
+        } catch (loserErr) {
+          console.warn('Could not auto-route loser to bronze playoff:', loserErr);
+        }
       }
 
       logAudit({
@@ -637,6 +662,34 @@ export const TournamentManagement = () => {
       }
     }
 
+    // Step 3b: If 2 or more rounds, create a Bronze Medal Playoff match for semi-final losers
+    let bronzeMatch: any = null;
+    if (totalRounds >= 2) {
+      const semiMatches = matchesByRound[totalRounds - 1];
+      if (semiMatches && semiMatches.length === 2) {
+        const finalsDate = new Date(baseDate);
+        finalsDate.setDate(finalsDate.getDate() + (totalRounds - 1));
+        const bronzeDate = new Date(finalsDate);
+        bronzeDate.setHours(Math.max(8, bronzeDate.getHours() - 2));
+
+        bronzeMatch = {
+          team_a_id: null,
+          team_a_name: 'TBD (SF 1 Loser)',
+          team_b_id: null,
+          team_b_name: 'TBD (SF 2 Loser)',
+          round: '3rd Place Playoff',
+          match_time: formatDate(bronzeDate),
+          venue: defaultVenue,
+          local_id: 'bronze-0',
+        };
+
+        semiMatches[0].loser_next_match_local_id = 'bronze-0';
+        semiMatches[0].loser_next_match_slot = 'team_a';
+        semiMatches[1].loser_next_match_local_id = 'bronze-0';
+        semiMatches[1].loser_next_match_slot = 'team_b';
+      }
+    }
+
     // Step 4: Auto-advance Round 1 BYE winners to Round 2
     if (totalRounds > 1) {
       const r1Matches = matchesByRound[1];
@@ -661,6 +714,9 @@ export const TournamentManagement = () => {
     const flatProposed: typeof proposedMatches = [];
     for (let r = 1; r <= totalRounds; r++) {
       flatProposed.push(...matchesByRound[r]);
+    }
+    if (bronzeMatch) {
+      flatProposed.push(bronzeMatch);
     }
 
     setProposedMatches(flatProposed);
@@ -745,13 +801,26 @@ export const TournamentManagement = () => {
         };
       });
 
-      const { data: insertedData, error: insertError } = await supabase
+      let insertedData: any = null;
+      const { data: firstTry, error: insertError } = await supabase
         .from('matches')
         .insert(payload)
         .select();
 
       if (insertError) {
-        throw insertError;
+        if (insertError.code === 'PGRST204' || (insertError as any).message?.includes('venue')) {
+          const fallbackPayload = payload.map(({ venue, ...rest }: any) => rest);
+          const { data: retryData, error: retryErr } = await supabase
+            .from('matches')
+            .insert(fallbackPayload)
+            .select();
+          if (retryErr) throw retryErr;
+          insertedData = retryData;
+        } else {
+          throw insertError;
+        }
+      } else {
+        insertedData = firstTry;
       }
 
       if (!insertedData || insertedData.length !== proposedMatches.length) {
@@ -760,24 +829,44 @@ export const TournamentManagement = () => {
 
       // Map local_id to database UUID
       const localIdToDbId: { [localId: string]: string } = {};
-      insertedData.forEach((dbMatch, idx) => {
+      insertedData.forEach((dbMatch: any, idx: number) => {
         const localMatch = proposedMatches[idx];
         localIdToDbId[localMatch.local_id] = dbMatch.id;
       });
 
-      // Pass 2: Batch Update next_match_id pointer links in parallel
+      // Pass 2: Batch Update next_match_id and loser_next_match_id pointer links in parallel
       const updates = proposedMatches
-        .filter(m => m.next_match_local_id && localIdToDbId[m.next_match_local_id])
-        .map(m => {
+        .filter(m => (m.next_match_local_id && localIdToDbId[m.next_match_local_id]) || (m.loser_next_match_local_id && localIdToDbId[m.loser_next_match_local_id]))
+        .map(async m => {
           const dbId = localIdToDbId[m.local_id];
-          const nextDbId = localIdToDbId[m.next_match_local_id!];
-          return supabase
+          const nextDbId = m.next_match_local_id ? localIdToDbId[m.next_match_local_id] : null;
+          const loserDbId = m.loser_next_match_local_id ? localIdToDbId[m.loser_next_match_local_id] : null;
+
+          const updatePayload: any = {};
+          if (nextDbId) {
+            updatePayload.next_match_id = nextDbId;
+            updatePayload.next_match_slot = m.next_match_slot;
+          }
+          if (loserDbId) {
+            updatePayload.loser_next_match_id = loserDbId;
+            updatePayload.loser_next_match_slot = m.loser_next_match_slot;
+          }
+
+          const { error } = await supabase
             .from('matches')
-            .update({
-              next_match_id: nextDbId,
-              next_match_slot: m.next_match_slot
-            })
+            .update(updatePayload)
             .eq('id', dbId);
+
+          if (error && error.code === '42703') {
+            // Graceful fallback if loser_next_match_id column is pending in live schema
+            const fallbackPayload: any = {};
+            if (nextDbId) {
+              fallbackPayload.next_match_id = nextDbId;
+              fallbackPayload.next_match_slot = m.next_match_slot;
+            }
+            return supabase.from('matches').update(fallbackPayload).eq('id', dbId);
+          }
+          return { error };
         });
 
       if (updates.length > 0) {
@@ -827,7 +916,7 @@ export const TournamentManagement = () => {
   };
 
   return (
-    <div className="space-y-6 relative min-h-screen max-w-[1600px] mx-auto px-4">
+    <div className="space-y-6 relative max-w-[1600px] mx-auto px-4 pb-6">
       {/* Subtle Grain Texture Overlay - Using a reliable data URI for the noise */}
       <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.015] mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/p6.png')]" />
 
@@ -881,7 +970,7 @@ export const TournamentManagement = () => {
                 <button
                   type="button"
                   onClick={() => { setCreationMode('binturungan'); setEventName('PSU Binturungan 2026'); }}
-                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-black uppercase italic tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-black uppercase italic tracking-wider transition-all duration-150 cursor-pointer active:scale-95 flex items-center justify-center gap-1.5 ${
                     creationMode === 'binturungan' 
                       ? 'bg-orange-500 text-white shadow-sm shadow-orange-500/20 scale-[1.01]' 
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
@@ -892,7 +981,7 @@ export const TournamentManagement = () => {
                 <button
                   type="button"
                   onClick={() => { setCreationMode('single'); setEventName('PSU Friendly Games'); }}
-                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-black uppercase italic tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-black uppercase italic tracking-wider transition-all duration-150 cursor-pointer active:scale-95 flex items-center justify-center gap-1.5 ${
                     creationMode === 'single' 
                       ? 'bg-orange-500 text-white shadow-sm shadow-orange-500/20 scale-[1.01]' 
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
@@ -934,7 +1023,7 @@ export const TournamentManagement = () => {
                         <button 
                           type="button" 
                           onClick={() => setSelectedSports(BINTURUNGAN_DEFAULT_SPORTS.map(s => s.name))} 
-                          className="text-[10px] font-black uppercase text-orange-500 hover:underline tracking-wider transition-colors"
+                          className="text-[10px] font-black uppercase text-orange-500 hover:underline tracking-wider transition-colors cursor-pointer"
                         >
                           Select All
                         </button>
@@ -942,7 +1031,7 @@ export const TournamentManagement = () => {
                         <button 
                           type="button" 
                           onClick={() => setSelectedSports([])} 
-                          className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 tracking-wider transition-colors"
+                          className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 tracking-wider transition-colors cursor-pointer"
                         >
                           Clear
                         </button>
@@ -957,7 +1046,7 @@ export const TournamentManagement = () => {
                             type="button"
                             key={sport.name}
                             onClick={() => toggleSport(sport.name)}
-                            className={`flex items-center justify-between px-2.5 py-2 rounded-xl border text-left transition-all duration-200 active:scale-95 ${
+                            className={`flex items-center justify-between px-2.5 py-2 rounded-xl border text-left transition-all duration-150 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${
                               isChecked 
                                 ? 'bg-orange-500 text-white border-orange-500 shadow-sm shadow-orange-500/20 font-bold' 
                                 : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-white/5 text-slate-700 dark:text-slate-300 hover:border-orange-500/40 hover:bg-orange-50/50 dark:hover:bg-slate-800'
@@ -1310,7 +1399,7 @@ export const TournamentManagement = () => {
                       <button
                         type="button"
                         onClick={() => setSelectedBracketType('single')}
-                        className={`p-5 rounded-2xl border-2 text-left relative transition-all ${
+                        className={`p-5 rounded-2xl border-2 text-left relative transition-all duration-150 cursor-pointer active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${
                           selectedBracketType === 'single'
                             ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-500/5 shadow-md shadow-orange-500/10'
                             : 'border-slate-200 dark:border-white/5 hover:border-orange-500/30 bg-white dark:bg-slate-900'
@@ -1335,7 +1424,7 @@ export const TournamentManagement = () => {
                       <button
                         type="button"
                         onClick={() => setSelectedBracketType('round_robin')}
-                        className={`p-5 rounded-2xl border-2 text-left relative transition-all ${
+                        className={`p-5 rounded-2xl border-2 text-left relative transition-all duration-150 cursor-pointer active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${
                           selectedBracketType === 'round_robin'
                             ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-500/5 shadow-md shadow-orange-500/10'
                             : 'border-slate-200 dark:border-white/5 hover:border-orange-500/30 bg-white dark:bg-slate-900'
