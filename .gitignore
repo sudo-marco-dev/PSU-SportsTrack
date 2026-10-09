@@ -38,3 +38,6 @@ dist-ssr
 .supabase/
 supabase/.temp/
 .temp/
+
+# Antigravity Agents
+.agents/
