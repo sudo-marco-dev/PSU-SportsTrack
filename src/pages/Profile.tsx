@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { 
   User, 
   Trophy, 
@@ -30,7 +32,9 @@ import {
   UserX,
   BellOff,
   Bell,
-  Building
+  Building,
+  BookOpen,
+  Layers
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
@@ -100,6 +104,32 @@ export const Profile = () => {
     enrolledAthletes: 0
   });
 
+  // Academic Profile State (Editable by player if parsing error)
+  const [academicProfile, setAcademicProfile] = useState({
+    studentNumber: '',
+    program: '',
+    yearLevel: '',
+    age: '',
+  });
+  const [isSavingAcademic, setIsSavingAcademic] = useState(false);
+  const [latestVerificationDoc, setLatestVerificationDoc] = useState<{
+    id: string;
+    status: string;
+    rejection_reason?: string | null;
+    confidence_score?: number | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (profile) {
+      setAcademicProfile({
+        studentNumber: profile.student_number || '',
+        program: profile.program || '',
+        yearLevel: profile.year_level || '',
+        age: profile.age ? String(profile.age) : '',
+      });
+    }
+  }, [profile]);
+
   useEffect(() => {
     fetchColleges();
     if (user) {
@@ -122,14 +152,46 @@ export const Profile = () => {
   };
 
   const checkVerificationStatus = async () => {
-    if (!user || isVerified) return;
+    if (!user) return;
     const { data } = await supabase
       .from('verification_documents')
-      .select('id')
+      .select('id, status, rejection_reason, confidence_score, created_at')
       .eq('user_id', user.id)
-      .eq('status', 'Pending');
-    if (data && data.length > 0) {
-      setHasPendingDoc(true);
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (data) {
+      setLatestVerificationDoc(data);
+      setHasPendingDoc(data.status === 'Pending');
+    } else {
+      setLatestVerificationDoc(null);
+      setHasPendingDoc(false);
+    }
+  };
+
+  const handleSaveAcademicProfile = async () => {
+    if (!user) return;
+    setIsSavingAcademic(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          student_number: academicProfile.studentNumber || null,
+          program: academicProfile.program || null,
+          year_level: academicProfile.yearLevel || null,
+          age: academicProfile.age ? parseInt(academicProfile.age, 10) : null,
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast.success('Academic profile updated successfully!');
+      if (refetchProfile) await refetchProfile();
+    } catch (err: any) {
+      toast.error('Failed to update academic profile: ' + err.message);
+    } finally {
+      setIsSavingAcademic(false);
     }
   };
 
@@ -256,7 +318,7 @@ export const Profile = () => {
     try {
       const [verifRes, tournRes, auditRes, teamsRes] = await Promise.all([
         supabase.from('verification_documents').select('id', { count: 'exact', head: true }).eq('status', 'Pending'),
-        supabase.from('tournaments').select('id', { count: 'exact', head: true }).neq('status', 'Completed'),
+        supabase.from('tournaments').select('id', { count: 'exact', head: true }).neq('status', 'Completed').or('is_deleted.is.null,is_deleted.eq.false'),
         supabase.from('audit_logs').select('id', { count: 'exact', head: true }),
         supabase.from('teams').select('id', { count: 'exact', head: true })
       ]);
@@ -324,15 +386,15 @@ export const Profile = () => {
                     <Badge className="bg-orange-500/20 text-orange-400 hover:bg-orange-500/20 border-orange-500/30 font-bold uppercase text-[10px] tracking-wider">
                       SYSTEM EXECUTIVE • ADMIN
                     </Badge>
-                    <Badge className="bg-white/10 text-slate-300 border-white/10 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1">
-                      <GraduationCap className="size-3 text-orange-400" />
-                      {profile?.college_name || 'PSU Main Campus'}
+                    <Badge className="bg-white/10 text-slate-300 border-white/10 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1 max-w-full">
+                      <GraduationCap className="size-3 text-orange-400 shrink-0" />
+                      <span className="truncate">{profile?.college_name || 'PSU Main Campus'}</span>
                     </Badge>
                     <Badge className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/30 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1">
                       <CheckCircle2 className="size-3" /> Full Superuser Access
                     </Badge>
                   </div>
-                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight uppercase text-white leading-tight">
+                  <h1 className="text-2xl sm:text-4xl font-black italic tracking-tighter uppercase text-white leading-none">
                     {profile?.full_name || user?.email?.split('@')[0]}
                   </h1>
                   <p className="text-slate-400 font-normal text-xs mt-0.5 flex items-center gap-1.5">
@@ -498,15 +560,15 @@ export const Profile = () => {
                     <Badge className="bg-orange-500/20 text-orange-400 hover:bg-orange-500/20 border-orange-500/30 font-bold uppercase text-[10px] tracking-wider">
                       ATHLETIC STAFF • LEAD COACH
                     </Badge>
-                    <Badge className="bg-white/10 text-slate-300 border-white/10 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1">
-                      <GraduationCap className="size-3 text-orange-400" />
-                      {profile?.college_name || 'PSU Athletic Division'}
+                    <Badge className="bg-white/10 text-slate-300 border-white/10 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1 max-w-full">
+                      <GraduationCap className="size-3 text-orange-400 shrink-0" />
+                      <span className="truncate">{profile?.college_name || 'PSU Athletic Division'}</span>
                     </Badge>
                     <Badge className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/30 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1">
                       <CheckCircle2 className="size-3" /> Official PSU Coach
                     </Badge>
                   </div>
-                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight uppercase text-white leading-tight">
+                  <h1 className="text-2xl sm:text-4xl font-black italic tracking-tighter uppercase text-white leading-none">
                     Coach {profile?.full_name || user?.email?.split('@')[0]}
                   </h1>
                   <p className="text-slate-400 font-normal text-xs mt-0.5 flex items-center gap-1.5">
@@ -602,9 +664,9 @@ export const Profile = () => {
                     <Badge className="bg-orange-500/20 text-orange-400 hover:bg-orange-500/20 border-orange-500/30 font-bold uppercase text-[10px] tracking-wider">
                       STUDENT ATHLETE
                     </Badge>
-                    <Badge className="bg-white/10 text-slate-300 border-white/10 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1">
-                      <GraduationCap className="size-3 text-orange-400" />
-                      {profile?.college_name || 'Unassigned College'}
+                    <Badge className="bg-white/10 text-slate-300 border-white/10 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1 max-w-full">
+                      <GraduationCap className="size-3 text-orange-400 shrink-0" />
+                      <span className="truncate">{profile?.college_name || 'Unassigned College'}</span>
                     </Badge>
                     {isVerified ? (
                       <Badge className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/30 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1">
@@ -616,7 +678,7 @@ export const Profile = () => {
                       </Badge>
                     ) : null}
                   </div>
-                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight uppercase text-white leading-tight">
+                  <h1 className="text-2xl sm:text-4xl font-black italic tracking-tighter uppercase text-white leading-none">
                     {profile?.full_name || user?.email?.split('@')[0]}
                   </h1>
                   <p className="text-slate-400 font-normal text-xs mt-0.5 flex items-center gap-1.5">
@@ -630,7 +692,7 @@ export const Profile = () => {
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">MVP Trophies</p>
                   <div className="flex items-center gap-1 mt-0.5">
                     <Star className="size-3.5 text-orange-500 fill-orange-500" />
-                    <span className="text-lg font-bold text-white">{stars.length}</span>
+                    <span className="text-lg font-bold text-white tabular-nums">{stars.length}</span>
                   </div>
                 </div>
                 <Button
@@ -710,30 +772,32 @@ export const Profile = () => {
           )}
 
           {/* Player Tabs */}
-          <Tabs defaultValue="achievements" className="w-full space-y-4">
-            <TabsList className="p-1 h-11 bg-slate-950/5 border border-slate-200/60 rounded-xl w-full sm:w-auto max-w-lg flex items-stretch">
-              <TabsTrigger
-                value="achievements"
-                className="flex-1 font-bold uppercase text-xs data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm rounded-lg transition-all flex items-center justify-center gap-1.5"
-              >
-                <Trophy className="size-3.5 text-orange-500" /> Achievements
-              </TabsTrigger>
-              <TabsTrigger
-                value="invitations"
-                className="flex-1 font-bold uppercase text-xs data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm rounded-lg transition-all flex items-center justify-center gap-1.5"
-              >
-                <Users className="size-3.5 text-orange-500" /> Team Invites ({invitations.length})
-              </TabsTrigger>
-              <TabsTrigger
-                value="account"
-                className="flex-1 font-bold uppercase text-xs data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm rounded-lg transition-all flex items-center justify-center gap-1.5"
-              >
-                <User className="size-3.5 text-orange-500" /> Account &amp; College
-              </TabsTrigger>
-            </TabsList>
+          <Tabs defaultValue="achievements" className="w-full flex flex-col space-y-4 min-w-0">
+            <div className="w-full overflow-x-auto scrollbar-hide -mx-1 px-1">
+              <TabsList className="p-1 h-11 bg-slate-950/5 border border-slate-200/60 rounded-xl w-full sm:w-auto inline-flex items-stretch min-w-max sm:min-w-0">
+                <TabsTrigger
+                  value="achievements"
+                  className="px-3 sm:px-4 font-bold uppercase text-[11px] sm:text-xs data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm rounded-lg transition-all flex items-center justify-center gap-1.5 shrink-0"
+                >
+                  <Trophy className="size-3.5 text-orange-500 shrink-0" /> Achievements
+                </TabsTrigger>
+                <TabsTrigger
+                  value="invitations"
+                  className="px-3 sm:px-4 font-bold uppercase text-[11px] sm:text-xs data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm rounded-lg transition-all flex items-center justify-center gap-1.5 shrink-0"
+                >
+                  <Users className="size-3.5 text-orange-500 shrink-0" /> Team Invites ({invitations.length})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="account"
+                  className="px-3 sm:px-4 font-bold uppercase text-[11px] sm:text-xs data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm rounded-lg transition-all flex items-center justify-center gap-1.5 shrink-0"
+                >
+                  <User className="size-3.5 text-orange-500 shrink-0" /> Account &amp; College
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             {/* Tab 1: Achievements & Trophy Case */}
-            <TabsContent value="achievements" className="outline-none space-y-4">
+            <TabsContent value="achievements" className="w-full min-w-0 outline-none space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg sm:text-xl font-bold uppercase tracking-tight text-slate-900 flex items-center gap-2">
@@ -816,7 +880,7 @@ export const Profile = () => {
             </TabsContent>
 
             {/* Tab 2: Coach Team Invitations */}
-            <TabsContent value="invitations" className="outline-none space-y-4">
+            <TabsContent value="invitations" className="w-full min-w-0 outline-none space-y-4">
               <Card className="border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-100">
                   <div>
@@ -903,42 +967,42 @@ export const Profile = () => {
             </TabsContent>
 
             {/* Tab 3: Account Details, College & Verification */}
-            <TabsContent value="account" className="outline-none space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                {/* Account Information Card & College Department Selector */}
-                <Card className="border border-slate-200 rounded-2xl shadow-sm">
-                  <CardHeader className="p-5 pb-3">
+            <TabsContent value="account" className="w-full min-w-0 outline-none space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* 1. Account Information Card & College Department Selector */}
+                <Card className="border border-slate-200 dark:border-white/10 rounded-3xl shadow-sm bg-white dark:bg-slate-900">
+                  <CardHeader className="p-6 pb-4">
                     <CardTitle className="text-lg font-bold uppercase tracking-tight flex items-center gap-2">
-                      <User className="size-4 sm:size-5 text-orange-500" /> Personal &amp; College Details
+                      <User className="size-5 text-orange-500" /> Personal &amp; Campus Affiliation
                     </CardTitle>
                     <CardDescription className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
-                      Registered Credentials &amp; College Department
+                      University Account Credentials
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="p-5 pt-0 space-y-3">
-                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-0.5">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email Address</p>
-                      <p className="font-bold text-slate-900 text-xs sm:text-sm">{user?.email}</p>
+                  <CardContent className="p-6 pt-0 space-y-3.5">
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-0.5">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Institutional Email</p>
+                      <p className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">{user?.email}</p>
                     </div>
 
-                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-0.5">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Account Type / Role</p>
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-0.5">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Athlete Role</p>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <Shield className="size-3.5 text-orange-500" />
-                        <span className="font-bold text-slate-900 text-xs sm:text-sm uppercase">
+                        <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm uppercase">
                           {isSuperAdmin ? 'Super Admin' : isFacilitator ? 'Facilitator' : isCoach ? 'Coach' : isFacultyAthlete ? 'Faculty Athlete' : 'Student Athlete'}
                         </span>
                       </div>
                     </div>
 
                     {/* College Department Selector / Display */}
-                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5">
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-1.5">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                         <GraduationCap className="size-3.5 text-orange-500" /> PSU College Department
                       </p>
                       {profile?.college_name ? (
-                        <div className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
-                          <span className="font-bold text-slate-900 text-xs">{profile.college_name}</span>
+                        <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-white/10 flex items-center justify-between">
+                          <span className="font-bold text-slate-900 dark:text-white text-xs">{profile.college_name}</span>
                           <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 border-emerald-200">
                             Assigned
                           </Badge>
@@ -949,7 +1013,7 @@ export const Profile = () => {
                             value={selectedCollegeId} 
                             onValueChange={(val: string | null) => setSelectedCollegeId(val || '')}
                           >
-                            <SelectTrigger className="w-full bg-white border-slate-200 rounded-xl text-xs font-medium h-10">
+                            <SelectTrigger className="w-full bg-white dark:bg-slate-800 border-slate-200 dark:border-white/10 rounded-xl text-xs font-medium h-11">
                               <SelectValue placeholder="Select your PSU College Department..." />
                             </SelectTrigger>
                             <SelectContent className="max-h-60 rounded-xl">
@@ -964,7 +1028,7 @@ export const Profile = () => {
                             size="sm"
                             disabled={isSavingCollege || !selectedCollegeId}
                             onClick={handleSaveCollege}
-                            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs h-9 rounded-xl"
+                            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs h-10 rounded-xl"
                           >
                             {isSavingCollege ? 'Saving...' : 'Save College Department'}
                           </Button>
@@ -972,11 +1036,11 @@ export const Profile = () => {
                       )}
                     </div>
 
-                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-1">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Athlete Dashboard Link</p>
                       <Button 
                         variant="outline" 
-                        className="w-full mt-1.5 font-semibold uppercase text-xs h-9 rounded-xl justify-between"
+                        className="w-full mt-1.5 font-bold uppercase text-xs h-10 rounded-xl justify-between border-slate-200 dark:border-white/10"
                         onClick={() => navigate('/player')}
                       >
                         <span>Open Athlete Dashboard</span>
@@ -986,54 +1050,195 @@ export const Profile = () => {
                   </CardContent>
                 </Card>
 
-                {/* Verification Status Card */}
-                <Card className="border border-slate-200 rounded-2xl shadow-sm">
-                  <CardHeader className="p-5 pb-3">
+                {/* 2. Verification Clearance Status Card */}
+                <Card className="border border-slate-200 dark:border-white/10 rounded-3xl shadow-sm bg-white dark:bg-slate-900">
+                  <CardHeader className="p-6 pb-4">
                     <CardTitle className="text-lg font-bold uppercase tracking-tight flex items-center gap-2">
-                      <ShieldCheck className="size-4 sm:size-5 text-orange-500" /> Eligibility Verification
+                      <ShieldCheck className="size-5 text-orange-500" /> Eligibility Clearance
                     </CardTitle>
                     <CardDescription className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
-                      PSU Athlete Authorization Status
+                      PSU Athlete Official Authorization
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="p-5 pt-0 space-y-3">
+                  <CardContent className="p-6 pt-0 space-y-4">
                     {isVerified ? (
-                      <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 space-y-2">
-                        <div className="flex items-center gap-2.5">
-                          <div className="p-1.5 bg-emerald-500 text-white rounded-lg">
+                      <div className="p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-900 dark:text-emerald-200 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-emerald-500 text-white rounded-xl">
                             <CheckCircle2 className="size-5" />
                           </div>
                           <div>
-                            <h4 className="font-bold uppercase tracking-tight text-sm">Fully Verified Athlete</h4>
-                            <p className="text-xs text-emerald-700 font-normal">Your PSU student athlete status is active and verified.</p>
+                            <h4 className="font-bold uppercase tracking-tight text-sm">Verified Athlete</h4>
+                            <p className="text-xs text-emerald-700 dark:text-emerald-400 font-normal">
+                              Your PSU student athlete status is active and approved for tournament competition.
+                            </p>
                           </div>
                         </div>
+                        {profile?.student_number && (
+                          <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-500/20 text-xs flex justify-between">
+                            <span className="font-semibold text-emerald-800 dark:text-emerald-300">Student ID:</span>
+                            <span className="font-black text-emerald-950 dark:text-white">{profile.student_number}</span>
+                          </div>
+                        )}
                       </div>
                     ) : hasPendingDoc ? (
-                      <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 space-y-2">
-                        <div className="flex items-center gap-2.5">
-                          <div className="p-1.5 bg-amber-500 text-white rounded-lg">
+                      <div className="p-5 rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-900 dark:text-amber-200 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-amber-500 text-white rounded-xl">
                             <Clock className="size-5 animate-pulse" />
                           </div>
                           <div>
-                            <h4 className="font-bold uppercase tracking-tight text-sm">Documents Under Review</h4>
-                            <p className="text-xs text-amber-700 font-normal">Your submitted verification files are being reviewed by administrators.</p>
+                            <h4 className="font-bold uppercase tracking-tight text-sm">Clearance Under Review</h4>
+                            <p className="text-xs text-amber-700 dark:text-amber-400 font-normal">
+                              Your submitted Certificate of Registration is awaiting administrative approval.
+                            </p>
                           </div>
                         </div>
+                        {latestVerificationDoc?.confidence_score !== undefined && latestVerificationDoc?.confidence_score !== null && (
+                          <div className="pt-2 border-t border-amber-200/60 dark:border-amber-500/20 text-xs flex justify-between">
+                            <span className="font-semibold text-amber-800 dark:text-amber-300">Parse Confidence:</span>
+                            <span className="font-black text-amber-950 dark:text-white">{latestVerificationDoc.confidence_score}%</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : latestVerificationDoc?.status === 'Rejected' ? (
+                      <div className="space-y-4">
+                        <div className="p-5 rounded-2xl bg-red-50 dark:bg-red-500/10 border-2 border-red-200 dark:border-red-500/20 text-red-950 dark:text-red-200 space-y-3">
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-red-500 text-white rounded-xl shrink-0">
+                              <XCircle className="size-5" />
+                            </div>
+                            <div>
+                              <Badge className="bg-red-500 text-white text-[9px] font-bold uppercase tracking-wider mb-1">
+                                Re-Verification Needed
+                              </Badge>
+                              <h4 className="font-bold uppercase tracking-tight text-sm text-red-600 dark:text-red-400">
+                                Previous Clearance Rejected
+                              </h4>
+                              <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                                Reason: <strong className="text-red-700 dark:text-red-300">{latestVerificationDoc.rejection_reason || 'Document could not be verified.'}</strong>
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <VerificationUpload onUploadSuccess={() => checkVerificationStatus()} />
                       </div>
                     ) : (
-                      <div className="space-y-3">
-                        <div className="p-3.5 rounded-xl bg-orange-50 border border-orange-200 text-orange-900">
-                          <p className="text-xs font-normal">
-                            Verification is required for players to join team rosters and participate in official PSU tournaments.
+                      <div className="space-y-4">
+                        <div className="p-4 rounded-2xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 text-orange-950 dark:text-orange-200">
+                          <p className="text-xs font-normal leading-relaxed">
+                            Official Certificate of Registration is required for all student players to join team rosters and enter university tournament brackets.
                           </p>
                         </div>
-                        <VerificationUpload onUploadSuccess={() => setHasPendingDoc(true)} />
+                        <VerificationUpload onUploadSuccess={() => checkVerificationStatus()} />
                       </div>
                     )}
                   </CardContent>
                 </Card>
               </div>
+
+              {/* 3. Academic & Student Credentials (Editable for corrections) */}
+              <Card className="border border-slate-200 dark:border-white/10 rounded-3xl shadow-sm bg-white dark:bg-slate-900">
+                <CardHeader className="p-6 pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg font-bold uppercase tracking-tight flex items-center gap-2">
+                        <BookOpen className="size-5 text-orange-500" /> Academic &amp; Enrollment Credentials
+                      </CardTitle>
+                      <CardDescription className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider mt-0.5">
+                        Parsed from Certificate of Registration • Editable for Correction
+                      </CardDescription>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider border-orange-500/30 text-orange-600 dark:text-orange-400">
+                      COR Data Layer
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-6 pt-2 space-y-4">
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    These academic details are automatically extracted from your official PSU Certificate of Registration. You can edit and update these details below to correct any optical document parsing errors.
+                  </p>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="studentNumber" className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <GraduationCap className="size-3.5 text-orange-500" /> Student Number
+                      </Label>
+                      <Input
+                        id="studentNumber"
+                        placeholder="e.g. 2023-8-0284"
+                        value={academicProfile.studentNumber}
+                        onChange={(e) => setAcademicProfile((prev) => ({ ...prev, studentNumber: e.target.value }))}
+                        className="h-11 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="program" className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <BookOpen className="size-3.5 text-orange-500" /> Degree Program
+                      </Label>
+                      <Input
+                        id="program"
+                        placeholder="e.g. Bachelor Of Science In Information Technology"
+                        value={academicProfile.program}
+                        onChange={(e) => setAcademicProfile((prev) => ({ ...prev, program: e.target.value }))}
+                        className="h-11 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="yearLevel" className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <Layers className="size-3.5 text-orange-500" /> Year Level
+                      </Label>
+                      <Select
+                        value={academicProfile.yearLevel}
+                        onValueChange={(val) => setAcademicProfile((prev) => ({ ...prev, yearLevel: val || '' }))}
+                      >
+                        <SelectTrigger className="h-11 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold">
+                          <SelectValue placeholder="Select Year Level" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          <SelectItem value="First Year">First Year</SelectItem>
+                          <SelectItem value="Second Year">Second Year</SelectItem>
+                          <SelectItem value="Third Year">Third Year</SelectItem>
+                          <SelectItem value="Fourth Year">Fourth Year</SelectItem>
+                          <SelectItem value="Fifth Year / Irregular">Fifth Year / Irregular</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="age" className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <User className="size-3.5 text-orange-500" /> Athlete Age
+                      </Label>
+                      <Input
+                        id="age"
+                        type="number"
+                        placeholder="e.g. 21"
+                        value={academicProfile.age}
+                        onChange={(e) => setAcademicProfile((prev) => ({ ...prev, age: e.target.value }))}
+                        className="h-11 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <Button
+                      onClick={handleSaveAcademicProfile}
+                      disabled={isSavingAcademic}
+                      className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs h-11 px-6 rounded-xl shadow-md shadow-orange-500/20"
+                    >
+                      {isSavingAcademic ? (
+                        <>
+                          <Loader2 className="size-3.5 animate-spin mr-1.5" /> Saving Details...
+                        </>
+                      ) : (
+                        'Save Academic Details'
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>

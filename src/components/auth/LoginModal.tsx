@@ -8,11 +8,6 @@ import {
   Lock,
   Mail,
   AlertCircle,
-  ShieldCheck,
-  Activity,
-  CheckCircle2,
-  Sparkles,
-  Star,
   UserPlus
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -21,6 +16,7 @@ import * as z from 'zod';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Form,
   FormControl,
@@ -40,12 +36,16 @@ const loginSchema = z.object({
 });
 
 const registerSchema = z.object({
-  fullName: z.string().min(2, { message: 'Full name is required' }),
+  lastName: z.string().min(1, { message: 'Last name is required' }),
+  firstName: z.string().min(1, { message: 'First name is required' }),
   email: z.string().email({ message: 'Invalid university email' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
   confirmPassword: z.string(),
   role: z.enum(['Player', 'player_faculty', 'faculty', 'Coach'] as const, { message: 'Role is required' }),
   collegeId: z.string().optional(),
+  termsAccepted: z.boolean().refine((val) => val === true, {
+    message: 'You must accept the Terms & Conditions and Privacy Policy',
+  }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword'],
@@ -60,6 +60,8 @@ export const LoginModal = () => {
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
   const [, setFailedAttempts] = useState<number>(0);
   const [colleges, setColleges] = useState<{ id: string; college_name: string }[]>([]);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   // Login Form
   const loginForm = useForm<z.infer<typeof loginSchema>>({
@@ -74,12 +76,14 @@ export const LoginModal = () => {
   const registerForm = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      fullName: '',
+      lastName: '',
+      firstName: '',
       email: '',
       password: '',
       confirmPassword: '',
       role: 'Player',
       collegeId: '',
+      termsAccepted: false,
     },
   });
 
@@ -118,7 +122,7 @@ export const LoginModal = () => {
     const lockUntilStr = localStorage.getItem('login_lockout_until');
     if (lockUntilStr) {
       const lockUntil = parseInt(lockUntilStr, 10);
-      const now = Date.now();
+      const now = Date.now(); // eslint-disable-line react-hooks/purity
       if (now < lockUntil) {
         const remainingSeconds = Math.ceil((lockUntil - now) / 1000);
         const minutes = Math.floor(remainingSeconds / 60);
@@ -135,7 +139,7 @@ export const LoginModal = () => {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email: values.email,
         password: values.password,
       });
@@ -147,7 +151,7 @@ export const LoginModal = () => {
 
         if (currentAttempts >= maxAttempts) {
           const lockTimeMs = 5 * 60 * 1000;
-          const lockUntil = Date.now() + lockTimeMs;
+          const lockUntil = Date.now() + lockTimeMs; // eslint-disable-line react-hooks/purity
           localStorage.setItem('login_lockout_until', lockUntil.toString());
           localStorage.setItem('login_attempts', currentAttempts.toString());
           setCooldownRemaining(300);
@@ -164,8 +168,27 @@ export const LoginModal = () => {
         toast.success('Logged in successfully! Welcome back.');
         loginForm.reset();
         closeLoginModal();
+
+        // Check role and route immediately to the appropriate dashboard
+        let destination = '/';
+        if (authData?.user?.id) {
+          const { data: userRec } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', authData.user.id)
+            .single();
+          const userRole = userRec?.role;
+          if (userRole === 'super_admin' || userRole === 'Admin') {
+            destination = '/admin';
+          } else if (userRole === 'coach' || userRole === 'Coach') {
+            destination = '/coach';
+          } else {
+            destination = '/player';
+          }
+        }
+        navigate(destination, { replace: true });
       }
-    } catch (error) {
+    } catch {
       toast.error('An unexpected error occurred during login');
     } finally {
       setIsLoading(false);
@@ -187,10 +210,11 @@ export const LoginModal = () => {
       }
 
       if (authData.user) {
-        // 2. Insert profile into users table
+        // 2. Insert profile into users table (Last Name, First Name basis)
+        const formattedFullName = `${values.lastName.trim()}, ${values.firstName.trim()}`;
         const { error: profileError } = await supabase.from('users').insert({
           id: authData.user.id,
-          full_name: values.fullName,
+          full_name: formattedFullName,
           role: values.role,
           college_id: values.collegeId || null,
         });
@@ -204,7 +228,7 @@ export const LoginModal = () => {
           window.location.reload();
         }
       }
-    } catch (error) {
+    } catch {
       toast.error('An unexpected error occurred during registration');
     } finally {
       setIsLoading(false);
@@ -212,414 +236,456 @@ export const LoginModal = () => {
   }
 
   return (
-    <Dialog open={isLoginModalOpen} onOpenChange={(open) => { if (!open) closeLoginModal(); }}>
-      <DialogContent className="w-full sm:max-w-5xl lg:max-w-6xl max-w-[96vw] min-h-[680px] max-h-[92vh] overflow-y-auto rounded-[2.5rem] md:rounded-[3rem] border border-white/10 p-0 shadow-2xl bg-slate-950 text-white relative">
-        <div className={`flex flex-col lg:flex-row min-h-[680px] w-full transition-all duration-700 ease-in-out ${authMode === 'register' ? 'lg:flex-row-reverse' : ''
-          }`}>
-          {/* FORM PANEL (SIGN IN / SIGN UP) */}
-          <div className={`w-full lg:w-5/12 p-6 sm:p-8 md:p-10 lg:p-12 flex flex-col justify-between bg-slate-950 border-white/5 transition-all duration-700 ease-in-out ${authMode === 'login' ? 'border-r' : 'border-l'
-            }`}>
-            <div>
-              {/* Header Badge */}
-              <div className="flex items-center justify-between mb-6">
-                <div className="size-11 sm:size-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 shadow-sm">
-                  {authMode === 'login' ? <Trophy className="size-5 sm:size-6" /> : <UserPlus className="size-5 sm:size-6" />}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-                  className="text-xs font-semibold text-slate-200 hover:text-white flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all active:scale-[0.98]"
-                >
-                  {authMode === 'login' ? 'Create Account' : 'Sign In'}
-                </button>
+    <>
+      <Dialog open={isLoginModalOpen} onOpenChange={(open) => { if (!open) closeLoginModal(); }}>
+        <DialogContent className="w-full max-w-[94vw] sm:max-w-md md:max-w-lg p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-white/10 shadow-2xl bg-slate-950 text-white relative max-h-[92vh] overflow-y-auto">
+          <div>
+            {/* Header Badge */}
+            <div className="flex items-center mb-5 sm:mb-6">
+              <div className="size-11 sm:size-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 shadow-sm">
+                {authMode === 'login' ? <Trophy className="size-5 sm:size-6" /> : <UserPlus className="size-5 sm:size-6" />}
               </div>
+            </div>
 
-              {/* Title & Description */}
-              <div className="animate-in fade-in duration-300">
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 block mb-1.5">
-                  PALAWAN STATE UNIVERSITY
-                </span>
-                <DialogTitle className="text-2xl sm:text-3xl font-bold text-white tracking-tight leading-none">
-                  {authMode === 'login' ? (
-                    <>Sign In <span className="text-orange-500">Portal</span></>
-                  ) : (
-                    <>Create <span className="text-orange-500">Account</span></>
-                  )}
-                </DialogTitle>
-                <DialogDescription className="text-slate-400 text-xs font-normal mt-2 leading-relaxed">
-                  {authMode === 'login'
-                    ? 'Enter your university email and password to access your dashboard.'
-                    : 'Register your official student, coach, or faculty profile to access PSU tournaments.'}
-                </DialogDescription>
-              </div>
+            {/* Title & Description */}
+            <div className="animate-in fade-in duration-300">
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 block mb-1">
+                PALAWAN STATE UNIVERSITY
+              </span>
+              <DialogTitle className="text-2xl sm:text-3xl font-black italic uppercase tracking-tight text-white leading-none">
+                {authMode === 'login' ? (
+                  <>Sign In <span className="text-orange-500">Portal</span></>
+                ) : (
+                  <>Create <span className="text-orange-500">Account</span></>
+                )}
+              </DialogTitle>
+              <DialogDescription className="text-slate-400 text-xs font-normal mt-1.5 leading-relaxed">
+                {authMode === 'login'
+                  ? 'Enter your university email and password to access your dashboard.'
+                  : 'Register your official student, coach, or faculty profile to access PSU tournaments.'}
+              </DialogDescription>
+            </div>
 
-              {/* Lockout Banner */}
-              {authMode === 'login' && cooldownRemaining > 0 && (
-                <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3">
-                  <AlertCircle className="size-5 text-red-400 shrink-0" />
-                  <div className="text-xs text-red-200 font-medium">
-                    Account locked. Cooldown: <span className="font-mono text-red-400 font-bold">{Math.floor(cooldownRemaining / 60)}m {cooldownRemaining % 60}s</span>
-                  </div>
+            {/* Lockout Banner */}
+            {authMode === 'login' && cooldownRemaining > 0 && (
+              <div className="mt-5 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3">
+                <AlertCircle className="size-5 text-red-400 shrink-0" />
+                <div className="text-xs text-red-200 font-medium">
+                  Account locked. Cooldown: <span className="font-mono text-red-400 font-bold">{Math.floor(cooldownRemaining / 60)}m {cooldownRemaining % 60}s</span>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* MODE 1: SIGN IN FORM */}
-              {authMode === 'login' && (
-                <Form {...loginForm}>
-                  <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4 mt-6 animate-in fade-in duration-300">
+            {/* MODE 1: SIGN IN FORM */}
+            {authMode === 'login' && (
+              <Form {...loginForm}>
+                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4 mt-5 animate-in fade-in duration-300">
+                  <FormField
+                    control={loginForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 ml-1">Email Address</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-slate-500" />
+                            <Input
+                              placeholder="athlete@psu.edu.ph"
+                              className="h-11 pl-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-orange-500"
+                              {...field}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={loginForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <div className="flex items-center justify-between ml-1">
+                          <FormLabel className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Password</FormLabel>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              closeLoginModal();
+                              navigate('/reset-password');
+                            }}
+                            className="text-[10px] font-bold text-orange-500 hover:text-orange-400 transition-colors"
+                          >
+                            Forgot password?
+                          </button>
+                        </div>
+                        <FormControl>
+                          <div className="relative">
+                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-slate-500" />
+                            <Input
+                              type={showPassword ? 'text' : 'password'}
+                              placeholder="••••••••"
+                              className="h-11 pl-11 pr-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-orange-500"
+                              {...field}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+                            >
+                              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                            </button>
+                          </div>
+                        </FormControl>
+                        <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button
+                    type="submit"
+                    className="w-full h-11 sm:h-12 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-xs sm:text-sm rounded-xl shadow-lg shadow-orange-500/20 gap-2 transition-all active:scale-[0.99] disabled:opacity-50 mt-2"
+                    disabled={isLoading || cooldownRemaining > 0}
+                  >
+                    {isLoading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                    ) : (
+                      <>
+                        <LogIn className="size-4" />
+                        Sign In
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            )}
+
+            {/* MODE 2: REGISTER FORM */}
+            {authMode === 'register' && (
+              <Form {...registerForm}>
+                <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-3.5 mt-5 animate-in fade-in duration-300">
+                  {/* Last Name and First Name Inputs (Foolproof Name Basis) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <FormField
-                      control={loginForm.control}
-                      name="email"
+                      control={registerForm.control}
+                      name="lastName"
                       render={({ field }) => (
                         <FormItem className="space-y-1">
-                          <FormLabel className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 ml-1">Email Address</FormLabel>
+                          <FormLabel className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 ml-1">
+                            Last Name
+                          </FormLabel>
                           <FormControl>
-                            <div className="relative">
-                              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-slate-500" />
-                              <Input
-                                placeholder="athlete@psu.edu.ph"
-                                type="email"
-                                className="h-11 sm:h-12 pl-11 bg-slate-900 border-white/10 rounded-xl font-medium text-sm text-white placeholder:text-slate-600 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all"
-                                {...field}
-                                disabled={isLoading || cooldownRemaining > 0}
-                              />
-                            </div>
+                            <Input
+                              placeholder="Dela Cruz"
+                              className="h-10 sm:h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-orange-500"
+                              {...field}
+                            />
                           </FormControl>
-                          <FormMessage className="text-[10px] font-medium text-red-400 ml-1" />
+                          <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
                         </FormItem>
                       )}
                     />
 
                     <FormField
-                      control={loginForm.control}
+                      control={registerForm.control}
+                      name="firstName"
+                      render={({ field }) => (
+                        <FormItem className="space-y-1">
+                          <FormLabel className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 ml-1">
+                            First Name
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Juan"
+                              className="h-10 sm:h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-orange-500"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={registerForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 ml-1">
+                          University Email
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="202381234@psu.palawan.edu.ph"
+                            className="h-10 sm:h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-orange-500"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <FormField
+                      control={registerForm.control}
                       name="password"
                       render={({ field }) => (
                         <FormItem className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <FormLabel className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 ml-1">Password</FormLabel>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                closeLoginModal();
-                                navigate('/reset-password');
-                              }}
-                              className="text-[11px] font-medium text-orange-500 hover:text-orange-400 hover:underline transition-colors"
-                            >
-                              Forgot password?
-                            </button>
-                          </div>
+                          <FormLabel className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 ml-1">Password</FormLabel>
                           <FormControl>
-                            <div className="relative">
-                              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-slate-500" />
-                              <Input
-                                placeholder="••••••••"
-                                type={showPassword ? 'text' : 'password'}
-                                className="h-11 sm:h-12 pl-11 pr-11 bg-slate-900 border-white/10 rounded-xl font-medium text-sm text-white placeholder:text-slate-600 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all"
-                                {...field}
-                                disabled={isLoading || cooldownRemaining > 0}
-                              />
+                            <Input
+                              type="password"
+                              placeholder="••••••••"
+                              className="h-10 sm:h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-orange-500"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={registerForm.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem className="space-y-1">
+                          <FormLabel className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 ml-1">Confirm</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              placeholder="••••••••"
+                              className="h-10 sm:h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-orange-500"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <FormField
+                      control={registerForm.control}
+                      name="role"
+                      render={({ field }) => (
+                        <FormItem className="space-y-1">
+                          <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Role</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="h-10 sm:h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-bold">
+                                <SelectValue placeholder="Select Role" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-slate-900 border-white/10 text-white font-bold text-xs rounded-xl">
+                              <SelectItem value="Player">Student Athlete</SelectItem>
+                              <SelectItem value="player_faculty">Faculty Athlete</SelectItem>
+                              <SelectItem value="faculty">Faculty Member</SelectItem>
+                              <SelectItem value="Coach">Athletic Coach</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={registerForm.control}
+                      name="collegeId"
+                      render={({ field }) => (
+                        <FormItem className="space-y-1">
+                          <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Department</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="h-10 sm:h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-bold truncate">
+                                <SelectValue placeholder="College">
+                                  {field.value && colleges.find((c) => c.id === field.value)?.college_name}
+                                </SelectValue>
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-slate-900 border-white/10 text-white font-bold text-xs rounded-xl max-h-48">
+                              {colleges.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>{c.college_name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Terms & Privacy Checkbox */}
+                  <FormField
+                    control={registerForm.control}
+                    name="termsAccepted"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1 pt-1.5">
+                        <div className="flex items-start gap-2.5">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="text-[11px] font-normal text-slate-300 cursor-pointer leading-relaxed block">
+                              I agree to the{' '}
                               <button
                                 type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setShowTermsModal(true);
+                                }}
+                                className="text-orange-400 hover:text-orange-300 underline font-semibold transition-colors cursor-pointer"
                               >
-                                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                                Terms &amp; Conditions
                               </button>
-                            </div>
-                          </FormControl>
-                          <FormMessage className="text-[10px] font-medium text-red-400 ml-1" />
-                        </FormItem>
-                      )}
-                    />
+                              {' '}and{' '}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setShowPrivacyModal(true);
+                                }}
+                                className="text-orange-400 hover:text-orange-300 underline font-semibold transition-colors cursor-pointer"
+                              >
+                                Privacy Policy
+                              </button>
+                            </FormLabel>
+                          </div>
+                        </div>
+                        <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
+                      </FormItem>
+                    )}
+                  />
 
-                    <Button
-                      type="submit"
-                      className="w-full h-11 sm:h-12 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm rounded-xl shadow-md shadow-orange-500/20 gap-2 transition-all active:scale-[0.99] disabled:opacity-50 mt-2"
-                      disabled={isLoading || cooldownRemaining > 0}
-                    >
-                      {isLoading ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                      ) : (
-                        <>
-                          <LogIn className="size-4" />
-                          Sign In
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </Form>
-              )}
-
-              {/* MODE 2: SIGN UP FORM */}
-              {authMode === 'register' && (
-                <Form {...registerForm}>
-                  <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-3.5 mt-5 animate-in fade-in duration-300">
-                    <FormField
-                      control={registerForm.control}
-                      name="fullName"
-                      render={({ field }) => (
-                        <FormItem className="space-y-1">
-                          <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Full Name</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Juan Dela Cruz"
-                              className="h-11 bg-slate-900 border-white/10 rounded-xl font-bold text-xs text-white placeholder:text-slate-600 focus:border-orange-500 outline-none transition-all"
-                              {...field}
-                              disabled={isLoading}
-                            />
-                          </FormControl>
-                          <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={registerForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem className="space-y-1">
-                          <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">University Email</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="202381234@psu.palawan.edu.ph"
-                              type="email"
-                              className="h-11 bg-slate-900 border-white/10 rounded-xl font-bold text-xs text-white placeholder:text-slate-600 focus:border-orange-500 outline-none transition-all"
-                              {...field}
-                              disabled={isLoading}
-                            />
-                          </FormControl>
-                          <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <FormField
-                        control={registerForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem className="space-y-1">
-                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Password</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="••••••••"
-                                type={showPassword ? 'text' : 'password'}
-                                className="h-11 bg-slate-900 border-white/10 rounded-xl font-bold text-xs text-white focus:border-orange-500 outline-none transition-all"
-                                {...field}
-                                disabled={isLoading}
-                              />
-                            </FormControl>
-                            <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={registerForm.control}
-                        name="confirmPassword"
-                        render={({ field }) => (
-                          <FormItem className="space-y-1">
-                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Confirm</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="••••••••"
-                                type={showPassword ? 'text' : 'password'}
-                                className="h-11 bg-slate-900 border-white/10 rounded-xl font-bold text-xs text-white focus:border-orange-500 outline-none transition-all"
-                                {...field}
-                                disabled={isLoading}
-                              />
-                            </FormControl>
-                            <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <FormField
-                        control={registerForm.control}
-                        name="role"
-                        render={({ field }) => (
-                          <FormItem className="space-y-1">
-                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Role</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger className="h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-bold">
-                                  <SelectValue placeholder="Role">
-                                    {field.value === 'player_faculty' || field.value === 'faculty'
-                                      ? 'Faculty'
-                                      : field.value === 'Coach'
-                                      ? 'Coach'
-                                      : 'Student'}
-                                  </SelectValue>
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent className="bg-slate-900 border-white/10 text-white font-bold text-xs rounded-xl">
-                                <SelectItem value="Player">Student</SelectItem>
-                                <SelectItem value="Coach">Coach</SelectItem>
-                                <SelectItem value="player_faculty">Faculty</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={registerForm.control}
-                        name="collegeId"
-                        render={({ field }) => (
-                          <FormItem className="space-y-1">
-                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Department</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger className="h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-bold truncate">
-                                  <SelectValue placeholder="College">
-                                    {field.value && colleges.find((c) => c.id === field.value)?.college_name}
-                                  </SelectValue>
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent className="bg-slate-900 border-white/10 text-white font-bold text-xs rounded-xl max-h-48">
-                                {colleges.map((c) => (
-                                  <SelectItem key={c.id} value={c.id}>{c.college_name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <Button
-                      type="submit"
-                      className="w-full h-11 sm:h-12 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm rounded-xl shadow-md shadow-orange-500/20 gap-2 transition-all active:scale-[0.99] disabled:opacity-50 mt-2"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                      ) : (
-                        <>
-                          <UserPlus className="size-4" />
-                          Create Account
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </Form>
-              )}
-            </div>
-
-            {/* Footer Auth Mode Toggle Prompt */}
-            <div className="mt-6 pt-4 border-t border-white/5">
-              <p className="text-xs font-normal text-slate-400 text-center">
-                {authMode === 'login' ? (
-                  <>
-                    New to PSU SportsTrack?{' '}
-                    <button
-                      type="button"
-                      onClick={() => setAuthMode('register')}
-                      className="text-orange-500 hover:text-orange-400 hover:underline font-semibold transition-colors ml-1"
-                    >
-                      Create Account
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    Already have an account?{' '}
-                    <button
-                      type="button"
-                      onClick={() => setAuthMode('login')}
-                      className="text-orange-500 hover:text-orange-400 hover:underline font-semibold transition-colors ml-1"
-                    >
-                      Sign In
-                    </button>
-                  </>
-                )}
-              </p>
-            </div>
+                  <Button
+                    type="submit"
+                    className="w-full h-11 sm:h-12 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-xs sm:text-sm rounded-xl shadow-lg shadow-orange-500/20 gap-2 transition-all active:scale-[0.99] disabled:opacity-50 mt-2"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                    ) : (
+                      <>
+                        <UserPlus className="size-4" />
+                        Create Account
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            )}
           </div>
 
-          {/* SHOWCASE INFO PANEL */}
-          <div className="w-full lg:w-7/12 p-6 sm:p-8 md:p-10 lg:p-12 bg-slate-900/90 flex flex-col justify-between relative overflow-hidden transition-all duration-700 ease-in-out">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="size-2 rounded-full bg-orange-500" />
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-orange-400">
-                  Official Athletic Management Platform
-                </span>
-              </div>
+          {/* Footer Auth Mode Toggle Prompt */}
+          <div className="mt-5 pt-4 border-t border-white/5">
+            <p className="text-xs font-normal text-slate-400 text-center">
+              {authMode === 'login' ? (
+                <>
+                  New to PSU SportsTrack?{' '}
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode('register')}
+                    className="text-orange-500 hover:text-orange-400 hover:underline font-bold transition-colors ml-1 cursor-pointer"
+                  >
+                    Create Account
+                  </button>
+                </>
+              ) : (
+                <>
+                  Already have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode('login')}
+                    className="text-orange-500 hover:text-orange-400 hover:underline font-bold transition-colors ml-1 cursor-pointer"
+                  >
+                    Sign In
+                  </button>
+                </>
+              )}
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
 
-              <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-white leading-tight mb-3 sm:mb-4">
-                Digital Arena for <span className="text-orange-500">PSU Athletics</span> &amp; Competitions
-              </h3>
-
-              <p className="text-slate-400 text-xs sm:text-sm font-normal leading-relaxed mb-6 sm:mb-8">
-                PSU SportsTrack connects student-athletes, coaches, and university athletic administrators in an integrated digital hub for campus sports, live scores, and official tournament records.
-              </p>
-
-              {/* Website Info Cards */}
-              <div className="space-y-3 sm:space-y-4">
-                <div className="flex items-start gap-3.5 p-4 sm:p-5 rounded-2xl bg-slate-950/80 border border-white/5 transition-colors">
-                  <div className="size-9 rounded-lg border border-orange-500/30 bg-orange-500/10 text-orange-400 flex items-center justify-center shrink-0">
-                    <Activity className="size-4" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-xs sm:text-sm text-white tracking-normal">
-                      Live Matchroom &amp; Real-Time Tracking
-                    </h4>
-                    <p className="text-[11px] sm:text-xs text-slate-400 font-normal mt-0.5 leading-relaxed">
-                      Instant point scoring, live referee play-by-play events, and public leaderboard streams across all campus disciplines.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3.5 p-4 sm:p-5 rounded-2xl bg-slate-950/80 border border-white/5 transition-colors">
-                  <div className="size-9 rounded-lg border border-orange-500/30 bg-orange-500/10 text-orange-400 flex items-center justify-center shrink-0">
-                    <Trophy className="size-4" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-xs sm:text-sm text-white tracking-normal">
-                      Tournament Arena &amp; Bracket Seeding
-                    </h4>
-                    <p className="text-[11px] sm:text-xs text-slate-400 font-normal mt-0.5 leading-relaxed">
-                      Automated single-elimination trees, round-robin pools, match venue slotting, and official admin result verification.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3.5 p-4 sm:p-5 rounded-2xl bg-slate-950/80 border border-white/5 transition-colors">
-                  <div className="size-9 rounded-lg border border-orange-500/30 bg-orange-500/10 text-orange-400 flex items-center justify-center shrink-0">
-                    <Star className="size-4" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-xs sm:text-sm text-white tracking-normal">
-                      Roster Verification &amp; Hall of Fame MVPs
-                    </h4>
-                    <p className="text-[11px] sm:text-xs text-slate-400 font-normal mt-0.5 leading-relaxed">
-                      Verified team application screening, eligibility badges, and Gold/Red Star MVP honors on athlete profiles.
-                    </p>
-                  </div>
-                </div>
-              </div>
+      {/* Terms & Conditions Draft Modal */}
+      <Dialog open={showTermsModal} onOpenChange={setShowTermsModal}>
+        <DialogContent className="max-w-[92vw] sm:max-w-lg rounded-2xl sm:rounded-3xl p-6 bg-slate-950 text-white border border-white/10 max-h-[85vh] overflow-y-auto">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="size-2 rounded-full bg-orange-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-orange-400">Governance Draft</span>
             </div>
-
-            {/* Bottom Info Badges */}
-            <div className="flex flex-wrap items-center gap-2.5 pt-4 sm:pt-6 mt-6 sm:mt-8 border-t border-white/5">
-              <span className="px-3 py-1.5 bg-white/[0.04] border border-white/10 rounded-lg text-xs font-medium text-slate-300 flex items-center gap-2 select-none">
-                <CheckCircle2 className="size-3.5 text-slate-400" /> Real-time Scores
-              </span>
-              <span className="px-3 py-1.5 bg-white/[0.04] border border-white/10 rounded-lg text-xs font-medium text-slate-300 flex items-center gap-2 select-none">
-                <ShieldCheck className="size-3.5 text-slate-400" /> Verified PSU Athletes
-              </span>
-              <span className="px-3 py-1.5 bg-white/[0.04] border border-white/10 rounded-lg text-xs font-medium text-slate-300 flex items-center gap-2 select-none">
-                <Sparkles className="size-3.5 text-slate-400" /> Official Brackets
-              </span>
+            <DialogTitle className="text-xl sm:text-2xl font-black italic uppercase tracking-tight text-white">
+              Terms &amp; Conditions
+            </DialogTitle>
+            <div className="text-slate-300 text-xs sm:text-sm space-y-3 leading-relaxed border-t border-white/10 pt-3">
+              <p>
+                <strong>1. Acceptance of Terms:</strong> By registering and using PSU SportsTrack, student-athletes, coaches, and university officials agree to abide by the university athletic policies and student code of conduct.
+              </p>
+              <p>
+                <strong>2. Academic &amp; Athletic Eligibility:</strong> All registered participants must be officially enrolled or employed at Palawan State University and maintain university athletic eligibility standards.
+              </p>
+              <p>
+                <strong>3. Sportsmanship &amp; Integrity:</strong> Foul play, falsification of game statistics, or unsportsmanlike behavior will result in disqualification from university tournaments.
+              </p>
+              <p className="text-[11px] text-slate-500 italic pt-2 border-t border-white/5">
+                Note: Official legal terms are currently being drafted by the Palawan State University Sports Governance Board.
+              </p>
+            </div>
+            <div className="pt-2 flex justify-end">
+              <Button 
+                onClick={() => setShowTermsModal(false)}
+                className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs h-9 px-4 rounded-xl"
+              >
+                Close
+              </Button>
             </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      {/* Privacy Policy Draft Modal */}
+      <Dialog open={showPrivacyModal} onOpenChange={setShowPrivacyModal}>
+        <DialogContent className="max-w-[92vw] sm:max-w-lg rounded-2xl sm:rounded-3xl p-6 bg-slate-950 text-white border border-white/10 max-h-[85vh] overflow-y-auto">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="size-2 rounded-full bg-orange-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-orange-400">Data Privacy Notice</span>
+            </div>
+            <DialogTitle className="text-xl sm:text-2xl font-black italic uppercase tracking-tight text-white">
+              Privacy Policy
+            </DialogTitle>
+            <div className="text-slate-300 text-xs sm:text-sm space-y-3 leading-relaxed border-t border-white/10 pt-3">
+              <p>
+                <strong>1. Information We Collect:</strong> We collect student/faculty names, institutional email addresses, campus colleges, and athletic performance records for the purpose of tournament management.
+              </p>
+              <p>
+                <strong>2. Use of Information:</strong> Profile information and match statistics are displayed publicly across leaderboards, tournament rosters, and official match records.
+              </p>
+              <p>
+                <strong>3. Data Security:</strong> University credentials and account data are secured in accordance with PSU IT data governance standards. We do not share personal information with unauthorized third parties.
+              </p>
+              <p className="text-[11px] text-slate-500 italic pt-2 border-t border-white/5">
+                Note: Official privacy policy details are currently being drafted in accordance with university compliance requirements.
+              </p>
+            </div>
+            <div className="pt-2 flex justify-end">
+              <Button 
+                onClick={() => setShowPrivacyModal(false)}
+                className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs h-9 px-4 rounded-xl"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };

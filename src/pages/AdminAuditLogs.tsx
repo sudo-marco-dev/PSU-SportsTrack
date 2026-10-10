@@ -33,15 +33,9 @@ export const AdminAuditLogs = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [timeFilter, setTimeFilter] = useState('all');
 
-  useEffect(() => {
-    fetchLogs();
-  }, []);
-
   const fetchLogs = async () => {
     setIsLoading(true);
-    // Joining with users table to get admin names
-    // Note: in audit_logs admin_id references auth.users. 
-    // We assume there's a public.users table with the same IDs.
+    // admin_id in audit_logs references public.users which mirrors auth.users IDs
     const { data, error } = await supabase
       .from('audit_logs')
       .select(`
@@ -55,10 +49,15 @@ export const AdminAuditLogs = () => {
     if (error) {
       toast.error('Failed to fetch audit logs: ' + error.message);
     } else {
-      setLogs(data as any);
+      setLogs((data ?? []) as AuditLog[]);
     }
     setIsLoading(false);
   };
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- data-fetch-on-mount pattern
+  useEffect(() => {
+    fetchLogs();
+  }, []);
 
   const filteredLogs = logs.filter(log => {
     // 1. Text Search Filter
@@ -103,7 +102,7 @@ export const AdminAuditLogs = () => {
               Administrative Audit
             </span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-sans font-black tracking-tight uppercase leading-tight">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
             SYSTEM <span className="text-orange-500">AUDIT TRAIL</span>
           </h1>
           <p className="text-slate-400 font-sans font-medium text-sm tracking-wide mt-2 max-w-2xl opacity-80">
@@ -189,7 +188,7 @@ export const AdminAuditLogs = () => {
                   <TableCell className="pl-8 py-5">
                     <div className="flex items-center gap-2 text-slate-500">
                       <Clock className="size-3" />
-                      <span className="text-[11px] font-bold">
+                      <span className="text-[11px] font-mono font-bold tabular-nums">
                         {new Date(log.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                       </span>
                     </div>

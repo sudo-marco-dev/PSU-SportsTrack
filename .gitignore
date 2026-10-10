@@ -41,3 +41,6 @@ supabase/.temp/
 
 # Antigravity Agents
 .agents/
+
+# Agent tooling artifacts
+skills-lock.json

@@ -38,7 +38,7 @@ export async function resetDemoState(supabase: SupabaseClient): Promise<{
       await supabase.from('matches').update({ next_match_id: null }).eq('tournament_id', tournamentId);
       try {
         await supabase.from('matches').update({ loser_next_match_id: null }).eq('tournament_id', tournamentId);
-      } catch (_) {}
+      } catch { /* loser_next_match_id column may not exist yet — skip gracefully */ }
 
       const { data: oldMatches } = await supabase.from('matches').select('id').eq('tournament_id', tournamentId);
       if (oldMatches && oldMatches.length > 0) {
@@ -179,10 +179,10 @@ export async function resetDemoState(supabase: SupabaseClient): Promise<{
       tournamentId,
       liveMatchId: sf1Match.id
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     return {
       success: false,
-      error: err.message || 'Unknown error occurred while resetting demo'
+      error: err instanceof Error ? err.message : 'Unknown error occurred while resetting demo'
     };
   }
 }

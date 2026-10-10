@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Users, UserPlus, ClipboardList, Star } from 'lucide-react';
+import { Users, UserPlus, ClipboardList, Star, AlertTriangle, Zap, Circle } from 'lucide-react';
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
 
@@ -83,8 +83,6 @@ export const TeamManagement = () => {
   const [manageRosterTeamId, setManageRosterTeamId] = useState<string | null>(null);
   const [rosterMembers, setRosterMembers] = useState<RosterMember[]>([]);
   const [isLoadingRoster, setIsLoadingRoster] = useState(false);
-  const [editingJerseyId, setEditingJerseyId] = useState<string | null>(null);
-  const [editingJerseyNum, setEditingJerseyNum] = useState<string>('');
 
   useEffect(() => {
     if (user?.id) {
@@ -130,7 +128,11 @@ export const TeamManagement = () => {
   };
 
   const fetchTournaments = async () => {
-    const { data } = await supabase.from('tournaments').select('id, name, sport, status').eq('status', 'Draft');
+    const { data } = await supabase
+      .from('tournaments')
+      .select('id, name, sport, status')
+      .eq('status', 'Draft')
+      .or('is_deleted.is.null,is_deleted.eq.false');
     if (data) setTournaments(data as Tournament[]);
   };
 
@@ -220,48 +222,34 @@ export const TeamManagement = () => {
 
   const fetchRosterMembers = async (teamId: string) => {
     setIsLoadingRoster(true);
-    
-    // Attempt query with extended game-day lineup columns
     const { data, error } = await supabase
       .from('team_roster')
       .select('id, status, player_id, jersey_number, position, is_captain, is_starter, availability_status, users(full_name, colleges(college_name))')
       .eq('team_id', teamId);
 
-    if (error && error.code === '42703') {
-      // Graceful fallback if full migration columns are still pending in Supabase
-      const { data: fallbackData, error: fallbackError } = await supabase
-        .from('team_roster')
-        .select('id, status, player_id, jersey_number, users(full_name, colleges(college_name))')
-        .eq('team_id', teamId);
-
-      if (!fallbackError && fallbackData) {
-        setRosterMembers((fallbackData as unknown) as RosterMember[]);
-      }
-    } else if (!error && data) {
-      setRosterMembers((data as unknown) as RosterMember[]);
-    } else if (error) {
+    if (error) {
       toast.error('Failed to load roster: ' + error.message);
+    } else if (data) {
+      setRosterMembers((data as unknown) as RosterMember[]);
     }
     setIsLoadingRoster(false);
   };
 
   const handleUpdateRosterMember = async (rosterId: string, updates: Record<string, any>) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('team_roster')
         .update(updates)
-        .eq('id', rosterId);
+        .eq('id', rosterId)
+        .select();
 
       if (error) {
-        if (error.code === '42703') {
-          // If only jersey_number column exists, update only jersey_number
-          if ('jersey_number' in updates) {
-            await supabase.from('team_roster').update({ jersey_number: updates.jersey_number }).eq('id', rosterId);
-          }
-        } else {
-          toast.error('Failed to update roster: ' + error.message);
-          return;
-        }
+        toast.error('Failed to update roster: ' + error.message);
+        return;
+      }
+      if (!data || data.length === 0) {
+        toast.error('Unable to update roster: Permission denied or record not found.');
+        return;
       }
       toast.success('Roster details updated.');
       setRosterMembers(prev => prev.map(m => m.id === rosterId ? { ...m, ...updates } : m));
@@ -274,7 +262,6 @@ export const TeamManagement = () => {
     const trimmed = value.trim();
     if (!trimmed) {
       await handleUpdateRosterMember(rosterId, { jersey_number: null });
-      setEditingJerseyId(null);
       return;
     }
     const num = parseInt(trimmed, 10);
@@ -283,7 +270,6 @@ export const TeamManagement = () => {
       return;
     }
     await handleUpdateRosterMember(rosterId, { jersey_number: num });
-    setEditingJerseyId(null);
   };
 
   const handleToggleCaptain = async (member: RosterMember) => {
@@ -345,7 +331,7 @@ export const TeamManagement = () => {
                 Team Management
               </span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-sans font-black tracking-tight uppercase leading-tight">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
               ROSTER & <span className="text-orange-500">RECRUITMENT</span>
             </h1>
             <p className="text-slate-400 font-sans font-medium text-sm tracking-wide mt-2 max-w-2xl opacity-80">
@@ -355,53 +341,53 @@ export const TeamManagement = () => {
           <div className="flex gap-4 relative z-10">
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger render={
-                <Button size="lg" className="h-14 bg-orange-500 hover:bg-orange-600 text-white font-black gap-2 px-8 rounded-xl shadow-xl shadow-orange-500/20 uppercase italic tracking-wider transition-all hover:scale-[1.02] active:scale-95 group">
+                <Button size="lg" className="h-12 sm:h-14 bg-orange-500 hover:bg-orange-600 text-white font-black gap-2 px-6 sm:px-8 rounded-xl shadow-xl shadow-orange-500/20 uppercase italic tracking-wider transition-all hover:scale-[1.02] active:scale-95 group">
                   <UserPlus className="size-5 group-hover:rotate-12 transition-transform duration-300" />
-                  <span className="text-base">New Team</span>
+                  <span className="text-sm sm:text-base">New Team</span>
                 </Button>
               } />
-              <DialogContent className="max-w-md rounded-[2rem] p-8">
-                <DialogHeader>
-                  <DialogTitle className="text-3xl font-black italic uppercase tracking-tighter">Form <span className="text-orange-500">New Team</span></DialogTitle>
-                  <DialogDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-2">
+              <DialogContent className="w-full sm:max-w-md max-w-[95vw] rounded-3xl p-6 sm:p-8 overflow-hidden">
+                <DialogHeader className="min-w-0">
+                  <DialogTitle className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter truncate">Form <span className="text-orange-500">New Team</span></DialogTitle>
+                  <DialogDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-1">
                     Enroll your squad into an official tournament.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-6 py-6">
-                  <div className="space-y-3">
+                <div className="space-y-4 py-4 min-w-0">
+                  <div className="space-y-2 min-w-0">
                     <label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">Team Identity</label>
                     <Input
                       placeholder="e.g., PSU Tigers"
                       value={newTeamName}
                       onChange={(e) => setNewTeamName(e.target.value)}
-                      className="h-14 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-2xl font-bold"
+                      className="h-12 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-xl font-bold px-3"
                     />
                   </div>
-                  <div className="space-y-3">
-                    <label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1 flex items-center gap-1.5">
+                  <div className="space-y-2 min-w-0">
+                    <label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1 flex items-center gap-1.5 flex-wrap">
                       <span className="inline-flex px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 font-black text-[8px] uppercase tracking-wider border border-orange-500/20">Registration Open</span>
-                      Target Tournament (Draft Phase Only)
+                      <span>Target Tournament (Draft Phase)</span>
                     </label>
                     {tournaments.length === 0 ? (
-                      <div className="h-14 flex items-center gap-3 px-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-400 text-sm font-medium">
-                        <span className="text-orange-500">⚠</span>
-                        No draft tournaments available for registration right now.
+                      <div className="h-12 flex items-center gap-3 px-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-400 text-xs font-medium">
+                        <AlertTriangle className="size-4 text-orange-500 shrink-0" />
+                        <span>No draft tournaments available right now.</span>
                       </div>
                     ) : (
                       <Select value={selectedTournament} onValueChange={(val) => setSelectedTournament(val || '')}>
-                        <SelectTrigger className="h-14 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-2xl font-bold">
-                          <SelectValue placeholder="Select a tournament (Registration Open)">
+                        <SelectTrigger className="h-12 w-full min-w-0 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-xl font-bold px-3">
+                          <SelectValue placeholder="Select a tournament">
                             {selectedTournament && (() => {
                               const tournament = (tournaments || []).find(t => t.id === selectedTournament);
                               return tournament ? `${tournament.name}${tournament.sport ? ` (${tournament.sport})` : ''}` : selectedTournament;
                             })()}
                           </SelectValue>
                         </SelectTrigger>
-                        <SelectContent className="rounded-2xl">
+                        <SelectContent className="rounded-xl max-w-[calc(100vw-3rem)] sm:max-w-md">
                           {tournaments.map((tournament) => (
-                            <SelectItem key={tournament.id} value={tournament.id} className="rounded-xl">
-                              <div className="flex flex-col gap-0.5">
-                                <span className="font-black text-sm">{tournament.name}</span>
+                            <SelectItem key={tournament.id} value={tournament.id} className="rounded-lg">
+                              <div className="flex flex-col gap-0.5 min-w-0">
+                                <span className="font-black text-sm truncate">{tournament.name}</span>
                                 {tournament.sport && <span className="text-[10px] text-slate-400 font-medium">{tournament.sport} • Registration Open</span>}
                               </div>
                             </SelectItem>
@@ -411,9 +397,9 @@ export const TeamManagement = () => {
                     )}
                   </div>
                 </div>
-                <DialogFooter className="gap-3 pt-4">
-                  <Button variant="ghost" onClick={() => setIsCreateOpen(false)} className="h-14 rounded-2xl font-black uppercase tracking-widest text-xs">Cancel</Button>
-                  <Button onClick={handleCreateTeam} className="h-14 flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-black uppercase italic tracking-[0.1em]">Launch Team</Button>
+                <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 pt-2">
+                  <Button variant="ghost" onClick={() => setIsCreateOpen(false)} className="h-11 sm:h-12 rounded-xl font-black uppercase tracking-wider text-xs">Cancel</Button>
+                  <Button onClick={handleCreateTeam} className="h-11 sm:h-12 flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-black uppercase italic tracking-wider text-xs sm:text-sm shadow-md shadow-orange-500/20">Launch Team</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -470,32 +456,34 @@ export const TeamManagement = () => {
           ) : viewMode === 'grid' ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredTeams.map((team, idx) => (
-                <Card key={team.id} className="group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl rounded-3xl overflow-hidden border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: `${idx * 50}ms` }}>
-                  <div className={`h-2 w-full ${team.status === 'Approved' ? 'bg-emerald-500' : 'bg-orange-500'}`} />
-                  <CardHeader className="p-8 pb-4">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="p-2 bg-slate-50 dark:bg-white/5 rounded-xl group-hover:bg-orange-500 transition-colors duration-500">
-                        <Users className="size-5 text-slate-400 group-hover:text-white transition-colors duration-500" />
+                <Card key={team.id} className="group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl rounded-3xl overflow-hidden border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 animate-in fade-in slide-in-from-bottom-4 flex flex-col justify-between min-w-0" style={{ animationDelay: `${idx * 50}ms` }}>
+                  <div className="min-w-0">
+                    <div className={`h-2 w-full ${team.status === 'Approved' ? 'bg-emerald-500' : 'bg-orange-500'}`} />
+                    <CardHeader className="p-5 sm:p-6 pb-2 min-w-0">
+                      <div className="flex justify-between items-start mb-3 gap-2">
+                        <div className="p-2 bg-slate-50 dark:bg-white/5 rounded-xl group-hover:bg-orange-500 transition-colors duration-500 shrink-0">
+                          <Users className="size-5 text-slate-400 group-hover:text-white transition-colors duration-500" />
+                        </div>
+                        <Badge className={`${team.status === 'Approved' ? 'bg-emerald-500' : 'bg-orange-500'} text-[10px] font-black uppercase tracking-widest py-1 px-3 rounded-full shadow-lg shrink-0`}>
+                          {team.status}
+                        </Badge>
                       </div>
-                      <Badge className={`${team.status === 'Approved' ? 'bg-emerald-500' : 'bg-orange-500'} text-[10px] font-black uppercase tracking-widest py-1 px-3 rounded-full shadow-lg`}>
-                        {team.status}
-                      </Badge>
-                    </div>
-                    <CardTitle className="text-2xl font-black italic uppercase tracking-tighter group-hover:text-orange-500 transition-colors">{team.name}</CardTitle>
-                    <CardDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-1 flex items-center gap-2">
-                      <span>{team.tournaments?.name}</span>
-                      {team.tournaments?.sport && (
-                        <>
-                          <span className="text-slate-300">•</span>
-                          <span className="text-orange-500">{team.tournaments.sport}</span>
-                        </>
-                      )}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-8 pt-4">
+                      <CardTitle className="text-xl sm:text-2xl font-black italic uppercase tracking-tighter group-hover:text-orange-500 transition-colors truncate" title={team.name}>{team.name}</CardTitle>
+                      <CardDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-1 flex items-center gap-2 truncate">
+                        <span className="truncate">{team.tournaments?.name}</span>
+                        {team.tournaments?.sport && (
+                          <>
+                            <span className="text-slate-300">•</span>
+                            <span className="text-orange-500 shrink-0">{team.tournaments.sport}</span>
+                          </>
+                        )}
+                      </CardDescription>
+                    </CardHeader>
+                  </div>
+                  <CardContent className="p-5 sm:p-6 pt-3 mt-auto min-w-0">
                     <Button
                       variant="outline"
-                      className="w-full h-14 rounded-2xl font-black uppercase italic tracking-[0.1em] border-2 border-slate-100 dark:border-white/5 hover:bg-orange-50 dark:hover:bg-orange-500/10 hover:border-orange-500/50 transition-all duration-300"
+                      className="w-full h-12 rounded-xl font-black uppercase italic tracking-wider border-2 border-slate-100 dark:border-white/5 hover:bg-orange-50 dark:hover:bg-orange-500/10 hover:border-orange-500/50 transition-all duration-300"
                       onClick={() => {
                         setManageRosterTeamId(team.id);
                         fetchRosterMembers(team.id);
@@ -568,30 +556,33 @@ export const TeamManagement = () => {
           ) : viewMode === 'grid' ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredPlayers.map((player, idx) => (
-                <Card key={player.id} className="group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl rounded-3xl overflow-hidden border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: `${idx * 50}ms` }}>
-                  <CardHeader className="p-8 pb-4">
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="size-12 bg-slate-50 dark:bg-white/5 rounded-2xl flex items-center justify-center font-black text-slate-400 group-hover:bg-orange-500 group-hover:text-white transition-all duration-500">
-                        {player.full_name.charAt(0)}
+                <Card key={player.id} className="group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl rounded-3xl overflow-hidden border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 animate-in fade-in slide-in-from-bottom-4 flex flex-col justify-between min-w-0" style={{ animationDelay: `${idx * 50}ms` }}>
+                  <div className="min-w-0">
+                    <CardHeader className="p-5 sm:p-6 pb-2 min-w-0">
+                      <div className="flex items-center gap-3.5 mb-3.5 min-w-0">
+                        <div className="size-11 sm:size-12 bg-slate-50 dark:bg-white/5 rounded-2xl flex items-center justify-center font-black text-slate-400 group-hover:bg-orange-500 group-hover:text-white transition-all duration-500 shrink-0 shadow-sm">
+                          {player.full_name.charAt(0)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <CardTitle className="text-lg sm:text-xl font-black italic uppercase tracking-tighter truncate group-hover:text-orange-500 transition-colors" title={player.full_name}>{player.full_name}</CardTitle>
+                          <CardDescription className="font-bold text-orange-500 uppercase text-[9px] tracking-[0.2em] mt-0.5 truncate">Verified Athlete</CardDescription>
+                        </div>
                       </div>
-                      <div>
-                        <CardTitle className="text-xl font-black italic uppercase tracking-tighter group-hover:text-orange-500 transition-colors">{player.full_name}</CardTitle>
-                        <CardDescription className="font-bold text-orange-500 uppercase text-[9px] tracking-[0.2em] mt-0.5">Verified Athlete</CardDescription>
+                      <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-3 sm:p-3.5 border border-slate-100 dark:border-white/5 min-w-0">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 italic">University</p>
+                        <p className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 truncate" title={Array.isArray(player.colleges) ? player.colleges[0]?.college_name : player.colleges?.college_name || 'N/A'}>
+                          {Array.isArray(player.colleges) ? player.colleges[0]?.college_name : player.colleges?.college_name || 'N/A'}
+                        </p>
                       </div>
-                    </div>
-                    <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-4 border border-slate-100 dark:border-white/5">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 italic">University</p>
-                      <p className="text-sm font-bold text-slate-700 dark:text-slate-300 truncate">
-                        {Array.isArray(player.colleges) ? player.colleges[0]?.college_name : player.colleges?.college_name || 'N/A'}
-                      </p>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-8 pt-4">
+                    </CardHeader>
+                  </div>
+                  <CardContent className="p-5 sm:p-6 pt-3 mt-auto min-w-0">
                     <Button
-                      className="w-full h-14 bg-slate-900 hover:bg-orange-500 text-white font-black uppercase italic tracking-[0.1em] rounded-2xl shadow-xl transition-all duration-300"
+                      className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider rounded-xl shadow-md shadow-orange-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                       onClick={() => setInvitePlayerId(player.id)}
                     >
-                      Recruit Athlete
+                      <UserPlus className="size-4" />
+                      <span>Recruit Athlete</span>
                     </Button>
                   </CardContent>
                 </Card>
@@ -644,12 +635,12 @@ export const TeamManagement = () => {
 
       {/* Dialogs */}
       <Dialog open={!!manageRosterTeamId} onOpenChange={(open) => !open && setManageRosterTeamId(null)}>
-        <DialogContent className="max-w-2xl rounded-[2rem] p-8">
-          <DialogHeader>
-            <DialogTitle className="text-3xl font-black italic uppercase tracking-tighter">Manage <span className="text-orange-500">Roster</span></DialogTitle>
-            <DialogDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-2">View and manage players invited to this team.</DialogDescription>
+        <DialogContent className="w-full sm:max-w-2xl max-w-[95vw] max-h-[88dvh] overflow-hidden rounded-3xl p-5 sm:p-8 flex flex-col min-w-0">
+          <DialogHeader className="min-w-0">
+            <DialogTitle className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter truncate">Manage <span className="text-orange-500">Roster</span></DialogTitle>
+            <DialogDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-1">View and manage players invited to this team.</DialogDescription>
           </DialogHeader>
-          <div className="py-6 max-h-[60vh] overflow-y-auto pr-2 scrollbar-hide">
+          <div className="py-4 max-h-[60vh] overflow-y-auto overflow-x-hidden pr-1 scrollbar-hide min-w-0 flex-1">
             {isLoadingRoster ? (
               <p className="text-center py-8 text-slate-400 font-bold uppercase tracking-widest text-xs animate-pulse">Retrieving Roster...</p>
             ) : rosterMembers.length === 0 ? (
@@ -657,7 +648,7 @@ export const TeamManagement = () => {
                 <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No players on roster yet.</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3.5 min-w-0">
                 {rosterMembers.map((member) => {
                   const colleges = Array.isArray(member.users)
                     ? member.users[0]?.colleges
@@ -667,29 +658,29 @@ export const TeamManagement = () => {
                     : colleges?.college_name || 'N/A';
 
                   return (
-                    <div key={member.id} className="p-5 border-2 border-slate-100 dark:border-white/5 rounded-2xl bg-white dark:bg-slate-900 group hover:border-orange-500/30 transition-all duration-300 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="size-10 rounded-xl bg-slate-50 dark:bg-white/5 flex items-center justify-center font-black text-slate-500 group-hover:bg-orange-500 group-hover:text-white transition-all">
-                            {(Array.isArray(member.users) ? member.users[0]?.full_name : member.users?.full_name || '?')[0]}
+                    <div key={member.id} className="p-4 sm:p-5 border-2 border-slate-100 dark:border-white/5 rounded-2xl bg-white dark:bg-slate-900 group hover:border-orange-500/30 transition-all duration-300 space-y-3 min-w-0">
+                      <div className="flex items-center justify-between gap-3 min-w-0">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="size-10 rounded-xl bg-slate-50 dark:bg-white/5 flex items-center justify-center font-black text-slate-500 group-hover:bg-orange-500 group-hover:text-white transition-all shrink-0">
+                            {((Array.isArray(member.users) ? member.users[0]?.full_name : member.users?.full_name) || '?')[0]}
                           </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-black italic uppercase tracking-tighter text-lg leading-none">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap min-w-0">
+                              <span className="font-black italic uppercase tracking-tighter text-base sm:text-lg leading-none truncate max-w-full">
                                 {Array.isArray(member.users) ? member.users[0]?.full_name : member.users?.full_name || 'Unknown Player'}
                               </span>
                               {member.is_captain && (
-                                <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[9px] font-black uppercase px-2 py-0 gap-1">
+                                <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[9px] font-black uppercase px-2 py-0 gap-1 shrink-0">
                                   <Star className="size-2.5 fill-amber-500" /> Captain
                                 </Badge>
                               )}
                             </div>
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{collegeName}</span>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap min-w-0">
+                              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider truncate max-w-[200px]">{collegeName}</span>
                               <span className="text-slate-300">•</span>
                               <Badge
                                 variant={member.status === 'Approved' ? 'default' : 'secondary'}
-                                className="text-[9px] font-black uppercase px-2 py-0"
+                                className="text-[9px] font-black uppercase px-2 py-0 shrink-0"
                               >
                                 {member.status}
                               </Badge>
@@ -699,7 +690,7 @@ export const TeamManagement = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-destructive font-black uppercase text-[10px] tracking-widest hover:bg-destructive/10 h-8 px-3 rounded-xl"
+                          className="text-destructive font-black uppercase text-[10px] tracking-widest hover:bg-destructive/10 h-8 px-2.5 rounded-xl shrink-0"
                           onClick={() => handleRemoveFromRoster(member.id)}
                         >
                           Remove
@@ -707,72 +698,74 @@ export const TeamManagement = () => {
                       </div>
 
                       {/* Coach Game-Day Lineup & Jersey Operations Row */}
-                      <div className="pt-3 border-t border-slate-100 dark:border-white/5 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50 dark:bg-white/[0.02] -mx-5 -mb-5 p-4 rounded-b-2xl">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {/* Jersey Number Assignment */}
-                          {editingJerseyId === member.id ? (
-                            <div className="flex items-center gap-1">
-                              <span className="text-xs font-black text-slate-400">#</span>
-                              <Input
-                                type="number"
-                                min="0"
-                                max="99"
-                                className="w-16 h-8 text-center text-xs font-black p-1 bg-white dark:bg-slate-950"
-                                value={editingJerseyNum}
-                                onChange={(e) => setEditingJerseyNum(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') handleSaveJersey(member.id, editingJerseyNum);
-                                  if (e.key === 'Escape') setEditingJerseyId(null);
-                                }}
-                                autoFocus
-                              />
-                              <Button size="sm" className="h-8 px-2 text-xs bg-orange-500 hover:bg-orange-600 text-white font-bold" onClick={() => handleSaveJersey(member.id, editingJerseyNum)}>Save</Button>
-                            </div>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 px-2.5 rounded-lg text-xs font-black border-slate-200 dark:border-white/10 hover:border-orange-500 gap-1 bg-white dark:bg-slate-900"
-                              onClick={() => {
-                                setEditingJerseyId(member.id);
-                                setEditingJerseyNum(member.jersey_number ? String(member.jersey_number) : '');
+                      <div className="pt-3 border-t border-slate-100 dark:border-white/5 flex flex-wrap items-center justify-between gap-2.5 bg-slate-50/50 dark:bg-white/[0.02] -mx-4 sm:-mx-5 -mb-4 sm:-mb-5 p-3.5 sm:p-4 rounded-b-2xl min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap min-w-0">
+                          {/* Stable Fixed-Width Jersey Number Input Badge - Zero Layout Shift */}
+                          <div
+                            className="h-8 w-20 shrink-0 flex items-center px-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 focus-within:border-orange-500 focus-within:ring-1 focus-within:ring-orange-500/30 transition-all shadow-sm"
+                            title="Assign Jersey Number (0-99, press Enter or click outside to save)"
+                          >
+                            <span className="text-xs font-black text-slate-400 select-none mr-1">#</span>
+                            <input
+                              type="number"
+                              min="0"
+                              max="99"
+                              placeholder="--"
+                              className="w-full bg-transparent text-xs font-black text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none p-0 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              defaultValue={member.jersey_number ?? ''}
+                              key={`jersey-${member.id}-${member.jersey_number}`}
+                              onBlur={(e) => {
+                                const val = e.target.value.trim();
+                                if (!val && member.jersey_number !== null) {
+                                  handleSaveJersey(member.id, '');
+                                } else if (val && parseInt(val, 10) !== member.jersey_number) {
+                                  handleSaveJersey(member.id, val);
+                                }
                               }}
-                              title="Click to assign Jersey #"
-                            >
-                              <span className="text-slate-400">#</span>
-                              <span>{member.jersey_number ?? '--'}</span>
-                            </Button>
-                          )}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  (e.target as HTMLInputElement).blur();
+                                }
+                              }}
+                            />
+                          </div>
 
                           {/* Captaincy Toggle */}
                           <Button
                             size="sm"
                             variant="outline"
-                            className={`h-8 px-2.5 rounded-lg text-xs font-bold gap-1 bg-white dark:bg-slate-900 ${member.is_captain ? 'bg-amber-500/10 text-amber-600 border-amber-500/40' : 'text-slate-400'}`}
+                            className={`h-8 px-2.5 rounded-lg text-xs font-bold gap-1 bg-white dark:bg-slate-900 shrink-0 transition-all ${member.is_captain ? 'bg-amber-500/10 text-amber-600 border-amber-500/40 font-black' : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
                             onClick={() => handleToggleCaptain(member)}
                             title="Toggle Team Captaincy"
                           >
                             <Star className={`size-3 ${member.is_captain ? 'fill-amber-500 text-amber-500' : ''}`} />
-                            {member.is_captain ? 'Captain' : 'Captain'}
+                            <span>Captain</span>
                           </Button>
 
                           {/* Starters Toggle */}
                           <Button
                             size="sm"
                             variant="outline"
-                            className={`h-8 px-2.5 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 ${member.is_starter ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/40 font-black' : 'text-slate-400'}`}
+                            className={`h-8 px-2.5 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 shrink-0 transition-all ${member.is_starter ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/40 font-black' : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
                             onClick={() => handleToggleStarter(member)}
                             title="Toggle Starter vs Bench"
                           >
-                            {member.is_starter ? '⚡ Starter' : 'Bench'}
+                            {member.is_starter ? (
+                              <span className="inline-flex items-center gap-1">
+                                <Zap className="size-3 fill-emerald-500 text-emerald-500" />
+                                <span>Starter</span>
+                              </span>
+                            ) : (
+                              'Bench'
+                            )}
                           </Button>
 
                           {/* Position Selector */}
                           <Select value={member.position || 'Player'} onValueChange={(val) => val && handleUpdatePosition(member.id, val)}>
-                            <SelectTrigger className="h-8 w-24 text-xs font-bold rounded-lg border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900">
+                            <SelectTrigger className="h-8 w-24 min-w-[6rem] text-xs font-bold rounded-lg border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 shrink-0">
                               <SelectValue placeholder="Position" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="rounded-xl">
                               <SelectItem value="PG">PG</SelectItem>
                               <SelectItem value="SG">SG</SelectItem>
                               <SelectItem value="SF">SF</SelectItem>
@@ -791,17 +784,37 @@ export const TeamManagement = () => {
                         </div>
 
                         {/* Availability Selector */}
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                           <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Status:</span>
                           <Select value={member.availability_status || 'active'} onValueChange={(val) => val && handleUpdateAvailability(member.id, val)}>
-                            <SelectTrigger className={`h-8 w-28 text-xs font-bold rounded-lg border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 ${member.availability_status === 'injured' ? 'text-red-500 font-black' : member.availability_status === 'benched' ? 'text-amber-500 font-bold' : 'text-emerald-600 font-bold'}`}>
+                            <SelectTrigger className={`h-8 w-28 min-w-[7rem] text-xs font-bold rounded-lg border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 ${member.availability_status === 'injured' ? 'text-red-500 font-black' : member.availability_status === 'benched' ? 'text-amber-500 font-bold' : 'text-emerald-600 font-bold'}`}>
                               <SelectValue placeholder="Status" />
                             </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="active">🟢 Active</SelectItem>
-                              <SelectItem value="benched">🟡 Benched</SelectItem>
-                              <SelectItem value="injured">🔴 Injured</SelectItem>
-                              <SelectItem value="excused">⚪ Excused</SelectItem>
+                            <SelectContent className="rounded-xl">
+                              <SelectItem value="active">
+                                <span className="inline-flex items-center gap-1.5">
+                                  <Circle className="size-2 fill-emerald-500 text-emerald-500" />
+                                  <span>Active</span>
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="benched">
+                                <span className="inline-flex items-center gap-1.5">
+                                  <Circle className="size-2 fill-amber-500 text-amber-500" />
+                                  <span>Benched</span>
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="injured">
+                                <span className="inline-flex items-center gap-1.5">
+                                  <Circle className="size-2 fill-red-500 text-red-500" />
+                                  <span>Injured</span>
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="excused">
+                                <span className="inline-flex items-center gap-1.5">
+                                  <Circle className="size-2 fill-slate-400 text-slate-400" />
+                                  <span>Excused</span>
+                                </span>
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -812,47 +825,45 @@ export const TeamManagement = () => {
               </div>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setManageRosterTeamId(null)} className="h-14 w-full rounded-2xl font-black uppercase tracking-widest text-xs">Close</Button>
+          <DialogFooter className="pt-3">
+            <Button variant="ghost" onClick={() => setManageRosterTeamId(null)} className="h-11 sm:h-12 w-full rounded-xl font-black uppercase tracking-wider text-xs">Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!invitePlayerId} onOpenChange={(open) => !open && setInvitePlayerId(null)}>
-        <DialogContent className="max-w-md rounded-[2rem] p-8">
-          <DialogHeader>
-            <DialogTitle className="text-3xl font-black italic uppercase tracking-tighter">Recruit <span className="text-orange-500">Athlete</span></DialogTitle>
-            <DialogDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-2">Select a team to send an invitation to this player.</DialogDescription>
+        <DialogContent className="w-full sm:max-w-md max-w-[95vw] rounded-3xl p-6 sm:p-8 overflow-hidden min-w-0">
+          <DialogHeader className="min-w-0">
+            <DialogTitle className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter truncate">Recruit <span className="text-orange-500">Athlete</span></DialogTitle>
+            <DialogDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-1">Select a team to send an invitation to this player.</DialogDescription>
           </DialogHeader>
-          <div className="py-6">
-            <div className="space-y-3">
-              <label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">Target Team</label>
-              <Select value={selectedTeamToInvite} onValueChange={(val) => setSelectedTeamToInvite(val || '')}>
-                <SelectTrigger className="h-14 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-2xl font-bold">
-                  <SelectValue placeholder="Select one of your teams">
-                    {selectedTeamToInvite && (() => {
-                      const team = (teams || []).find(t => t.id === selectedTeamToInvite);
-                      return team ? `${team.name} (${team.tournaments?.name || 'Tournament'}${team.tournaments?.sport ? ` - ${team.tournaments.sport}` : ''})` : selectedTeamToInvite;
-                    })()}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="rounded-2xl w-[var(--radix-select-trigger-width)]">
-                  {teams.length === 0 ? (
-                    <div className="p-4 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest">No teams created yet</div>
-                  ) : (
-                    teams.map((team) => (
-                      <SelectItem key={team.id} value={team.id} className="rounded-xl">
-                        {team.name} ({team.tournaments?.name || 'Tournament'}{team.tournaments?.sport ? ` - ${team.tournaments.sport}` : ''})
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="py-4 space-y-2.5 min-w-0">
+            <label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">Target Team</label>
+            <Select value={selectedTeamToInvite} onValueChange={(val) => setSelectedTeamToInvite(val || '')}>
+              <SelectTrigger className="h-12 w-full min-w-0 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-xl font-bold px-3">
+                <SelectValue placeholder="Select one of your teams">
+                  {selectedTeamToInvite && (() => {
+                    const team = (teams || []).find(t => t.id === selectedTeamToInvite);
+                    return team ? `${team.name} (${team.tournaments?.name || 'Tournament'}${team.tournaments?.sport ? ` - ${team.tournaments.sport}` : ''})` : selectedTeamToInvite;
+                  })()}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="rounded-xl max-w-[calc(100vw-3rem)] sm:max-w-md">
+                {teams.length === 0 ? (
+                  <div className="p-4 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest">No teams created yet</div>
+                ) : (
+                  teams.map((team) => (
+                    <SelectItem key={team.id} value={team.id} className="rounded-lg">
+                      <span className="truncate">{team.name} ({team.tournaments?.name || 'Tournament'}{team.tournaments?.sport ? ` - ${team.tournaments.sport}` : ''})</span>
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
           </div>
-          <DialogFooter className="gap-3">
-            <Button variant="ghost" onClick={() => { setInvitePlayerId(null); setSelectedTeamToInvite(''); }} className="h-14 rounded-2xl font-black uppercase tracking-widest text-xs">Cancel</Button>
-            <Button onClick={handleInvitePlayer} disabled={!selectedTeamToInvite} className="h-14 flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-black uppercase italic tracking-[0.1em]">Send Recruitment Invite</Button>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 pt-2">
+            <Button variant="ghost" onClick={() => { setInvitePlayerId(null); setSelectedTeamToInvite(''); }} className="h-11 sm:h-12 rounded-xl font-black uppercase tracking-wider text-xs">Cancel</Button>
+            <Button onClick={handleInvitePlayer} disabled={!selectedTeamToInvite} className="h-11 sm:h-12 flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-black uppercase italic tracking-wider text-xs sm:text-sm shadow-md shadow-orange-500/20">Send Recruitment Invite</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -54,7 +54,7 @@ function DialogContent({
         <DialogPrimitive.Popup
           data-slot="dialog-content"
           className={cn(
-            "pointer-events-auto relative grid w-full max-w-lg gap-4 rounded-3xl bg-white dark:bg-slate-950 p-6 text-sm text-slate-900 dark:text-white shadow-2xl duration-200 ease-out outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 max-h-[92vh] overflow-y-auto",
+            "pointer-events-auto relative grid w-full max-w-lg min-w-0 gap-4 rounded-3xl bg-white dark:bg-slate-950 p-6 text-sm text-slate-900 dark:text-white shadow-2xl duration-200 ease-out outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 max-h-[92vh] overflow-y-auto overflow-x-hidden",
             className
           )}
           {...props}
@@ -85,7 +85,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn("flex flex-col gap-2", className)}
+      className={cn("flex flex-col min-w-0 gap-2", className)}
       {...props}
     />
   )
@@ -103,7 +103,7 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end min-w-0 w-full",
         className
       )}
       {...props}

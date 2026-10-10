@@ -76,6 +76,7 @@ export const CoachDashboard = () => {
         .from('tournaments')
         .select('*')
         .eq('status', 'Draft')
+        .or('is_deleted.is.null,is_deleted.eq.false')
         .order('created_at', { ascending: false });
 
       setDraftTournaments(draftData || []);
@@ -110,7 +111,7 @@ export const CoachDashboard = () => {
                   Coach Analytics
                 </span>
               </div>
-              <h1 className="text-2xl md:text-4xl font-sans font-black tracking-tight uppercase leading-tight">
+              <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
                 PERFORMANCE <span className="text-orange-500">OVERVIEW</span>
               </h1>
             </div>
@@ -121,7 +122,7 @@ export const CoachDashboard = () => {
 
       {/* Coming Soon Tournaments / Registration Banner */}
       {draftTournaments.length > 0 && (
-        <div className="bg-gradient-to-r from-orange-500/15 via-orange-500/5 to-slate-900 border-2 border-orange-500/30 rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 relative overflow-hidden shadow-xl">
+        <div className="bg-slate-950 border border-white/5 rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 relative overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10 mb-4 md:mb-6">
             <div className="flex items-start md:items-center gap-3">
               <div className="p-2.5 md:p-3 bg-orange-500 rounded-xl md:rounded-2xl text-white shadow-lg shadow-orange-500/30 shrink-0">
@@ -136,7 +137,7 @@ export const CoachDashboard = () => {
                     Draft Tournament Phase
                   </span>
                 </div>
-                <h3 className="text-lg md:text-2xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white mt-1">
+                <h3 className="text-lg md:text-2xl font-black italic uppercase tracking-tight text-white mt-1">
                   Enrolling Teams for Events
                 </h3>
               </div>
@@ -153,26 +154,26 @@ export const CoachDashboard = () => {
             {draftTournaments.slice(0, 8).map((t) => (
               <div
                 key={t.id}
-                className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-orange-500/20 rounded-2xl p-4 flex flex-col justify-between hover:border-orange-500/50 transition-all group"
+                className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col justify-between hover:border-orange-500/50 transition-all group"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 dark:text-orange-400 font-bold text-[9px] uppercase tracking-wider">
+                    <span className="px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-400 font-bold text-[9px] uppercase tracking-wider">
                       {t.sport}
                     </span>
-                    <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">
+                    <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">
                       Apply Open
                     </span>
                   </div>
-                  <h4 className="font-black text-sm uppercase italic tracking-tight text-slate-900 dark:text-white truncate group-hover:text-orange-500 transition-colors">
+                  <h4 className="font-black text-sm uppercase italic tracking-tight text-white line-clamp-2 group-hover:text-orange-500 transition-colors">
                     {t.name}
                   </h4>
                 </div>
-                <div className="mt-3 pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[10px] text-slate-500 font-medium">
-                  <span>Starts: {new Date(t.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-400 font-medium">
+                  <span>Starts: {new Date(t.start_date || t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                   <button 
                     onClick={() => navigate('/coach/teams')} 
-                    className="text-orange-500 hover:text-orange-600 font-black uppercase tracking-wider cursor-pointer transition-all hover:translate-x-0.5 active:scale-95 duration-150 inline-flex items-center"
+                    className="text-orange-400 hover:text-orange-300 font-black uppercase tracking-wider cursor-pointer transition-all hover:translate-x-0.5 active:scale-95 duration-150 inline-flex items-center"
                   >
                     Enroll →
                   </button>

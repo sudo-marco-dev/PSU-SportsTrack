@@ -35,6 +35,10 @@ interface AuthContextType {
     cluster_id?: string | null;
     account_status?: AccountStatus;
     faculty_id_url?: string | null;
+    student_number?: string | null;
+    program?: string | null;
+    year_level?: string | null;
+    age?: number | null;
   } | null;
   isLoginModalOpen: boolean;
   openLoginModal: () => void;
@@ -76,42 +80,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const openLoginModal = () => setIsLoginModalOpen(true);
   const closeLoginModal = () => setIsLoginModalOpen(false);
 
-  useEffect(() => {
-    // Fetch initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        setIsLoading(true);
-        fetchUserProfile(session.user.id);
-      } else {
-        setIsLoading(false);
-      }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          setIsLoading(true);
-          fetchUserProfile(session.user.id);
-        } else {
-          setRole(null);
-          setIsVerified(false);
-          setAccountStatus('active');
-          setProfile(null);
-          setIsLoading(false);
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
   const fetchUserProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -149,6 +117,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           cluster_id: data.cluster_id || null,
           account_status: status,
           faculty_id_url: data.faculty_id_url || null,
+          student_number: data.student_number || null,
+          program: data.program || null,
+          year_level: data.year_level || null,
+          age: data.age ?? null,
         });
       }
     } catch (err) {
@@ -157,6 +129,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        setIsLoading(true);
+        fetchUserProfile(session.user.id);
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          setIsLoading(true);
+          fetchUserProfile(session.user.id);
+        } else {
+          setRole(null);
+          setIsVerified(false);
+          setAccountStatus('active');
+          setProfile(null);
+          setIsLoading(false);
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const refetchProfile = async () => {
     if (user?.id) {
@@ -202,4 +208,5 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);

@@ -35,77 +35,67 @@ export function NotFound() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-dvh flex items-center justify-center bg-slate-950 px-4 relative overflow-hidden">
+      <div className="absolute -right-20 -top-20 size-80 bg-orange-500/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="w-full max-w-md relative z-10">
         {/* Error Container */}
-        <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+        <div className="bg-slate-900 border border-white/10 rounded-3xl sm:rounded-[2rem] shadow-2xl p-6 sm:p-10 text-center">
           
-          {/* Error Icon */}
-          <div className="mb-6">
-            <div className="inline-block p-4 bg-red-50 rounded-full">
-              <svg 
-                className="w-12 h-12 text-red-600" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={1.5} 
-                  d="M12 9v2m0 4v2m0 4v2M12 3a9 9 0 110 18 9 9 0 010-18z" 
-                />
-              </svg>
-            </div>
+          {/* Error Eyebrow */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-[10px] font-black uppercase tracking-[0.2em] mb-4">
+            Arena Navigation Error
           </div>
 
           {/* Error Code & Message */}
-          <h1 className="text-5xl font-bold text-slate-900 mb-2">404</h1>
-          <p className="text-xl font-semibold text-slate-700 mb-1">Page Not Found</p>
-          <p className="text-slate-600 mb-6">
-            The page you're looking for doesn't exist or has been moved to a new location.
+          <h1 className="text-6xl sm:text-7xl font-black italic tracking-tighter text-orange-500 leading-none mb-1">
+            404
+          </h1>
+          <p className="text-xl font-black uppercase italic tracking-tight text-white mb-2">
+            Fixture Not Found
+          </p>
+          <p className="text-slate-400 text-xs sm:text-sm font-medium leading-relaxed mb-6">
+            The tournament page or fixture you are attempting to reach does not exist or has been relocated.
           </p>
 
           {/* Attempted Route (Debug Info) */}
-          <div className="bg-slate-50 rounded-lg p-4 mb-8 text-left border border-slate-200">
-            <p className="text-xs text-slate-600 font-mono break-all">
-              <span className="text-slate-500">Attempted route:</span><br />
-              <code className="text-red-600">{location.pathname}</code>
+          <div className="bg-slate-950 rounded-xl p-3 mb-6 text-left border border-white/5">
+            <p className="text-[10px] text-slate-500 font-mono break-all uppercase tracking-wider">
+              Attempted route: <code className="text-orange-400 font-bold lowercase">{location.pathname}</code>
             </p>
           </div>
 
           {/* Action Buttons */}
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <button
               type="button"
               onClick={handleSmartRedirect}
-              className="w-full px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/30 cursor-pointer active:scale-[0.98] transition-all duration-150 flex items-center justify-center gap-2"
+              className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-xs rounded-xl shadow-lg shadow-orange-500/20 cursor-pointer active:scale-[0.98] transition-all flex items-center justify-center gap-2"
             >
               {!user 
-                ? 'Go to Sign In' 
+                ? 'Sign In to Arena' 
                 : isSuperAdmin 
-                  ? 'Go to Admin Command Center'
+                  ? 'Admin Command Center'
                   : isCoach 
-                    ? 'Go to Coach Dashboard'
+                    ? 'Coach Dashboard'
                     : isPlayer 
-                      ? 'Go to Player Hub'
-                      : 'Go to Match Center'}
+                      ? 'Player Hub'
+                      : 'Match Center'}
             </button>
             
             <button
               type="button"
               onClick={() => navigate('/', { replace: true })}
-              className="w-full px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 cursor-pointer active:scale-[0.98] transition-all duration-150 flex items-center justify-center gap-2"
+              className="w-full h-11 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-bold uppercase text-xs tracking-wider rounded-xl border border-white/5 cursor-pointer active:scale-[0.98] transition-all flex items-center justify-center gap-2"
             >
-              Back to Home
+              Return Home
             </button>
 
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="w-full px-6 py-2.5 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-semibold text-xs cursor-pointer active:scale-[0.98] transition-all duration-150"
+              className="w-full py-2 text-slate-500 hover:text-slate-300 font-bold text-[11px] uppercase tracking-wider cursor-pointer active:scale-[0.98] transition-all"
             >
-              ← Go Back to Previous Page
+              ← Go Back to Previous View
             </button>
           </div>
 

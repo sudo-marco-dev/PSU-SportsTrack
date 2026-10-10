@@ -20,8 +20,23 @@ import {
   Lock,
   CheckCircle2,
   Crown,
-  ArrowRight
+  ArrowRight,
+  Medal
 } from 'lucide-react';
+import type { IconType } from 'react-icons';
+import { 
+  GiBasketballBall, 
+  GiVolleyballBall, 
+  GiSoccerBall, 
+  GiShuttlecock, 
+  GiBaseballBat, 
+  GiSoccerKick, 
+  GiPingPongBat,
+  GiGamepad,
+  GiChessKnight,
+  GiRunningShoe
+} from 'react-icons/gi';
+import { FaPersonSwimming } from 'react-icons/fa6';
 
 type Tournament = {
   id: string;
@@ -47,27 +62,27 @@ type Match = {
   next_match_id?: string | null;
 };
 
-const SPORT_ICONS: Record<string, string> = {
-  Basketball: '🏀',
-  Volleyball: '🏐',
-  Soccer: '⚽',
-  Football: '⚽',
-  Badminton: '🏸',
-  Baseball: '⚾',
-  Futsal: '🥅',
-  'Table Tennis': '🏓',
-  Esports: '🎮',
-  Chess: '♟️',
-  Swimming: '🏊',
-  Athletics: '🏃',
+const SPORT_ICONS: Record<string, IconType> = {
+  Basketball: GiBasketballBall,
+  Volleyball: GiVolleyballBall,
+  Soccer: GiSoccerBall,
+  Football: GiSoccerBall,
+  Badminton: GiShuttlecock,
+  Baseball: GiBaseballBat,
+  Futsal: GiSoccerKick,
+  'Table Tennis': GiPingPongBat,
+  Esports: GiGamepad,
+  Chess: GiChessKnight,
+  Swimming: FaPersonSwimming,
+  Athletics: GiRunningShoe,
 };
 
-const getSportIcon = (sportName: string) => {
-  if (!sportName) return '🏆';
+const getSportIcon = (sportName: string): IconType => {
+  if (!sportName) return Trophy as unknown as IconType;
   for (const [key, icon] of Object.entries(SPORT_ICONS)) {
     if (sportName.toLowerCase().includes(key.toLowerCase())) return icon;
   }
-  return '🏆';
+  return Trophy as unknown as IconType;
 };
 
 const extractSportName = (match: Match, tourMap: Map<string, Tournament>): string => {
@@ -123,18 +138,24 @@ export const TournamentExplorer = () => {
         supabase
           .from('tournaments')
           .select('id, name, sport, status, start_date, end_date')
+          .or('is_deleted.is.null,is_deleted.eq.false')
           .order('start_date', { ascending: false }),
         supabase
           .from('matches')
-          .select('*, tournament:tournament_id(id, name, sport, status, start_date), team_a:team_a_id(name, sport), team_b:team_b_id(name, sport)')
+          .select('*, tournament:tournament_id(id, name, sport, status, start_date, is_deleted), team_a:team_a_id(name), team_b:team_b_id(name)')
           .order('match_time', { ascending: true })
       ]);
 
       if (tournamentsRes.error) throw tournamentsRes.error;
       if (matchesRes.error) throw matchesRes.error;
 
-      setTournaments(tournamentsRes.data || []);
-      setMatches((matchesRes.data as unknown) as Match[] || []);
+      const validTournaments = tournamentsRes.data || [];
+      const validMatches = ((matchesRes.data as unknown) as Match[] || []).filter(
+        (m: any) => !m.tournament?.is_deleted
+      );
+
+      setTournaments(validTournaments);
+      setMatches(validMatches);
     } catch (error: any) {
       console.error('Error fetching explorer data:', error);
       toast.error('Failed to load match center data');
@@ -364,15 +385,18 @@ export const TournamentExplorer = () => {
             >
               {selectedTournamentId === 'all' ? 'All Tournaments' : selectedTourObj?.name}
             </button>
-            {selectedSport !== 'all' && (
-              <>
-                <ChevronRight className="size-3 text-slate-600" />
-                <span className="text-orange-500 font-black flex items-center gap-1 truncate max-w-[100px] sm:max-w-none">
-                  <span>{getSportIcon(selectedSport)}</span>
-                  <span className="truncate">{selectedSport}</span>
-                </span>
-              </>
-            )}
+            {selectedSport !== 'all' && (() => {
+              const SportIcon = getSportIcon(selectedSport);
+              return (
+                <>
+                  <ChevronRight className="size-3 text-slate-600" />
+                  <span className="text-orange-500 font-black flex items-center gap-1.5 truncate max-w-[120px] sm:max-w-none">
+                    <SportIcon className="size-3.5 shrink-0" />
+                    <span className="truncate">{selectedSport}</span>
+                  </span>
+                </>
+              );
+            })()}
           </div>
 
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -520,7 +544,7 @@ export const TournamentExplorer = () => {
                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-orange-500/40'
             }`}
           >
-            <span>🏆</span>
+            <Trophy className="size-3.5 shrink-0" />
             <span>All Sports</span>
             <span className={`ml-0.5 px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold ${
               selectedSport === 'all' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
@@ -532,6 +556,7 @@ export const TournamentExplorer = () => {
           {/* Individual Sport Pills */}
           {availableSports.map((sport) => {
             const isSelected = selectedSport === sport.name;
+            const SportIcon = sport.icon;
             return (
               <button
                 key={sport.name}
@@ -543,7 +568,7 @@ export const TournamentExplorer = () => {
                     : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-orange-500/40'
                 }`}
               >
-                <span>{sport.icon}</span>
+                <SportIcon className="size-3.5 shrink-0" />
                 <span>{sport.name}</span>
                 <span className={`ml-0.5 px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold ${
                   isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
@@ -613,7 +638,7 @@ export const TournamentExplorer = () => {
           <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-300">
             {/* Elimination Finished Banner Notice */}
             {isEliminationComplete && (
-              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-slate-900 to-slate-950 border border-emerald-500/30 text-white flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 shadow-xl">
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-950 border border-emerald-500/30 text-white flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 shadow-xl relative overflow-hidden">
                 <div className="flex items-center gap-3">
                   <div className="size-9 sm:size-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
                     <CheckCircle2 className="size-5 sm:size-6" />
@@ -629,9 +654,11 @@ export const TournamentExplorer = () => {
                 </div>
                 <Button
                   onClick={() => setActivePhase('playoffs')}
-                  className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic text-xs tracking-wider h-10 px-4 sm:px-5 rounded-xl shrink-0 shadow-md shadow-orange-500/20 w-full md:w-auto"
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic text-xs tracking-wider h-10 px-4 sm:px-5 rounded-xl shrink-0 shadow-md shadow-orange-500/20 w-full md:w-auto inline-flex items-center gap-1.5"
                 >
-                  View Playoff Bracket 🏆 →
+                  <span>View Playoff Bracket</span>
+                  <Trophy className="size-3.5" />
+                  <span>→</span>
                 </Button>
               </div>
             )}
@@ -670,8 +697,8 @@ export const TournamentExplorer = () => {
             </div>
 
             {/* Tabs for Live/Upcoming vs Match History */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6 sm:space-y-8">
-              <div className="sticky top-0 z-20 pb-2 bg-slate-50/80 backdrop-blur-md">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col space-y-6 sm:space-y-8 min-w-0">
+              <div className="sticky top-0 z-20 pb-2 bg-slate-50/80 backdrop-blur-md w-full">
                 <TabsList className="p-1 h-11 sm:h-13 bg-slate-950/5 border border-slate-200/50 backdrop-blur-xl rounded-xl md:rounded-2xl w-full flex items-stretch">
                   <TabsTrigger 
                     value="live" 
@@ -689,11 +716,11 @@ export const TournamentExplorer = () => {
                 </TabsList>
               </div>
 
-              <TabsContent value="live" className="outline-none mt-0 space-y-8 sm:space-y-12">
+              <TabsContent value="live" className="w-full min-w-0 outline-none mt-0 space-y-8 sm:space-y-12">
                 {(() => {
                   if (isSelectedDraft) {
                     return (
-                      <Card className="border-2 border-dashed border-orange-500/30 py-12 sm:py-16 px-6 text-center bg-gradient-to-b from-orange-500/10 via-orange-500/5 to-transparent rounded-2xl sm:rounded-[2.5rem]">
+                      <Card className="border-2 border-dashed border-orange-500/30 py-12 sm:py-16 px-6 text-center bg-slate-900/60 dark:bg-slate-950 rounded-2xl sm:rounded-[2.5rem] shadow-xl">
                         <div className="size-14 sm:size-16 rounded-2xl sm:rounded-3xl bg-orange-500/10 text-orange-500 flex items-center justify-center mx-auto mb-4 border border-orange-500/20 shadow-lg shadow-orange-500/10">
                           <Clock className="size-7 sm:size-8 animate-pulse" />
                         </div>
@@ -732,7 +759,7 @@ export const TournamentExplorer = () => {
                           <div className="space-y-3">
                             {dateMatches.map((match) => {
                               const sportName = extractSportName(match, tourMap);
-                              const sportIcon = getSportIcon(sportName);
+                              const SportIcon = getSportIcon(sportName);
 
                               return (
                                 <div key={match.id} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between bg-white border border-slate-200 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 hover:shadow-md transition-all gap-3">
@@ -740,9 +767,12 @@ export const TournamentExplorer = () => {
                                   <div className="flex items-center justify-between sm:flex-col sm:items-start gap-1.5 w-full sm:w-48">
                                     <div className="flex items-center gap-1.5 sm:gap-2">
                                       {match.status === 'Ongoing' ? (
-                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-red-500 text-white rounded-md animate-pulse">
-                                          <span className="flex size-1.5 rounded-full bg-white animate-ping" />
-                                          <span className="text-[9px] font-black uppercase tracking-widest">LIVE</span>
+                                        <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-red-600 text-white rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm">
+                                          <span className="relative flex size-1.5">
+                                            <span className="animate-ping-slow absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full size-1.5 bg-white"></span>
+                                          </span>
+                                          LIVE
                                         </div>
                                       ) : (
                                         <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-slate-50 border border-slate-200/80 rounded-md">
@@ -752,8 +782,9 @@ export const TournamentExplorer = () => {
                                           </span>
                                         </div>
                                       )}
-                                      <span className="px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 font-black text-[9px] uppercase border border-orange-500/20">
-                                        {sportIcon} {sportName}
+                                      <span className="px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 font-black text-[9px] uppercase border border-orange-500/20 inline-flex items-center gap-1">
+                                        <SportIcon className="size-2.5 shrink-0" />
+                                        <span>{sportName}</span>
                                       </span>
                                     </div>
 
@@ -801,7 +832,7 @@ export const TournamentExplorer = () => {
                 })()}
               </TabsContent>
 
-              <TabsContent value="history" className="outline-none mt-0 space-y-8 sm:space-y-12">
+              <TabsContent value="history" className="w-full min-w-0 outline-none mt-0 space-y-8 sm:space-y-12">
                 {Object.keys(historyGroups).length === 0 ? (
                   <Card className="border-dashed border-2 py-16 sm:py-20 text-center bg-slate-50/50 rounded-2xl sm:rounded-[2rem]">
                     <History className="size-10 sm:size-12 text-slate-300 mx-auto mb-3" />
@@ -819,7 +850,7 @@ export const TournamentExplorer = () => {
                       <div className="space-y-3">
                         {dateMatches.map((match) => {
                           const sportName = extractSportName(match, tourMap);
-                          const sportIcon = getSportIcon(sportName);
+                          const SportIcon = getSportIcon(sportName);
 
                           return (
                             <div key={match.id} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between bg-white border border-slate-100 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 hover:shadow-sm transition-all gap-3 opacity-90 hover:opacity-100">
@@ -827,8 +858,9 @@ export const TournamentExplorer = () => {
                               <div className="flex items-center justify-between sm:flex-col sm:items-start gap-1.5 w-full sm:w-48">
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-slate-500 font-black uppercase tracking-widest text-[9px] px-2 py-0.5 bg-slate-100 rounded-md">FINAL</span>
-                                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-black text-[9px] uppercase">
-                                    {sportIcon} {sportName}
+                                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-black text-[9px] uppercase inline-flex items-center gap-1">
+                                    <SportIcon className="size-2.5 shrink-0 text-slate-500" />
+                                    <span>{sportName}</span>
                                   </span>
                                 </div>
                                 {match.round && (
@@ -895,7 +927,8 @@ export const TournamentExplorer = () => {
                     <Lock className="size-7 sm:size-8 animate-pulse text-orange-500" />
                   </div>
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/20 text-orange-400 text-[9px] sm:text-[10px] font-black uppercase tracking-widest border border-orange-500/30">
-                    🔒 Phase 2 Locked • Playoffs Pending
+                    <Lock className="size-3 text-orange-400" />
+                    <span>Phase 2 Locked • Playoffs Pending</span>
                   </div>
                   <h3 className="text-xl sm:text-2xl font-black italic uppercase tracking-tight text-white">
                     Playoff Bracket Unlocks After Elimination Round
@@ -929,8 +962,9 @@ export const TournamentExplorer = () => {
                       <h2 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none drop-shadow-md">
                         {championTeam}
                       </h2>
-                      <p className="text-white/90 font-bold uppercase tracking-widest text-[10px] sm:text-xs mt-0.5">
-                        🏆 Tournament Championship Winner
+                      <p className="text-white/90 font-bold uppercase tracking-widest text-[10px] sm:text-xs mt-0.5 inline-flex items-center gap-1.5">
+                        <Trophy className="size-3.5 text-yellow-200" />
+                        <span>Tournament Championship Winner</span>
                       </p>
                     </div>
                   </div>
@@ -978,11 +1012,12 @@ export const TournamentExplorer = () => {
                       <button
                         type="button"
                         onClick={() => setMobilePlayoffStage('finals')}
-                        className={`flex-1 py-2 px-3 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 whitespace-nowrap ${
+                        className={`flex-1 py-2 px-3 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 whitespace-nowrap inline-flex items-center justify-center gap-1 ${
                           mobilePlayoffStage === 'finals' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'
                         }`}
                       >
-                        Finals 🏆
+                        <span>Finals</span>
+                        <Trophy className="size-3" />
                       </button>
                     )}
                   </div>
@@ -1054,7 +1089,7 @@ export const TournamentExplorer = () => {
                         {playoffRoundsGrouped.bronze.length > 0 && (
                           <div className="space-y-3 pt-4 border-t border-white/10">
                             <div className="text-center font-black uppercase italic tracking-widest text-[11px] text-amber-500 pb-2 border-b border-amber-500/30 flex items-center justify-center gap-1.5">
-                              <span className="text-sm">🥉</span>
+                              <Medal className="size-3.5 text-amber-500" />
                               <span>3rd-Place Bronze Playoff</span>
                             </div>
                             {playoffRoundsGrouped.bronze.map(match => (
@@ -1097,10 +1132,10 @@ const BracketMatchCard = ({ match, isFinals = false, isBronze = false, onNavigat
       onClick={onNavigate}
       className={`rounded-xl sm:rounded-2xl border transition-all duration-300 p-3 sm:p-4 cursor-pointer relative group overflow-hidden ${
         isFinals 
-          ? 'bg-gradient-to-b from-amber-500/10 via-slate-900 to-slate-950 border-amber-500/50 shadow-xl shadow-amber-500/10 hover:border-amber-400' 
+          ? 'bg-slate-900 border-amber-500/50 shadow-xl shadow-amber-500/10 hover:border-amber-400' 
           : isBronze
-          ? 'bg-gradient-to-b from-amber-950/30 via-slate-900 to-slate-950 border-amber-700/50 shadow-lg shadow-amber-950/20 hover:border-amber-600'
-          : 'bg-slate-900 border-white/10 hover:border-orange-500/50 hover:bg-slate-850'
+          ? 'bg-slate-900 border-amber-700/50 shadow-lg shadow-amber-950/20 hover:border-amber-600'
+          : 'bg-slate-900 border-white/10 hover:border-orange-500/50 hover:bg-slate-800'
       }`}
     >
       <div className="flex items-center justify-between mb-2 sm:mb-3 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-white/5 pb-1.5 sm:pb-2">
@@ -1108,8 +1143,12 @@ const BracketMatchCard = ({ match, isFinals = false, isBronze = false, onNavigat
           {match.round || 'Playoff Node'}
         </span>
         {match.status === 'Ongoing' ? (
-          <span className="text-red-400 font-bold animate-pulse flex items-center gap-1 shrink-0">
-            <span className="size-1.5 rounded-full bg-red-400 animate-ping" /> LIVE
+          <span className="text-rose-400 font-black text-[10px] tracking-wider uppercase flex items-center gap-1.5 shrink-0">
+            <span className="relative flex size-1.5">
+              <span className="animate-ping-slow absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full size-1.5 bg-rose-400"></span>
+            </span>
+            LIVE
           </span>
         ) : match.status === 'Completed' ? (
           <span className="text-emerald-400 font-bold shrink-0">FINAL</span>

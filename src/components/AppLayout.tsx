@@ -13,7 +13,9 @@ import {
   Globe,
   ClipboardList,
   Medal,
-  Activity
+  Activity,
+  Info,
+  RotateCcw
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
@@ -65,6 +67,7 @@ export const AppLayout = () => {
       { name: 'Tournaments', href: '/admin/tournaments', icon: Trophy },
       { name: 'System Verifications', href: '/admin/verifications', icon: ShieldCheck },
       { name: 'System Audit', href: '/admin/audit-logs', icon: ClipboardList },
+      { name: 'Recovery Center', href: '/admin/recovery', icon: RotateCcw },
     ] : []),
     ...(isFacilitator && !isSuperAdmin ? [
       { name: 'Live Scorer', href: '/explorer', icon: Activity },
@@ -72,9 +75,21 @@ export const AppLayout = () => {
     ...(isCoach ? [
       { name: 'My Teams', href: '/coach/teams', icon: UserCheck },
     ] : []),
+    {
+      name: 'About SportsTrack',
+      href: '/about',
+      icon: Info
+    },
   ];
 
   const isActive = (path: string) => location.pathname === path;
+
+  // Secondary management routes that make "More" tab show active state
+  const isMoreRouteActive = ['/about'].includes(location.pathname) || (isSuperAdmin
+    ? ['/admin/tournaments', '/admin/verifications', '/admin/audit-logs', '/admin/recovery'].includes(location.pathname)
+    : isCoach
+    ? ['/coach/teams'].includes(location.pathname)
+    : false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -83,11 +98,11 @@ export const AppLayout = () => {
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-slate-50">
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-slate-900 text-white sticky top-0 h-screen shadow-xl border-r border-white/5">
+    <div className="min-h-dvh w-full bg-slate-50">
+      {/* Desktop Sidebar — Permanently anchored to viewport left, eliminating floating detachment on scroll */}
+      <aside className="hidden md:flex flex-col w-64 bg-slate-900 text-white fixed top-0 bottom-0 left-0 h-dvh shadow-xl border-r border-white/5 z-30">
         <div className="p-6">
-          <Link to="/" className="flex items-center gap-2 font-black text-2xl tracking-tighter">
+          <Link to={getDashboardHref()} className="flex items-center gap-2 font-black text-2xl tracking-tighter">
             <span className="text-orange-500 italic">PSU</span>
             <span className="text-white">SportsTrack</span>
           </Link>
@@ -127,10 +142,7 @@ export const AppLayout = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold truncate text-slate-200 group-hover:text-white transition-colors">{user?.email?.split('@')[0]}</p>
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] text-orange-500/90 uppercase font-black tracking-widest">{formatRole(role)}</p>
-                    <span className="text-[9px] font-bold text-slate-400 group-hover:text-orange-400 transition-colors">Profile →</span>
-                  </div>
+                  <p className="text-[10px] text-orange-500/90 uppercase font-black tracking-widest">{formatRole(role)}</p>
                 </div>
               </button>
               <Button
@@ -154,34 +166,24 @@ export const AppLayout = () => {
         </div>
       </aside>
 
-      {/* Layout Content Wrapper */}
-      <div className="flex-1 min-w-0 flex flex-col relative">
+      {/* Layout Content Wrapper — md:pl-64 accommodates the fixed desktop sidebar */}
+      <div className="flex-1 min-w-0 flex flex-col relative md:pl-64">
         {/* Mobile Topbar */}
         <header className="md:hidden sticky top-0 flex h-16 items-center justify-between bg-slate-900 text-white px-4 shadow-lg z-30 border-b border-white/5">
-          <Link to="/" className="flex items-center gap-2 font-black text-xl">
+          <Link to={getDashboardHref()} className="flex items-center gap-2 font-black text-xl">
             <span className="text-orange-500 italic">PSU</span>
             <span className="text-white">SportsTrack</span>
           </Link>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-slate-300 hover:text-white hover:bg-white/10"
-            >
-              {isMobileMenuOpen ? <X className="size-6" /> : <Menu className="size-6" />}
-            </Button>
-          </div>
         </header>
 
         {/* Mobile Navigation Drawer */}
         {isMobileMenuOpen && (
-          <div className="fixed inset-0 z-50 md:hidden animate-in fade-in duration-300">
+          <div className="fixed inset-0 z-[70] md:hidden animate-in fade-in duration-300">
             <div
               className="fixed inset-0 bg-black/60 backdrop-blur-sm"
               onClick={() => setIsMobileMenuOpen(false)}
             />
-            <div className="fixed inset-y-0 right-0 w-72 bg-slate-900 text-white shadow-2xl animate-in slide-in-from-right duration-500 border-l border-white/5 flex flex-col">
+            <div className="fixed inset-y-0 right-0 w-72 bg-slate-900 text-white shadow-2xl animate-in slide-in-from-right duration-500 border-l border-white/5 flex flex-col overscroll-contain">
               <div className="p-8 flex justify-between items-center border-b border-white/5">
                 <div className="font-black text-xl italic tracking-tighter">
                   <span className="text-orange-500">NAV</span>IGATION
@@ -229,7 +231,7 @@ export const AppLayout = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold truncate text-slate-200">{user?.email?.split('@')[0]}</p>
-                        <p className="text-[10px] text-orange-500 uppercase font-black tracking-widest">{formatRole(role)} • View Profile →</p>
+                        <p className="text-[10px] text-orange-500 uppercase font-black tracking-widest">{formatRole(role)}</p>
                       </div>
                     </button>
                     <Button
@@ -262,9 +264,130 @@ export const AppLayout = () => {
         )}
 
         {/* Main Routed Content Area */}
-        <main className="flex-1 px-4 py-8 md:px-10 md:py-10 max-w-7xl mx-auto w-full">
+        <main className="flex-1 px-4 py-6 md:px-10 md:py-10 pb-24 md:pb-10 max-w-7xl mx-auto w-full">
           <Outlet />
         </main>
+
+        {/* Mobile Bottom Navigation Rail — Always Fixed & Visible Across All Views */}
+        <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-slate-900/95 backdrop-blur-md border-t border-white/10 pb-safe w-full max-w-[100vw] overflow-hidden shadow-2xl [isolation:isolate]">
+          <div className="flex items-center justify-around h-16 w-full px-0.5">
+            {/* 1. Home / Mission Command */}
+            <Link
+              to={getDashboardHref()}
+              className={`flex-1 min-w-0 w-0 h-full flex flex-col items-center justify-center py-1 text-center transition-all duration-150 active:scale-90 relative ${
+                isActive(getDashboardHref()) || (getDashboardHref() === '/admin' && location.pathname === '/')
+                  ? 'text-orange-400 font-bold'
+                  : 'text-slate-400 hover:text-slate-200 font-medium'
+              }`}
+            >
+              <div className="relative">
+                <LayoutDashboard className="size-5" />
+                {(isActive(getDashboardHref()) || (getDashboardHref() === '/admin' && location.pathname === '/')) && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 size-1 bg-orange-500 rounded-full shadow-[0_0_8px_#f97316]" />
+                )}
+              </div>
+              <span className="text-[10px] mt-1 tracking-tight leading-none truncate w-full px-0.5">
+                Home
+              </span>
+            </Link>
+
+            {/* 2. Matches / Live Courtside */}
+            <Link
+              to="/explorer"
+              className={`flex-1 min-w-0 w-0 h-full flex flex-col items-center justify-center py-1 text-center transition-all duration-150 active:scale-90 relative ${
+                isActive('/explorer') || location.pathname.startsWith('/match/')
+                  ? 'text-orange-400 font-bold'
+                  : 'text-slate-400 hover:text-slate-200 font-medium'
+              }`}
+            >
+              <div className="relative">
+                <Globe className="size-5" />
+                {(isActive('/explorer') || location.pathname.startsWith('/match/')) && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 size-1 bg-orange-500 rounded-full shadow-[0_0_8px_#f97316]" />
+                )}
+              </div>
+              <span className="text-[10px] mt-1 tracking-tight leading-none truncate w-full px-0.5">
+                Matches
+              </span>
+            </Link>
+
+            {/* 3. Rankings / Standings */}
+            <Link
+              to="/ranking"
+              className={`flex-1 min-w-0 w-0 h-full flex flex-col items-center justify-center py-1 text-center transition-all duration-150 active:scale-90 relative ${
+                isActive('/ranking')
+                  ? 'text-orange-400 font-bold'
+                  : 'text-slate-400 hover:text-slate-200 font-medium'
+              }`}
+            >
+              <div className="relative">
+                <Medal className="size-5" />
+                {isActive('/ranking') && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 size-1 bg-orange-500 rounded-full shadow-[0_0_8px_#f97316]" />
+                )}
+              </div>
+              <span className="text-[10px] mt-1 tracking-tight leading-none truncate w-full px-0.5">
+                Rankings
+              </span>
+            </Link>
+
+            {/* 4. Profile / Authentication — Guaranteed Zero Right-Overflow */}
+            {user ? (
+              <Link
+                to="/profile"
+                className={`flex-1 min-w-0 w-0 h-full flex flex-col items-center justify-center py-1 text-center transition-all duration-150 active:scale-90 relative ${
+                  isActive('/profile') ? 'text-orange-400 font-bold' : 'text-slate-400 hover:text-slate-200 font-medium'
+                }`}
+              >
+                <div className="relative">
+                  <div
+                    className={`size-5 rounded-full flex items-center justify-center text-[10px] font-black text-white ${
+                      isActive('/profile') ? 'bg-orange-500 ring-2 ring-orange-400/50' : 'bg-slate-700'
+                    }`}
+                  >
+                    {user?.email?.charAt(0).toUpperCase()}
+                  </div>
+                  {isActive('/profile') && (
+                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 size-1 bg-orange-500 rounded-full shadow-[0_0_8px_#f97316]" />
+                  )}
+                </div>
+                <span className="text-[10px] mt-1 tracking-tight leading-none truncate w-full px-0.5">
+                  Profile
+                </span>
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={openLoginModal}
+                className="flex-1 min-w-0 w-0 h-full flex flex-col items-center justify-center py-1 text-center transition-all duration-150 active:scale-90 text-slate-400 hover:text-orange-400 cursor-pointer"
+              >
+                <LogIn className="size-5" />
+                <span className="text-[10px] mt-1 tracking-tight leading-none truncate w-full px-0.5">
+                  Log In
+                </span>
+              </button>
+            )}
+
+            {/* 5. More / Role Management Hub */}
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className={`flex-1 min-w-0 w-0 h-full flex flex-col items-center justify-center py-1 text-center transition-all duration-150 active:scale-90 cursor-pointer relative ${
+                isMoreRouteActive || isMobileMenuOpen ? 'text-orange-400 font-bold' : 'text-slate-400 hover:text-slate-200 font-medium'
+              }`}
+            >
+              <div className="relative">
+                <Menu className="size-5" />
+                {(isMoreRouteActive || isMobileMenuOpen) && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 size-1 bg-orange-500 rounded-full shadow-[0_0_8px_#f97316]" />
+                )}
+              </div>
+              <span className="text-[10px] mt-1 tracking-tight leading-none truncate w-full px-0.5">
+                More
+              </span>
+            </button>
+          </div>
+        </nav>
       </div>
 
       {/* Global Sign Out Confirmation Dialog */}

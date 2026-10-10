@@ -26,7 +26,7 @@ const loginSchema = z.object({
 });
 
 export const Login = () => {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isSuperAdmin, isCoach, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -35,9 +35,15 @@ export const Login = () => {
 
   useEffect(() => {
     if (!authLoading && user) {
-      navigate('/', { replace: true });
+      if (isSuperAdmin) {
+        navigate('/admin', { replace: true });
+      } else if (isCoach) {
+        navigate('/coach', { replace: true });
+      } else {
+        navigate('/player', { replace: true });
+      }
     }
-  }, [user, authLoading, navigate]);
+  }, [user, isSuperAdmin, isCoach, authLoading, navigate]);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -97,7 +103,7 @@ export const Login = () => {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email: values.email,
         password: values.password,
       });
@@ -134,7 +140,24 @@ export const Login = () => {
         localStorage.removeItem('login_lockout_until');
         setFailedAttempts(0);
         toast.success('Logged in successfully');
-        navigate('/');
+
+        let destination = '/player';
+        if (authData?.user?.id) {
+          const { data: userRec } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', authData.user.id)
+            .single();
+          const userRole = userRec?.role;
+          if (userRole === 'super_admin' || userRole === 'Admin') {
+            destination = '/admin';
+          } else if (userRole === 'coach' || userRole === 'Coach') {
+            destination = '/coach';
+          } else {
+            destination = '/player';
+          }
+        }
+        navigate(destination, { replace: true });
       }
     } catch (error) {
       toast.error('An unexpected error occurred');
@@ -144,7 +167,7 @@ export const Login = () => {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-slate-900 relative overflow-hidden">
+    <div className="flex min-h-dvh items-center justify-center p-4 bg-slate-900 relative overflow-hidden">
       {/* Decorative Background Elements */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-600/20 blur-[120px] rounded-full animate-pulse" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-600/10 blur-[120px] rounded-full" />

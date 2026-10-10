@@ -8,17 +8,25 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Activity, Trophy, Clock, Star, User, CalendarDays, Dumbbell, Swords, MapPin } from 'lucide-react';
+import { Activity, Trophy, Clock, Star, User, CalendarDays, Dumbbell, Swords, MapPin, XCircle, CheckCircle2, Zap } from 'lucide-react';
 
 type RosterInvite = {
   id: string;
   status: 'Pending' | 'Approved' | 'Rejected';
+  jersey_number?: number | null;
+  position?: string | null;
+  is_captain?: boolean;
+  is_starter?: boolean;
+  availability_status?: string | null;
   teams: {
+    id?: string;
     name: string;
     tournaments: {
+      id?: string;
       name: string;
-    } | { name: string }[] | null;
-  } | { name: string; tournaments: any }[] | null;
+      sport?: string;
+    } | { id?: string; name: string; sport?: string }[] | null;
+  } | { id?: string; name: string; tournaments: any }[] | null;
 };
 
 type LiveMatch = {
@@ -43,9 +51,16 @@ type PlayerStar = {
 };
 
 export const PlayerDashboard = () => {
-  const { isVerified, user } = useAuth();
+  const { isVerified, user, isSuperAdmin, isCoach, isPlayer } = useAuth();
   const navigate = useNavigate();
   const [hasPendingDocuments, setHasPendingDocuments] = useState(false);
+  const [latestDoc, setLatestDoc] = useState<{
+    id: string;
+    status: string;
+    rejection_reason?: string | null;
+    confidence_score?: number | null;
+    extracted_full_name?: string | null;
+  } | null>(null);
   const [invites, setInvites] = useState<RosterInvite[]>([]);
   const [myTeams, setMyTeams] = useState<RosterInvite[]>([]);
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
@@ -55,21 +70,37 @@ export const PlayerDashboard = () => {
   const [selectedTournament, setSelectedTournament] = useState<any | null>(null);
 
   useEffect(() => {
-    if (user && !isVerified) {
+    if (isSuperAdmin) {
+      navigate('/admin', { replace: true });
+    } else if (isCoach) {
+      navigate('/coach', { replace: true });
+    }
+  }, [isSuperAdmin, isCoach, navigate]);
+
+  useEffect(() => {
+    if (user && isPlayer && !isVerified) {
       supabase
         .from('verification_documents')
-        .select('id')
+        .select('id, status, rejection_reason, confidence_score, extracted_full_name, created_at')
         .eq('user_id', user.id)
-        .eq('status', 'Pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
         .then(({ data }) => {
-          if (data && data.length > 0) {
-            setHasPendingDocuments(true);
+          if (data) {
+            setLatestDoc(data);
+            setHasPendingDocuments(data.status === 'Pending');
+          } else {
+            setLatestDoc(null);
+            setHasPendingDocuments(false);
           }
         });
     }
 
-    fetchDashboardData();
-  }, [user, isVerified]);
+    if (!isSuperAdmin && !isCoach) {
+      fetchDashboardData();
+    }
+  }, [user, isPlayer, isVerified, isSuperAdmin, isCoach]);
 
   useEffect(() => {
     if (!user) return;
@@ -100,8 +131,37 @@ export const PlayerDashboard = () => {
       )
       .subscribe();
 
+    // Realtime subscription for Coach Roster Updates & Invites
+    const rosterSubscription = user?.id
+      ? supabase
+          .channel(`player_roster_${user.id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'team_roster',
+              filter: `player_id=eq.${user.id}`,
+            },
+            (payload) => {
+              fetchDashboardData();
+              if (payload.eventType === 'UPDATE') {
+                const updated = payload.new as any;
+                if (updated.availability_status) {
+                  const statusName = String(updated.availability_status).toUpperCase();
+                  toast.info(`Coach updated your team game-day status: ${statusName}`);
+                }
+              }
+            }
+          )
+          .subscribe()
+      : null;
+
     return () => {
       supabase.removeChannel(matchSubscription);
+      if (rosterSubscription) {
+        supabase.removeChannel(rosterSubscription);
+      }
     };
   }, [user]);
 
@@ -112,7 +172,7 @@ export const PlayerDashboard = () => {
     if (user?.id) {
       const { data: rosterData } = await supabase
         .from('team_roster')
-        .select('id, status, teams(name, tournaments(name))')
+        .select('id, status, jersey_number, position, is_captain, is_starter, availability_status, teams(id, name, tournaments(id, name, sport))')
         .eq('player_id', user.id);
 
       if (rosterData) {
@@ -152,6 +212,7 @@ export const PlayerDashboard = () => {
       .from('tournaments')
       .select('*')
       .eq('status', 'Draft')
+      .or('is_deleted.is.null,is_deleted.eq.false')
       .order('created_at', { ascending: false });
 
     if (draftData) {
@@ -175,22 +236,100 @@ export const PlayerDashboard = () => {
     }
   };
 
-  if (user && !isVerified) {
+  if (isSuperAdmin || isCoach) {
+    return null;
+  }
+
+  if (user && isPlayer && !isVerified) {
     if (hasPendingDocuments) {
       return (
-        <div className="flex flex-col items-center justify-center py-14 sm:py-20 p-8 text-center bg-white rounded-3xl border border-slate-200 shadow-sm max-w-2xl mx-auto">
-          <div className="size-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mb-6">
+        <div className="flex flex-col items-center justify-center py-14 sm:py-20 p-8 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm max-w-2xl mx-auto space-y-4">
+          <div className="size-16 bg-orange-100 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-full flex items-center justify-center">
             <Clock className="size-8 animate-pulse" />
           </div>
-          <h1 className="text-3xl font-black text-slate-900 uppercase italic">Review <span className="text-orange-500">In Progress</span></h1>
-          <p className="text-slate-500 max-w-md mx-auto mt-4 font-medium">Your verification documents are being processed by our team. You'll gain full access once your eligibility is confirmed.</p>
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic">
+              Clearance <span className="text-orange-500">In Progress</span>
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-2 font-medium text-sm leading-relaxed">
+              Your Certificate of Registration has been parsed and submitted for clearance. You will gain full tournament eligibility once an administrator confirms your credentials.
+            </p>
+          </div>
+          {latestDoc?.confidence_score !== undefined && latestDoc?.confidence_score !== null && (
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-700 dark:text-slate-300">
+              <CheckCircle2 className="size-3.5 text-emerald-500" />
+              <span>Parsed Match Confidence: <strong className="text-orange-500">{latestDoc.confidence_score}%</strong></span>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (latestDoc?.status === 'Rejected') {
+      return (
+        <div className="max-w-2xl mx-auto space-y-6 p-4">
+          {/* Rejection Alert Card */}
+          <div className="p-6 rounded-3xl bg-red-50 dark:bg-red-500/10 border-2 border-red-200 dark:border-red-500/20 text-slate-900 dark:text-white shadow-xl space-y-4">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-red-500 text-white rounded-2xl shrink-0 shadow-md shadow-red-500/20">
+                <XCircle className="size-7" />
+              </div>
+              <div className="space-y-1">
+                <Badge className="bg-red-500 text-white font-black text-[10px] uppercase tracking-wider">
+                  Action Required • Re-Verification
+                </Badge>
+                <h2 className="text-2xl font-black italic uppercase tracking-tight text-red-600 dark:text-red-400">
+                  Verification Clearance Rejected
+                </h2>
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  Your submitted Certificate of Registration could not be approved by the athletics administration.
+                </p>
+              </div>
+            </div>
+
+            {/* Rejection Reason from Admin */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-red-200 dark:border-red-500/20 space-y-1.5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-red-600 dark:text-red-400 block">
+                Official Administrator Reason
+              </span>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-snug">
+                {latestDoc.rejection_reason || 'Document could not be verified by administration.'}
+              </p>
+            </div>
+
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Please download your official digital PDF copy directly from the{' '}
+              <a
+                href="https://oes.psu.palawan.edu.ph/aims/students/"
+                target="_blank"
+                rel="noreferrer"
+                className="text-orange-600 dark:text-orange-400 font-bold underline hover:text-orange-700"
+              >
+                PSU Student Portal (AIMS)
+              </a>{' '}
+              and re-submit below.
+            </p>
+          </div>
+
+          {/* Re-Upload Form */}
+          <VerificationUpload
+            onUploadSuccess={() => {
+              setHasPendingDocuments(true);
+              setLatestDoc((prev) => prev ? { ...prev, status: 'Pending' } : null);
+            }}
+          />
         </div>
       );
     }
 
     return (
       <div className="p-4">
-        <VerificationUpload onUploadSuccess={() => setHasPendingDocuments(true)} />
+        <VerificationUpload
+          onUploadSuccess={() => {
+            setHasPendingDocuments(true);
+            setLatestDoc({ id: 'new', status: 'Pending' });
+          }}
+        />
       </div>
     );
   }
@@ -216,7 +355,7 @@ export const PlayerDashboard = () => {
                 {user ? 'Athlete Hub' : 'Official Portal'}
               </span>
             </div>
-            <h1 className="text-2xl md:text-4xl font-black tracking-tight text-white uppercase italic leading-none">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-white">
               {user ? 'PLAYER ' : 'SPORTS '}<span className="text-orange-500">HUB</span>
             </h1>
             <p className="text-slate-400 text-xs md:text-sm font-medium mt-2 max-w-md">
@@ -231,7 +370,7 @@ export const PlayerDashboard = () => {
                 <p className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Stars</p>
                 <div className="flex items-center gap-1.5">
                   <Star className="size-3 text-orange-500 fill-orange-500" />
-                  <p className="text-lg md:text-xl font-black text-white leading-none">{stars.length}</p>
+                  <p className="text-lg md:text-xl font-black tabular-nums text-white leading-none">{stars.length}</p>
                 </div>
               </div>
             </div>
@@ -319,7 +458,7 @@ export const PlayerDashboard = () => {
               <div 
                 key={t.id}
                 onClick={() => setSelectedTournament(t)}
-                className="p-5 rounded-2xl bg-gradient-to-br from-white via-orange-50/20 to-orange-50/40 border-2 border-orange-500/20 hover:border-orange-500 hover:shadow-lg transition-all duration-300 cursor-pointer group relative overflow-hidden"
+                className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 hover:border-orange-500 hover:shadow-lg transition-all duration-300 cursor-pointer group relative overflow-hidden shadow-sm"
               >
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <span className="px-2 py-0.5 rounded-md bg-orange-500 text-white font-bold text-[9px] uppercase tracking-wider">
@@ -346,7 +485,7 @@ export const PlayerDashboard = () => {
 
       {/* Live & Upcoming Games Section */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold flex items-center gap-2">
+        <h2 className="text-lg md:text-xl font-black uppercase italic tracking-tight text-slate-900 flex items-center gap-2">
           <Activity className="size-5 text-primary" /> Live & Upcoming Games
         </h2>
         {liveMatches.length === 0 ? (
@@ -371,8 +510,14 @@ export const PlayerDashboard = () => {
                   <div className="flex justify-between items-start mb-2">
                     <Badge 
                       variant={match.status === 'Ongoing' ? 'destructive' : 'secondary'} 
-                      className={`font-black uppercase text-[10px] tracking-widest ${match.status === 'Ongoing' ? 'animate-pulse bg-red-600' : ''}`}
+                      className={`font-black uppercase text-[10px] tracking-widest gap-1.5 px-2.5 py-0.5 rounded-full ${match.status === 'Ongoing' ? 'bg-red-600 hover:bg-red-600 text-white shadow-sm' : ''}`}
                     >
+                      {match.status === 'Ongoing' && (
+                        <span className="relative flex size-1.5">
+                          <span className="animate-ping-slow absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                          <span className="relative inline-flex rounded-full size-1.5 bg-white"></span>
+                        </span>
+                      )}
                       {match.status === 'Ongoing' ? 'LIVE NOW' : match.status}
                     </Badge>
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">{match.round}</span>
@@ -391,10 +536,10 @@ export const PlayerDashboard = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {match.status === 'Ongoing' && (
-                    <div className="flex justify-center items-center gap-6 bg-slate-950 text-white py-3 rounded-xl font-mono text-2xl font-black shadow-inner">
-                      <span className="text-orange-500">{match.team_a_score}</span>
+                    <div className="flex justify-center items-center gap-6 bg-slate-950 text-white py-3 rounded-xl font-mono text-2xl font-black tabular-nums shadow-inner">
+                      <span className="text-orange-500 tabular-nums">{match.team_a_score}</span>
                       <span className="opacity-20">:</span>
-                      <span className="text-orange-500">{match.team_b_score}</span>
+                      <span className="text-orange-500 tabular-nums">{match.team_b_score}</span>
                     </div>
                   )}
                   {match.status === 'Scheduled' && (
@@ -477,28 +622,95 @@ export const PlayerDashboard = () => {
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {myTeams.map((roster, index) => (
-                <Card 
-                  key={roster.id} 
-                  className="group border-2 border-slate-100 hover:border-slate-300 transition-all rounded-2xl animate-in fade-in slide-in-from-bottom-4 fill-mode-both"
-                  style={{ animationDelay: `${index * 75}ms` }}
-                >
-                  <CardHeader>
-                    <CardTitle className="font-black uppercase italic tracking-tight">
-                      {Array.isArray(roster.teams) ? roster.teams[0]?.name : roster.teams?.name ?? 'Unknown Team'}
-                    </CardTitle>
-                    <CardDescription className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                      {(() => {
-                        const team = Array.isArray(roster.teams) ? roster.teams[0] : roster.teams;
-                        return Array.isArray(team?.tournaments) ? team?.tournaments[0]?.name : team?.tournaments?.name ?? 'Unknown Tournament';
-                      })()}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Badge className="font-black uppercase tracking-widest text-[9px] bg-slate-900">Official Roster Member</Badge>
-                  </CardContent>
-                </Card>
-              ))}
+              {myTeams.map((roster, index) => {
+                const team = Array.isArray(roster.teams) ? roster.teams[0] : roster.teams;
+                const tourney = Array.isArray(team?.tournaments) ? team?.tournaments[0] : team?.tournaments;
+                const availability = roster.availability_status || 'active';
+
+                return (
+                  <Card 
+                    key={roster.id} 
+                    className="group border-2 border-slate-100 hover:border-orange-500/30 transition-all rounded-2xl animate-in fade-in slide-in-from-bottom-4 fill-mode-both bg-white dark:bg-slate-900 shadow-sm"
+                    style={{ animationDelay: `${index * 75}ms` }}
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <Badge variant="outline" className="text-[9px] font-black uppercase tracking-wider text-orange-500 border-orange-500/30">
+                          {tourney?.sport || 'Athletics'}
+                        </Badge>
+                        {/* Game-day status projection badge */}
+                        {availability === 'active' && (
+                          <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[9px] font-black uppercase tracking-wider gap-1">
+                            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Active Roster
+                          </Badge>
+                        )}
+                        {availability === 'benched' && (
+                          <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[9px] font-black uppercase tracking-wider gap-1">
+                            <span className="size-1.5 rounded-full bg-amber-500" />
+                            Benched
+                          </Badge>
+                        )}
+                        {availability === 'injured' && (
+                          <Badge className="bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 text-[9px] font-black uppercase tracking-wider gap-1">
+                            <span className="size-1.5 rounded-full bg-red-500" />
+                            Injured Reserve
+                          </Badge>
+                        )}
+                        {availability === 'excused' && (
+                          <Badge className="bg-slate-100 dark:bg-white/10 text-slate-500 border-none text-[9px] font-black uppercase tracking-wider gap-1">
+                            <span className="size-1.5 rounded-full bg-slate-400" />
+                            Excused
+                          </Badge>
+                        )}
+                      </div>
+                      <CardTitle className="font-black uppercase italic tracking-tight text-lg mt-1">
+                        {team?.name ?? 'Unknown Team'}
+                      </CardTitle>
+                      <CardDescription className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                        {tourney?.name ?? 'Official Tournament'}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0 space-y-3">
+                      {/* Player Roster Credentials Pill Box */}
+                      <div className="grid grid-cols-3 gap-1.5 p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 text-center text-xs">
+                        <div className="flex flex-col">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Jersey</span>
+                          <span className="font-black text-slate-900 dark:text-white">
+                            {roster.jersey_number !== null && roster.jersey_number !== undefined ? `#${roster.jersey_number}` : '--'}
+                          </span>
+                        </div>
+                        <div className="flex flex-col border-x border-slate-200 dark:border-white/10">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Position</span>
+                          <span className="font-black text-slate-900 dark:text-white truncate px-1">
+                            {roster.position || 'Player'}
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Role</span>
+                          <span className="font-black text-slate-900 dark:text-white flex items-center justify-center gap-1">
+                            {roster.is_starter ? (
+                              <>
+                                <Zap className="size-3 fill-emerald-500 text-emerald-500" />
+                                <span>Starter</span>
+                              </>
+                            ) : (
+                              'Bench'
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      {roster.is_captain && (
+                        <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-xs font-black uppercase tracking-wider bg-amber-500/10 px-2.5 py-1.5 rounded-lg border border-amber-500/20">
+                          <Star className="size-3.5 fill-amber-500" />
+                          <span>Official Team Captain</span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </section>

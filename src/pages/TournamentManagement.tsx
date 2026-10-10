@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,8 +30,20 @@ import {
   Sparkles,
   Lightbulb,
   MapPin,
-  Eye
+  Eye,
+  RotateCcw,
+  Medal
 } from 'lucide-react';
+import type { IconType } from 'react-icons';
+import { 
+  GiBasketballBall, 
+  GiVolleyballBall, 
+  GiSoccerBall, 
+  GiShuttlecock, 
+  GiBaseballBat, 
+  GiSoccerKick, 
+  GiPingPongBat 
+} from 'react-icons/gi';
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
 import { logAudit } from '@/lib/audit';
@@ -43,6 +56,9 @@ type Tournament = {
   status: string;
   start_date: string;
   end_date: string;
+  is_deleted?: boolean;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 };
 
 type PendingTeam = {
@@ -57,18 +73,25 @@ type PendingTeam = {
   } | null;
 };
 
-const BINTURUNGAN_DEFAULT_SPORTS = [
-  { name: 'Basketball', icon: '🏀', category: 'Court' },
-  { name: 'Volleyball', icon: '🏐', category: 'Court' },
-  { name: 'Soccer', icon: '⚽', category: 'Pitch' },
-  { name: 'Badminton', icon: '🏸', category: 'Racket' },
-  { name: 'Baseball', icon: '⚾', category: 'Diamond' },
-  { name: 'Futsal', icon: '🥅', category: 'Indoor' },
-  { name: 'Table Tennis', icon: '🏓', category: 'Paddle' },
+type SportConfig = {
+  name: string;
+  icon: IconType;
+  category: string;
+};
+
+const BINTURUNGAN_DEFAULT_SPORTS: SportConfig[] = [
+  { name: 'Basketball', icon: GiBasketballBall, category: 'Court' },
+  { name: 'Volleyball', icon: GiVolleyballBall, category: 'Court' },
+  { name: 'Soccer', icon: GiSoccerBall, category: 'Pitch' },
+  { name: 'Badminton', icon: GiShuttlecock, category: 'Racket' },
+  { name: 'Baseball', icon: GiBaseballBat, category: 'Diamond' },
+  { name: 'Futsal', icon: GiSoccerKick, category: 'Indoor' },
+  { name: 'Table Tennis', icon: GiPingPongBat, category: 'Paddle' },
 ];
 
 export const TournamentManagement = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [pendingTeams, setPendingTeams] = useState<PendingTeam[]>([]);
   const [isLoadingTournaments, setIsLoadingTournaments] = useState(true);
@@ -115,6 +138,20 @@ export const TournamentManagement = () => {
     loser_next_match_slot?: 'team_a' | 'team_b';
   }[]>([]);
 
+  // Conclude / Finish Tournament State
+  const [isConcludeDialogOpen, setIsConcludeDialogOpen] = useState(false);
+  const [tournamentToConclude, setTournamentToConclude] = useState<Tournament | null>(null);
+  const [concludeChampionName, setConcludeChampionName] = useState<string | null>(null);
+  const [isConcludingTournament, setIsConcludingTournament] = useState(false);
+
+  // Reopen Tournament State
+  const [isReopenDialogOpen, setIsReopenDialogOpen] = useState(false);
+  const [tournamentToReopen, setTournamentToReopen] = useState<Tournament | null>(null);
+  const [isReopeningTournament, setIsReopeningTournament] = useState(false);
+
+  // Reset Bracket Confirmation State
+  const [isResetBracketDialogOpen, setIsResetBracketDialogOpen] = useState(false);
+
   // MVP Awards State
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>('');
   const [tournamentPlayers, setTournamentPlayers] = useState<any[]>([]);
@@ -126,6 +163,234 @@ export const TournamentManagement = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [activeTab, setActiveTab] = useState('tournaments');
+
+  // Champion & Completion Calculation
+  const { allMatchesCompleted, championName } = useMemo(() => {
+    if (!existingMatches || existingMatches.length === 0) {
+      return { allMatchesCompleted: false, championName: null };
+    }
+    const allCompleted = existingMatches.every(m => m.status === 'Completed');
+    
+    // Look for championship match (match with no next_match_id, or round with 'final')
+    const finalMatch = existingMatches.find(m => !m.next_match_id && m.status === 'Completed' && (m.round?.toLowerCase().includes('final') || !m.round?.toLowerCase().includes('bronze')))
+      || existingMatches.find(m => !m.next_match_id && m.status === 'Completed')
+      || (allCompleted ? existingMatches[existingMatches.length - 1] : null);
+
+    let winnerName: string | null = null;
+    if (finalMatch && finalMatch.status === 'Completed') {
+      const isTeamAWinner = (finalMatch.team_a_score || 0) >= (finalMatch.team_b_score || 0);
+      winnerName = isTeamAWinner ? finalMatch.team_a_name : finalMatch.team_b_name;
+    }
+
+    return { allMatchesCompleted: allCompleted, championName: winnerName };
+  }, [existingMatches]);
+
+  // Official Tournament Standings & Placements Memo (Gold, Silver, Bronze, and Elimination Placements)
+  const tournamentStandings = useMemo(() => {
+    if (!selectedTournamentForBracket) return [];
+
+    const statsMap = new Map<string, {
+      teamId: string;
+      teamName: string;
+      matchesPlayed: number;
+      wins: number;
+      losses: number;
+      pointsFor: number;
+      pointsAgainst: number;
+      finalRank?: number;
+      stage?: string;
+      medal?: 'gold' | 'silver' | 'bronze' | 'elimination';
+    }>();
+
+    // Initialize all approved teams
+    approvedTeams.forEach(t => {
+      if (t.id && t.name) {
+        statsMap.set(t.id, {
+          teamId: t.id,
+          teamName: t.name,
+          matchesPlayed: 0,
+          wins: 0,
+          losses: 0,
+          pointsFor: 0,
+          pointsAgainst: 0,
+        });
+      }
+    });
+
+    // Also include teams from matches if missing
+    existingMatches.forEach(m => {
+      if (m.team_a_id && m.team_a_name && m.team_a_name !== 'BYE' && m.team_a_name !== 'TBD' && !statsMap.has(m.team_a_id)) {
+        statsMap.set(m.team_a_id, {
+          teamId: m.team_a_id,
+          teamName: m.team_a_name,
+          matchesPlayed: 0,
+          wins: 0,
+          losses: 0,
+          pointsFor: 0,
+          pointsAgainst: 0,
+        });
+      }
+      if (m.team_b_id && m.team_b_name && m.team_b_name !== 'BYE' && m.team_b_name !== 'TBD' && !statsMap.has(m.team_b_id)) {
+        statsMap.set(m.team_b_id, {
+          teamId: m.team_b_id,
+          teamName: m.team_b_name,
+          matchesPlayed: 0,
+          wins: 0,
+          losses: 0,
+          pointsFor: 0,
+          pointsAgainst: 0,
+        });
+      }
+    });
+
+    // Compute match statistics and placement records
+    existingMatches.forEach(match => {
+      const scoreA = match.team_a_score || 0;
+      const scoreB = match.team_b_score || 0;
+      const isPlayed = match.status === 'Completed' || scoreA > 0 || scoreB > 0;
+
+      if (isPlayed) {
+        const tA = match.team_a_id ? statsMap.get(match.team_a_id) : undefined;
+        const tB = match.team_b_id ? statsMap.get(match.team_b_id) : undefined;
+
+        if (tA && match.team_a_name !== 'BYE' && match.team_a_name !== 'TBD') {
+          tA.matchesPlayed += 1;
+          tA.pointsFor += scoreA;
+          tA.pointsAgainst += scoreB;
+          if (scoreA > scoreB) tA.wins += 1;
+          else if (scoreA < scoreB) tA.losses += 1;
+        }
+
+        if (tB && match.team_b_name !== 'BYE' && match.team_b_name !== 'TBD') {
+          tB.matchesPlayed += 1;
+          tB.pointsFor += scoreB;
+          tB.pointsAgainst += scoreA;
+          if (scoreB > scoreA) tB.wins += 1;
+          else if (scoreB < scoreA) tB.losses += 1;
+        }
+
+        const roundLower = (match.round || '').toLowerCase();
+        const isWinnerA = scoreA >= scoreB;
+        const winnerId = isWinnerA ? match.team_a_id : match.team_b_id;
+        const loserId = isWinnerA ? match.team_b_id : match.team_a_id;
+
+        const isFinal = (roundLower.includes('final') && !roundLower.includes('semi') && !roundLower.includes('quarter') && !roundLower.includes('bronze') && !roundLower.includes('3rd'))
+          || (!match.next_match_id && !roundLower.includes('bronze') && !roundLower.includes('3rd'));
+        const isBronze = roundLower.includes('bronze') || roundLower.includes('3rd');
+
+        if (isFinal && (match.status === 'Completed' || scoreA > 0 || scoreB > 0)) {
+          if (winnerId && statsMap.has(winnerId)) {
+            const winner = statsMap.get(winnerId)!;
+            winner.finalRank = 1;
+            winner.stage = 'Tournament Champion';
+            winner.medal = 'gold';
+          }
+          if (loserId && statsMap.has(loserId)) {
+            const loser = statsMap.get(loserId)!;
+            loser.finalRank = 2;
+            loser.stage = 'Grand Finalist';
+            loser.medal = 'silver';
+          }
+        } else if (isBronze && (match.status === 'Completed' || scoreA > 0 || scoreB > 0)) {
+          if (winnerId && statsMap.has(winnerId)) {
+            const winner = statsMap.get(winnerId)!;
+            winner.finalRank = 3;
+            winner.stage = 'Bronze Medalist';
+            winner.medal = 'bronze';
+          }
+          if (loserId && statsMap.has(loserId)) {
+            const loser = statsMap.get(loserId)!;
+            loser.finalRank = 4;
+            loser.stage = '4th Place Playoff';
+            loser.medal = 'elimination';
+          }
+        } else if (roundLower.includes('semi')) {
+          if (loserId && statsMap.has(loserId)) {
+            const loser = statsMap.get(loserId)!;
+            if (!loser.stage) {
+              loser.stage = 'Semi-Finalist';
+            }
+          }
+        } else if (roundLower.includes('quarter')) {
+          if (loserId && statsMap.has(loserId)) {
+            const loser = statsMap.get(loserId)!;
+            if (!loser.stage) {
+              loser.stage = 'Quarter-Finalist';
+            }
+          }
+        }
+      }
+    });
+
+    const squadList = Array.from(statsMap.values()).filter(t => t.teamName !== 'BYE' && t.teamName !== 'TBD');
+
+    squadList.sort((a, b) => {
+      if (a.finalRank && b.finalRank) return a.finalRank - b.finalRank;
+      if (a.finalRank) return -1;
+      if (b.finalRank) return 1;
+
+      const stagePriority = (stage?: string) => {
+        if (!stage) return 99;
+        if (stage === 'Tournament Champion') return 1;
+        if (stage === 'Grand Finalist') return 2;
+        if (stage === 'Bronze Medalist') return 3;
+        if (stage === '4th Place Playoff') return 4;
+        if (stage === 'Semi-Finalist') return 5;
+        if (stage === 'Quarter-Finalist') return 6;
+        return 10;
+      };
+
+      const diffStage = stagePriority(a.stage) - stagePriority(b.stage);
+      if (diffStage !== 0) return diffStage;
+
+      if (b.wins !== a.wins) return b.wins - a.wins;
+
+      const diffA = a.pointsFor - a.pointsAgainst;
+      const diffB = b.pointsFor - b.pointsAgainst;
+      if (diffB !== diffA) return diffB - diffA;
+
+      return b.pointsFor - a.pointsFor;
+    });
+
+    return squadList.map((item, index) => {
+      const calculatedRank = item.finalRank || (index + 1);
+      const medal: 'gold' | 'silver' | 'bronze' | 'elimination' = item.medal || (
+        calculatedRank === 1 ? 'gold' :
+        calculatedRank === 2 ? 'silver' :
+        calculatedRank === 3 ? 'bronze' : 'elimination'
+      );
+      let stage = item.stage;
+
+      if (calculatedRank === 1) {
+        stage = stage || 'Tournament Champion';
+      } else if (calculatedRank === 2) {
+        stage = stage || 'Grand Finalist';
+      } else if (calculatedRank === 3) {
+        stage = stage || 'Bronze Medalist';
+      } else {
+        stage = stage || `${calculatedRank}th Place Placement`;
+      }
+
+      const pointDiff = item.pointsFor - item.pointsAgainst;
+      const winRate = item.matchesPlayed > 0 ? (item.wins / item.matchesPlayed) * 100 : 0;
+
+      return {
+        teamId: item.teamId,
+        teamName: item.teamName,
+        rank: calculatedRank,
+        medal,
+        stage,
+        matchesPlayed: item.matchesPlayed,
+        wins: item.wins,
+        losses: item.losses,
+        winRate,
+        pointsFor: item.pointsFor,
+        pointsAgainst: item.pointsAgainst,
+        pointDiff,
+      };
+    });
+  }, [selectedTournamentForBracket, approvedTeams, existingMatches]);
+
 
   // Memoized Filtering Logic
   const filteredTournaments = useMemo(() => {
@@ -170,7 +435,9 @@ export const TournamentManagement = () => {
     if (error) {
       toast.error('Failed to load tournaments: ' + error.message);
     } else {
-      setTournaments(data as Tournament[]);
+      const allTournaments = (data as Tournament[]) || [];
+      const activeTournaments = allTournaments.filter(t => !t.is_deleted);
+      setTournaments(activeTournaments);
     }
     setIsLoadingTournaments(false);
   };
@@ -179,8 +446,9 @@ export const TournamentManagement = () => {
     setIsLoadingTeams(true);
     const { data, error } = await supabase
       .from('teams')
-      .select('id, name, status, users(full_name), tournaments(id, name, status, sport)')
-      .eq('status', 'Pending');
+      .select('id, name, status, users!coach_id(full_name), tournaments(id, name, status, sport)')
+      .eq('status', 'Pending')
+      .or('is_deleted.is.null,is_deleted.eq.false');
 
     if (error) {
       toast.error('Failed to load pending teams: ' + error.message);
@@ -305,68 +573,73 @@ export const TournamentManagement = () => {
     setIsDeleteOpen(true);
   };
 
+  const handleRestoreTournament = async (tournamentId: string, tournamentName?: string) => {
+    try {
+      const { error } = await supabase
+        .from('tournaments')
+        .update({
+          is_deleted: false,
+          deleted_at: null,
+          deleted_by: null
+        })
+        .eq('id', tournamentId);
+
+      if (error) throw error;
+
+      toast.success(`"${tournamentName || 'Tournament'}" restored successfully!`, {
+        description: 'Tournament is live and visible across all public brackets and athlete hubs.'
+      });
+
+      await logAudit({
+        action: 'RESTORE_TOURNAMENT',
+        entity_type: 'tournaments',
+        entity_id: tournamentId,
+        details: `Restored soft-deleted tournament: ${tournamentName || tournamentId}`
+      });
+
+      fetchTournaments();
+    } catch (err: any) {
+      toast.error('Failed to restore tournament: ' + err.message);
+    }
+  };
+
   const handleDeleteTournament = async () => {
     if (!tournamentToDelete) return;
     setIsDeletingTournament(true);
 
     try {
       const tournamentId = tournamentToDelete.id;
+      const tournamentName = tournamentToDelete.name;
 
-      // 1. Break self-referencing pointer links on matches
-      try {
-        await supabase
-          .from('matches')
-          .update({ next_match_id: null, loser_next_match_id: null })
-          .eq('tournament_id', tournamentId);
-      } catch {
-        await supabase
-          .from('matches')
-          .update({ next_match_id: null })
-          .eq('tournament_id', tournamentId);
-      }
+      const adminId = user?.id || (await supabase.auth.getUser()).data.user?.id || null;
 
-      // 2. Fetch all match IDs in this tournament
-      const { data: matchesData } = await supabase
-        .from('matches')
-        .select('id')
-        .eq('tournament_id', tournamentId);
-
-      if (matchesData && matchesData.length > 0) {
-        const matchIds = matchesData.map(m => m.id);
-        // Delete match events referencing these matches
-        await supabase.from('match_events').delete().in('match_id', matchIds);
-        // Delete player stars referencing these matches
-        await supabase.from('player_stars').delete().in('match_id', matchIds);
-      }
-
-      // 3. Delete player stars associated directly with the tournament
-      await supabase.from('player_stars').delete().eq('tournament_id', tournamentId);
-
-      // 4. Delete matches in tournament
-      await supabase.from('matches').delete().eq('tournament_id', tournamentId);
-
-      // 5. Find teams in tournament to remove rosters and then teams
-      const { data: teamsData } = await supabase.from('teams').select('id').eq('tournament_id', tournamentId);
-      if (teamsData && teamsData.length > 0) {
-        const teamIds = teamsData.map(t => t.id);
-        await supabase.from('team_roster').delete().in('team_id', teamIds);
-        await supabase.from('teams').delete().eq('tournament_id', tournamentId);
-      }
-
-      // 6. Delete the tournament itself
-      const { error } = await supabase.from('tournaments').delete().eq('id', tournamentId);
+      // Soft delete: Mark is_deleted = true, preserve matches, teams, rosters, and stats
+      const { error } = await supabase
+        .from('tournaments')
+        .update({
+          is_deleted: true,
+          deleted_at: new Date().toISOString(),
+          deleted_by: adminId
+        })
+        .eq('id', tournamentId);
 
       if (error) {
         throw error;
       }
 
-      toast.success(`Tournament "${tournamentToDelete.name}" has been permanently terminated.`);
+      toast.success(`"${tournamentName}" moved to Recovery Vault.`, {
+        description: 'Hidden from public brackets. You can undo or restore it anytime in the Recovery Center.',
+        action: {
+          label: 'Undo',
+          onClick: () => handleRestoreTournament(tournamentId, tournamentName)
+        }
+      });
 
-      logAudit({
+      await logAudit({
         action: 'DELETE_TOURNAMENT',
         entity_type: 'tournaments',
         entity_id: tournamentId,
-        details: `Terminated and deleted tournament: ${tournamentToDelete.name}`
+        details: `Soft-deleted tournament: ${tournamentName} (recoverable in Recovery Center)`
       });
 
       setIsDeleteOpen(false);
@@ -375,7 +648,7 @@ export const TournamentManagement = () => {
       fetchTournaments();
       fetchPendingTeams();
     } catch (err: any) {
-      toast.error('Failed to delete tournament: ' + err.message);
+      toast.error('Failed to move tournament to recovery: ' + err.message);
     } finally {
       setIsDeletingTournament(false);
     }
@@ -413,15 +686,33 @@ export const TournamentManagement = () => {
   };
 
   const handleRejectTeam = async (teamId: string) => {
+    const pendingTeam = pendingTeams.find(t => t.id === teamId);
+    const adminId = user?.id || (await supabase.auth.getUser()).data.user?.id || null;
+
+    // Soft delete rejected team application so it can be restored if needed
     const { error } = await supabase
       .from('teams')
-      .delete()
+      .update({
+        is_deleted: true,
+        deleted_at: new Date().toISOString(),
+        deleted_by: adminId
+      })
       .eq('id', teamId);
 
     if (error) {
       toast.error('Failed to reject team: ' + error.message);
     } else {
-      toast.success('Team application rejected and removed.');
+      toast.success('Team application moved to Recovery Archive.', {
+        description: 'Preserved in Recovery Center if you need to restore it.'
+      });
+
+      await logAudit({
+        action: 'REJECT_TEAM',
+        entity_type: 'teams',
+        entity_id: teamId,
+        details: `Soft-deleted / rejected team application: ${pendingTeam?.name || teamId}`
+      });
+
       fetchPendingTeams();
     }
   };
@@ -473,9 +764,12 @@ export const TournamentManagement = () => {
           .eq('id', match.next_match_id);
 
         if (error) throw error;
-        toast.success(`🎉 Match result confirmed! ${winnerName} has advanced to the next bracket round!`);
+        toast.success(`Match result confirmed! ${winnerName} has advanced to the next bracket round.`);
       } else {
-        toast.success(`🏆 Tournament Championship Result Confirmed! ${winnerName} is crowned Champion! 🎉`, { duration: 8000 });
+        toast.success(`Championship Result Confirmed! ${winnerName} is crowned Champion!`, {
+          description: 'All final scores are locked. You can now conclude and finalize this tournament.',
+          duration: 8000
+        });
       }
 
       // Route loser to Bronze Medal match if loser_next_match_id is configured
@@ -489,7 +783,7 @@ export const TournamentManagement = () => {
             .from('matches')
             .update({ [loserMatchField]: loserId })
             .eq('id', match.loser_next_match_id);
-          toast.info(`🥉 ${loserName} routed to Bronze Medal Playoff!`);
+          toast.info(`${loserName} routed to Bronze Medal Playoff.`);
         } catch (loserErr) {
           console.warn('Could not auto-route loser to bronze playoff:', loserErr);
         }
@@ -508,6 +802,83 @@ export const TournamentManagement = () => {
     } catch (err: any) {
       toast.error('Failed to confirm match result: ' + err.message);
     }
+  };
+
+  const handleConcludeTournament = async () => {
+    if (!tournamentToConclude) return;
+    setIsConcludingTournament(true);
+    try {
+      const { error } = await supabase
+        .from('tournaments')
+        .update({ status: 'Completed' })
+        .eq('id', tournamentToConclude.id);
+
+      if (error) throw error;
+
+      toast.success(`"${tournamentToConclude.name}" officially concluded!`, {
+        description: concludeChampionName 
+          ? `Champion: ${concludeChampionName} crowned!` 
+          : 'Tournament archived and bracket locked from further changes.'
+      });
+
+      await logAudit({
+        action: 'CONCLUDE_TOURNAMENT',
+        entity_type: 'tournaments',
+        entity_id: tournamentToConclude.id,
+        details: `Concluded tournament: ${tournamentToConclude.name}. Champion: ${concludeChampionName || 'N/A'}`
+      });
+
+      if (selectedTournamentForBracket?.id === tournamentToConclude.id) {
+        setSelectedTournamentForBracket(prev => prev ? { ...prev, status: 'Completed' } : null);
+      }
+      setTournaments(prev => prev.map(t => t.id === tournamentToConclude.id ? { ...t, status: 'Completed' } : t));
+      setIsConcludeDialogOpen(false);
+      setTournamentToConclude(null);
+    } catch (err: any) {
+      toast.error('Failed to conclude tournament: ' + err.message);
+    } finally {
+      setIsConcludingTournament(false);
+    }
+  };
+
+  const handleReopenTournament = async () => {
+    if (!tournamentToReopen) return;
+    setIsReopeningTournament(true);
+    try {
+      const { error } = await supabase
+        .from('tournaments')
+        .update({ status: 'Active' })
+        .eq('id', tournamentToReopen.id);
+
+      if (error) throw error;
+
+      toast.success(`"${tournamentToReopen.name}" reopened to Active status.`, {
+        description: 'Live match scoring and bracket controls unlocked.'
+      });
+
+      await logAudit({
+        action: 'REOPEN_TOURNAMENT',
+        entity_type: 'tournaments',
+        entity_id: tournamentToReopen.id,
+        details: `Reopened tournament: ${tournamentToReopen.name} back to Active`
+      });
+
+      if (selectedTournamentForBracket?.id === tournamentToReopen.id) {
+        setSelectedTournamentForBracket(prev => prev ? { ...prev, status: 'Active' } : null);
+      }
+      setTournaments(prev => prev.map(t => t.id === tournamentToReopen.id ? { ...t, status: 'Active' } : t));
+      setIsReopenDialogOpen(false);
+      setTournamentToReopen(null);
+    } catch (err: any) {
+      toast.error('Failed to reopen tournament: ' + err.message);
+    } finally {
+      setIsReopeningTournament(false);
+    }
+  };
+
+  const handleConfirmResetBracket = () => {
+    setIsResetBracketDialogOpen(false);
+    generateSeededMatches();
   };
 
   const fetchTournamentPlayers = async (tournamentId: string) => {
@@ -785,6 +1156,16 @@ export const TournamentManagement = () => {
     setIsPublishing(true);
 
     try {
+      // Clean up previous matches for this tournament to ensure idempotency and prevent duplicate/infinite matches
+      const { error: cleanupErr } = await supabase
+        .from('matches')
+        .delete()
+        .eq('tournament_id', selectedTournamentForBracket.id);
+
+      if (cleanupErr) {
+        console.warn('Could not clean up previous matches before re-publishing:', cleanupErr);
+      }
+
       // Pass 1: Batch Insert all matches to get database-generated IDs
       const payload = proposedMatches.map(m => {
         const isByeMatch = m.team_b_name === 'BYE';
@@ -928,14 +1309,14 @@ export const TournamentManagement = () => {
               Administrative Hub
             </span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-sans font-black tracking-tight uppercase leading-tight">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
             TOURNAMENT <span className="text-orange-500">ARENA</span>
           </h1>
           <p className="text-slate-400 font-sans font-medium text-sm tracking-wide mt-2 max-w-2xl opacity-80">
             The central command for institutional competitions, team enrollments, and MVP recognition.
           </p>
         </div>
-        <div className="flex gap-4 relative z-10">
+        <div className="flex items-center gap-3 relative z-10">
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger 
               render={
@@ -945,7 +1326,7 @@ export const TournamentManagement = () => {
                 </Button>
               }
             />
-            <DialogContent className="w-full sm:max-w-2xl max-w-[95vw] rounded-3xl border-slate-200 dark:border-white/10 p-6 shadow-2xl bg-white dark:bg-slate-950">
+            <DialogContent className="w-full sm:max-w-2xl max-w-[95vw] max-h-[88dvh] overflow-y-auto rounded-3xl border-slate-200 dark:border-white/10 p-6 shadow-2xl bg-white dark:bg-slate-950">
               <DialogHeader className="space-y-1">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -1041,6 +1422,7 @@ export const TournamentManagement = () => {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-white/10">
                       {BINTURUNGAN_DEFAULT_SPORTS.map((sport) => {
                         const isChecked = selectedSports.includes(sport.name);
+                        const SportIcon = sport.icon;
                         return (
                           <button
                             type="button"
@@ -1052,8 +1434,12 @@ export const TournamentManagement = () => {
                                 : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-white/5 text-slate-700 dark:text-slate-300 hover:border-orange-500/40 hover:bg-orange-50/50 dark:hover:bg-slate-800'
                             }`}
                           >
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="text-sm leading-none select-none">{sport.icon}</span>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className={`size-5 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                                isChecked ? 'bg-white/20 text-white' : 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                              }`}>
+                                <SportIcon className="size-3.5 stroke-[2.2]" />
+                              </div>
                               <span className="text-xs font-black uppercase tracking-tight truncate">{sport.name}</span>
                             </div>
                             <div className={`size-3.5 rounded flex items-center justify-center border shrink-0 ml-1 ${
@@ -1076,11 +1462,17 @@ export const TournamentManagement = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl">
-                          {BINTURUNGAN_DEFAULT_SPORTS.map(s => (
-                            <SelectItem key={s.name} value={s.name} className="rounded-lg font-bold text-xs">
-                              {s.icon} {s.name}
-                            </SelectItem>
-                          ))}
+                          {BINTURUNGAN_DEFAULT_SPORTS.map(s => {
+                            const SportIcon = s.icon;
+                            return (
+                              <SelectItem key={s.name} value={s.name} className="rounded-lg font-bold text-xs">
+                                <div className="flex items-center gap-2">
+                                  <SportIcon className="size-3.5 text-orange-500 shrink-0" />
+                                  <span>{s.name}</span>
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1240,7 +1632,14 @@ export const TournamentManagement = () => {
                       <div className="p-2 bg-slate-50 dark:bg-white/5 rounded-xl group-hover:bg-orange-500 transition-colors duration-500">
                         <Trophy className="size-5 text-slate-400 group-hover:text-white transition-colors duration-500" />
                       </div>
-                      <Badge className={`${t.status === 'Completed' ? 'bg-slate-900' : 'bg-orange-500'} text-[10px] font-black uppercase tracking-widest py-1 px-3 rounded-full shadow-lg shadow-orange-500/10`}>
+                      <Badge className={`${
+                        t.status === 'Completed' 
+                          ? 'bg-emerald-600 text-white shadow-emerald-500/10' 
+                          : t.status === 'Active' 
+                          ? 'bg-orange-500 text-white shadow-orange-500/10' 
+                          : 'bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300'
+                      } text-[10px] font-black uppercase tracking-widest py-1 px-3 rounded-full shadow-lg`}>
+                        {t.status === 'Completed' && <CheckCircle2 className="size-3 mr-1 inline" />}
                         {t.status}
                       </Badge>
                     </div>
@@ -1257,13 +1656,18 @@ export const TournamentManagement = () => {
                         className="flex-1 h-14 flex items-center justify-center gap-3 bg-slate-900 hover:bg-orange-500 text-white font-black uppercase italic tracking-[0.1em] rounded-2xl shadow-xl transition-all duration-300 group-hover:shadow-orange-500/20"
                         onClick={() => openWizard(t)}
                       >
-                        {t.status === 'Draft' ? <LayoutGrid className="size-5" /> : <Eye className="size-5 text-orange-400" />}
-                        {t.status === 'Draft' ? 'Setup Bracket' : 'Bracket Preview'}
+                        {t.status === 'Draft' ? (
+                          <LayoutGrid className="size-5" />
+                        ) : t.status === 'Completed' ? (
+                          <Trophy className="size-5 text-amber-400" />
+                        ) : (
+                          <Eye className="size-5 text-orange-400" />
+                        )}
+                        {t.status === 'Draft' ? 'Setup Bracket' : t.status === 'Completed' ? 'View Results' : 'Bracket Preview'}
                       </Button>
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-14 w-14 rounded-2xl text-slate-400 hover:text-red-500 hover:bg-red-500/10 transition-colors shrink-0"
+                        variant="outline"
+                        className="h-14 w-14 rounded-2xl border-2 border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-500 text-slate-400 flex items-center justify-center shrink-0 transition-all shadow-sm"
                         title="Terminate Tournament"
                         onClick={() => promptDeleteTournament(t)}
                       >
@@ -1296,8 +1700,17 @@ export const TournamentManagement = () => {
                       <TableCell className="font-black italic uppercase tracking-tighter text-lg pl-8 py-5">{t.name}</TableCell>
                       <TableCell className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">{t.sport}</TableCell>
                       <TableCell>
-                        <Badge variant={t.status === 'Completed' ? 'default' : 'secondary'} className="text-[9px] font-black uppercase tracking-tighter px-2">
-                           {t.status}
+                        <Badge 
+                          className={`${
+                            t.status === 'Completed' 
+                              ? 'bg-emerald-600 text-white' 
+                              : t.status === 'Active' 
+                              ? 'bg-orange-500 text-white' 
+                              : 'bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300'
+                          } text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full`}
+                        >
+                          {t.status === 'Completed' && <CheckCircle2 className="size-2.5 mr-1 inline" />}
+                          {t.status}
                         </Badge>
                       </TableCell>
                       <TableCell className="font-bold text-xs text-slate-400">{new Date(t.start_date).toLocaleDateString()}</TableCell>
@@ -1330,31 +1743,57 @@ export const TournamentManagement = () => {
           )}
 
           <Dialog open={isBracketOpen} onOpenChange={(open) => { setIsBracketOpen(open); if (!open) { setWizardStep(1); setProposedMatches([]); } }}>
-            <DialogContent className="sm:max-w-4xl overflow-y-auto max-h-[90vh] rounded-[2rem] border-slate-200 dark:border-white/10 p-0">
+            <DialogContent className="sm:max-w-4xl overflow-y-auto max-h-[88dvh] rounded-[2rem] border-slate-200 dark:border-white/10 p-0">
               {/* Wizard Header */}
               <div className="bg-slate-950 text-white px-8 py-6 rounded-t-[2rem] relative overflow-hidden">
                 <div className="absolute -right-16 -top-16 size-64 bg-orange-500/10 rounded-full blur-[80px]" />
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 mb-1">
-                    <Shuffle className="w-4 h-4 text-orange-500" />
-                    <span className="text-orange-500 font-bold text-[10px] tracking-[0.2em] uppercase">Tournament Setup Wizard</span>
+                    {selectedTournamentForBracket?.status === 'Completed' ? (
+                      <>
+                        <Trophy className="w-4 h-4 text-amber-400" />
+                        <span className="text-amber-400 font-bold text-[10px] tracking-[0.2em] uppercase">Tournament Concluded & Sealed</span>
+                      </>
+                    ) : (
+                      <>
+                        <Shuffle className="w-4 h-4 text-orange-500" />
+                        <span className="text-orange-500 font-bold text-[10px] tracking-[0.2em] uppercase">Tournament Bracket Center</span>
+                      </>
+                    )}
                   </div>
                   <DialogHeader>
-                    <DialogTitle className="text-2xl font-black uppercase italic tracking-tight text-white">{selectedTournamentForBracket?.name}</DialogTitle>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <DialogTitle className="text-2xl font-black uppercase italic tracking-tight text-white">{selectedTournamentForBracket?.name}</DialogTitle>
+                      <Badge className={`${
+                        selectedTournamentForBracket?.status === 'Completed'
+                          ? 'bg-emerald-600 text-white'
+                          : selectedTournamentForBracket?.status === 'Active'
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-white/10 text-white'
+                      } text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full`}>
+                        {selectedTournamentForBracket?.status}
+                      </Badge>
+                    </div>
                     <DialogDescription className="text-slate-400 text-xs font-medium mt-1">
-                      {wizardStep === 1 ? 'Step 1: Review format & teams, then auto-seed the bracket.' : 'Step 2: Review matchups, set schedules, then publish.'}
+                      {selectedTournamentForBracket?.status === 'Completed'
+                        ? 'Official results are sealed. Champion is crowned and standings are archived.'
+                        : wizardStep === 1 
+                        ? 'Step 1: Review format & teams, confirm results, or manage bracket.' 
+                        : 'Step 2: Review matchups, set schedules, then publish.'}
                     </DialogDescription>
                   </DialogHeader>
                   {/* Step Indicators */}
-                  <div className="flex items-center gap-3 mt-4">
-                    <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${wizardStep === 1 ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/50'}`}>
-                      1. Format
+                  {selectedTournamentForBracket?.status !== 'Completed' && (
+                    <div className="flex items-center gap-3 mt-4">
+                      <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${wizardStep === 1 ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/50'}`}>
+                        1. Format
+                      </div>
+                      <div className="h-px w-6 bg-white/20" />
+                      <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${wizardStep === 2 ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/50'}`}>
+                        2. Schedule
+                      </div>
                     </div>
-                    <div className="h-px w-6 bg-white/20" />
-                    <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${wizardStep === 2 ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/50'}`}>
-                      2. Schedule
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -1367,117 +1806,378 @@ export const TournamentManagement = () => {
                 ) : wizardStep === 1 ? (
                   /* ===== STEP 1: Format & Teams ===== */
                   <div className="space-y-6">
-                    {/* System Recommendation Banner */}
-                    {(() => {
-                      const rec = getBracketRecommendation(approvedTeams.length);
-                      return (
-                        <div className="p-5 rounded-2xl bg-gradient-to-r from-orange-500/10 via-orange-500/5 to-transparent border border-orange-500/30 flex items-start gap-4">
-                          <div className="p-3 bg-orange-500 rounded-xl text-white shadow-lg shadow-orange-500/20 shrink-0">
-                            <Lightbulb className="size-6" />
+                    {/* Champion Crowned / Concluded Banner */}
+                    {selectedTournamentForBracket?.status === 'Completed' ? (
+                      <div className="p-6 rounded-2xl bg-amber-500/10 dark:bg-amber-500/5 border-2 border-amber-500/30 flex items-center justify-between gap-4 shadow-lg shadow-amber-500/5">
+                        <div className="flex items-center gap-4">
+                          <div className="size-14 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/30 shrink-0">
+                            <Trophy className="size-7" />
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">System Recommendation</span>
-                              <Badge className="bg-orange-500 text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5">
-                                {approvedTeams.length} Teams Ready
-                              </Badge>
-                            </div>
-                            <h4 className="font-black italic uppercase text-lg text-slate-900 dark:text-white mt-0.5">
-                              {rec.title}
-                            </h4>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium leading-relaxed">
-                              {rec.reason}
+                          <div>
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 dark:text-amber-400">
+                              Tournament Concluded • Official Champion
+                            </span>
+                            <h3 className="text-2xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white mt-0.5">
+                              {championName || 'Champion Crowned'}
+                            </h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
+                              This tournament has concluded. Bracket generation is locked to preserve official athletic records.
                             </p>
                           </div>
                         </div>
-                      );
-                    })()}
-
-                    {/* Format Selector Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Single Elimination */}
-                      <button
-                        type="button"
-                        onClick={() => setSelectedBracketType('single')}
-                        className={`p-5 rounded-2xl border-2 text-left relative transition-all duration-150 cursor-pointer active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${
-                          selectedBracketType === 'single'
-                            ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-500/5 shadow-md shadow-orange-500/10'
-                            : 'border-slate-200 dark:border-white/5 hover:border-orange-500/30 bg-white dark:bg-slate-900'
-                        }`}
-                      >
-                        {selectedBracketType === 'single' && (
-                          <div className="absolute top-3 right-3">
-                            <CheckCircle2 className="size-5 text-orange-500" />
-                          </div>
-                        )}
-                        <LayoutGrid className="size-8 text-orange-500 mb-3" />
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-black uppercase italic tracking-tight text-lg text-slate-900 dark:text-white">Single Elimination</h4>
-                          {approvedTeams.length >= 4 && approvedTeams.length <= 16 && (
-                            <Badge className="bg-orange-500 text-white text-[8px] font-black uppercase">Suggested</Badge>
-                          )}
-                        </div>
-                        <p className="text-slate-500 text-xs font-medium mt-1">Standard knockout tree. Loser is eliminated, winners advance.</p>
-                      </button>
-
-                      {/* Round Robin */}
-                      <button
-                        type="button"
-                        onClick={() => setSelectedBracketType('round_robin')}
-                        className={`p-5 rounded-2xl border-2 text-left relative transition-all duration-150 cursor-pointer active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${
-                          selectedBracketType === 'round_robin'
-                            ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-500/5 shadow-md shadow-orange-500/10'
-                            : 'border-slate-200 dark:border-white/5 hover:border-orange-500/30 bg-white dark:bg-slate-900'
-                        }`}
-                      >
-                        {selectedBracketType === 'round_robin' && (
-                          <div className="absolute top-3 right-3">
-                            <CheckCircle2 className="size-5 text-orange-500" />
-                          </div>
-                        )}
-                        <Shuffle className="size-8 text-orange-500 mb-3" />
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-black uppercase italic tracking-tight text-lg text-slate-900 dark:text-white">Round Robin / Pools</h4>
-                          {approvedTeams.length > 0 && approvedTeams.length <= 4 && (
-                            <Badge className="bg-emerald-600 text-white text-[8px] font-black uppercase">Suggested</Badge>
-                          )}
-                        </div>
-                        <p className="text-slate-500 text-xs font-medium mt-1">All vs All format. Every squad battles each team before finals.</p>
-                      </button>
-                    </div>
-
-                    {/* Approved Teams Count */}
-                    <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-6 border border-slate-100 dark:border-white/5">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Approved Teams for This Event</p>
-                          <div className="flex items-baseline gap-3">
-                            <span className="text-5xl font-black text-slate-900 dark:text-white tabular-nums">{approvedTeams.length}</span>
-                            <span className="text-sm font-bold text-slate-400">teams ready</span>
-                          </div>
-                        </div>
-                        <Users className="size-12 text-slate-200 dark:text-white/10" />
+                        <Badge className="bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 shrink-0 hidden sm:inline-flex items-center gap-1.5">
+                          <Trophy className="size-3" /> Gold Champion
+                        </Badge>
                       </div>
-                      {approvedTeams.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-100 dark:border-white/5">
-                          {approvedTeams.map(t => (
-                            <span key={t.id} className="px-3 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-full text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                              {t.name}
+                    ) : (allMatchesCompleted || championName) ? (
+                      <div className="p-5 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/5 border-2 border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+                        <div className="flex items-center gap-4">
+                          <div className="size-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-600/30 shrink-0">
+                            <Trophy className="size-6" />
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">
+                              Matches Finished • Ready to Conclude
                             </span>
-                          ))}
+                            <h3 className="text-lg font-black italic uppercase tracking-tight text-slate-900 dark:text-white">
+                              {championName ? `${championName} Crowned Champion!` : 'All Tournament Matches Completed'}
+                            </h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                              Tournament results are ready. Finalize and conclude the tournament to seal the bracket and update standings.
+                            </p>
+                          </div>
                         </div>
-                      )}
-                    </div>
+                        <Button
+                          onClick={() => {
+                            setTournamentToConclude(selectedTournamentForBracket);
+                            setConcludeChampionName(championName);
+                            setIsConcludeDialogOpen(true);
+                          }}
+                          className="h-11 px-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black uppercase italic tracking-wider shadow-md shadow-emerald-600/20 gap-2 shrink-0 self-stretch sm:self-auto"
+                        >
+                          <Trophy className="size-4" />
+                          Conclude Tournament
+                        </Button>
+                      </div>
+                    ) : null}
+                    {/* If tournament is Completed OR matches are finished: show Official Podium & Standings Table! */}
+                    {selectedTournamentForBracket?.status === 'Completed' || (allMatchesCompleted && existingMatches.length > 0) ? (
+                      <div className="space-y-6">
+                        {/* Official Tournament Podium */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                          {/* 2nd Place - Silver Tier */}
+                          <div className="p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 flex flex-col items-center text-center order-2 md:order-1 relative overflow-hidden shadow-sm">
+                            <div className="size-14 rounded-2xl bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-500 font-black text-xl mb-3 shadow-inner">
+                              2
+                            </div>
+                            <Badge variant="outline" className="text-[9px] font-black uppercase tracking-wider text-slate-500 border-slate-300 dark:border-slate-700 mb-2">
+                              Silver Medal • Runner-Up
+                            </Badge>
+                            <h4 className="text-lg font-black uppercase italic tracking-tight text-slate-900 dark:text-white truncate max-w-full">
+                              {tournamentStandings[1]?.teamName || 'Runner-Up TBD'}
+                            </h4>
+                            {tournamentStandings[1] ? (
+                              <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2.5 text-xs font-bold text-slate-500">
+                                <span>{tournamentStandings[1].wins}W - {tournamentStandings[1].losses}L</span>
+                                <span>•</span>
+                                <span>{tournamentStandings[1].pointsFor} PF</span>
+                                <span>•</span>
+                                <span className={tournamentStandings[1].pointDiff >= 0 ? 'text-emerald-500' : 'text-slate-400'}>
+                                  {tournamentStandings[1].pointDiff >= 0 ? `+${tournamentStandings[1].pointDiff}` : tournamentStandings[1].pointDiff} Diff
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-slate-400 italic mt-2">Awaiting match results</span>
+                            )}
+                          </div>
+
+                          {/* 1st Place - Gold Champion */}
+                          <div className="p-6 rounded-2xl border-2 border-amber-500 bg-amber-50/40 dark:bg-amber-500/10 flex flex-col items-center text-center order-1 md:order-2 shadow-xl shadow-amber-500/10 relative overflow-hidden scale-100 md:scale-105 border-t-4">
+                            <div className="size-16 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black text-2xl mb-3 shadow-lg shadow-amber-500/30">
+                              <Trophy className="size-8" />
+                            </div>
+                            <Badge className="bg-amber-500 text-white text-[9px] font-black uppercase tracking-widest px-3 py-0.5 mb-2 shadow-sm">
+                              Gold Champion • 1st Place
+                            </Badge>
+                            <h4 className="text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white truncate max-w-full">
+                              {tournamentStandings[0]?.teamName || championName || 'Champion Crowned'}
+                            </h4>
+                            {tournamentStandings[0] ? (
+                              <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-500/20 flex items-center gap-2.5 text-xs font-bold text-amber-700 dark:text-amber-300">
+                                <span>{tournamentStandings[0].wins}W - {tournamentStandings[0].losses}L</span>
+                                <span>•</span>
+                                <span>{tournamentStandings[0].pointsFor} PF</span>
+                                <span>•</span>
+                                <span className="text-emerald-600 dark:text-emerald-400 font-black">
+                                  +{tournamentStandings[0].pointDiff} Diff
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-amber-600/80 italic mt-2">Champion Crowned</span>
+                            )}
+                          </div>
+
+                          {/* 3rd Place - Bronze Tier */}
+                          <div className="p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 flex flex-col items-center text-center order-3 relative overflow-hidden shadow-sm">
+                            <div className="size-14 rounded-2xl bg-amber-700/10 dark:bg-amber-500/10 border border-amber-700/20 dark:border-amber-500/20 flex items-center justify-center text-amber-700 dark:text-amber-500 font-black text-xl mb-3 shadow-inner">
+                              3
+                            </div>
+                            <Badge variant="outline" className="text-[9px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-500 border-amber-700/30 dark:border-amber-500/30 mb-2">
+                              Bronze Medal • 3rd Place
+                            </Badge>
+                            <h4 className="text-lg font-black uppercase italic tracking-tight text-slate-900 dark:text-white truncate max-w-full">
+                              {tournamentStandings[2]?.teamName || (tournamentStandings.length <= 2 ? 'No 3rd Place Playoff' : 'Bronze TBD')}
+                            </h4>
+                            {tournamentStandings[2] ? (
+                              <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2.5 text-xs font-bold text-slate-500">
+                                <span>{tournamentStandings[2].wins}W - {tournamentStandings[2].losses}L</span>
+                                <span>•</span>
+                                <span>{tournamentStandings[2].pointsFor} PF</span>
+                                <span>•</span>
+                                <span className={tournamentStandings[2].pointDiff >= 0 ? 'text-emerald-500' : 'text-slate-400'}>
+                                  {tournamentStandings[2].pointDiff >= 0 ? `+${tournamentStandings[2].pointDiff}` : tournamentStandings[2].pointDiff} Diff
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-slate-400 italic mt-2">
+                                {tournamentStandings.length <= 2 ? '2-Team Championship Final' : 'Awaiting 3rd place playoff'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Official Tournament Standings & Placements Breakdown Table */}
+                        <div className="bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 rounded-2xl overflow-hidden shadow-sm">
+                          <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/50">
+                            <div className="flex items-center gap-2">
+                              <Medal className="size-4 text-orange-500" />
+                              <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                                Official Tournament Standings & Placements
+                              </h4>
+                            </div>
+                            <Badge variant="outline" className="text-[9px] font-black uppercase tracking-wider text-slate-500 border-slate-200 dark:border-white/10">
+                              {tournamentStandings.length} {tournamentStandings.length === 1 ? 'Team Placed' : 'Teams Placed'}
+                            </Badge>
+                          </div>
+
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs">
+                              <thead className="bg-slate-50/80 dark:bg-slate-900/80 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-white/5">
+                                <tr>
+                                  <th className="py-3 px-4">Placement</th>
+                                  <th className="py-3 px-4">Squad Name</th>
+                                  <th className="py-3 px-4">Milestone / Stage</th>
+                                  <th className="py-3 px-3 text-center">MP</th>
+                                  <th className="py-3 px-3 text-center">W</th>
+                                  <th className="py-3 px-3 text-center">L</th>
+                                  <th className="py-3 px-3 text-center">Win %</th>
+                                  <th className="py-3 px-4 text-center">PF - PA</th>
+                                  <th className="py-3 px-4 text-center">Diff</th>
+                                  <th className="py-3 px-4 text-right">Award</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                                {tournamentStandings.map((team) => (
+                                  <tr
+                                    key={team.teamId}
+                                    className={`transition-colors ${
+                                      team.rank === 1
+                                        ? 'bg-amber-500/5 font-semibold'
+                                        : team.rank === 2
+                                        ? 'bg-slate-100/40 dark:bg-white/[0.02]'
+                                        : 'hover:bg-slate-50/50 dark:hover:bg-white/[0.02]'
+                                    }`}
+                                  >
+                                    <td className="py-3.5 px-4 font-black">
+                                      <div className="flex items-center gap-2">
+                                        {team.rank === 1 ? (
+                                          <Badge className="bg-amber-500 hover:bg-amber-500 text-white font-black text-[10px] px-2 py-0.5 rounded-lg gap-1 shadow-sm">
+                                            <Trophy className="size-3" /> 1st Gold
+                                          </Badge>
+                                        ) : team.rank === 2 ? (
+                                          <Badge className="bg-slate-400 hover:bg-slate-400 text-white font-black text-[10px] px-2 py-0.5 rounded-lg gap-1">
+                                            <Medal className="size-3" /> 2nd Silver
+                                          </Badge>
+                                        ) : team.rank === 3 ? (
+                                          <Badge className="bg-amber-700 hover:bg-amber-700 text-white font-black text-[10px] px-2 py-0.5 rounded-lg gap-1">
+                                            <Medal className="size-3" /> 3rd Bronze
+                                          </Badge>
+                                        ) : (
+                                          <span className="px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 font-bold text-[11px]">
+                                            #{team.rank}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td className="py-3.5 px-4">
+                                      <span className="font-black italic uppercase tracking-tight text-slate-900 dark:text-white">
+                                        {team.teamName}
+                                      </span>
+                                    </td>
+                                    <td className="py-3.5 px-4">
+                                      <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                                        {team.stage}
+                                      </span>
+                                    </td>
+                                    <td className="py-3.5 px-3 text-center font-bold text-slate-600 dark:text-slate-300">{team.matchesPlayed}</td>
+                                    <td className="py-3.5 px-3 text-center font-black text-emerald-600 dark:text-emerald-400">{team.wins}</td>
+                                    <td className="py-3.5 px-3 text-center font-black text-slate-400">{team.losses}</td>
+                                    <td className="py-3.5 px-3 text-center font-bold text-slate-700 dark:text-slate-200">{team.winRate.toFixed(0)}%</td>
+                                    <td className="py-3.5 px-4 text-center font-mono text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                                      {team.pointsFor} - {team.pointsAgainst}
+                                    </td>
+                                    <td className="py-3.5 px-4 text-center font-black">
+                                      <span className={team.pointDiff > 0 ? 'text-emerald-600 dark:text-emerald-400' : team.pointDiff < 0 ? 'text-rose-500' : 'text-slate-400'}>
+                                        {team.pointDiff > 0 ? `+${team.pointDiff}` : team.pointDiff}
+                                      </span>
+                                    </td>
+                                    <td className="py-3.5 px-4 text-right">
+                                      {team.medal === 'gold' ? (
+                                        <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-black text-[9px] uppercase tracking-wider">
+                                          Gold Champion
+                                        </Badge>
+                                      ) : team.medal === 'silver' ? (
+                                        <Badge className="bg-slate-500/10 text-slate-600 dark:text-slate-300 border border-slate-500/20 font-black text-[9px] uppercase tracking-wider">
+                                          Silver Runner-Up
+                                        </Badge>
+                                      ) : team.medal === 'bronze' ? (
+                                        <Badge className="bg-amber-700/10 text-amber-700 dark:text-amber-500 border border-amber-700/20 font-black text-[9px] uppercase tracking-wider">
+                                          Bronze Medalist
+                                        </Badge>
+                                      ) : (
+                                        <Badge variant="outline" className="text-slate-400 font-bold text-[9px] uppercase">
+                                          Elimination Placement
+                                        </Badge>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    ) : existingMatches.length === 0 ? (
+                      /* Only show seeding wizard setup cards when there are no existing matches yet */
+                      <>
+                        {/* System Recommendation Banner */}
+                        {(() => {
+                          const rec = getBracketRecommendation(approvedTeams.length);
+                          return (
+                            <div className="p-5 rounded-2xl bg-orange-500/5 dark:bg-slate-900 border border-orange-500/30 flex items-start gap-4 shadow-sm">
+                              <div className="p-3 bg-orange-500 rounded-xl text-white shadow-lg shadow-orange-500/20 shrink-0">
+                                <Lightbulb className="size-6" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">System Recommendation</span>
+                                  <Badge className="bg-orange-500 text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5">
+                                    {approvedTeams.length} Teams Ready
+                                  </Badge>
+                                </div>
+                                <h4 className="font-black italic uppercase text-lg text-slate-900 dark:text-white mt-0.5">
+                                  {rec.title}
+                                </h4>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium leading-relaxed">
+                                  {rec.reason}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Format Selector Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Single Elimination */}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedBracketType('single')}
+                            className={`p-5 rounded-2xl border-2 text-left relative transition-all duration-150 cursor-pointer active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${
+                              selectedBracketType === 'single'
+                                ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-500/5 shadow-md shadow-orange-500/10'
+                                : 'border-slate-200 dark:border-white/5 hover:border-orange-500/30 bg-white dark:bg-slate-900'
+                            }`}
+                          >
+                            {selectedBracketType === 'single' && (
+                              <div className="absolute top-3 right-3">
+                                <CheckCircle2 className="size-5 text-orange-500" />
+                              </div>
+                            )}
+                            <LayoutGrid className="size-8 text-orange-500 mb-3" />
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-black uppercase italic tracking-tight text-lg text-slate-900 dark:text-white">Single Elimination</h4>
+                              {approvedTeams.length >= 4 && approvedTeams.length <= 16 && (
+                                <Badge className="bg-orange-500 text-white text-[8px] font-black uppercase">Suggested</Badge>
+                              )}
+                            </div>
+                            <p className="text-slate-500 text-xs font-medium mt-1">Standard knockout tree. Loser is eliminated, winners advance.</p>
+                          </button>
+
+                          {/* Round Robin */}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedBracketType('round_robin')}
+                            className={`p-5 rounded-2xl border-2 text-left relative transition-all duration-150 cursor-pointer active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${
+                              selectedBracketType === 'round_robin'
+                                ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-500/5 shadow-md shadow-orange-500/10'
+                                : 'border-slate-200 dark:border-white/5 hover:border-orange-500/30 bg-white dark:bg-slate-900'
+                            }`}
+                          >
+                            {selectedBracketType === 'round_robin' && (
+                              <div className="absolute top-3 right-3">
+                                <CheckCircle2 className="size-5 text-orange-500" />
+                              </div>
+                            )}
+                            <Shuffle className="size-8 text-orange-500 mb-3" />
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-black uppercase italic tracking-tight text-lg text-slate-900 dark:text-white">Round Robin / Pools</h4>
+                              {approvedTeams.length > 0 && approvedTeams.length <= 4 && (
+                                <Badge className="bg-emerald-600 text-white text-[8px] font-black uppercase">Suggested</Badge>
+                              )}
+                            </div>
+                            <p className="text-slate-500 text-xs font-medium mt-1">All vs All format. Every squad battles each team before finals.</p>
+                          </button>
+                        </div>
+
+                        {/* Approved Teams Count */}
+                        <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-6 border border-slate-100 dark:border-white/5">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Approved Teams for This Event</p>
+                              <div className="flex items-baseline gap-3">
+                                <span className="text-5xl font-black text-slate-900 dark:text-white tabular-nums">{approvedTeams.length}</span>
+                                <span className="text-sm font-bold text-slate-400">teams ready</span>
+                              </div>
+                            </div>
+                            <Users className="size-12 text-slate-200 dark:text-white/10" />
+                          </div>
+                          {approvedTeams.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-100 dark:border-white/5">
+                              {approvedTeams.map(t => (
+                                <span key={t.id} className="px-3 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-full text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                                  {t.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    ) : null}
 
                     {/* Published Matches / Bracket Preview & Result Confirmation */}
                     {existingMatches.length > 0 && (
                       <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-white/5">
                         <div className="flex items-center justify-between">
                           <h4 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white flex items-center gap-2">
-                            <Trophy className="size-4 text-orange-500" /> Bracket Preview & Match Confirmation ({existingMatches.length} matches)
+                            <Trophy className="size-4 text-orange-500" /> 
+                            {selectedTournamentForBracket?.status === 'Completed' ? 'Official Match Ledger & Bracket Archive' : 'Bracket Preview & Match Confirmation'} ({existingMatches.length} {existingMatches.length === 1 ? 'match' : 'matches'})
                           </h4>
-                          <Badge variant="outline" className="text-[9px] font-black uppercase tracking-wider border-orange-500 text-orange-600 bg-orange-50 dark:bg-orange-500/10">
-                            Live Arena Tree
+                          <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-wider ${
+                            selectedTournamentForBracket?.status === 'Completed'
+                              ? 'border-emerald-500 text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10'
+                              : 'border-orange-500 text-orange-600 bg-orange-50 dark:bg-orange-500/10'
+                          }`}>
+                            {selectedTournamentForBracket?.status === 'Completed' ? 'Sealed & Archived' : 'Live Arena Tree'}
                           </Badge>
                         </div>
 
@@ -1521,7 +2221,13 @@ export const TournamentManagement = () => {
                                           <div className="flex items-center justify-between text-xs font-bold text-slate-500">
                                             <div className="flex items-center gap-2">
                                               {match.status === 'Ongoing' ? (
-                                                <Badge className="bg-red-500 text-white font-black text-[9px] uppercase tracking-widest animate-pulse">LIVE NOW</Badge>
+                                                <Badge className="bg-red-600 hover:bg-red-600 text-white font-black text-[9px] uppercase tracking-widest gap-1.5 px-2.5 py-0.5 rounded-full shadow-sm">
+                                                  <span className="relative flex size-1.5">
+                                                    <span className="animate-ping-slow absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full size-1.5 bg-white"></span>
+                                                  </span>
+                                                  LIVE NOW
+                                                </Badge>
                                               ) : isCompleted ? (
                                                 <Badge className="bg-slate-900 dark:bg-white/10 text-white text-[9px] font-black uppercase tracking-widest">Completed</Badge>
                                               ) : (
@@ -1583,8 +2289,9 @@ export const TournamentManagement = () => {
                                                   </Button>
                                                 )
                                               ) : (
-                                                <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[9px] font-black uppercase tracking-wider py-1 px-2">
-                                                  🏆 Champion: {winnerName}
+                                                <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[9px] font-black uppercase tracking-wider py-1 px-2 inline-flex items-center gap-1">
+                                                  <Trophy className="size-3" />
+                                                  <span>Champion: {winnerName}</span>
                                                 </Badge>
                                               )
                                             )}
@@ -1686,27 +2393,95 @@ export const TournamentManagement = () => {
 
               {/* Wizard Footer */}
               <DialogFooter className="px-8 py-5 border-t border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] rounded-b-[2rem] gap-3">
-                <Button variant="ghost" onClick={() => { setIsBracketOpen(false); setWizardStep(1); setProposedMatches([]); }} className="h-12 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-100 dark:hover:bg-white/5">
-                  Cancel
-                </Button>
-                {wizardStep === 1 ? (
-                  <Button
-                    onClick={generateSeededMatches}
-                    disabled={approvedTeams.length < 2}
-                    className="h-12 flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-black uppercase italic tracking-[0.1em] shadow-lg shadow-orange-500/20 gap-2"
-                  >
-                    <Shuffle className="size-4" />
-                    Auto-Seed Bracket
-                  </Button>
+                {selectedTournamentForBracket?.status === 'Completed' ? (
+                  <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-3">
+                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-black text-xs uppercase tracking-wider">
+                      <Trophy className="size-4 text-amber-500" />
+                      <span>Tournament Concluded • {championName ? `Champion: ${championName}` : 'Results Sealed'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setTournamentToReopen(selectedTournamentForBracket);
+                          setIsReopenDialogOpen(true);
+                        }}
+                        className="h-11 px-4 text-xs font-bold text-slate-500 hover:text-slate-900 border-slate-200 dark:border-white/10 rounded-xl"
+                      >
+                        <RotateCcw className="size-3.5 mr-1" /> Reopen Tournament
+                      </Button>
+                      <Button
+                        onClick={() => { setIsBracketOpen(false); setWizardStep(1); setProposedMatches([]); }}
+                        className="h-11 px-6 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black uppercase tracking-wider text-xs"
+                      >
+                        Close
+                      </Button>
+                    </div>
+                  </div>
+                ) : existingMatches.length > 0 && wizardStep === 1 ? (
+                  <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-3">
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="ghost" 
+                        onClick={() => { setIsBracketOpen(false); setWizardStep(1); setProposedMatches([]); }} 
+                        className="h-11 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-100 dark:hover:bg-white/5"
+                      >
+                        Close
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsResetBracketDialogOpen(true)}
+                        className="h-11 border-slate-200 dark:border-white/10 text-slate-500 hover:text-red-500 hover:border-red-500/30 rounded-xl font-black uppercase tracking-wider text-[10px] gap-1.5"
+                        title="Reseed will replace all current matches"
+                      >
+                        <RotateCcw className="size-3.5" />
+                        Reset & Reseed
+                      </Button>
+                    </div>
+                    {allMatchesCompleted || championName ? (
+                      <Button
+                        onClick={() => {
+                          setTournamentToConclude(selectedTournamentForBracket);
+                          setConcludeChampionName(championName);
+                          setIsConcludeDialogOpen(true);
+                        }}
+                        className="h-11 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black uppercase italic tracking-wider shadow-lg shadow-emerald-600/20 gap-2 w-full sm:w-auto"
+                      >
+                        <Trophy className="size-4" />
+                        Conclude Tournament
+                      </Button>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] font-bold text-slate-400 border-slate-200 dark:border-white/10 py-1.5 px-3">
+                        {existingMatches.length} Matches Live in Arena
+                      </Badge>
+                    )}
+                  </div>
                 ) : (
-                  <Button
-                    onClick={handlePublishBracket}
-                    disabled={isPublishing || proposedMatches.length === 0}
-                    className="h-12 flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-black uppercase italic tracking-[0.1em] shadow-lg shadow-orange-500/20 gap-2"
-                  >
-                    {isPublishing ? <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white" /> : <CheckCircle2 className="size-4" />}
-                    {isPublishing ? 'Publishing...' : `Publish ${proposedMatches.length} Matches`}
-                  </Button>
+                  <>
+                    <Button variant="ghost" onClick={() => { setIsBracketOpen(false); setWizardStep(1); setProposedMatches([]); }} className="h-12 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-100 dark:hover:bg-white/5">
+                      Cancel
+                    </Button>
+                    {wizardStep === 1 ? (
+                      <Button
+                        onClick={generateSeededMatches}
+                        disabled={approvedTeams.length < 2}
+                        className="h-12 flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-black uppercase italic tracking-[0.1em] shadow-lg shadow-orange-500/20 gap-2"
+                      >
+                        <Shuffle className="size-4" />
+                        Auto-Seed Bracket
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={handlePublishBracket}
+                        disabled={isPublishing || proposedMatches.length === 0}
+                        className="h-12 flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-black uppercase italic tracking-[0.1em] shadow-lg shadow-orange-500/20 gap-2"
+                      >
+                        {isPublishing ? <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white" /> : <CheckCircle2 className="size-4" />}
+                        {isPublishing ? 'Publishing...' : `Publish ${proposedMatches.length} Matches`}
+                      </Button>
+                    )}
+                  </>
                 )}
               </DialogFooter>
             </DialogContent>
@@ -1752,7 +2527,7 @@ export const TournamentManagement = () => {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="size-8 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 uppercase">
-                            {(Array.isArray(team.users) ? team.users[0]?.full_name : team.users?.full_name || 'NA')[0]}
+                            {((Array.isArray(team.users) ? team.users[0]?.full_name : team.users?.full_name) || 'NA')[0]}
                           </div>
                           <span className="font-bold text-sm text-slate-700 dark:text-slate-300">
                             {Array.isArray(team.users) ? team.users[0]?.full_name : team.users?.full_name || 'N/A'}
@@ -1810,7 +2585,7 @@ export const TournamentManagement = () => {
                   <CardContent className="p-8 pt-4">
                     <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-white/5 rounded-2xl mb-8">
                       <div className="size-10 rounded-full bg-white dark:bg-slate-900 flex items-center justify-center text-xs font-black text-orange-500 border border-slate-100 dark:border-white/5">
-                        {(Array.isArray(team.users) ? team.users[0]?.full_name : team.users?.full_name || 'NA')[0]}
+                        {((Array.isArray(team.users) ? team.users[0]?.full_name : team.users?.full_name) || 'NA')[0]}
                       </div>
                       <div className="flex flex-col">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Team Coach</span>
@@ -1946,32 +2721,36 @@ export const TournamentManagement = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Delete / Terminate Tournament Modal */}
+      {/* Delete / Move to Recovery Modal */}
       <Dialog open={isDeleteOpen} onOpenChange={(open) => { setIsDeleteOpen(open); if (!open) { setTournamentToDelete(null); setDeleteConfirmationInput(''); } }}>
-        <DialogContent className="w-full sm:max-w-md max-w-[95vw] rounded-3xl border-rose-200 dark:border-rose-500/20 p-6 shadow-2xl bg-white dark:bg-slate-950">
+        <DialogContent className="w-full sm:max-w-md max-w-[95vw] max-h-[88dvh] overflow-y-auto rounded-3xl border-orange-500/20 p-6 shadow-2xl bg-white dark:bg-slate-950">
           <DialogHeader className="space-y-2">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-xl border border-rose-500/20">
-                <AlertTriangle className="size-5" />
+              <div className="p-2 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-xl border border-orange-500/20">
+                <RotateCcw className="size-5" />
               </div>
               <DialogTitle className="text-xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white">
-                Terminate <span className="text-rose-600">Tournament</span>
+                Move to <span className="text-orange-500">Recovery Vault</span>
               </DialogTitle>
             </div>
             <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
-              Are you sure you want to permanently terminate <strong className="text-slate-900 dark:text-white font-bold">{tournamentToDelete?.name}</strong>? This action will purge all registered teams, brackets, matches, and player records for this event.
+              Moving <strong className="text-slate-900 dark:text-white font-bold">{tournamentToDelete?.name}</strong> to the Recovery Vault will immediately hide it from public brackets, live match explorers, and rankings.
+              <span className="flex items-start gap-1.5 mt-2 text-emerald-600 dark:text-emerald-400 font-bold">
+                <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
+                <span>Soft-Delete Safeguard: All registered squads, brackets, matches, and player ratings remain 100% preserved and can be restored anytime in the Recovery Center.</span>
+              </span>
             </DialogDescription>
           </DialogHeader>
 
-          <div className="my-2 p-3 bg-rose-500/5 rounded-2xl border border-rose-500/15 space-y-2">
-            <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
-              Type <span className="font-mono font-black text-rose-700 dark:text-rose-300">DELETE</span> to confirm:
+          <div className="my-2 p-3 bg-orange-500/5 rounded-2xl border border-orange-500/15 space-y-2">
+            <p className="text-[11px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider">
+              Type <span className="font-mono font-black text-orange-700 dark:text-orange-300">DELETE</span> to confirm:
             </p>
             <Input
               placeholder="DELETE"
               value={deleteConfirmationInput}
               onChange={(e) => setDeleteConfirmationInput(e.target.value)}
-              className="h-10 bg-white dark:bg-slate-900 border-rose-200 dark:border-rose-500/30 rounded-xl font-mono font-bold text-xs uppercase tracking-widest text-slate-900 dark:text-white"
+              className="h-10 bg-white dark:bg-slate-900 border-orange-200 dark:border-orange-500/30 rounded-xl font-mono font-bold text-xs uppercase tracking-widest text-slate-900 dark:text-white focus:ring-orange-500"
             />
           </div>
 
@@ -1986,15 +2765,151 @@ export const TournamentManagement = () => {
             </Button>
             <Button
               onClick={handleDeleteTournament}
-              disabled={deleteConfirmationInput.trim().toUpperCase() !== 'DELETE' || isDeletingTournament}
-              className="h-10 flex-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl font-black uppercase italic tracking-wider text-xs shadow-md shadow-rose-600/20 gap-2 transition-all active:scale-[0.98]"
+              disabled={(deleteConfirmationInput.trim().toUpperCase() !== 'DELETE' && deleteConfirmationInput.trim().toUpperCase() !== 'ARCHIVE') || isDeletingTournament}
+              className="h-10 flex-1 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white rounded-xl font-black uppercase italic tracking-wider text-xs shadow-md shadow-orange-600/20 gap-2 transition-all active:scale-[0.98]"
             >
               {isDeletingTournament ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white" />
               ) : (
-                <Trash2 className="size-3.5" />
+                <RotateCcw className="size-3.5" />
               )}
-              {isDeletingTournament ? 'Terminating...' : 'Confirm Termination'}
+              {isDeletingTournament ? 'Moving to Vault...' : 'Move to Recovery Vault'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Conclude Tournament Confirmation Modal */}
+      <Dialog open={isConcludeDialogOpen} onOpenChange={setIsConcludeDialogOpen}>
+        <DialogContent className="w-full sm:max-w-md max-w-[95vw] rounded-3xl border-emerald-500/20 p-6 shadow-2xl bg-white dark:bg-slate-950">
+          <DialogHeader className="space-y-2">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/20">
+                <Trophy className="size-5" />
+              </div>
+              <DialogTitle className="text-xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white">
+                Conclude <span className="text-emerald-600">Tournament</span>
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+              Officially conclude <strong className="text-slate-900 dark:text-white">{tournamentToConclude?.name}</strong>?
+              {concludeChampionName && (
+                <div className="mt-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-700 dark:text-amber-300 font-bold flex items-center gap-2">
+                  <Trophy className="size-4 text-amber-600 shrink-0" />
+                  <span>Crowned Champion: <strong className="font-black underline">{concludeChampionName}</strong></span>
+                </div>
+              )}
+              <span className="block mt-2 text-slate-600 dark:text-slate-300">
+                This will set status to <strong>COMPLETED</strong>, lock the bracket tree to prevent accidental match wipes or re-seeding, and archive official tournament records.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2 pt-3 border-t border-slate-100 dark:border-white/5">
+            <Button
+              variant="ghost"
+              onClick={() => setIsConcludeDialogOpen(false)}
+              className="h-10 rounded-xl font-black uppercase tracking-widest text-xs"
+              disabled={isConcludingTournament}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConcludeTournament}
+              disabled={isConcludingTournament}
+              className="h-10 flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black uppercase italic tracking-wider text-xs shadow-md shadow-emerald-600/20 gap-2 transition-all active:scale-[0.98]"
+            >
+              {isConcludingTournament ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white" />
+              ) : (
+                <CheckCircle2 className="size-3.5" />
+              )}
+              {isConcludingTournament ? 'Finalizing...' : 'Yes, Conclude Tournament'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reopen Tournament Confirmation Modal */}
+      <Dialog open={isReopenDialogOpen} onOpenChange={setIsReopenDialogOpen}>
+        <DialogContent className="w-full sm:max-w-md max-w-[95vw] rounded-3xl border-orange-500/20 p-6 shadow-2xl bg-white dark:bg-slate-950">
+          <DialogHeader className="space-y-2">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2.5 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-xl border border-orange-500/20">
+                <RotateCcw className="size-5" />
+              </div>
+              <DialogTitle className="text-xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white">
+                Reopen <span className="text-orange-500">Tournament</span>
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+              Reopen <strong className="text-slate-900 dark:text-white">{tournamentToReopen?.name}</strong> to Active status?
+              <span className="block mt-2 text-slate-600 dark:text-slate-300">
+                This will switch tournament status back to <strong>Active</strong>, allowing facilitators to update scores or adjust bracket matchups if needed.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2 pt-3 border-t border-slate-100 dark:border-white/5">
+            <Button
+              variant="ghost"
+              onClick={() => setIsReopenDialogOpen(false)}
+              className="h-10 rounded-xl font-black uppercase tracking-widest text-xs"
+              disabled={isReopeningTournament}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleReopenTournament}
+              disabled={isReopeningTournament}
+              className="h-10 flex-1 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-black uppercase italic tracking-wider text-xs shadow-md shadow-orange-600/20 gap-2 transition-all active:scale-[0.98]"
+            >
+              {isReopeningTournament ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white" />
+              ) : (
+                <RotateCcw className="size-3.5" />
+              )}
+              {isReopeningTournament ? 'Reopening...' : 'Yes, Reopen Tournament'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset & Reseed Warning Modal */}
+      <Dialog open={isResetBracketDialogOpen} onOpenChange={setIsResetBracketDialogOpen}>
+        <DialogContent className="w-full sm:max-w-md max-w-[95vw] rounded-3xl border-red-500/20 p-6 shadow-2xl bg-white dark:bg-slate-950">
+          <DialogHeader className="space-y-2">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2.5 bg-red-500/10 text-red-600 dark:text-red-400 rounded-xl border border-red-500/20">
+                <AlertTriangle className="size-5" />
+              </div>
+              <DialogTitle className="text-xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white">
+                Reset & Reseed <span className="text-red-500">Bracket</span>
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+              This tournament already contains <strong className="text-slate-900 dark:text-white">{existingMatches.length} match(es)</strong> with active or finalized results.
+              <div className="mt-2 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-700 dark:text-red-300 font-bold flex items-start gap-2">
+                <AlertTriangle className="size-4 text-red-600 shrink-0 mt-0.5" />
+                <span>Destructive Action: Regenerating the bracket will erase all existing match records, scores, and commentator logs for this tournament.</span>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2 pt-3 border-t border-slate-100 dark:border-white/5">
+            <Button
+              variant="ghost"
+              onClick={() => setIsResetBracketDialogOpen(false)}
+              className="h-10 rounded-xl font-black uppercase tracking-widest text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmResetBracket}
+              className="h-10 flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl font-black uppercase italic tracking-wider text-xs shadow-md shadow-red-600/20 gap-2 transition-all active:scale-[0.98]"
+            >
+              <RotateCcw className="size-3.5" />
+              Reset & Regenerate
             </Button>
           </DialogFooter>
         </DialogContent>

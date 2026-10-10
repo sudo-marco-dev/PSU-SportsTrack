@@ -93,9 +93,13 @@ END $$;
 CREATE OR REPLACE VIEW profiles AS 
 SELECT * FROM users;
 
--- 4. Team Roster Jersey Number
+-- 4. Team Roster Jersey Number & Game-Day Lineup Columns
 ALTER TABLE IF EXISTS team_roster 
-ADD COLUMN IF NOT EXISTS jersey_number INT;
+ADD COLUMN IF NOT EXISTS jersey_number INT,
+ADD COLUMN IF NOT EXISTS is_captain BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS is_starter BOOLEAN DEFAULT true,
+ADD COLUMN IF NOT EXISTS position TEXT DEFAULT 'Player',
+ADD COLUMN IF NOT EXISTS availability_status TEXT DEFAULT 'active';
 
 -- 5. Matches Finalization Columns
 ALTER TABLE IF EXISTS matches 

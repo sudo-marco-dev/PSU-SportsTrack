@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { resetDemoState } from '@/lib/demoReset';
+import { FacilitatorManagementModal } from '@/components/admin/FacilitatorManagementModal';
 
 export const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -43,16 +44,21 @@ export const AdminDashboard = () => {
     rejected: 0,
     total: 0
   });
-  const [recentMatches, setRecentMatches] = useState<any[]>([]);
-  const [draftTournaments, setDraftTournaments] = useState<any[]>([]);
-
-  useEffect(() => {
-    fetchStats();
-  }, []);
+  const [recentMatches, setRecentMatches] = useState<{
+    id: string; status: string; team_a_score?: number; team_b_score?: number; team1_score?: number; team2_score?: number;
+    tournament: { name: string } | null;
+    team1: { name: string } | null;
+    team2: { name: string } | null;
+  }[]>([]);
+  const [draftTournaments, setDraftTournaments] = useState<{
+    id: string; name: string; status: string; created_at: string; sport?: string; start_date?: string;
+  }[]>([]);
+  const [recoverableCount, setRecoverableCount] = useState(0);
+  const [facilitatorsCount, setFacilitatorsCount] = useState(0);
+  const [isFacilitatorModalOpen, setIsFacilitatorModalOpen] = useState(false);
 
   const fetchStats = async () => {
     try {
-      // Fetch counts in parallel
       const [
         { count: tournamentCount },
         { count: liveCount },
@@ -60,15 +66,19 @@ export const AdminDashboard = () => {
         { count: approvedCount },
         { count: rejectedCount },
         { count: playerCount },
-        { data: draftData }
+        { data: draftData },
+        { count: deletedTournCount },
+        { count: faciCount }
       ] = await Promise.all([
-        supabase.from('tournaments').select('*', { count: 'exact', head: true }).eq('status', 'Active'),
+        supabase.from('tournaments').select('*', { count: 'exact', head: true }).eq('status', 'Active').or('is_deleted.is.null,is_deleted.eq.false'),
         supabase.from('matches').select('*', { count: 'exact', head: true }).eq('status', 'Live'),
         supabase.from('verification_documents').select('*', { count: 'exact', head: true }).eq('status', 'Pending'),
         supabase.from('verification_documents').select('*', { count: 'exact', head: true }).eq('status', 'Approved'),
         supabase.from('verification_documents').select('*', { count: 'exact', head: true }).eq('status', 'Rejected'),
         supabase.from('users').select('*', { count: 'exact', head: true }).in('role', ['player_student', 'player_faculty', 'Player']),
-        supabase.from('tournaments').select('*').eq('status', 'Draft').order('created_at', { ascending: false })
+        supabase.from('tournaments').select('*').eq('status', 'Draft').or('is_deleted.is.null,is_deleted.eq.false').order('created_at', { ascending: false }),
+        supabase.from('tournaments').select('*', { count: 'exact', head: true }).eq('is_deleted', true),
+        supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'facilitator').neq('account_status', 'soft_deleted')
       ]);
 
       const totalVerifications = (pendingCount || 0) + (approvedCount || 0) + (rejectedCount || 0);
@@ -80,33 +90,51 @@ export const AdminDashboard = () => {
         totalPlayers: playerCount || 0
       });
 
-      setDraftTournaments(draftData || []);
+      setRecoverableCount(deletedTournCount || 0);
+      setFacilitatorsCount(faciCount || 0);
+      setDraftTournaments((draftData || []) as typeof draftTournaments);
 
       setVerificationBreakdown({
         pending: pendingCount || 0,
         approved: approvedCount || 0,
         rejected: rejectedCount || 0,
-        total: totalVerifications || 1 // Avoid division by zero
+        total: totalVerifications || 1
       });
 
-      // Fetch recent completed matches
       const { data: matches } = await supabase
         .from('matches')
         .select(`
-          *,
-          tournament:tournaments(name),
-          team1:teams!team1_id(name),
-          team2:teams!team2_id(name)
+          id,
+          status,
+          team_a_score,
+          team_b_score,
+          tournament:tournament_id(name),
+          team1:team_a_id(name),
+          team2:team_b_id(name)
         `)
         .eq('status', 'Completed')
         .order('updated_at', { ascending: false })
         .limit(4);
 
-      setRecentMatches(matches || []);
+      const formattedMatches = (matches || []).map((m: any) => ({
+        id: m.id,
+        status: m.status,
+        team_a_score: m.team_a_score,
+        team_b_score: m.team_b_score,
+        tournament: Array.isArray(m.tournament) ? m.tournament[0] : m.tournament,
+        team1: Array.isArray(m.team1) ? m.team1[0] : m.team1,
+        team2: Array.isArray(m.team2) ? m.team2[0] : m.team2,
+      }));
+
+      setRecentMatches(formattedMatches);
     } catch (error) {
       console.error('Error fetching admin stats:', error);
     }
   };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
 
   const handleResetDemoArena = async () => {
     if (resetConfirmationText !== 'RESET DEMO') return;
@@ -114,7 +142,7 @@ export const AdminDashboard = () => {
     try {
       const res = await resetDemoState(supabase);
       if (res.success) {
-        toast.success('🎉 Demo Arena successfully reset! 4 squads, championship bracket & live match ready.');
+        toast.success('Demo Arena successfully reset! 4 squads, championship bracket & live match ready.');
         setIsResetDialogOpen(false);
         setResetConfirmationText('');
         fetchStats();
@@ -168,10 +196,10 @@ export const AdminDashboard = () => {
   return (
     <div className="space-y-6 relative max-w-[1400px] mx-auto px-4 pb-6">
       {/* Subtle Grain Texture Overlay */}
-      <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.01] mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/p6.png')]" />
+      <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.01] mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/p6.png')]" />
 
       {/* Header - Simplified & Production Ready */}
-      <div className="bg-slate-950 text-white py-5 md:py-8 px-5 md:px-12 rounded-2xl md:rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden group">
+      <div className="bg-slate-950 text-white py-5 md:py-8 px-5 md:px-12 rounded-2xl md:rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden group flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-2">
             <LayoutDashboard className="w-5 h-5 text-orange-500" />
@@ -179,12 +207,42 @@ export const AdminDashboard = () => {
               Command Center
             </span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-sans font-black tracking-tight uppercase leading-tight">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
             SYSTEM <span className="text-orange-500">OVERVIEW</span>
           </h1>
           <p className="text-slate-400 font-sans font-medium text-sm tracking-wide mt-2 max-w-2xl">
             Institutional Orchestration Hub. Monitor tournament lifecycle, user eligibility, and live match execution.
           </p>
+        </div>
+
+        <div className="relative z-10 shrink-0 flex items-center gap-2.5 flex-wrap">
+          <Button
+            onClick={() => setIsFacilitatorModalOpen(true)}
+            variant="ghost"
+            className="h-11 border border-white/15 hover:border-orange-500/60 bg-white/5 hover:bg-orange-500/20 text-white hover:text-white font-bold gap-2 px-5 rounded-xl text-xs uppercase tracking-wider group cursor-pointer"
+          >
+            <ShieldCheck className="size-4 text-orange-400 group-hover:scale-110 transition-transform" />
+            <span className="text-white group-hover:text-white">Match Facilitators</span>
+            {facilitatorsCount > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-orange-500 text-white text-[10px] font-black shadow-sm">
+                {facilitatorsCount}
+              </span>
+            )}
+          </Button>
+
+          <Button
+            onClick={() => navigate('/admin/recovery')}
+            variant="ghost"
+            className="h-11 border border-white/15 hover:border-orange-500/60 bg-white/5 hover:bg-orange-500/20 text-white hover:text-white font-bold gap-2 px-5 rounded-xl text-xs uppercase tracking-wider group cursor-pointer"
+          >
+            <RotateCcw className="size-4 text-orange-400 group-hover:rotate-[-45deg] transition-transform" />
+            <span className="text-white group-hover:text-white">Recovery Center</span>
+            {recoverableCount > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-orange-500 text-white text-[10px] font-black shadow-sm">
+                {recoverableCount}
+              </span>
+            )}
+          </Button>
         </div>
 
         {/* Abstract Background Element */}
@@ -237,12 +295,12 @@ export const AdminDashboard = () => {
                       Draft
                     </span>
                   </div>
-                  <h4 className="font-black text-sm uppercase italic tracking-tight text-white truncate group-hover:text-orange-500 transition-colors">
+                  <h4 className="font-black text-sm uppercase italic tracking-tight text-white line-clamp-2 group-hover:text-orange-500 transition-colors">
                     {t.name}
                   </h4>
                 </div>
                 <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                  <span>Kickoff: {new Date(t.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                  <span>Kickoff: {new Date(t.start_date || t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                   <span className="text-orange-500 font-bold">Awaiting Teams</span>
                 </div>
               </div>
@@ -251,27 +309,27 @@ export const AdminDashboard = () => {
         </div>
       )}
 
-      {/* Stats Grid - 2x2 Refactored for Density */}
-      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:gap-6 relative z-10">
+      {/* Stats Grid - Responsive 2x2 on mobile, 4 on desktop with no label clipping */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6 relative z-10">
         {statCards.map((stat, idx) => (
-          <Card key={stat.label} className="group hover:border-orange-500/30 transition-all duration-500 shadow-sm hover:shadow-xl rounded-3xl overflow-hidden border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: `${idx * 75}ms` }}>
-            <CardContent className="p-4 md:p-6">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3 md:gap-5">
-                  <div className={`p-2.5 md:p-4 ${stat.bg} rounded-xl md:rounded-2xl group-hover:scale-105 transition-transform duration-500`}>
-                    <stat.icon className={`size-5 md:size-7 ${stat.color}`} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[9px] md:text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 mb-1 leading-none truncate">{stat.label}</p>
-                    <p className="text-2xl md:text-5xl font-black italic tracking-tighter text-slate-900 dark:text-white leading-none">{stat.value}</p>
-                  </div>
+          <Card key={stat.label} className="group hover:border-orange-500/30 transition-all duration-300 shadow-sm hover:shadow-xl rounded-2xl md:rounded-3xl border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: `${idx * 75}ms` }}>
+            <CardContent className="p-3.5 sm:p-5">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className={`p-2 sm:p-3 ${stat.bg} rounded-xl group-hover:scale-105 transition-transform shrink-0`}>
+                  <stat.icon className={`size-4.5 sm:size-6 ${stat.color}`} />
                 </div>
-                <div className="hidden sm:flex flex-col items-end">
-                  <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-50 dark:bg-white/5 px-3 py-1.5 rounded-full">
-                    <TrendingUp className="size-3 text-orange-500" />
-                    {stat.trend}
-                  </div>
+                <div className="hidden sm:flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-slate-500 bg-slate-50 dark:bg-white/5 px-2.5 py-1 rounded-full">
+                  <TrendingUp className="size-2.5 text-orange-500" />
+                  {stat.trend}
                 </div>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 leading-tight">
+                  {stat.label}
+                </p>
+                <p className="text-2xl sm:text-4xl font-black italic tracking-tighter tabular-nums text-slate-900 dark:text-white mt-1 leading-none">
+                  {stat.value}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -287,7 +345,7 @@ export const AdminDashboard = () => {
               <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.15em] md:tracking-[0.2em] text-slate-500 mt-1 truncate">User eligibility & security clearance</p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-black italic text-slate-900 dark:text-white leading-none">{verificationBreakdown.total}</p>
+              <p className="text-2xl font-black italic tabular-nums text-slate-900 dark:text-white leading-none">{verificationBreakdown.total}</p>
               <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Total Audited</p>
             </div>
           </div>
@@ -418,24 +476,26 @@ export const AdminDashboard = () => {
 
         {/* Capstone Showcase Demo Tool - Only visible to SuperAdmin */}
         {isSuperAdmin && (
-          <div className="bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent border-2 border-orange-500/20 rounded-[2.5rem] p-6 shadow-lg flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3.5 bg-orange-500 rounded-2xl shadow-md shadow-orange-500/30 text-white">
+          <div className="bg-white dark:bg-slate-900 border-2 border-orange-500/30 rounded-2xl md:rounded-[2.5rem] p-5 sm:p-6 shadow-lg flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 sm:gap-6 overflow-hidden">
+            <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0">
+              <div className="p-3.5 bg-orange-500 rounded-2xl shadow-md shadow-orange-500/30 text-white shrink-0">
                 <Sparkles className="size-6" />
               </div>
-              <div>
-                <h3 className="text-base font-black uppercase italic tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                  Capstone Demonstration Arena
-                  <span className="text-[9px] font-black uppercase tracking-widest bg-orange-500 text-white px-2 py-0.5 rounded-full">SUPERADMIN</span>
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-base font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
+                    Capstone Demonstration Arena
+                  </h3>
+                  <span className="text-[9px] font-black uppercase tracking-widest bg-orange-500 text-white px-2 py-0.5 rounded-full shrink-0">SUPERADMIN</span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
                   Instant reset to standard demo scenario: 4 campus squads, active Binturungan tournament, 3rd-place bronze bracket, and an ongoing basketball match with live commentary.
                 </p>
               </div>
             </div>
             <Button
               onClick={() => setIsResetDialogOpen(true)}
-              className="h-12 px-6 bg-orange-500 hover:bg-orange-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-orange-500/20 gap-2 shrink-0 transition-transform active:scale-95"
+              className="w-full lg:w-auto h-12 px-6 bg-orange-500 hover:bg-orange-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-orange-500/20 gap-2 shrink-0 transition-transform active:scale-95"
             >
               <RotateCcw className="size-4" />
               Reset Demo Arena
@@ -469,8 +529,8 @@ export const AdminDashboard = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-tighter">
-                      {match.team1_score} - {match.team2_score}
+                    <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-tighter tabular-nums">
+                      {match.team_a_score ?? 0} - {match.team_b_score ?? 0}
                     </p>
                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-0.5">Final</p>
                   </div>
@@ -545,6 +605,12 @@ export const AdminDashboard = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <FacilitatorManagementModal
+        open={isFacilitatorModalOpen}
+        onOpenChange={setIsFacilitatorModalOpen}
+        onUpdated={fetchStats}
+      />
     </div>
   );
 };

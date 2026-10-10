@@ -59,7 +59,7 @@ export const offlineQueue = {
       existing.last_updated = new Date().toISOString();
 
       localStorage.setItem(`${STORAGE_PREFIX}${matchId}`, JSON.stringify(existing));
-      console.log(`📦 [OfflineQueue] Buffered score for match ${matchId}: ${teamAScore} - ${teamBScore}`);
+      if (import.meta.env.DEV) console.log(`[OfflineQueue] Buffered score for match ${matchId}: ${teamAScore} - ${teamBScore}`);
     } catch (err) {
       console.error('Error buffering offline score:', err);
     }
@@ -89,7 +89,7 @@ export const offlineQueue = {
       existing.last_updated = new Date().toISOString();
 
       localStorage.setItem(`${STORAGE_PREFIX}${matchId}`, JSON.stringify(existing));
-      console.log(`📦 [OfflineQueue] Buffered event for match ${matchId}: "${description}"`);
+      if (import.meta.env.DEV) console.log(`[OfflineQueue] Buffered event for match ${matchId}: "${description}"`);
     } catch (err) {
       console.error('Error buffering offline event:', err);
     }
@@ -112,7 +112,7 @@ export const offlineQueue = {
   clear(matchId: string) {
     try {
       localStorage.removeItem(`${STORAGE_PREFIX}${matchId}`);
-      console.log(`🧹 [OfflineQueue] Cleared cache for match ${matchId}`);
+      if (import.meta.env.DEV) console.log(`[OfflineQueue] Cleared cache for match ${matchId}`);
     } catch (err) {
       console.error('Error clearing offline match cache:', err);
     }
@@ -127,7 +127,7 @@ export const offlineQueue = {
       return { success: true, syncedEvents: 0 };
     }
 
-    console.log(`🚀 [OfflineQueue] Synchronizing offline cache for match ${matchId}...`, state);
+    if (import.meta.env.DEV) console.log(`[OfflineQueue] Synchronizing offline cache for match ${matchId}...`, state);
 
     try {
       // 1. Try atomic batch RPC if available
@@ -173,7 +173,7 @@ export const offlineQueue = {
       this.clear(matchId);
       return { success: true, syncedEvents: state.events.length };
     } catch (err) {
-      console.error('❌ [OfflineQueue] Failed to flush offline queue:', err);
+      console.error('[OfflineQueue] Failed to flush offline queue:', err);
       return { success: false, syncedEvents: 0 };
     }
   }

@@ -180,7 +180,7 @@ export const ResetPassword = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4 relative overflow-hidden">
+    <div className="min-h-dvh flex items-center justify-center bg-slate-900 px-4 relative overflow-hidden">
       {/* Decorative Background Elements — matching Login page */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-600/20 blur-[120px] rounded-full animate-pulse" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-600/10 blur-[120px] rounded-full" />
