@@ -96,7 +96,6 @@ export const FacilitatorManagementModal = ({
         .select('*, colleges(college_name)')
         .neq('role', 'facilitator')
         .neq('role', 'super_admin')
-        .neq('role', 'Admin')
         .neq('account_status', 'soft_deleted')
         .order('full_name', { ascending: true })
         .limit(20);
@@ -466,10 +465,9 @@ export const FacilitatorManagementModal = ({
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Coach">Coach (Team Coach / Staff)</SelectItem>
-                <SelectItem value="player_student">Student Athlete (player_student)</SelectItem>
-                <SelectItem value="player_faculty">Faculty Athlete (player_faculty)</SelectItem>
-                <SelectItem value="Player">General Player</SelectItem>
+                <SelectItem value="coach">Coach (Team Coach / Staff)</SelectItem>
+                <SelectItem value="player_student">Student Athlete</SelectItem>
+                <SelectItem value="player_faculty">Faculty Athlete</SelectItem>
               </SelectContent>
             </Select>
           </div>

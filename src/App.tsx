@@ -63,7 +63,7 @@ function AppRoutes() {
             <Route path="/achievements" element={<Navigate to="/profile" replace />} />
 
             {/* Role-Specific Routes */}
-            <Route element={<ProtectedRoute requiredRole="Admin" />}>
+            <Route element={<ProtectedRoute requiredRole="super_admin" />}>
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/tournaments" element={<TournamentManagement />} />
               <Route path="/admin/verifications" element={<SystemVerifications />} />
@@ -71,12 +71,12 @@ function AppRoutes() {
               <Route path="/admin/recovery" element={<AdminRecovery />} />
             </Route>
 
-            <Route element={<ProtectedRoute requiredRole="Coach" />}>
+            <Route element={<ProtectedRoute requiredRole="coach" />}>
               <Route path="/coach" element={<CoachDashboard />} />
               <Route path="/coach/teams" element={<TeamManagement />} />
             </Route>
 
-            <Route element={<ProtectedRoute requiredRole="Player" />}>
+            <Route element={<ProtectedRoute requiredRole={['player_student', 'player_faculty']} />}>
               <Route path="/player" element={<PlayerDashboard />} />
             </Route>
           </Route>

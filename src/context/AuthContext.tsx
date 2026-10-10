@@ -7,10 +7,7 @@ export type UserRole =
   | 'facilitator'
   | 'coach'
   | 'player_student'
-  | 'player_faculty'
-  | 'Admin'
-  | 'Coach'
-  | 'Player';
+  | 'player_faculty';
 
 export type AccountStatus = 'active' | 'inactive' | 'archived' | 'soft_deleted';
 
@@ -175,12 +172,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   // Derived role permission flags
-  const isSuperAdmin = role === 'super_admin' || role === 'Admin';
+  const isSuperAdmin = role === 'super_admin';
   const isFacilitator = role === 'facilitator' || isSuperAdmin;
-  const isCoach = role === 'coach' || role === 'Coach';
-  const isPlayer = role === 'player_student' || role === 'player_faculty' || role === 'Player';
+  const isCoach = role === 'coach';
+  const isPlayer = role === 'player_student' || role === 'player_faculty';
   const isFacultyAthlete = role === 'player_faculty';
-  const isStudentAthlete = role === 'player_student' || role === 'Player';
+  const isStudentAthlete = role === 'player_student';
 
   return (
     <AuthContext.Provider value={{

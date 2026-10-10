@@ -149,9 +149,9 @@ export const Login = () => {
             .eq('id', authData.user.id)
             .single();
           const userRole = userRec?.role;
-          if (userRole === 'super_admin' || userRole === 'Admin') {
+          if (userRole === 'super_admin') {
             destination = '/admin';
-          } else if (userRole === 'coach' || userRole === 'Coach') {
+          } else if (userRole === 'coach') {
             destination = '/coach';
           } else {
             destination = '/player';

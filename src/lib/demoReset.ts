@@ -23,7 +23,7 @@ export async function resetDemoState(supabase: SupabaseClient): Promise<{
     }
 
     // 2. Fetch coaches
-    const { data: coaches } = await supabase.from('users').select('id').eq('role', 'Coach').limit(4);
+    const { data: coaches } = await supabase.from('users').select('id').eq('role', 'coach').limit(4);
     const coachIds = (coaches || []).map(c => c.id);
 
     // 3. Find or Create Demo Tournament

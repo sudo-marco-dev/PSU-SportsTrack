@@ -41,7 +41,7 @@ const registerSchema = z.object({
   email: z.string().email({ message: 'Invalid university email' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
   confirmPassword: z.string(),
-  role: z.enum(['Player', 'player_faculty', 'faculty', 'Coach'] as const, { message: 'Role is required' }),
+  role: z.enum(['player_student', 'player_faculty', 'coach'] as const, { message: 'Role is required' }),
   collegeId: z.string().optional(),
   termsAccepted: z.boolean().refine((val) => val === true, {
     message: 'You must accept the Terms & Conditions and Privacy Policy',
@@ -81,7 +81,7 @@ export const LoginModal = () => {
       email: '',
       password: '',
       confirmPassword: '',
-      role: 'Player',
+      role: 'player_student',
       collegeId: '',
       termsAccepted: false,
     },
@@ -481,10 +481,9 @@ export const LoginModal = () => {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="bg-slate-900 border-white/10 text-white font-bold text-xs rounded-xl">
-                              <SelectItem value="Player">Student Athlete</SelectItem>
+                              <SelectItem value="player_student">Student Athlete</SelectItem>
                               <SelectItem value="player_faculty">Faculty Athlete</SelectItem>
-                              <SelectItem value="faculty">Faculty Member</SelectItem>
-                              <SelectItem value="Coach">Athletic Coach</SelectItem>
+                              <SelectItem value="coach">Athletic Coach</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />

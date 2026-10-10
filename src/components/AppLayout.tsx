@@ -31,11 +31,11 @@ export const AppLayout = () => {
 
   const formatRole = (r: string | null) => {
     if (!r) return 'Spectator';
-    if (r === 'super_admin' || r === 'Admin') return 'Super Admin';
+    if (r === 'super_admin') return 'Super Admin';
     if (r === 'facilitator') return 'Facilitator';
-    if (r === 'coach' || r === 'Coach') return 'Coach';
-    if (r === 'player_student' || r === 'Player') return 'Student';
-    if (r === 'player_faculty' || r === 'faculty' || r === 'Faculty') return 'Faculty';
+    if (r === 'coach') return 'Coach';
+    if (r === 'player_student') return 'Student Athlete';
+    if (r === 'player_faculty') return 'Faculty Athlete';
     return r;
   };
 

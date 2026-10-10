@@ -685,3 +685,23 @@ This log tracks every user prompt, database migration, code change, and Git oper
     *   `npx eslint src/lib/corParser.ts src/pages/AdminRecovery.tsx src/pages/TournamentManagement.tsx` exits with code 0 (0 errors).
     *   Vercel routing verified and repository synchronized with remote.
 
+---
+
+### Prompt 34: Complete Role Normalization & Documentation Unification
+*   **Timestamp**: 2026-10-10T22:20:00+08:00
+*   **User Directive**: "clean and unifiy them to avoid documentation conflicts and confusion also update the md file with the unified version"
+*   **Actions Taken**:
+    *   **Database Data Normalization**: Executed SQL migration on active Supabase project `kxnkdhznnpwvnljjmfwl` converting all 26 users to canonical snake_case identifiers (`UPDATE users SET role = 'super_admin' WHERE role = 'Admin'`, `UPDATE users SET role = 'coach' WHERE role = 'Coach'`, `UPDATE users SET role = 'player_student' WHERE role = 'Player'`).
+    *   **Database Constraint Hardening**: Replaced `users_role_check` constraint with strict canonical check (`CHECK (role IN ('super_admin', 'facilitator', 'coach', 'player_student', 'player_faculty'))`), removing legacy PascalCase aliases.
+    *   **Migration Script**: Created version-controlled migration [`supabase/migrations/20261010_unify_roles.sql`](file:///f:/VScodes/SportsTrack/psu-sportstrack/supabase/migrations/20261010_unify_roles.sql).
+    *   **Type & Permission Simplification**: Updated [`src/context/AuthContext.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/context/AuthContext.tsx) to strictly recognize the 5 canonical roles, removing legacy union members and boolean fallback checks.
+    *   **Route Guards Unified**: Updated [`src/components/ProtectedRoute.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/ProtectedRoute.tsx) and [`src/App.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/App.tsx) to use `super_admin`, `coach`, `player_student`, and `player_faculty`.
+    *   **Auth Registration Forms Cleaned**: Normalized role enums and Select components in [`src/components/auth/LoginModal.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/auth/LoginModal.tsx) and [`src/pages/Register.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/Register.tsx).
+    *   **Scorekeeper & Facilitator Governance**: Cleaned up role checks in [`src/pages/LiveMatch.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/LiveMatch.tsx), [`src/components/admin/FacilitatorManagementModal.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/admin/FacilitatorManagementModal.tsx), and [`src/components/AppLayout.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/AppLayout.tsx).
+    *   **Seed & Reset Scripts Updated**: Standardized coach query in [`src/lib/demoReset.ts`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/lib/demoReset.ts) and [`scripts/seed_demo.js`](file:///f:/VScodes/SportsTrack/psu-sportstrack/scripts/seed_demo.js).
+    *   **Documentation Overhaul**: Rewrote [`user_roles_and_access_control.md`](file:///f:/VScodes/SportsTrack/psu-sportstrack/user_roles_and_access_control.md) removing all duplicate role mentions and presenting the unified canonical RBAC specification.
+*   **Verification**:
+    *   `npm run build` compiled with exit code 0 in 4.00s.
+    *   ESLint verification on modified files passed with 0 errors.
+
+

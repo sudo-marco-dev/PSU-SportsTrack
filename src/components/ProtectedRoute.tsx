@@ -36,18 +36,18 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) 
   if (requiredRole) {
     const requiredRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
     
-    // Check permission with hierarchical & backward compatibility
+    // Check permission with hierarchical logic
     const hasPermission = requiredRoles.some((req) => {
-      if (req === 'super_admin' || req === 'Admin') {
+      if (req === 'super_admin') {
         return isSuperAdmin;
       }
       if (req === 'facilitator') {
         return isFacilitator;
       }
-      if (req === 'coach' || req === 'Coach') {
+      if (req === 'coach') {
         return isCoach || isSuperAdmin;
       }
-      if (req === 'player_student' || req === 'player_faculty' || req === 'Player') {
+      if (req === 'player_student' || req === 'player_faculty') {
         return isPlayer;
       }
       return role === req;

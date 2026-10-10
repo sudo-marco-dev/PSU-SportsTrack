@@ -27,7 +27,7 @@ export const Navbar = () => {
             PSU SportsTrack
           </Link>
 
-          {profile?.role === 'Admin' && (
+          {profile?.role === 'super_admin' && (
             <Link 
               to="/admin/tournaments" 
               className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"

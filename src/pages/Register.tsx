@@ -28,7 +28,7 @@ const registerSchema = z.object({
   email: z.string().email({ message: 'Invalid email address' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
   confirmPassword: z.string(),
-  role: z.enum(['player_student', 'player_faculty', 'coach', 'Player', 'Coach'] as const, { message: 'Role is required' }),
+  role: z.enum(['player_student', 'player_faculty', 'coach'] as const, { message: 'Role is required' }),
   collegeId: z.string().optional(),
   termsAccepted: z.boolean().refine((val) => val === true, {
     message: 'You must accept the Terms & Conditions and Privacy Policy',
@@ -95,7 +95,7 @@ export const Register = () => {
           toast.error('Failed to create user profile: ' + profileError.message);
         } else {
           toast.success('Registration successful!');
-          const rolePath = (values.role === 'coach' || values.role === 'Coach') ? '/coach' : '/player';
+          const rolePath = values.role === 'coach' ? '/coach' : '/player';
           window.location.href = rolePath;
         }
       }
@@ -246,7 +246,7 @@ export const Register = () => {
                             <SelectValue placeholder="Select Role">
                               {field.value === 'player_faculty'
                                 ? 'Faculty'
-                                : field.value === 'coach' || field.value === 'Coach'
+                                : field.value === 'coach'
                                 ? 'Coach'
                                 : 'Student'}
                             </SelectValue>

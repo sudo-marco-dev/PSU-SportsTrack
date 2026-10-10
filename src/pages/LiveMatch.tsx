@@ -124,7 +124,7 @@ const playClaimAlertChime = () => {
 export const LiveMatch = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
-  const { role, user, profile, isSuperAdmin, isFacilitator } = useAuth();
+  const { user, profile, isSuperAdmin, isFacilitator } = useAuth();
   const [match, setMatch] = useState<Match | null>(null);
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -227,7 +227,7 @@ export const LiveMatch = () => {
   const broadcastChannelRef = useRef<any>(null);
 
   // Strict Governance: ONLY Facilitators and Superadmins can score games. Coaches are strictly read-only!
-  const isAuthorizedScorekeeper = isFacilitator || isSuperAdmin || role === 'facilitator' || role === 'super_admin' || role === 'Admin';
+  const isAuthorizedScorekeeper = isFacilitator || isSuperAdmin;
   const isAuthorized = isAuthorizedScorekeeper && (isHoldingLease || isSuperAdmin);
 
   useEffect(() => {

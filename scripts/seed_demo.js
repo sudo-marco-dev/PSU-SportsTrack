@@ -52,7 +52,7 @@ async function runSeed() {
     console.log(`✅ Clusters active: ${Object.keys(clusterMap).length}`);
 
     // Step 2: Fetch available Coaches for team assignment
-    const { data: coaches } = await supabase.from('users').select('id, full_name').eq('role', 'Coach').limit(4);
+    const { data: coaches } = await supabase.from('users').select('id, full_name').eq('role', 'coach').limit(4);
     const coachIds = (coaches || []).map(c => c.id);
 
     // Step 3: Create / Reset Demo Tournament
