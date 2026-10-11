@@ -8,11 +8,11 @@ This log tracks every user prompt, database migration, code change, and Git oper
 
 ### 💬 Prompt 1: Rebuild Core Database & Security
 *   **Timestamp**: 2026-05-17T14:41:13+08:00
-*   **User Directive**: Rebuild the core database schema, apply Row Level Security (RLS) policies, enable Realtime, and seed initial Palawan State University colleges on the pristine Supabase project `kxnkdhznnpwvnljjmfwl`.
+*   **User Directive**: Rebuild the core database schema, apply Row Level Security (RLS) policies, enable Realtime, and seed initial Palawan State University colleges on the pristine Supabase project.
 *   **Actions Taken**:
     *   Designed and drafted `implementation_plan.md` outlining the blueprint for 10 core tables and 18 strict RLS policies.
     *   Wrote the PostgreSQL DDL script `rebuild_schema.sql` under the scratch directory.
-    *   Executed the DDL script via the Supabase MCP `apply_migration` tool on the active project reference `kxnkdhznnpwvnljjmfwl`.
+    *   Executed the DDL script via the Supabase MCP `apply_migration` tool on the active project reference.
     *   Verified all 10 tables were successfully created, 9 colleges were correctly seeded, Realtime logical replication publication was configured for target tables (`matches`, `match_events`, `player_stars`, `team_roster`), and storage bucket `verification_documents` with its policies was provisioned.
     *   Marked all items completed in `task.md` and finalized the `walkthrough.md` report.
 
@@ -405,7 +405,7 @@ This log tracks every user prompt, database migration, code change, and Git oper
 *   **Actions Taken**:
     *   **Supabase Schema Repair for Team Roster Actions**:
         *   Investigated toast error: `Could not find the 'is_captain' column of 'team_roster' in the schema cache`.
-        *   Executed DDL migration on Supabase project `kxnkdhznnpwvnljjmfwl` adding missing game-day lineup columns:
+        *   Executed DDL migration on active Supabase project adding missing game-day lineup columns:
             *   `is_captain BOOLEAN DEFAULT false`
             *   `is_starter BOOLEAN DEFAULT true`
             *   `position TEXT DEFAULT 'Player'`
@@ -691,7 +691,7 @@ This log tracks every user prompt, database migration, code change, and Git oper
 *   **Timestamp**: 2026-10-10T22:20:00+08:00
 *   **User Directive**: "clean and unifiy them to avoid documentation conflicts and confusion also update the md file with the unified version"
 *   **Actions Taken**:
-    *   **Database Data Normalization**: Executed SQL migration on active Supabase project `kxnkdhznnpwvnljjmfwl` converting all 26 users to canonical snake_case identifiers (`UPDATE users SET role = 'super_admin' WHERE role = 'Admin'`, `UPDATE users SET role = 'coach' WHERE role = 'Coach'`, `UPDATE users SET role = 'player_student' WHERE role = 'Player'`).
+    *   **Database Data Normalization**: Executed SQL migration on active Supabase project converting all 26 users to canonical snake_case identifiers (`UPDATE users SET role = 'super_admin' WHERE role = 'Admin'`, `UPDATE users SET role = 'coach' WHERE role = 'Coach'`, `UPDATE users SET role = 'player_student' WHERE role = 'Player'`).
     *   **Database Constraint Hardening**: Replaced `users_role_check` constraint with strict canonical check (`CHECK (role IN ('super_admin', 'facilitator', 'coach', 'player_student', 'player_faculty'))`), removing legacy PascalCase aliases.
     *   **Migration Script**: Created version-controlled migration [`supabase/migrations/20261010_unify_roles.sql`](file:///f:/VScodes/SportsTrack/psu-sportstrack/supabase/migrations/20261010_unify_roles.sql).
     *   **Type & Permission Simplification**: Updated [`src/context/AuthContext.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/context/AuthContext.tsx) to strictly recognize the 5 canonical roles, removing legacy union members and boolean fallback checks.
