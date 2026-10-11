@@ -18,6 +18,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { Button } from './ui/button';
+import { ThemeToggle } from './ui/ThemeToggle';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { LoginModal } from '@/components/auth/LoginModal';
 import { toast } from 'sonner';
@@ -98,7 +99,7 @@ export const AppLayout = () => {
   };
 
   return (
-    <div className="min-h-dvh w-full bg-slate-50">
+    <div className="min-h-dvh w-full bg-slate-50 dark:bg-background transition-colors duration-200">
       {/* Desktop Sidebar — Permanently anchored to viewport left, eliminating floating detachment on scroll */}
       <aside className="hidden md:flex flex-col w-64 bg-slate-900 text-white fixed top-0 bottom-0 left-0 h-dvh shadow-xl border-r border-white/5 z-30">
         <div className="p-6">
@@ -127,6 +128,10 @@ export const AppLayout = () => {
             </Link>
           ))}
         </nav>
+
+        <div className="px-4 py-2 border-t border-white/5">
+          <ThemeToggle className="w-full justify-start gap-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl h-9" />
+        </div>
 
         <div className="p-4 border-t border-white/5 bg-black/20">
           {user ? (
@@ -188,14 +193,17 @@ export const AppLayout = () => {
                 <div className="font-black text-xl italic tracking-tighter">
                   <span className="text-orange-500">NAV</span>IGATION
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="rounded-full hover:bg-white/10"
-                >
-                  <X className="size-6" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <ThemeToggle className="text-slate-400 hover:text-white hover:bg-white/10 rounded-full" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="rounded-full hover:bg-white/10"
+                  >
+                    <X className="size-6" />
+                  </Button>
+                </div>
               </div>
 
               <nav className="flex-1 p-6 space-y-2 overflow-y-auto">
@@ -394,10 +402,10 @@ export const AppLayout = () => {
       <Dialog open={showSignOutPrompt} onOpenChange={setShowSignOutPrompt}>
         <DialogContent className="sm:max-w-[425px] rounded-3xl p-6">
           <DialogHeader className="space-y-2">
-            <DialogTitle className="text-2xl font-black uppercase italic tracking-tight text-slate-900">
+            <DialogTitle className="text-2xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
               Confirm Sign Out
             </DialogTitle>
-            <DialogDescription className="text-slate-500 text-sm font-medium">
+            <DialogDescription className="text-slate-500 dark:text-slate-400 text-sm font-medium">
               Are you sure you want to end your active session? You will be switched to public viewer mode.
             </DialogDescription>
           </DialogHeader>

@@ -1,12 +1,12 @@
 # PSU SportsTrack - Project State
 
 ## 🏛️ Architecture
-- **Frontend**: React 18, Vite (SWC), TypeScript, Tailwind CSS, shadcn/ui.
-- **Backend/DB**: Supabase (PostgreSQL, Auth, Storage).
+- **Frontend**: React 19, Vite, TypeScript, Tailwind CSS, shadcn/ui, next-themes.
+- **Backend/DB**: Supabase (PostgreSQL, Auth, Storage, Realtime).
 - **Testing**: Playwright.
 
 ## 📍 Current State
-- **Active Phase**: Phase 5: Final Polish & Capstone Readiness.
+- **Active Phase**: Phase 5: Final Polish, Role Normalization, Theme Engine & Capstone Readiness.
 - **Completed**: Project scaffolding, Playwright configuration, Supabase DB Schema & RLS initialization.
 - [x] Phase 3.1 Database Schema (Matches, Live Feed, MVP Stars).
 - [x] Phase 3.2 Dual-Mode Bracket Generation (Auto/Manual).
@@ -36,6 +36,13 @@
 - [x] Phase 5.6 Admin Audit Log Time Filters (Today, Week, Month)
 - [x] Phase 5.7 Registration Security (Confirm Password Field)
 - [x] Phase 5.8 Coach Recruitment Validation (Duplicate Sport Prevention)
+- [x] Phase 5.9 Role Normalization & Unified RBAC (`super_admin`, `facilitator`, `coach`, `player_student`, `player_faculty`)
+- [x] Phase 5.10 Institutional PSU COR Verification & Student Corporate Email Parser
+- [x] Phase 5.11 Courtside Scorer Attribution, Score Deduction & Realtime Box Score Deck
+- [x] Phase 5.12 Anti-Slop Vector Sports Icon System (`react-icons/gi`, `react-icons/fa6` & centralized `sportIcons.ts`)
+- [x] Phase 5.13 Universal Mobile-First App Shell (Persistent 5-tier bottom nav rail, safe-area insets & zero-overflow dialogs)
+- [x] Phase 5.14 Next-Themes Dynamic Dark/Light Mode Engine & Nocturnal Color Architecture
+- [x] Phase 5.15 Public Users Email Synchronization (`trg_sync_user_email` trigger & registration pipeline persistence)
 
 ## 🛠️ Recent Modifications & Change Log
 
@@ -110,7 +117,100 @@
   - `scripts/seed_demo.js`
   - `package.json`
 
-## 🎯 Future Goals
-- [x] Phase 4: MVP Star System (Red & Gold Stars).
-- [x] Phase 4.1: Binturungan One-Click Multi-Sport Creation & Draft Lifecycle.
-- [x] Phase 5: Final Polish, Facilitator Governance & Capstone Readiness.
+### Canonical Role Normalization & Unified Governance
+- **Description**: Rebuilt and unified the entire user role architecture to eliminate legacy PascalCase/snake_case disparities:
+  1. **Canonical Schema Check**: Hardened database constraint to strictly require canonical snake_case identifiers (`CHECK (role IN ('super_admin', 'facilitator', 'coach', 'player_student', 'player_faculty'))`).
+  2. **Database Data Normalization**: Executed data migration normalizing all existing users to canonical values.
+  3. **Strict Context & Route Guards**: Refactored `AuthContext.tsx` and `ProtectedRoute.tsx` to eliminate redundant fallback checks, cleanly routing `super_admin` directly to `/admin`, `coach` to `/coach`, and athletes to `/player`.
+  4. **Documentation Sync**: Rewrote `user_roles_and_access_control.md` to establish the definitive source of truth for platform RBAC.
+- **Files Modified**:
+  - `supabase/migrations/20261010_unify_roles.sql`
+  - `src/context/AuthContext.tsx`
+  - `src/components/ProtectedRoute.tsx`
+  - `src/App.tsx`
+  - `src/components/auth/LoginModal.tsx`
+  - `src/pages/Register.tsx`
+  - `user_roles_and_access_control.md`
+
+### Official PSU COR Verification, Corporate Email Parser & PDF Canvas Preview
+- **Description**: Upgraded the athlete clearance pipeline with strict university-grade verification tools:
+  1. **Discrete Name Parsing**: Upgraded athlete registration to separate First Name and Last Name inputs for unambiguous database storage and accurate document string matching.
+  2. **Corporate Student Email Validation**: Added regex extraction for official PSU student corporate emails (`[student_number]@psu.palawan.edu.ph`), cross-verifying the student ID extracted from the Certificate of Registration (COR) and contributing 15 confidence points.
+  3. **Client-Side Canvas PDF Viewer**: Integrated custom PDF.js canvas viewer in `CanvasPdfViewer.tsx`, eliminating forced browser download prompts and enabling in-browser document inspection with anchored zoom controls.
+  4. **Direct University Portal Integration**: Added direct verification links to the official PSU student portal (`https://oes.psu.palawan.edu.ph/aims/students/`).
+- **Files Modified**:
+  - `src/lib/corParser.ts`
+  - `src/components/admin/CanvasPdfViewer.tsx`
+  - `src/pages/SystemVerifications.tsx`
+  - `src/pages/Register.tsx`
+  - `src/components/auth/LoginModal.tsx`
+
+### Live Match Scorer Attribution, Score Deductions & Box Score Deck
+- **Description**: Enhanced courtside live match operations for facilitators and administrators:
+  1. **Player Scoring Attribution**: Clicking score increment buttons (`+1 FT`, `+2 Field`, `+3 Triple`) launches the Scorer Attribution Modal to assign the point to specific active or pending team athletes, with an inline fallback for walk-on jersey numbers.
+  2. **Deduction & Rollback Safeguards**: Added score deduction dialog with destructive confirmation warning and a non-negative floor guard (`score >= 0`) that rolls back athlete box scores and generates audit entries.
+  3. **Real-time Box Score Deck**: Integrated live courtside Box Score leaderboard tracking points per player, updating automatically over Supabase Realtime Postgres change events and broadcast channels.
+- **Files Modified**:
+  - `src/pages/LiveMatch.tsx`
+
+### Universal Mobile-First App Shell & Anti-Overflow Architecture
+- **Description**: Implemented universal mobile-first layout standards eliminating clipping and scroll bugs:
+  1. **5-Tier Persistent Bottom Navigation Rail**: Implemented persistent, fixed bottom navigation bar on mobile with role-aware destinations (`Home`, `Matches`, `Rankings`, `Profile/Login`, `More`), isolation styling, and iOS `.pb-safe` padding.
+  2. **Elimination of Redundant Action Buttons**: Removed duplicate header login and burger menu buttons on mobile; eliminated redundant toggle buttons in auth dialogs.
+  3. **Nocturnal Arena Visual Standards**: Replaced washed-out, muddy brown/orange gradients with deep solid slate (`#020617`), vibrant orange court accents, and WCAG AA contrast.
+  4. **Zero-Overflow Modal Dialogs & Dropdowns**: Enforced `max-h-[88dvh] overflow-y-auto` and `min-w-0` across all dialogs, preventing horizontal scroll blowout and mobile keyboard clipping.
+- **Files Modified**:
+  - `src/components/AppLayout.tsx`
+  - `src/index.css`
+  - `src/components/ui/dialog.tsx`
+  - `src/components/ui/select.tsx`
+  - `src/components/ui/card.tsx`
+  - `src/components/ui/tabs.tsx`
+  - `src/pages/About.tsx`
+  - `design_context.md`
+  - `design.md`
+
+### Dynamic Theme Engine (Next-Themes) & Nocturnal Color Architecture
+- **Description**: Integrated dark/light mode switching system:
+  1. **Theme Provider**: Added `ThemeProvider` using `next-themes` with system preference detection and class attribute toggling.
+  2. **Theme Toggle Component**: Created animated `ThemeToggle` button with smooth SVG rotation between Sun and Moon icons, accessible from both desktop sidebar and mobile drawer.
+  3. **Universal Color Token Mapping**: Configured dark mode HSL CSS variables in `index.css` and audited all pages to ensure crisp contrast (`dark:bg-slate-900`, `dark:text-white`, `dark:border-white/10`).
+- **Files Modified**:
+  - `src/context/ThemeProvider.tsx`
+  - `src/components/ui/ThemeToggle.tsx`
+  - `src/App.tsx`
+  - `src/components/AppLayout.tsx`
+  - `src/components/layout/Navbar.tsx`
+  - `src/index.css`
+  - All page views (`AdminDashboard`, `CoachDashboard`, `LiveMatch`, `PlayerDashboard`, `Profile`, `Ranking`, `SystemVerifications`, `TeamManagement`, `TournamentExplorer`, `TournamentManagement`)
+
+### Centralized Sports Vector Icon Registry (`sportIcons.ts`)
+- **Description**: Eliminated generic placeholder icons and centralized all sport iconography:
+  1. **Central Registry**: Created `src/lib/sportIcons.ts` with authentic vector sport glyphs from `react-icons/gi` and `react-icons/fa6` for all 11 collegiate disciplines.
+  2. **Dynamic Resolver**: Implemented `getSportIcon(sportName)` fallback utility for seamless icon resolution across tournaments, match ledgers, brackets, and dashboard feeds.
+- **Files Modified**:
+  - `src/lib/sportIcons.ts`
+  - `src/pages/AdminDashboard.tsx`
+  - `src/pages/TournamentManagement.tsx`
+  - `src/pages/TournamentExplorer.tsx`
+
+### Public Users Email Schema Synchronization & Registration Pipeline
+- **Description**: Connected Supabase Auth user emails to the public profile schema:
+  1. **Database Migration**: Added `email TEXT` column to `public.users`, backfilled existing accounts from `auth.users`, and provisioned automatic trigger `trg_sync_user_email`.
+  2. **Registration Flow**: Updated account registration and auth modal to insert `email` directly into `public.users`.
+  3. **Verification Query Fallback**: Added resilient query handling in `SystemVerifications.tsx` to handle email lookups gracefully.
+- **Files Modified**:
+  - `supabase/migrations/20261011_add_email_to_users.sql`
+  - `src/pages/Register.tsx`
+  - `src/components/auth/LoginModal.tsx`
+  - `src/pages/SystemVerifications.tsx`
+
+## 🎯 Deployment & Capstone Readiness
+- [x] Phase 4: MVP Star System (Red & Gold Stars)
+- [x] Phase 4.1: Binturungan Multi-Sport Creation & Tournament Lifecycle
+- [x] Phase 5: Facilitator Governance, Offline Resilience & Bronze Brackets
+- [x] Phase 5.9 - 5.15: Role Normalization, COR Pipeline, Theme Engine & Icon Standardization
+- [x] Production Build Validation: Zero TypeScript compiler errors (`tsc -b`), zero build failures (`vite build`)
+- [x] Code Quality Audit: Zero ESLint errors across entire `src/` codebase
+- [x] Database Synchronization: All migrations executed and active on Supabase project `kxnkdhznnpwvnljjmfwl`
+- [x] Deployment Configuration: `vercel.json` SPA routing rewrites and security redirects configured

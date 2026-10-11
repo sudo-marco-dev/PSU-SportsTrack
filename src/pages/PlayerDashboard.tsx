@@ -387,20 +387,20 @@ export const PlayerDashboard = () => {
               <Trophy className="size-5 text-orange-500" /> My Achievements
             </h2>
           </div>
-          <Card className="bg-white border-2 border-slate-100 overflow-hidden shadow-xl rounded-2xl md:rounded-[2rem]">
+          <Card className="bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/10 overflow-hidden shadow-xl rounded-2xl md:rounded-[2rem]">
             <CardContent className="p-4 md:p-8">
               {stars.length === 0 ? (
                 <div className="text-center py-8 space-y-3 opacity-50">
                   <div className="flex justify-center gap-3">
-                    <Star className="size-7 text-slate-200" />
-                    <Star className="size-9 text-slate-300 -translate-y-2" />
-                    <Star className="size-7 text-slate-200" />
+                    <Star className="size-7 text-slate-200 dark:text-slate-700" />
+                    <Star className="size-9 text-slate-300 dark:text-slate-600 -translate-y-2" />
+                    <Star className="size-7 text-slate-200 dark:text-slate-700" />
                   </div>
                   <p className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em] text-slate-400">Trophy Case Empty</p>
                 </div>
               ) : (
                 <div className="space-y-4 md:space-y-6">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 md:gap-6 p-4 md:p-6 rounded-xl md:rounded-[1.5rem] bg-slate-50 border border-slate-100 group hover:border-orange-500/30 transition-all duration-300">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 md:gap-6 p-4 md:p-6 rounded-xl md:rounded-[1.5rem] bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 group hover:border-orange-500/30 transition-all duration-300">
                     <div className={`p-4 md:p-5 rounded-2xl shadow-lg shrink-0 ${
                       stars[0].star_type === 'Red' ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'
                     }`}>
@@ -409,23 +409,23 @@ export const PlayerDashboard = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">Latest Honor</span>
-                        <div className="h-px flex-1 bg-slate-200" />
+                        <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
                       </div>
-                      <p className="font-black text-xl md:text-2xl uppercase italic tracking-tight leading-none mb-1">
+                      <p className="font-black text-xl md:text-2xl uppercase italic tracking-tight leading-none mb-1 text-slate-900 dark:text-white">
                         {stars[0].star_type === 'Red' ? 'Match MVP' : 'Tournament MVP'}
                       </p>
-                      <p className="text-xs md:text-sm font-bold text-slate-500 truncate">
+                      <p className="text-xs md:text-sm font-bold text-slate-500 dark:text-slate-400 truncate">
                         {stars[0].tournaments?.name}
                       </p>
                     </div>
                     <div className="hidden md:block">
-                      <Badge variant="outline" className="font-black uppercase tracking-widest border-2 px-3 py-1 text-[10px]">{new Date(stars[0].created_at).toLocaleDateString()}</Badge>
+                      <Badge variant="outline" className="font-black uppercase tracking-widest border-2 px-3 py-1 text-[10px] border-slate-200 dark:border-white/10">{new Date(stars[0].created_at).toLocaleDateString()}</Badge>
                     </div>
                   </div>
 
                   <Button 
                     variant="outline" 
-                    className="w-full h-12 md:h-14 border-2 border-slate-100 font-black uppercase italic tracking-widest text-xs md:text-sm hover:bg-slate-950 hover:text-white hover:border-slate-950 transition-all rounded-xl md:rounded-2xl group shadow-sm"
+                    className="w-full h-12 md:h-14 border-2 border-slate-100 dark:border-white/10 text-slate-700 dark:text-slate-200 font-black uppercase italic tracking-widest text-xs md:text-sm hover:bg-slate-950 hover:text-white hover:border-slate-950 transition-all rounded-xl md:rounded-2xl group shadow-sm"
                     onClick={() => navigate('/profile')}
                   >
                     <span className="group-hover:translate-x-1 transition-transform inline-block mr-2">View Full Trophy Room</span>
@@ -444,11 +444,11 @@ export const PlayerDashboard = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
             <div className="flex items-center gap-2">
               <span className="flex h-2 w-2 rounded-full bg-orange-500 animate-ping" />
-              <h2 className="text-lg md:text-xl font-black uppercase italic tracking-tight text-slate-900 flex items-center gap-2">
+              <h2 className="text-lg md:text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
                 <Clock className="size-4 md:size-5 text-orange-500" /> Coming Soon • Upcoming Events
               </h2>
             </div>
-            <span className="self-start sm:self-auto px-2.5 py-0.5 rounded-full bg-orange-500/10 text-orange-600 font-black text-[9px] md:text-[10px] uppercase tracking-wider border border-orange-500/20">
+            <span className="self-start sm:self-auto px-2.5 py-0.5 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 font-black text-[9px] md:text-[10px] uppercase tracking-wider border border-orange-500/20">
               Draft & Recruitment Phase
             </span>
           </div>
@@ -468,12 +468,12 @@ export const PlayerDashboard = () => {
                     Coming Soon
                   </span>
                 </div>
-                <h4 className="font-black text-base uppercase italic tracking-tight text-slate-900 truncate group-hover:text-orange-500 transition-colors">
+                <h4 className="font-black text-base uppercase italic tracking-tight text-slate-900 dark:text-white truncate group-hover:text-orange-500 transition-colors">
                   {t.name}
                 </h4>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-semibold">
+                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/10 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
                   <span>Kickoff: {new Date(t.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                  <span className="text-orange-600 font-black uppercase tracking-wider group-hover:translate-x-1 transition-transform inline-flex items-center gap-0.5">
+                  <span className="text-orange-600 dark:text-orange-400 font-black uppercase tracking-wider group-hover:translate-x-1 transition-transform inline-flex items-center gap-0.5">
                     View Details →
                   </span>
                 </div>
@@ -485,7 +485,7 @@ export const PlayerDashboard = () => {
 
       {/* Live & Upcoming Games Section */}
       <section className="space-y-4">
-        <h2 className="text-lg md:text-xl font-black uppercase italic tracking-tight text-slate-900 flex items-center gap-2">
+        <h2 className="text-lg md:text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
           <Activity className="size-5 text-primary" /> Live & Upcoming Games
         </h2>
         {liveMatches.length === 0 ? (
@@ -501,8 +501,8 @@ export const PlayerDashboard = () => {
             {liveMatches.map((match, index) => (
               <Card 
                 key={match.id} 
-                className={`group transition-all duration-300 border-2 rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 fill-mode-both ${
-                  match.status === 'Ongoing' ? 'border-orange-500 shadow-xl shadow-orange-500/10' : 'hover:border-slate-300'
+                className={`group transition-all duration-300 border-2 rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 fill-mode-both bg-white dark:bg-slate-900 ${
+                  match.status === 'Ongoing' ? 'border-orange-500 shadow-xl shadow-orange-500/10' : 'border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
                 }`}
                 style={{ animationDelay: `${index * 75}ms` }}
               >
@@ -522,13 +522,13 @@ export const PlayerDashboard = () => {
                     </Badge>
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">{match.round}</span>
                   </div>
-                  <CardTitle className="text-lg mt-2 flex items-center justify-between font-black uppercase italic tracking-tight">
+                  <CardTitle className="text-lg mt-2 flex items-center justify-between font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
                     <span className="truncate">{match.team_a?.name || 'TBD'}</span>
-                    <span className="text-slate-300 text-xs mx-2">VS</span>
+                    <span className="text-slate-300 dark:text-slate-600 text-xs mx-2">VS</span>
                     <span className="truncate">{match.team_b?.name || 'BYE'}</span>
                   </CardTitle>
                   {match.venue && (
-                    <div className="flex items-center gap-1 mt-2 text-[10px] font-black text-slate-500 uppercase tracking-wider truncate">
+                    <div className="flex items-center gap-1 mt-2 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
                       <MapPin className="size-3 text-orange-500 shrink-0" />
                       <span className="truncate">{match.venue}</span>
                     </div>
@@ -543,7 +543,7 @@ export const PlayerDashboard = () => {
                     </div>
                   )}
                   {match.status === 'Scheduled' && (
-                    <div className="flex justify-center items-center gap-2 text-slate-400 font-bold uppercase text-[10px] tracking-widest py-3 bg-slate-50 rounded-xl border border-dashed">
+                    <div className="flex justify-center items-center gap-2 text-slate-400 font-bold uppercase text-[10px] tracking-widest py-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-dashed border-slate-200 dark:border-white/10">
                       <Clock className="size-3" /> <span>Pre-Match Warmup</span>
                     </div>
                   )}
@@ -564,7 +564,7 @@ export const PlayerDashboard = () => {
       {/* Pending Invites Section (Only visible when logged in) */}
       {user && invites.length > 0 && (
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
+          <h2 className="text-xl font-semibold flex items-center gap-2 text-slate-900 dark:text-white">
             Active Team Invites
             <Badge variant="destructive">{invites.length}</Badge>
           </h2>
@@ -572,15 +572,15 @@ export const PlayerDashboard = () => {
             {invites.map((invite, index) => (
               <Card 
                 key={invite.id} 
-                className="group border-2 border-orange-200 bg-orange-50/30 overflow-hidden rounded-2xl animate-in fade-in slide-in-from-bottom-4 fill-mode-both"
+                className="group border-2 border-orange-200 dark:border-orange-500/30 bg-orange-50/30 dark:bg-orange-500/10 overflow-hidden rounded-2xl animate-in fade-in slide-in-from-bottom-4 fill-mode-both"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <div className="h-1 w-full bg-orange-500" />
                 <CardHeader>
-                  <CardTitle className="font-black uppercase italic tracking-tight">
+                  <CardTitle className="font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
                     {Array.isArray(invite.teams) ? invite.teams[0]?.name : invite.teams?.name ?? 'Unknown Team'}
                   </CardTitle>
-                  <CardDescription className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                  <CardDescription className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
                     {(() => {
                       const team = Array.isArray(invite.teams) ? invite.teams[0] : invite.teams;
                       return Array.isArray(team?.tournaments) ? team?.tournaments[0]?.name : team?.tournaments?.name ?? 'Unknown Tournament';
@@ -596,7 +596,7 @@ export const PlayerDashboard = () => {
                   </Button>
                   <Button 
                     variant="outline" 
-                    className="flex-1 font-black uppercase italic tracking-widest h-10 rounded-xl border-2" 
+                    className="flex-1 font-black uppercase italic tracking-widest h-10 rounded-xl border-2 border-slate-200 dark:border-white/10" 
                     onClick={() => handleRosterAction(invite.id, 'Rejected')}
                   >
                     Decline
@@ -740,37 +740,37 @@ export const PlayerDashboard = () => {
 
               <div className="space-y-3 py-2">
                 {/* Sport */}
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                  <div className="p-2 rounded-lg bg-orange-100 text-orange-600">
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10">
+                  <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400">
                     <Dumbbell className="size-4" />
                   </div>
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sport</p>
-                    <p className="font-bold text-sm text-slate-900">{selectedTournament.sport}</p>
+                    <p className="font-bold text-sm text-slate-900 dark:text-white">{selectedTournament.sport}</p>
                   </div>
                 </div>
 
                 {/* Format / Type */}
                 {selectedTournament.type && (
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <div className="p-2 rounded-lg bg-orange-100 text-orange-600">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10">
+                    <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400">
                       <Swords className="size-4" />
                     </div>
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Format</p>
-                      <p className="font-bold text-sm text-slate-900">{selectedTournament.type}</p>
+                      <p className="font-bold text-sm text-slate-900 dark:text-white">{selectedTournament.type}</p>
                     </div>
                   </div>
                 )}
 
                 {/* Start Date */}
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                  <div className="p-2 rounded-lg bg-orange-100 text-orange-600">
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10">
+                  <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400">
                     <CalendarDays className="size-4" />
                   </div>
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Start Date</p>
-                    <p className="font-bold text-sm text-slate-900">
+                    <p className="font-bold text-sm text-slate-900 dark:text-white">
                       {new Date(selectedTournament.start_date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
                     </p>
                   </div>
@@ -778,13 +778,13 @@ export const PlayerDashboard = () => {
 
                 {/* End Date */}
                 {selectedTournament.end_date && (
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <div className="p-2 rounded-lg bg-slate-200 text-slate-600">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10">
+                    <div className="p-2 rounded-lg bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300">
                       <CalendarDays className="size-4" />
                     </div>
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">End Date</p>
-                      <p className="font-bold text-sm text-slate-900">
+                      <p className="font-bold text-sm text-slate-900 dark:text-white">
                         {new Date(selectedTournament.end_date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
                       </p>
                     </div>

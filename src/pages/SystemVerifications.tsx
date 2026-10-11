@@ -117,7 +117,23 @@ export const SystemVerifications = () => {
     const { data, error } = await query;
 
     if (error) {
-      toast.error('Failed to fetch verification documents: ' + error.message);
+      console.warn('Verification documents primary query failed, trying fallback:', error.message);
+      // Resilient fallback query without email field if schema cache is ever out of sync
+      let fallbackQuery = supabase
+        .from('verification_documents')
+        .select('*, users(full_name, role, account_status, student_number, program, year_level, age, colleges(college_name))')
+        .order('created_at', { ascending: false });
+
+      if (statusFilter !== 'all') {
+        fallbackQuery = fallbackQuery.eq('status', statusFilter);
+      }
+
+      const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+      if (fallbackError) {
+        toast.error('Failed to fetch verification documents: ' + fallbackError.message);
+      } else {
+        setDocuments((fallbackData as unknown) as PendingDocument[]);
+      }
     } else {
       setDocuments((data as unknown) as PendingDocument[]);
     }

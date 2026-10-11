@@ -64,49 +64,49 @@ export const About: React.FC = () => {
           <div className="size-6 sm:size-7 rounded-lg sm:rounded-xl bg-orange-500 text-white font-black text-xs flex items-center justify-center shadow-md">
             ★
           </div>
-          <h2 className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-800">
+          <h2 className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
             Platform Capabilities &amp; Features
           </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-          <Card className="rounded-2xl border-slate-200/80 shadow-sm hover:shadow-md transition-all p-5 sm:p-6 bg-white flex flex-col justify-between">
+          <Card className="rounded-2xl border-slate-200/80 dark:border-white/10 shadow-sm hover:shadow-md transition-all p-5 sm:p-6 bg-white dark:bg-slate-900 flex flex-col justify-between">
             <CardContent className="p-0 space-y-3">
               <div className="size-11 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center border border-orange-500/20 shadow-sm">
                 <Activity className="size-5" />
               </div>
-              <h3 className="font-black italic uppercase tracking-tight text-base sm:text-lg text-slate-900">
+              <h3 className="font-black italic uppercase tracking-tight text-base sm:text-lg text-slate-900 dark:text-white">
                 Live Matchroom &amp; Real-Time Tracking
               </h3>
-              <p className="text-slate-500 text-xs font-normal leading-relaxed">
+              <p className="text-slate-500 dark:text-slate-400 text-xs font-normal leading-relaxed">
                 Instant point scoring, live referee play-by-play events, and public leaderboard streams across all campus sports disciplines.
               </p>
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl border-slate-200/80 shadow-sm hover:shadow-md transition-all p-5 sm:p-6 bg-white flex flex-col justify-between">
+          <Card className="rounded-2xl border-slate-200/80 dark:border-white/10 shadow-sm hover:shadow-md transition-all p-5 sm:p-6 bg-white dark:bg-slate-900 flex flex-col justify-between">
             <CardContent className="p-0 space-y-3">
               <div className="size-11 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center border border-orange-500/20 shadow-sm">
                 <Trophy className="size-5" />
               </div>
-              <h3 className="font-black italic uppercase tracking-tight text-base sm:text-lg text-slate-900">
+              <h3 className="font-black italic uppercase tracking-tight text-base sm:text-lg text-slate-900 dark:text-white">
                 Tournament Arena &amp; Bracket Seeding
               </h3>
-              <p className="text-slate-500 text-xs font-normal leading-relaxed">
+              <p className="text-slate-500 dark:text-slate-400 text-xs font-normal leading-relaxed">
                 Automated single-elimination trees, round-robin pools, match venue slotting, and official administrator score verification.
               </p>
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl border-slate-200/80 shadow-sm hover:shadow-md transition-all p-5 sm:p-6 bg-white flex flex-col justify-between">
+          <Card className="rounded-2xl border-slate-200/80 dark:border-white/10 shadow-sm hover:shadow-md transition-all p-5 sm:p-6 bg-white dark:bg-slate-900 flex flex-col justify-between">
             <CardContent className="p-0 space-y-3">
               <div className="size-11 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center border border-orange-500/20 shadow-sm">
                 <Star className="size-5" />
               </div>
-              <h3 className="font-black italic uppercase tracking-tight text-base sm:text-lg text-slate-900">
+              <h3 className="font-black italic uppercase tracking-tight text-base sm:text-lg text-slate-900 dark:text-white">
                 Roster Verification &amp; Hall of Fame MVPs
               </h3>
-              <p className="text-slate-500 text-xs font-normal leading-relaxed">
+              <p className="text-slate-500 dark:text-slate-400 text-xs font-normal leading-relaxed">
                 Verified team application screening, athlete eligibility badges, and Gold/Red Star MVP honors recognized across university profiles.
               </p>
             </CardContent>
@@ -142,36 +142,36 @@ export const About: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
         <Link 
           to="/explorer" 
-          className="p-4 rounded-xl bg-white border border-slate-200 hover:border-orange-500/50 hover:bg-orange-50/20 transition-all flex items-center justify-between group"
+          className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 hover:border-orange-500/50 hover:bg-orange-50/20 dark:hover:bg-slate-800 transition-all flex items-center justify-between group"
         >
           <div className="flex items-center gap-3">
             <Globe className="size-5 text-orange-500" />
-            <span className="font-bold text-xs uppercase text-slate-800">Match Center</span>
+            <span className="font-bold text-xs uppercase text-slate-800 dark:text-slate-200">Match Center</span>
           </div>
-          <ArrowRight className="size-4 text-slate-400 group-hover:text-orange-500 group-hover:translate-x-0.5 transition-all" />
+          <ArrowRight className="size-4 text-slate-400 dark:text-slate-500 group-hover:text-orange-500 group-hover:translate-x-0.5 transition-all" />
         </Link>
 
         <Link 
           to="/ranking" 
-          className="p-4 rounded-xl bg-white border border-slate-200 hover:border-orange-500/50 hover:bg-orange-50/20 transition-all flex items-center justify-between group"
+          className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 hover:border-orange-500/50 hover:bg-orange-50/20 dark:hover:bg-slate-800 transition-all flex items-center justify-between group"
         >
           <div className="flex items-center gap-3">
             <Medal className="size-5 text-orange-500" />
-            <span className="font-bold text-xs uppercase text-slate-800">Standings &amp; Rankings</span>
+            <span className="font-bold text-xs uppercase text-slate-800 dark:text-slate-200">Standings &amp; Rankings</span>
           </div>
-          <ArrowRight className="size-4 text-slate-400 group-hover:text-orange-500 group-hover:translate-x-0.5 transition-all" />
+          <ArrowRight className="size-4 text-slate-400 dark:text-slate-500 group-hover:text-orange-500 group-hover:translate-x-0.5 transition-all" />
         </Link>
 
         <Link 
           to={user ? "/profile" : "/"} 
           onClick={() => { if (!user) openLoginModal(); }}
-          className="p-4 rounded-xl bg-white border border-slate-200 hover:border-orange-500/50 hover:bg-orange-50/20 transition-all flex items-center justify-between group cursor-pointer"
+          className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 hover:border-orange-500/50 hover:bg-orange-50/20 dark:hover:bg-slate-800 transition-all flex items-center justify-between group cursor-pointer"
         >
           <div className="flex items-center gap-3">
             <Users className="size-5 text-orange-500" />
-            <span className="font-bold text-xs uppercase text-slate-800">{user ? "My Athlete Profile" : "Athlete Portal Login"}</span>
+            <span className="font-bold text-xs uppercase text-slate-800 dark:text-slate-200">{user ? "My Athlete Profile" : "Athlete Portal Login"}</span>
           </div>
-          <ArrowRight className="size-4 text-slate-400 group-hover:text-orange-500 group-hover:translate-x-0.5 transition-all" />
+          <ArrowRight className="size-4 text-slate-400 dark:text-slate-500 group-hover:text-orange-500 group-hover:translate-x-0.5 transition-all" />
         </Link>
       </div>
     </div>

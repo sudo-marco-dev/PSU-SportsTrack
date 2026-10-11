@@ -38,7 +38,7 @@ export const DataToolbar = ({
         </div>
         
         <Select value={filterValue} onValueChange={(val) => onFilterChange(val || '')}>
-          <SelectTrigger className="w-full sm:w-[220px] h-14 bg-white/80 dark:bg-slate-900/80 border-slate-100 dark:border-white/5 rounded-2xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-bold text-xs uppercase tracking-widest text-slate-600">
+          <SelectTrigger className="w-full sm:w-[220px] h-14 bg-white/80 dark:bg-slate-900/80 border-slate-100 dark:border-white/5 rounded-2xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-bold text-xs uppercase tracking-widest text-slate-600 dark:text-slate-300">
             <div className="flex items-center gap-3">
               <Filter className="size-4 text-orange-500" />
               <SelectValue placeholder="Filter Hub" />

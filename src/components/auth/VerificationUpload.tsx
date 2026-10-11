@@ -136,7 +136,7 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
         <CardTitle className="text-2xl font-black italic tracking-tight uppercase text-slate-900 dark:text-white">
           VERIFY <span className="text-orange-500">ELIGIBILITY</span>
         </CardTitle>
-        <CardDescription className="text-slate-500 text-xs font-normal leading-relaxed">
+        <CardDescription className="text-slate-500 dark:text-slate-400 text-xs font-normal leading-relaxed">
           Palawan State University student athletes must submit their official Certificate of Registration (COR) for enrollment verification. Valid PSU ID is no longer required.
         </CardDescription>
       </CardHeader>

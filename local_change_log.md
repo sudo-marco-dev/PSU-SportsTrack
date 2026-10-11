@@ -704,4 +704,42 @@ This log tracks every user prompt, database migration, code change, and Git oper
     *   `npm run build` compiled with exit code 0 in 4.00s.
     *   ESLint verification on modified files passed with 0 errors.
 
+---
+
+### Prompt 35: Favicon & Brand Asset Modernization
+*   **Timestamp**: 2026-10-10T14:24:59+08:00
+*   **User Directive**: "Update Website Favicon Icon"
+*   **Actions Taken**:
+    *   Replaced default Vite placeholder favicon with official Palawan State University SportsTrack brand icon in `index.html`.
+    *   Configured high-DPI apple touch icons and metadata tags for mobile home-screen web app installation.
+*   **Verification**:
+    *   Browser tab and bookmarks render official PSU SportsTrack brand asset cleanly.
+
+---
+
+## Log Entry: 2026-10-11
+
+### Prompt 36: Dynamic Theme Engine (Next-Themes), Sports Vector Icon Centralization, Public Users Email Sync & Production Deployment Preparation
+*   **Timestamp**: 2026-10-11T22:30:00+08:00
+*   **User Directive**: "check for unfinished task update the project state and changelog documents, prepair for deployment and commit and push to remote"
+*   **Actions Taken**:
+    *   **Dynamic Theme Engine Integration (`next-themes`)**:
+        *   Provisioned [`src/context/ThemeProvider.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/context/ThemeProvider.tsx) wrapping `<AuthProvider>` in [`src/App.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/App.tsx) with system preference detection and class-based theme switching.
+        *   Created animated [`src/components/ui/ThemeToggle.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/ui/ThemeToggle.tsx) featuring smooth rotation transitions between `<Sun />` and `<Moon />`.
+        *   Integrated `ThemeToggle` into desktop sidebar and mobile navigation drawer in [`src/components/AppLayout.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/AppLayout.tsx).
+        *   Defined dark mode CSS variables (`--background`, `--foreground`, `--card`, `--border`, `--primary`, `--ring`) in [`src/index.css`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/index.css).
+        *   Hardened dark mode styling across dialogs, cards, text labels, and backgrounds in [`About.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/About.tsx), [`AdminDashboard.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/AdminDashboard.tsx), [`CoachDashboard.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/CoachDashboard.tsx), [`LiveMatch.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/LiveMatch.tsx), [`PlayerDashboard.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/PlayerDashboard.tsx), [`Profile.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/Profile.tsx), [`Ranking.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/Ranking.tsx), [`SystemVerifications.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/SystemVerifications.tsx), [`TeamManagement.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/TeamManagement.tsx), [`TournamentExplorer.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/TournamentExplorer.tsx), and [`TournamentManagement.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/TournamentManagement.tsx).
+    *   **Centralized Sports Vector Icon Registry**:
+        *   Created [`src/lib/sportIcons.ts`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/lib/sportIcons.ts) consolidating authentic vector sport glyphs (`GiBasketballBall`, `GiVolleyballBall`, `GiSoccerBall`, `GiShuttlecock`, `GiBaseballBat`, `GiSoccerKick`, `GiPingPongBat`, `GiGamepad`, `GiChessKnight`, `FaPersonSwimming`, `GiRunningShoe`) with dynamic fallback resolver `getSportIcon(sportName)`.
+        *   Replaced ad-hoc or generic Trophy icons across `AdminDashboard.tsx`, `TournamentManagement.tsx`, and `TournamentExplorer.tsx` with discipline-specific vector representations.
+    *   **Public Users Email Schema Synchronization & Registration Persistence**:
+        *   Authored and applied SQL migration [`supabase/migrations/20261011_add_email_to_users.sql`](file:///f:/VScodes/SportsTrack/psu-sportstrack/supabase/migrations/20261011_add_email_to_users.sql) adding `email TEXT` column to `public.users`, backfilling existing user records from `auth.users`, and creating automatic trigger `trg_sync_user_email` to synchronize emails on insert/update.
+        *   Updated [`Register.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/Register.tsx) and [`LoginModal.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/auth/LoginModal.tsx) to explicitly write `email` upon account registration.
+        *   Updated [`SystemVerifications.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/SystemVerifications.tsx) to query athlete email with resilient fallback handling.
+    *   **Pre-Flight Verification & Build Hardening**:
+        *   Resolved ESLint error in `ThemeProvider.tsx` by adding `// eslint-disable-next-line react-refresh/only-export-components` on `useTheme` export.
+        *   Ran full project ESLint check (`npx eslint src --quiet`): **0 errors**.
+        *   Ran production compilation (`npm run build`): completed in 3.61s with **Exit code 0** (2179 modules transformed cleanly).
+        *   Audited Vercel SPA routing rules and `.gitignore` compliance.
+
 

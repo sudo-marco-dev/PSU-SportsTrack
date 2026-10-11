@@ -207,7 +207,7 @@ export const CoachDashboard = () => {
                 Live
               </div>
             </div>
-            <p className="text-slate-500 text-xs font-bold mt-4 uppercase tracking-widest opacity-60">Squads currently enrolled in active tournaments</p>
+            <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-4 uppercase tracking-widest opacity-60">Squads currently enrolled in active tournaments</p>
           </CardContent>
         </Card>
 
@@ -229,7 +229,7 @@ export const CoachDashboard = () => {
               </span>
               <div className="text-slate-400 font-bold text-xs uppercase tracking-widest">Approved</div>
             </div>
-            <p className="text-slate-500 text-xs font-bold mt-4 uppercase tracking-widest opacity-60">Verified athletes actively assigned to your teams</p>
+            <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-4 uppercase tracking-widest opacity-60">Verified athletes actively assigned to your teams</p>
           </CardContent>
         </Card>
 
@@ -251,7 +251,7 @@ export const CoachDashboard = () => {
               </span>
               <div className="text-amber-500 font-bold text-xs uppercase tracking-widest bg-amber-500/10 px-2 py-1 rounded-lg">Action Req.</div>
             </div>
-            <p className="text-slate-500 text-xs font-bold mt-4 uppercase tracking-widest opacity-60">Athletes awaiting roster verification or acceptance</p>
+            <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-4 uppercase tracking-widest opacity-60">Athletes awaiting roster verification or acceptance</p>
           </CardContent>
         </Card>
 
@@ -276,7 +276,7 @@ export const CoachDashboard = () => {
                 Tracked
               </div>
             </div>
-            <p className="text-slate-500 text-xs font-bold mt-4 uppercase tracking-widest opacity-60">Matches involving your teams scheduled for today</p>
+            <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-4 uppercase tracking-widest opacity-60">Matches involving your teams scheduled for today</p>
           </CardContent>
         </Card>
       </div>

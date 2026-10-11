@@ -346,10 +346,10 @@ export const TeamManagement = () => {
                   <span className="text-sm sm:text-base">New Team</span>
                 </Button>
               } />
-              <DialogContent className="w-full sm:max-w-md max-w-[95vw] rounded-3xl p-6 sm:p-8 overflow-hidden">
+              <DialogContent className="w-full sm:max-w-md max-w-[95vw] rounded-3xl p-6 sm:p-8 overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
                 <DialogHeader className="min-w-0">
-                  <DialogTitle className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter truncate">Form <span className="text-orange-500">New Team</span></DialogTitle>
-                  <DialogDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-1">
+                  <DialogTitle className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter truncate text-slate-900 dark:text-white">Form <span className="text-orange-500">New Team</span></DialogTitle>
+                  <DialogDescription className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest mt-1">
                     Enroll your squad into an official tournament.
                   </DialogDescription>
                 </DialogHeader>
@@ -468,12 +468,12 @@ export const TeamManagement = () => {
                           {team.status}
                         </Badge>
                       </div>
-                      <CardTitle className="text-xl sm:text-2xl font-black italic uppercase tracking-tighter group-hover:text-orange-500 transition-colors truncate" title={team.name}>{team.name}</CardTitle>
-                      <CardDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-1 flex items-center gap-2 truncate">
+                      <CardTitle className="text-xl sm:text-2xl font-black italic uppercase tracking-tighter text-slate-900 dark:text-white group-hover:text-orange-500 transition-colors truncate" title={team.name}>{team.name}</CardTitle>
+                      <CardDescription className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest mt-1 flex items-center gap-2 truncate">
                         <span className="truncate">{team.tournaments?.name}</span>
                         {team.tournaments?.sport && (
                           <>
-                            <span className="text-slate-300">•</span>
+                            <span className="text-slate-300 dark:text-slate-600">•</span>
                             <span className="text-orange-500 shrink-0">{team.tournaments.sport}</span>
                           </>
                         )}
@@ -483,7 +483,7 @@ export const TeamManagement = () => {
                   <CardContent className="p-5 sm:p-6 pt-3 mt-auto min-w-0">
                     <Button
                       variant="outline"
-                      className="w-full h-12 rounded-xl font-black uppercase italic tracking-wider border-2 border-slate-100 dark:border-white/5 hover:bg-orange-50 dark:hover:bg-orange-500/10 hover:border-orange-500/50 transition-all duration-300"
+                      className="w-full h-12 rounded-xl font-black uppercase italic tracking-wider border-2 border-slate-100 dark:border-white/5 hover:bg-orange-50 dark:hover:bg-orange-500/10 hover:border-orange-500/50 transition-all duration-300 text-slate-900 dark:text-white"
                       onClick={() => {
                         setManageRosterTeamId(team.id);
                         fetchRosterMembers(team.id);
@@ -496,22 +496,22 @@ export const TeamManagement = () => {
               ))}
             </div>
           ) : (
-            <Card className="rounded-[2rem] border-2 border-slate-100 dark:border-white/5 overflow-hidden shadow-2xl">
+            <Card className="rounded-[2rem] border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 overflow-hidden shadow-2xl">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
                     <tr>
-                      <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px]">Team Name</th>
-                      <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px]">Tournament</th>
-                      <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px]">Status</th>
-                      <th className="text-right py-4 px-8 font-black uppercase tracking-widest text-[10px]">Actions</th>
+                      <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Team Name</th>
+                      <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Tournament</th>
+                      <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Status</th>
+                      <th className="text-right py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredTeams.map((team) => (
                       <tr key={team.id} className="border-b border-slate-50 dark:border-white/5 last:border-none hover:bg-orange-50/30 dark:hover:bg-orange-500/5 transition-colors group">
-                        <td className="py-4 px-8 font-black italic uppercase tracking-tighter text-lg">{team.name}</td>
-                        <td className="py-4 px-8 font-bold text-slate-500 uppercase text-[10px] tracking-widest">
+                        <td className="py-4 px-8 font-black italic uppercase tracking-tighter text-lg text-slate-900 dark:text-white">{team.name}</td>
+                        <td className="py-4 px-8 font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest">
                           {team.tournaments?.name}
                           {team.tournaments?.sport && <span className="text-orange-500 ml-2">({team.tournaments.sport})</span>}
                         </td>
@@ -564,7 +564,7 @@ export const TeamManagement = () => {
                           {player.full_name.charAt(0)}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <CardTitle className="text-lg sm:text-xl font-black italic uppercase tracking-tighter truncate group-hover:text-orange-500 transition-colors" title={player.full_name}>{player.full_name}</CardTitle>
+                          <CardTitle className="text-lg sm:text-xl font-black italic uppercase tracking-tighter truncate text-slate-900 dark:text-white group-hover:text-orange-500 transition-colors" title={player.full_name}>{player.full_name}</CardTitle>
                           <CardDescription className="font-bold text-orange-500 uppercase text-[9px] tracking-[0.2em] mt-0.5 truncate">Verified Athlete</CardDescription>
                         </div>
                       </div>
@@ -589,14 +589,14 @@ export const TeamManagement = () => {
               ))}
             </div>
           ) : (
-            <Card className="rounded-[2rem] border-2 border-slate-100 dark:border-white/5 overflow-hidden shadow-2xl">
+            <Card className="rounded-[2rem] border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 overflow-hidden shadow-2xl">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
                     <tr>
-                      <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px]">Athlete Name</th>
-                      <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px]">College</th>
-                      <th className="text-right py-4 px-8 font-black uppercase tracking-widest text-[10px]">Actions</th>
+                      <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Athlete Name</th>
+                      <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">College</th>
+                      <th className="text-right py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -607,10 +607,10 @@ export const TeamManagement = () => {
                             <div className="size-8 rounded-lg bg-slate-100 dark:bg-white/10 flex items-center justify-center font-black text-xs text-slate-500">
                               {player.full_name.charAt(0)}
                             </div>
-                            <span className="font-black italic uppercase tracking-tighter text-lg">{player.full_name}</span>
+                            <span className="font-black italic uppercase tracking-tighter text-lg text-slate-900 dark:text-white">{player.full_name}</span>
                           </div>
                         </td>
-                        <td className="py-4 px-8 font-bold text-slate-500 uppercase text-[10px] tracking-widest">
+                        <td className="py-4 px-8 font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest">
                           {Array.isArray(player.colleges) ? player.colleges[0]?.college_name : player.colleges?.college_name || 'N/A'}
                         </td>
                         <td className="py-4 px-8 text-right">
@@ -635,10 +635,10 @@ export const TeamManagement = () => {
 
       {/* Dialogs */}
       <Dialog open={!!manageRosterTeamId} onOpenChange={(open) => !open && setManageRosterTeamId(null)}>
-        <DialogContent className="w-full sm:max-w-2xl max-w-[95vw] max-h-[88dvh] overflow-hidden rounded-3xl p-5 sm:p-8 flex flex-col min-w-0">
+        <DialogContent className="w-full sm:max-w-2xl max-w-[95vw] max-h-[88dvh] overflow-hidden rounded-3xl p-5 sm:p-8 flex flex-col min-w-0 bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
           <DialogHeader className="min-w-0">
-            <DialogTitle className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter truncate">Manage <span className="text-orange-500">Roster</span></DialogTitle>
-            <DialogDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-1">View and manage players invited to this team.</DialogDescription>
+            <DialogTitle className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter truncate text-slate-900 dark:text-white">Manage <span className="text-orange-500">Roster</span></DialogTitle>
+            <DialogDescription className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest mt-1">View and manage players invited to this team.</DialogDescription>
           </DialogHeader>
           <div className="py-4 max-h-[60vh] overflow-y-auto overflow-x-hidden pr-1 scrollbar-hide min-w-0 flex-1">
             {isLoadingRoster ? (
@@ -666,7 +666,7 @@ export const TeamManagement = () => {
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap min-w-0">
-                              <span className="font-black italic uppercase tracking-tighter text-base sm:text-lg leading-none truncate max-w-full">
+                              <span className="font-black italic uppercase tracking-tighter text-base sm:text-lg leading-none truncate max-w-full text-slate-900 dark:text-white">
                                 {Array.isArray(member.users) ? member.users[0]?.full_name : member.users?.full_name || 'Unknown Player'}
                               </span>
                               {member.is_captain && (
@@ -676,8 +676,8 @@ export const TeamManagement = () => {
                               )}
                             </div>
                             <div className="flex items-center gap-2 mt-1 flex-wrap min-w-0">
-                              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider truncate max-w-[200px]">{collegeName}</span>
-                              <span className="text-slate-300">•</span>
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider truncate max-w-[200px]">{collegeName}</span>
+                              <span className="text-slate-300 dark:text-slate-600">•</span>
                               <Badge
                                 variant={member.status === 'Approved' ? 'default' : 'secondary'}
                                 className="text-[9px] font-black uppercase px-2 py-0 shrink-0"
@@ -832,10 +832,10 @@ export const TeamManagement = () => {
       </Dialog>
 
       <Dialog open={!!invitePlayerId} onOpenChange={(open) => !open && setInvitePlayerId(null)}>
-        <DialogContent className="w-full sm:max-w-md max-w-[95vw] rounded-3xl p-6 sm:p-8 overflow-hidden min-w-0">
+        <DialogContent className="w-full sm:max-w-md max-w-[95vw] rounded-3xl p-6 sm:p-8 overflow-hidden min-w-0 bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
           <DialogHeader className="min-w-0">
-            <DialogTitle className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter truncate">Recruit <span className="text-orange-500">Athlete</span></DialogTitle>
-            <DialogDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-1">Select a team to send an invitation to this player.</DialogDescription>
+            <DialogTitle className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter truncate text-slate-900 dark:text-white">Recruit <span className="text-orange-500">Athlete</span></DialogTitle>
+            <DialogDescription className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest mt-1">Select a team to send an invitation to this player.</DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-2.5 min-w-0">
             <label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">Target Team</label>

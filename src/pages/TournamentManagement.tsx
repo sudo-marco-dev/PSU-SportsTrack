@@ -47,6 +47,7 @@ import {
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
 import { logAudit } from '@/lib/audit';
+import { getSportIcon } from '@/lib/sportIcons';
 
 type Tournament = {
   id: string;
@@ -1622,15 +1623,17 @@ export const TournamentManagement = () => {
             </Card>
           ) : viewMode === 'grid' ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {filteredTournaments.map((t, idx) => (
+              {filteredTournaments.map((t, idx) => {
+                const SportIcon = (getSportIcon(t.sport || t.name)) as any;
+                return (
                 <Card key={t.id} className={`group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl rounded-3xl overflow-hidden border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 animate-in fade-in slide-in-from-bottom-4`} style={{ animationDelay: `${idx * 50}ms` }}>
                   <div className="h-2 bg-slate-100 dark:bg-white/5 w-full overflow-hidden">
                     <div className={`h-full bg-orange-500 transition-all duration-1000 delay-300 w-0 group-hover:w-full`} />
                   </div>
                   <CardHeader className="p-8 pb-4">
                     <div className="flex justify-between items-start mb-4">
-                      <div className="p-2 bg-slate-50 dark:bg-white/5 rounded-xl group-hover:bg-orange-500 transition-colors duration-500">
-                        <Trophy className="size-5 text-slate-400 group-hover:text-white transition-colors duration-500" />
+                      <div className="p-2.5 bg-slate-50 dark:bg-white/5 rounded-xl group-hover:bg-orange-500 transition-colors duration-500">
+                        <SportIcon className="size-5 text-slate-400 group-hover:text-white transition-colors duration-500" />
                       </div>
                       <Badge className={`${
                         t.status === 'Completed' 
@@ -1676,7 +1679,8 @@ export const TournamentManagement = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              );
+              })}
             </div>
           ) : (
             <Card className="rounded-[2rem] border-2 border-slate-100 dark:border-white/5 overflow-x-auto shadow-2xl">
@@ -1691,13 +1695,22 @@ export const TournamentManagement = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTournaments.map((t, idx) => (
+                  {filteredTournaments.map((t, idx) => {
+                    const SportIcon = (getSportIcon(t.sport || t.name)) as any;
+                    return (
                     <TableRow 
                       key={t.id} 
                       className="hover:bg-orange-50/30 dark:hover:bg-orange-500/5 transition-colors border-slate-100 dark:border-white/5 group animate-in fade-in slide-in-from-bottom-2 fill-mode-both"
                       style={{ animationDelay: `${idx * 40}ms` }}
                     >
-                      <TableCell className="font-black italic uppercase tracking-tighter text-lg pl-8 py-5">{t.name}</TableCell>
+                      <TableCell className="font-black italic uppercase tracking-tighter text-lg pl-8 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-400 group-hover:bg-orange-500 group-hover:text-white transition-colors">
+                            <SportIcon className="size-4" />
+                          </div>
+                          <span>{t.name}</span>
+                        </div>
+                      </TableCell>
                       <TableCell className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">{t.sport}</TableCell>
                       <TableCell>
                         <Badge 
@@ -1736,7 +1749,8 @@ export const TournamentManagement = () => {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </Card>
@@ -2168,10 +2182,15 @@ export const TournamentManagement = () => {
                     {existingMatches.length > 0 && (
                       <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-white/5">
                         <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white flex items-center gap-2">
-                            <Trophy className="size-4 text-orange-500" /> 
-                            {selectedTournamentForBracket?.status === 'Completed' ? 'Official Match Ledger & Bracket Archive' : 'Bracket Preview & Match Confirmation'} ({existingMatches.length} {existingMatches.length === 1 ? 'match' : 'matches'})
-                          </h4>
+                          {(() => {
+                            const BracketSportIcon = (getSportIcon(selectedTournamentForBracket?.sport || selectedTournamentForBracket?.name)) as any;
+                            return (
+                              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white flex items-center gap-2">
+                                <BracketSportIcon className="size-4 text-orange-500" /> 
+                                {selectedTournamentForBracket?.status === 'Completed' ? 'Official Match Ledger & Bracket Archive' : 'Bracket Preview & Match Confirmation'} ({existingMatches.length} {existingMatches.length === 1 ? 'match' : 'matches'})
+                              </h4>
+                            );
+                          })()}
                           <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-wider ${
                             selectedTournamentForBracket?.status === 'Completed'
                               ? 'border-emerald-500 text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10'

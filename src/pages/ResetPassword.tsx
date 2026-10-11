@@ -41,7 +41,7 @@ const BrandingHeader = () => (
     <div className="mx-auto w-14 h-14 bg-orange-500 rounded-2xl flex items-center justify-center rotate-3 mb-4 shadow-lg shadow-orange-500/30">
       <Trophy className="text-white size-8" />
     </div>
-    <h2 className="text-2xl font-black tracking-tighter text-slate-900 italic uppercase">
+    <h2 className="text-2xl font-black tracking-tighter text-white italic uppercase">
       PSU <span className="text-orange-500">SportsTrack</span>
     </h2>
     <p className="text-slate-400 font-medium uppercase text-[9px] tracking-[0.3em] mt-1">

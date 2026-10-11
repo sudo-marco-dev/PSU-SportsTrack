@@ -25,6 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { resetDemoState } from '@/lib/demoReset';
 import { FacilitatorManagementModal } from '@/components/admin/FacilitatorManagementModal';
+import { getSportIcon } from '@/lib/sportIcons';
 
 export const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -281,14 +282,17 @@ export const AdminDashboard = () => {
 
           {/* Draft Tournament Horizontal Scroller / Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-3.5 relative z-10">
-            {draftTournaments.slice(0, 8).map((t) => (
+            {draftTournaments.slice(0, 8).map((t) => {
+              const SportIcon = (getSportIcon(t.sport || t.name)) as any;
+              return (
               <div
                 key={t.id}
                 className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col justify-between hover:border-orange-500/50 transition-all group"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 dark:text-orange-400 font-bold text-[9px] uppercase tracking-wider">
+                    <span className="px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 dark:text-orange-400 font-bold text-[9px] uppercase tracking-wider flex items-center gap-1.5">
+                      <SportIcon className="size-3" />
                       {t.sport}
                     </span>
                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
@@ -304,7 +308,8 @@ export const AdminDashboard = () => {
                   <span className="text-orange-500 font-bold">Awaiting Teams</span>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         </div>
       )}
@@ -399,18 +404,58 @@ export const AdminDashboard = () => {
         </CardContent>
       </Card>
 
+      {/* Capstone Showcase Demo Tool - Only visible to SuperAdmin */}
+      {isSuperAdmin && (
+        <div className="relative overflow-hidden bg-white dark:bg-slate-900 border-2 border-orange-500/30 rounded-2xl md:rounded-[2.5rem] p-5 sm:p-6 md:p-7 shadow-xl bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent dark:from-orange-500/15 dark:via-slate-900/60 dark:to-slate-900/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 z-10 group">
+          {/* Subtle Ambient Glow */}
+          <div className="absolute -right-16 -top-16 size-48 bg-orange-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-orange-500/20 transition-all duration-700" />
+
+          <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0 relative z-10">
+            <div className="p-3.5 bg-orange-500 rounded-2xl shadow-lg shadow-orange-500/30 text-white shrink-0 group-hover:scale-105 group-hover:rotate-6 transition-transform duration-300">
+              <Sparkles className="size-6" />
+            </div>
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h3 className="text-base sm:text-lg font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
+                  Capstone Demonstration Arena
+                </h3>
+                <span className="text-[9px] font-black uppercase tracking-widest bg-orange-500 text-white px-2.5 py-0.5 rounded-full shrink-0 shadow-sm font-sans">
+                  SUPERADMIN
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-medium leading-relaxed max-w-3xl">
+                Instant reset to standard demo scenario: 4 campus squads, active Binturungan tournament, 3rd-place bronze bracket, and an ongoing basketball match with live commentary.
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={() => setIsResetDialogOpen(true)}
+            className="w-full sm:w-auto h-12 px-6 sm:px-7 bg-orange-500 hover:bg-orange-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 gap-2.5 shrink-0 transition-all active:scale-95 cursor-pointer relative z-10"
+          >
+            <RotateCcw className="size-4 group-hover:rotate-[-45deg] transition-transform duration-300" />
+            Reset Demo Arena
+          </Button>
+        </div>
+      )}
+
       <div className="grid lg:grid-cols-3 gap-8 relative z-10">
         {/* Quick Actions */}
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">Quick Operations</h2>
-            <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest text-orange-500">Settings</Button>
+            <Button
+              onClick={() => navigate('/profile')}
+              variant="ghost"
+              className="text-[10px] font-black uppercase tracking-widest text-orange-500 hover:text-orange-600 hover:bg-orange-500/10 rounded-xl"
+            >
+              Settings
+            </Button>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
             <Button
               onClick={() => navigate('/admin/tournaments')}
-              className="h-20 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-500/5 rounded-3xl flex items-center justify-between px-6 group transition-all"
+              className="h-20 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-500/5 rounded-3xl flex items-center justify-between px-6 group transition-all cursor-pointer"
             >
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-orange-500/10 rounded-xl group-hover:bg-orange-500 transition-colors">
@@ -426,7 +471,7 @@ export const AdminDashboard = () => {
 
             <Button
               onClick={() => navigate('/admin/verifications')}
-              className="h-20 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-500/5 rounded-3xl flex items-center justify-between px-6 group transition-all"
+              className="h-20 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-500/5 rounded-3xl flex items-center justify-between px-6 group transition-all cursor-pointer"
             >
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-blue-500/10 rounded-xl group-hover:bg-blue-500 transition-colors">
@@ -442,7 +487,7 @@ export const AdminDashboard = () => {
 
             <Button
               onClick={() => navigate('/explorer')}
-              className="h-20 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-500/5 rounded-3xl flex items-center justify-between px-6 group transition-all"
+              className="h-20 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-500/5 rounded-3xl flex items-center justify-between px-6 group transition-all cursor-pointer"
             >
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-emerald-500/10 rounded-xl group-hover:bg-emerald-500 transition-colors">
@@ -458,7 +503,7 @@ export const AdminDashboard = () => {
 
             <Button
               onClick={() => navigate('/admin/audit-logs')}
-              className="h-20 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-500/5 rounded-3xl flex items-center justify-between px-6 group transition-all"
+              className="h-20 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-500/5 rounded-3xl flex items-center justify-between px-6 group transition-all cursor-pointer"
             >
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-purple-500/10 rounded-xl group-hover:bg-purple-500 transition-colors">
@@ -474,35 +519,6 @@ export const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Capstone Showcase Demo Tool - Only visible to SuperAdmin */}
-        {isSuperAdmin && (
-          <div className="bg-white dark:bg-slate-900 border-2 border-orange-500/30 rounded-2xl md:rounded-[2.5rem] p-5 sm:p-6 shadow-lg flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 sm:gap-6 overflow-hidden">
-            <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0">
-              <div className="p-3.5 bg-orange-500 rounded-2xl shadow-md shadow-orange-500/30 text-white shrink-0">
-                <Sparkles className="size-6" />
-              </div>
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-base font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
-                    Capstone Demonstration Arena
-                  </h3>
-                  <span className="text-[9px] font-black uppercase tracking-widest bg-orange-500 text-white px-2 py-0.5 rounded-full shrink-0">SUPERADMIN</span>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
-                  Instant reset to standard demo scenario: 4 campus squads, active Binturungan tournament, 3rd-place bronze bracket, and an ongoing basketball match with live commentary.
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={() => setIsResetDialogOpen(true)}
-              className="w-full lg:w-auto h-12 px-6 bg-orange-500 hover:bg-orange-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-orange-500/20 gap-2 shrink-0 transition-transform active:scale-95"
-            >
-              <RotateCcw className="size-4" />
-              Reset Demo Arena
-            </Button>
-          </div>
-        )}
-
         {/* Recent Activity */}
         <div className="space-y-6">
           <div className="flex items-center justify-between px-2">
@@ -515,11 +531,13 @@ export const AdminDashboard = () => {
                 <p className="text-xs font-black uppercase tracking-widest text-slate-400 italic">No recent match data</p>
               </div>
             ) : (
-              recentMatches.map((match) => (
+              recentMatches.map((match) => {
+                const SportIcon = (getSportIcon(match.tournament?.name)) as any;
+                return (
                 <div key={match.id} className="flex items-center justify-between p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/5 transition-all group">
                   <div className="flex items-center gap-4">
-                    <div className="size-10 rounded-xl bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-400 group-hover:text-orange-500 transition-colors">
-                      <Trophy className="size-5" />
+                    <div className="size-10 rounded-xl bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-400 group-hover:text-orange-500 group-hover:bg-orange-500/10 transition-colors">
+                      <SportIcon className="size-5" />
                     </div>
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-orange-500 mb-0.5">{match.tournament?.name}</p>
@@ -535,9 +553,10 @@ export const AdminDashboard = () => {
                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-0.5">Final</p>
                   </div>
                 </div>
-              ))
+              );
+              })
             )}
-            <Button variant="ghost" className="w-full h-12 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-orange-500 hover:bg-orange-500/5 transition-all">
+            <Button variant="ghost" className="w-full h-12 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-orange-500 hover:bg-orange-500/5 transition-all cursor-pointer">
               Full Activity Log
             </Button>
           </div>

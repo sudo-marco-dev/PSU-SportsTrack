@@ -426,53 +426,53 @@ export const Profile = () => {
           {/* Admin Command Shortcuts Grid */}
           <div className="grid gap-4 md:grid-cols-3">
             <Card 
-              className="border border-slate-200 hover:border-orange-500/40 transition-all duration-200 rounded-2xl shadow-sm cursor-pointer group"
+              className="border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 hover:border-orange-500/40 transition-all duration-200 rounded-2xl shadow-sm cursor-pointer group"
               onClick={() => navigate('/admin/tournaments')}
             >
               <CardHeader className="p-5 pb-2">
                 <div className="p-2.5 rounded-xl bg-orange-500/10 text-orange-500 size-fit mb-2 group-hover:bg-orange-500 group-hover:text-white transition-colors duration-200">
                   <Trophy className="size-5" />
                 </div>
-                <CardTitle className="text-base sm:text-lg font-bold uppercase tracking-tight flex items-center justify-between">
+                <CardTitle className="text-base sm:text-lg font-bold uppercase tracking-tight flex items-center justify-between text-slate-900 dark:text-white">
                   Tournaments Arena
                   <ChevronRight className="size-4 text-slate-400 group-hover:text-orange-500 transition-colors" />
                 </CardTitle>
-                <CardDescription className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
+                <CardDescription className="text-slate-500 dark:text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
                   Match Slotting & Result Approvals
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-5 pt-0">
-                <p className="text-xs text-slate-500 font-normal">
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
                   Create tournaments, manage match venue dates, and confirm game winners to advance bracket trees.
                 </p>
-                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/10 flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Active Events</span>
-                  <span className="text-sm font-bold text-slate-900">{adminStats.activeTournaments}</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">{adminStats.activeTournaments}</span>
                 </div>
               </CardContent>
             </Card>
 
             <Card 
-              className="border border-slate-200 hover:border-orange-500/40 transition-all duration-200 rounded-2xl shadow-sm cursor-pointer group"
+              className="border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 hover:border-orange-500/40 transition-all duration-200 rounded-2xl shadow-sm cursor-pointer group"
               onClick={() => navigate('/admin/verifications')}
             >
               <CardHeader className="p-5 pb-2">
                 <div className="p-2.5 rounded-xl bg-orange-500/10 text-orange-500 size-fit mb-2 group-hover:bg-orange-500 group-hover:text-white transition-colors duration-200">
                   <ShieldCheck className="size-5" />
                 </div>
-                <CardTitle className="text-base sm:text-lg font-bold uppercase tracking-tight flex items-center justify-between">
+                <CardTitle className="text-base sm:text-lg font-bold uppercase tracking-tight flex items-center justify-between text-slate-900 dark:text-white">
                   System Verifications
                   <ChevronRight className="size-4 text-slate-400 group-hover:text-orange-500 transition-colors" />
                 </CardTitle>
-                <CardDescription className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
+                <CardDescription className="text-slate-500 dark:text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
                   Athlete Eligibility Approvals
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-5 pt-0">
-                <p className="text-xs text-slate-500 font-normal">
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
                   Inspect submitted student IDs, verify enrollment status, and authorize athletes for tournament participation.
                 </p>
-                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/10 flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pending Review</span>
                   <Badge className="bg-orange-500 text-white font-bold text-xs">
                     {adminStats.pendingVerifications} Pending
@@ -482,62 +482,62 @@ export const Profile = () => {
             </Card>
 
             <Card 
-              className="border border-slate-200 hover:border-orange-500/40 transition-all duration-200 rounded-2xl shadow-sm cursor-pointer group"
+              className="border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 hover:border-orange-500/40 transition-all duration-200 rounded-2xl shadow-sm cursor-pointer group"
               onClick={() => navigate('/admin/audit-logs')}
             >
               <CardHeader className="p-5 pb-2">
                 <div className="p-2.5 rounded-xl bg-orange-500/10 text-orange-500 size-fit mb-2 group-hover:bg-orange-500 group-hover:text-white transition-colors duration-200">
                   <ClipboardList className="size-5" />
                 </div>
-                <CardTitle className="text-base sm:text-lg font-bold uppercase tracking-tight flex items-center justify-between">
+                <CardTitle className="text-base sm:text-lg font-bold uppercase tracking-tight flex items-center justify-between text-slate-900 dark:text-white">
                   System Audit Logs
                   <ChevronRight className="size-4 text-slate-400 group-hover:text-orange-500 transition-colors" />
                 </CardTitle>
-                <CardDescription className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
+                <CardDescription className="text-slate-500 dark:text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
                   Platform Security Log
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-5 pt-0">
-                <p className="text-xs text-slate-500 font-normal">
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
                   Review complete administrative action logs, match score changes, and system access records.
                 </p>
-                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/10 flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Recorded Logs</span>
-                  <span className="text-sm font-bold text-slate-900">{adminStats.auditLogsCount}</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">{adminStats.auditLogsCount}</span>
                 </div>
               </CardContent>
             </Card>
           </div>
 
           {/* Admin Credentials & Scope Details */}
-          <Card className="border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6">
+          <Card className="border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 rounded-2xl shadow-sm p-5 sm:p-6">
             <CardHeader className="px-0 pt-0 pb-3">
-              <CardTitle className="text-lg font-bold uppercase tracking-tight flex items-center gap-2">
+              <CardTitle className="text-lg font-bold uppercase tracking-tight flex items-center gap-2 text-slate-900 dark:text-white">
                 <Shield className="size-5 text-orange-500" /> Executive Security Credentials
               </CardTitle>
-              <CardDescription className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
+              <CardDescription className="text-slate-500 dark:text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
                 Official Administrative Privileges Overview
               </CardDescription>
             </CardHeader>
             <CardContent className="px-0 grid gap-3 md:grid-cols-3">
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-0.5">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-0.5">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email Address</p>
-                <p className="font-bold text-slate-900 text-sm truncate">{user?.email}</p>
+                <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{user?.email}</p>
               </div>
 
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-0.5">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-0.5">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">College / Unit Affiliation</p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <GraduationCap className="size-3.5 text-orange-500" />
-                  <span className="font-bold text-slate-900 text-sm">{profile?.college_name || 'PSU Main Administration'}</span>
+                  <span className="font-bold text-slate-900 dark:text-white text-sm">{profile?.college_name || 'PSU Main Administration'}</span>
                 </div>
               </div>
 
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-0.5">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-0.5">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Institution</p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <Building className="size-3.5 text-orange-500" />
-                  <span className="font-bold text-slate-900 text-sm uppercase">Palawan State University</span>
+                  <span className="font-bold text-slate-900 dark:text-white text-sm uppercase">Palawan State University</span>
                 </div>
               </div>
             </CardContent>
@@ -595,12 +595,10 @@ export const Profile = () => {
                 </Button>
               </div>
             </div>
-          </div>
-
-          {/* Coach Management Hub */}
+          </div>          {/* Coach Management Hub */}
           <div className="grid gap-4 md:grid-cols-2">
             <Card 
-              className="border border-slate-200 hover:border-orange-500/40 transition-all duration-200 rounded-2xl shadow-sm cursor-pointer group p-5 sm:p-6"
+              className="border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 hover:border-orange-500/40 transition-all duration-200 rounded-2xl shadow-sm cursor-pointer group p-5 sm:p-6"
               onClick={() => navigate('/coach/teams')}
             >
               <div className="flex items-start justify-between">
@@ -611,37 +609,37 @@ export const Profile = () => {
               </div>
               <div className="mt-4 space-y-1.5">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-orange-500">Roster Management</span>
-                <h3 className="text-lg sm:text-xl font-bold uppercase tracking-tight text-slate-900">
+                <h3 className="text-lg sm:text-xl font-bold uppercase tracking-tight text-slate-900 dark:text-white">
                   My Teams &amp; Roster Applications
                 </h3>
-                <p className="text-xs text-slate-500 font-normal">
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
                   Register new athletic teams, manage team player rosters, and submit tournament roster entries.
                 </p>
               </div>
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/10 flex items-center justify-between text-xs">
                 <span className="text-slate-400 uppercase tracking-wider font-semibold text-[10px]">Enrolled Squads</span>
-                <span className="text-slate-900 font-bold">{coachStats.myTeamsCount} Active Teams</span>
+                <span className="text-slate-900 dark:text-white font-bold">{coachStats.myTeamsCount} Active Teams</span>
               </div>
             </Card>
 
-            <Card className="border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6 space-y-3">
+            <Card className="border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 rounded-2xl shadow-sm p-5 sm:p-6 space-y-3">
               <div className="flex items-center gap-3">
                 <div className="p-3 rounded-xl bg-orange-500/10 text-orange-500">
                   <ShieldCheck className="size-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold uppercase tracking-tight text-slate-900">Coaching Credentials</h3>
+                  <h3 className="text-lg font-bold uppercase tracking-tight text-slate-900 dark:text-white">Coaching Credentials</h3>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">PSU Athletics Division</p>
                 </div>
               </div>
               <div className="space-y-2 pt-1">
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email Address</p>
-                  <p className="font-bold text-slate-900 text-xs sm:text-sm">{user?.email}</p>
+                  <p className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">{user?.email}</p>
                 </div>
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">College Department</p>
-                  <p className="font-bold text-slate-900 text-xs sm:text-sm">{profile?.college_name || 'Unassigned College'}</p>
+                  <p className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">{profile?.college_name || 'Unassigned College'}</p>
                 </div>
               </div>
             </Card>
@@ -709,7 +707,7 @@ export const Profile = () => {
 
           {/* Coach Invitations Banner (If Player has pending invitations) */}
           {invitations.length > 0 && (
-            <Card className="border border-orange-500/30 bg-orange-500/5 rounded-2xl p-5 shadow-sm relative overflow-hidden">
+            <Card className="border border-orange-500/30 bg-orange-50/5 rounded-2xl p-5 shadow-sm relative overflow-hidden">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-start gap-3.5">
                   <div className="p-2.5 rounded-xl bg-orange-500 text-white shrink-0 shadow-md shadow-orange-500/20">
@@ -721,10 +719,10 @@ export const Profile = () => {
                         {invitations.length} Pending Coach Invite{invitations.length > 1 ? 's' : ''}
                       </Badge>
                     </div>
-                    <h3 className="text-lg font-bold uppercase tracking-tight text-slate-900 mt-1">
+                    <h3 className="text-lg font-bold uppercase tracking-tight text-slate-900 dark:text-white mt-1">
                       Team Join Invitations Received
                     </h3>
-                    <p className="text-xs text-slate-600 font-normal mt-0.5">
+                    <p className="text-xs text-slate-600 dark:text-slate-300 font-normal mt-0.5">
                       Coaches have invited you to join their official PSU tournament squads. You can accept or decline (&quot;Off Invitation&quot;).
                     </p>
                   </div>
@@ -733,16 +731,16 @@ export const Profile = () => {
 
               <div className="mt-4 space-y-2.5">
                 {invitations.map((inv) => (
-                  <div key={inv.id} className="p-3.5 rounded-xl bg-white border border-orange-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div key={inv.id} className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-orange-200 dark:border-orange-500/30 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 text-sm uppercase">{inv.teams?.name || 'Tournament Team'}</span>
-                        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider text-orange-600 border-orange-200">
+                        <span className="font-bold text-slate-900 dark:text-white text-sm uppercase">{inv.teams?.name || 'Tournament Team'}</span>
+                        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-500/30">
                           {inv.teams?.tournaments?.sport || 'PSU Sport'}
                         </Badge>
                       </div>
-                      <p className="text-xs text-slate-500 mt-0.5 font-normal">
-                        Coach: <span className="text-slate-800 font-semibold">{inv.teams?.users?.full_name || 'Athletic Coach'}</span> • Event: {inv.teams?.tournaments?.name || 'Tournament'}
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-normal">
+                        Coach: <span className="text-slate-800 dark:text-slate-200 font-semibold">{inv.teams?.users?.full_name || 'Athletic Coach'}</span> • Event: {inv.teams?.tournaments?.name || 'Tournament'}
                       </p>
                     </div>
 
@@ -751,7 +749,7 @@ export const Profile = () => {
                         size="sm"
                         variant="outline"
                         onClick={() => handleDeclineInvitation(inv.id, inv.teams?.name || 'team')}
-                        className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-semibold text-xs h-9 px-3 rounded-lg gap-1.5"
+                        className="border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-700 font-semibold text-xs h-9 px-3 rounded-lg gap-1.5"
                       >
                         <XCircle className="size-3.5" />
                         Decline
@@ -774,22 +772,22 @@ export const Profile = () => {
           {/* Player Tabs */}
           <Tabs defaultValue="achievements" className="w-full flex flex-col space-y-4 min-w-0">
             <div className="w-full overflow-x-auto scrollbar-hide -mx-1 px-1">
-              <TabsList className="p-1 h-11 bg-slate-950/5 border border-slate-200/60 rounded-xl w-full sm:w-auto inline-flex items-stretch min-w-max sm:min-w-0">
+              <TabsList className="p-1 h-11 bg-slate-950/5 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 rounded-xl w-full sm:w-auto inline-flex items-stretch min-w-max sm:min-w-0">
                 <TabsTrigger
                   value="achievements"
-                  className="px-3 sm:px-4 font-bold uppercase text-[11px] sm:text-xs data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm rounded-lg transition-all flex items-center justify-center gap-1.5 shrink-0"
+                  className="px-3 sm:px-4 font-bold uppercase text-[11px] sm:text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-950 dark:data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg transition-all flex items-center justify-center gap-1.5 shrink-0"
                 >
                   <Trophy className="size-3.5 text-orange-500 shrink-0" /> Achievements
                 </TabsTrigger>
                 <TabsTrigger
                   value="invitations"
-                  className="px-3 sm:px-4 font-bold uppercase text-[11px] sm:text-xs data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm rounded-lg transition-all flex items-center justify-center gap-1.5 shrink-0"
+                  className="px-3 sm:px-4 font-bold uppercase text-[11px] sm:text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-950 dark:data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg transition-all flex items-center justify-center gap-1.5 shrink-0"
                 >
                   <Users className="size-3.5 text-orange-500 shrink-0" /> Team Invites ({invitations.length})
                 </TabsTrigger>
                 <TabsTrigger
                   value="account"
-                  className="px-3 sm:px-4 font-bold uppercase text-[11px] sm:text-xs data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm rounded-lg transition-all flex items-center justify-center gap-1.5 shrink-0"
+                  className="px-3 sm:px-4 font-bold uppercase text-[11px] sm:text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-950 dark:data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg transition-all flex items-center justify-center gap-1.5 shrink-0"
                 >
                   <User className="size-3.5 text-orange-500 shrink-0" /> Account &amp; College
                 </TabsTrigger>
@@ -800,10 +798,10 @@ export const Profile = () => {
             <TabsContent value="achievements" className="w-full min-w-0 outline-none space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg sm:text-xl font-bold uppercase tracking-tight text-slate-900 flex items-center gap-2">
+                  <h2 className="text-lg sm:text-xl font-bold uppercase tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
                     <Trophy className="size-5 text-orange-500" /> Trophy Case &amp; Honors
                   </h2>
-                  <p className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider mt-0.5">
+                  <p className="text-slate-500 dark:text-slate-400 font-semibold uppercase text-[10px] tracking-wider mt-0.5">
                     Official PSU Athlete Achievements
                   </p>
                 </div>
@@ -816,7 +814,7 @@ export const Profile = () => {
                 </div>
               ) : stars.length === 0 ? (
                 /* Compact, Purposeful Empty State Card */
-                <Card className="border border-dashed bg-slate-50/50 py-8 px-6 text-center rounded-2xl border-slate-200 max-w-lg mx-auto shadow-sm">
+                <Card className="border border-dashed bg-slate-50/50 dark:bg-slate-900/50 py-8 px-6 text-center rounded-2xl border-slate-200 dark:border-white/10 max-w-lg mx-auto shadow-sm">
                   <CardContent className="space-y-3 p-0">
                     <div className="flex justify-center items-center gap-2 opacity-40">
                       <Star className="size-4 text-slate-400" />
@@ -826,8 +824,8 @@ export const Profile = () => {
                       <Star className="size-4 text-slate-400" />
                     </div>
                     <div className="space-y-1">
-                      <h3 className="text-base font-bold uppercase tracking-tight text-slate-700">Empty Trophy Case</h3>
-                      <p className="text-slate-500 font-normal max-w-sm mx-auto text-xs leading-relaxed">
+                      <h3 className="text-base font-bold uppercase tracking-tight text-slate-700 dark:text-slate-200">Empty Trophy Case</h3>
+                      <p className="text-slate-500 dark:text-slate-400 font-normal max-w-sm mx-auto text-xs leading-relaxed">
                         Compete in official PSU matches and tournaments to earn MVP distinction stars and expand your trophy showcase.
                       </p>
                     </div>
@@ -838,7 +836,7 @@ export const Profile = () => {
                   {stars.map((star, index) => (
                     <Card 
                       key={star.id || index} 
-                      className="group hover:shadow-lg transition-all duration-300 border border-slate-200 hover:border-orange-500/30 overflow-hidden rounded-2xl"
+                      className="group hover:shadow-lg transition-all duration-300 border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 hover:border-orange-500/30 overflow-hidden rounded-2xl"
                     >
                       <div className={`h-1.5 ${star.star_type === 'Red' ? 'bg-red-500' : 'bg-orange-500'}`} />
                       <CardContent className="p-5">
@@ -853,22 +851,22 @@ export const Profile = () => {
                         
                         <div className="space-y-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-orange-500">Honored Distinction</span>
-                          <h3 className="text-lg font-bold uppercase tracking-tight leading-none text-slate-900 group-hover:text-orange-600 transition-colors">
+                          <h3 className="text-lg font-bold uppercase tracking-tight leading-none text-slate-900 dark:text-white group-hover:text-orange-600 transition-colors">
                             {star.star_type === 'Red' ? 'Match MVP' : 'Tournament MVP'}
                           </h3>
-                          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide truncate mt-1">
+                          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide truncate mt-1">
                             {star.tournaments?.name || 'Official Tournament'}
                           </p>
                           {star.star_type === 'Red' && (
-                            <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 border-none font-bold uppercase tracking-wider text-[9px] mt-1">
+                            <Badge className="bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 border-none font-bold uppercase tracking-wider text-[9px] mt-1">
                               {star.matches?.round || 'Round Completed'}
                             </Badge>
                           )}
                         </div>
 
-                        <div className="mt-4 pt-3 border-t border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/10 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                           <span>Awarded</span>
-                          <span className="text-slate-600">
+                          <span className="text-slate-600 dark:text-slate-300">
                             {star.created_at ? new Date(star.created_at).toLocaleDateString() : 'N/A'}
                           </span>
                         </div>
@@ -881,13 +879,13 @@ export const Profile = () => {
 
             {/* Tab 2: Coach Team Invitations */}
             <TabsContent value="invitations" className="w-full min-w-0 outline-none space-y-4">
-              <Card className="border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+              <Card className="border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 rounded-2xl shadow-sm p-5 sm:p-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-white/10">
                   <div>
-                    <h3 className="text-lg sm:text-xl font-bold uppercase tracking-tight text-slate-900 flex items-center gap-2">
+                    <h3 className="text-lg sm:text-xl font-bold uppercase tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
                       <Users className="size-5 text-orange-500" /> Coach Team Invitations
                     </h3>
-                    <p className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider mt-0.5">
+                    <p className="text-slate-500 dark:text-slate-400 font-semibold uppercase text-[10px] tracking-wider mt-0.5">
                       Manage Squad Invites &amp; Invitation Mode
                     </p>
                   </div>
@@ -924,20 +922,20 @@ export const Profile = () => {
                     </div>
                   ) : invitations.length === 0 ? (
                     <div className="text-center py-8 px-4 space-y-2 max-w-sm mx-auto">
-                      <UserX className="size-8 text-slate-300 mx-auto" />
-                      <h4 className="text-base font-bold uppercase text-slate-600">No Pending Invitations</h4>
-                      <p className="text-xs text-slate-500 font-normal leading-relaxed">
+                      <UserX className="size-8 text-slate-300 dark:text-slate-600 mx-auto" />
+                      <h4 className="text-base font-bold uppercase text-slate-600 dark:text-slate-300">No Pending Invitations</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-normal leading-relaxed">
                         When coaches invite you to join their official PSU athletic teams, invites will appear here for you to accept or decline.
                       </p>
                     </div>
                   ) : (
                     invitations.map((inv) => (
-                      <div key={inv.id} className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                      <div key={inv.id} className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-3">
                         <div>
                           <span className="text-[10px] font-bold uppercase tracking-wider text-orange-500">Coach Invite</span>
-                          <h4 className="text-base font-bold uppercase tracking-tight text-slate-900">{inv.teams?.name || 'Tournament Team'}</h4>
-                          <p className="text-xs text-slate-500 mt-0.5 font-normal">
-                            Coach: <span className="text-slate-800 font-semibold">{inv.teams?.users?.full_name || 'Athletic Coach'}</span> • Sport: {inv.teams?.tournaments?.sport || 'PSU Sport'}
+                          <h4 className="text-base font-bold uppercase tracking-tight text-slate-900 dark:text-white">{inv.teams?.name || 'Tournament Team'}</h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-normal">
+                            Coach: <span className="text-slate-800 dark:text-slate-200 font-semibold">{inv.teams?.users?.full_name || 'Athletic Coach'}</span> • Sport: {inv.teams?.tournaments?.sport || 'PSU Sport'}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -945,7 +943,7 @@ export const Profile = () => {
                             size="sm"
                             variant="outline"
                             onClick={() => handleDeclineInvitation(inv.id, inv.teams?.name || 'team')}
-                            className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-semibold text-xs h-9 px-3 rounded-lg gap-1.5"
+                            className="border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-700 dark:hover:text-red-300 font-semibold text-xs h-9 px-3 rounded-lg gap-1.5"
                           >
                             <XCircle className="size-3.5" />
                             Decline
@@ -1246,12 +1244,12 @@ export const Profile = () => {
 
       {/* Sign Out Confirmation Dialog */}
       <Dialog open={showSignOutPrompt} onOpenChange={setShowSignOutPrompt}>
-        <DialogContent className="max-w-sm rounded-2xl p-6 border-slate-100">
+        <DialogContent className="max-w-sm rounded-2xl p-6 border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter">
+            <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter text-slate-900 dark:text-white">
               Sign <span className="text-orange-500">Out</span>
             </DialogTitle>
-            <DialogDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-2">
+            <DialogDescription className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest mt-2">
               Are you sure you want to sign out of PSU SportsTrack?
             </DialogDescription>
           </DialogHeader>

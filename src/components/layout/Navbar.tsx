@@ -60,12 +60,12 @@ export const Navbar = () => {
       </div>
 
       <Dialog open={showSignOutPrompt} onOpenChange={setShowSignOutPrompt}>
-        <DialogContent className="max-w-sm rounded-[2rem] p-8 border-slate-100 dark:border-white/5">
+        <DialogContent className="max-w-sm rounded-[2rem] p-8 border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter">
+            <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter text-slate-900 dark:text-white">
               Sign <span className="text-orange-500">Out</span>
             </DialogTitle>
-            <DialogDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-2">
+            <DialogDescription className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest mt-2">
               Are you sure you want to sign out of PSU SportsTrack?
             </DialogDescription>
           </DialogHeader>

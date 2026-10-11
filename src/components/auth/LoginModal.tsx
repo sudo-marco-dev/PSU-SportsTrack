@@ -215,6 +215,7 @@ export const LoginModal = () => {
         const { error: profileError } = await supabase.from('users').insert({
           id: authData.user.id,
           full_name: formattedFullName,
+          email: values.email.trim(),
           role: values.role,
           college_id: values.collegeId || null,
         });

@@ -1512,11 +1512,11 @@ export const LiveMatch = () => {
                       <span className="text-xs font-black uppercase tracking-[0.2em]">Match Recognition</span>
                       <Star className="size-5 fill-orange-600" />
                     </div>
-                    <h3 className="text-4xl font-black text-slate-900 uppercase tracking-tighter italic">{awardedMVP}</h3>
-                    <div className="inline-block px-4 py-1.5 bg-slate-900 text-white rounded-full text-xs font-bold uppercase tracking-widest mt-4">
+                    <h3 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">{awardedMVP}</h3>
+                    <div className="inline-block px-4 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full text-xs font-bold uppercase tracking-widest mt-4">
                       Official Red Star MVP
                     </div>
-                    <p className="text-slate-500 text-sm mt-6 max-w-xs mx-auto">
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mt-6 max-w-xs mx-auto">
                       This player has been officially recognized for their exceptional performance in this match.
                     </p>
                   </div>
@@ -1644,9 +1644,9 @@ export const LiveMatch = () => {
                 </CardHeader>
                 <CardContent className="max-w-md mx-auto space-y-4 pb-8 text-center">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block text-left">Select MVP Player</label>
+                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block text-left">Select MVP Player</label>
                     <Select value={selectedPlayerId} onValueChange={(val) => setSelectedPlayerId(val || '')}>
-                      <SelectTrigger className="w-full bg-white border-slate-200">
+                      <SelectTrigger className="w-full bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
                         <SelectValue placeholder="Select a player...">
                           {selectedPlayerId && (() => {
                             const player = (rosterPlayers || []).find(p => p.player_id === selectedPlayerId);

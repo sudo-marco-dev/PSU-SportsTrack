@@ -23,20 +23,7 @@ import {
   ArrowRight,
   Medal
 } from 'lucide-react';
-import type { IconType } from 'react-icons';
-import { 
-  GiBasketballBall, 
-  GiVolleyballBall, 
-  GiSoccerBall, 
-  GiShuttlecock, 
-  GiBaseballBat, 
-  GiSoccerKick, 
-  GiPingPongBat,
-  GiGamepad,
-  GiChessKnight,
-  GiRunningShoe
-} from 'react-icons/gi';
-import { FaPersonSwimming } from 'react-icons/fa6';
+import { SPORT_ICONS, getSportIcon } from '@/lib/sportIcons';
 
 type Tournament = {
   id: string;
@@ -62,28 +49,7 @@ type Match = {
   next_match_id?: string | null;
 };
 
-const SPORT_ICONS: Record<string, IconType> = {
-  Basketball: GiBasketballBall,
-  Volleyball: GiVolleyballBall,
-  Soccer: GiSoccerBall,
-  Football: GiSoccerBall,
-  Badminton: GiShuttlecock,
-  Baseball: GiBaseballBat,
-  Futsal: GiSoccerKick,
-  'Table Tennis': GiPingPongBat,
-  Esports: GiGamepad,
-  Chess: GiChessKnight,
-  Swimming: FaPersonSwimming,
-  Athletics: GiRunningShoe,
-};
 
-const getSportIcon = (sportName: string): IconType => {
-  if (!sportName) return Trophy as unknown as IconType;
-  for (const [key, icon] of Object.entries(SPORT_ICONS)) {
-    if (sportName.toLowerCase().includes(key.toLowerCase())) return icon;
-  }
-  return Trophy as unknown as IconType;
-};
 
 const extractSportName = (match: Match, tourMap: Map<string, Tournament>): string => {
   const tour = tourMap.get(match.tournament_id);
@@ -99,6 +65,32 @@ const extractSportName = (match: Match, tourMap: Map<string, Tournament>): strin
     }
   }
   return 'General Sports';
+};
+
+const parseTournamentDisplay = (name: string, sport?: string | null) => {
+  if (!name) return { eventName: null, tournamentName: 'Tournament' };
+
+  // Check if name has separator like " - " or " – " or " — " or " : "
+  const separatorMatch = name.match(/^(.*?)\s*[-–—:]\s*(.+)$/);
+  if (separatorMatch) {
+    return {
+      eventName: separatorMatch[1].trim(),
+      tournamentName: separatorMatch[2].trim(),
+    };
+  }
+
+  // If sport is provided and differs from name, use event name and sport
+  if (sport && sport.toLowerCase() !== name.toLowerCase()) {
+    return {
+      eventName: name,
+      tournamentName: sport,
+    };
+  }
+
+  return {
+    eventName: null,
+    tournamentName: name,
+  };
 };
 
 const isPlayoffRound = (roundName: string): boolean => {
@@ -362,7 +354,7 @@ export const TournamentExplorer = () => {
   }
 
   return (
-    <div className="space-y-6 md:space-y-8 pb-4 animate-in fade-in duration-500 max-w-full overflow-hidden">
+    <div className="space-y-6 md:space-y-8 pb-4 animate-in fade-in duration-500 max-w-full">
       {/* Hero Header & Breadcrumb Trail */}
       <div className="relative overflow-hidden rounded-2xl md:rounded-[2.5rem] bg-slate-950 text-white py-5 sm:py-6 md:py-10 px-4 sm:px-6 md:px-12 shadow-2xl border border-white/5">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 size-64 sm:size-80 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -431,38 +423,42 @@ export const TournamentExplorer = () => {
             <div className="size-6 sm:size-7 rounded-lg sm:rounded-xl bg-orange-500 text-white font-black text-xs flex items-center justify-center shadow-lg shadow-orange-500/20">
               1
             </div>
-            <h2 className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-800 flex items-center gap-1.5">
+            <h2 className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
               Select Tournament <span className="text-slate-400 text-[10px] sm:text-xs font-medium">({tournaments.length})</span>
             </h2>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3.5 p-1 -m-1">
           {/* Global View Card */}
           <button
             type="button"
             onClick={() => setSelectedTournamentId('all')}
             className={`text-left p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 cursor-pointer active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 relative group overflow-hidden flex flex-col justify-between ${
               selectedTournamentId === 'all'
-                ? 'bg-slate-950 text-white border-orange-500 shadow-xl shadow-slate-950/20 scale-[1.01]'
-                : 'bg-white border-slate-200/80 hover:border-orange-500/40 hover:bg-slate-50 text-slate-800 shadow-sm'
+                ? 'bg-slate-950 text-white border-orange-500 shadow-xl shadow-slate-950/20 ring-1 ring-orange-500 z-10'
+                : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-white/10 hover:border-orange-500/40 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 shadow-sm'
             }`}
           >
-            <div className="flex items-center justify-between mb-2.5 sm:mb-3">
+            <div className="flex items-center justify-between mb-2 sm:mb-2.5">
               <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md ${
-                selectedTournamentId === 'all' ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-600'
+                selectedTournamentId === 'all' ? 'bg-orange-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
               }`}>
                 Global Feed
               </span>
               <Globe className={`size-3.5 sm:size-4 ${selectedTournamentId === 'all' ? 'text-orange-500' : 'text-slate-400'}`} />
             </div>
-            <div>
-              <h3 className="font-black italic uppercase tracking-tight text-sm sm:text-base mb-0.5">
+            <div className="space-y-0.5">
+              <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 block truncate leading-none">
+                All Competitions
+              </span>
+              <h3 className="font-black italic uppercase tracking-tight text-sm sm:text-base leading-tight">
                 All Tournaments
               </h3>
-              <p className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${selectedTournamentId === 'all' ? 'text-slate-400' : 'text-slate-500'}`}>
-                {matches.length} Matches Tracked
-              </p>
+              <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-bold uppercase tracking-wider opacity-75 pt-1">
+                <span>{matches.length} Matches Tracked</span>
+                <span>Active Feed</span>
+              </div>
             </div>
           </button>
 
@@ -471,6 +467,8 @@ export const TournamentExplorer = () => {
             const isSelected = selectedTournamentId === t.id;
             const isDraft = t.status === 'Draft';
             const tourMatchesCount = matches.filter(m => m.tournament_id === t.id).length;
+            const { eventName, tournamentName } = parseTournamentDisplay(t.name, t.sport);
+            const SportIcon = (t.sport ? getSportIcon(t.sport) : Trophy) as any;
 
             return (
               <button
@@ -479,28 +477,39 @@ export const TournamentExplorer = () => {
                 onClick={() => setSelectedTournamentId(t.id)}
                 className={`text-left p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 cursor-pointer active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 relative group overflow-hidden flex flex-col justify-between ${
                   isSelected
-                    ? 'bg-slate-950 text-white border-orange-500 shadow-xl shadow-slate-950/20 scale-[1.01]'
-                    : 'bg-white border-slate-200/80 hover:border-orange-500/40 hover:bg-slate-50 text-slate-800 shadow-sm'
+                    ? 'bg-slate-950 text-white border-orange-500 shadow-xl shadow-slate-950/20 ring-1 ring-orange-500 z-10'
+                    : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-white/10 hover:border-orange-500/40 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 shadow-sm'
                 }`}
               >
-                <div className="flex items-center justify-between mb-2.5 sm:mb-3 gap-2">
+                <div className="flex items-center justify-between mb-2 sm:mb-2.5 gap-2">
                   <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md truncate max-w-[120px] ${
                     isDraft 
-                      ? 'bg-orange-500/10 text-orange-600 border border-orange-500/20' 
+                      ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20' 
                       : isSelected 
                       ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
-                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      : 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30'
                   }`}>
                     {isDraft ? 'Coming Soon' : t.status || 'Active'}
                   </span>
-                  <Trophy className={`size-3.5 sm:size-4 shrink-0 ${isSelected ? 'text-orange-500' : 'text-slate-400'}`} />
+                  <SportIcon className={`size-3.5 sm:size-4 shrink-0 ${isSelected ? 'text-orange-500' : 'text-slate-400'}`} />
                 </div>
 
-                <div>
-                  <h3 className="font-black italic uppercase tracking-tight text-sm sm:text-base mb-0.5 truncate">
-                    {t.name}
+                <div className="space-y-0.5">
+                  {eventName && (
+                    <span 
+                      className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 block truncate leading-none" 
+                      title={eventName}
+                    >
+                      {eventName}
+                    </span>
+                  )}
+                  <h3 
+                    className="font-black italic uppercase tracking-tight text-sm sm:text-base leading-tight truncate text-slate-900 dark:text-white" 
+                    title={t.name}
+                  >
+                    {tournamentName}
                   </h3>
-                  <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-bold uppercase tracking-wider opacity-75">
+                  <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-bold uppercase tracking-wider opacity-75 pt-1">
                     <span>{isDraft ? 'Registration Open' : `${tourMatchesCount} Games`}</span>
                     <span>{t.start_date ? new Date(t.start_date).getFullYear() : ''}</span>
                   </div>
@@ -540,14 +549,14 @@ export const TournamentExplorer = () => {
             onClick={() => setSelectedSport('all')}
             className={`px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-black uppercase italic tracking-tight transition-all duration-200 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 flex items-center gap-1.5 shrink-0 border ${
               selectedSport === 'all'
-                ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20 scale-[1.02]'
+                ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20 ring-1 ring-orange-400 relative z-10'
                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-orange-500/40'
             }`}
           >
             <Trophy className="size-3.5 shrink-0" />
             <span>All Sports</span>
             <span className={`ml-0.5 px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold ${
-              selectedSport === 'all' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+              selectedSport === 'all' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
             }`}>
               {matchesForTournament.length}
             </span>
@@ -564,14 +573,14 @@ export const TournamentExplorer = () => {
                 onClick={() => setSelectedSport(sport.name)}
                 className={`px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-black uppercase italic tracking-tight transition-all duration-200 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 flex items-center gap-1.5 shrink-0 border ${
                   isSelected
-                    ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20 scale-[1.02]'
+                    ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20 ring-1 ring-orange-400 relative z-10'
                     : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-orange-500/40'
                 }`}
               >
                 <SportIcon className="size-3.5 shrink-0" />
                 <span>{sport.name}</span>
                 <span className={`ml-0.5 px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold ${
-                  isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                  isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                 }`}>
                   {sport.count}
                 </span>
@@ -588,7 +597,7 @@ export const TournamentExplorer = () => {
             <div className="size-6 sm:size-7 rounded-lg sm:rounded-xl bg-orange-500 text-white font-black text-xs flex items-center justify-center shadow-lg shadow-orange-500/20">
               3
             </div>
-            <h2 className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-800 flex items-center gap-2">
+            <h2 className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 flex items-center gap-2">
               Competition Phase Mode
             </h2>
           </div>
@@ -664,7 +673,7 @@ export const TournamentExplorer = () => {
             )}
 
             {/* Filter Controls Toolbar */}
-            <div className="bg-white border border-slate-200 rounded-2xl md:rounded-[2rem] p-3.5 sm:p-5 shadow-sm space-y-3">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl md:rounded-[2rem] p-3.5 sm:p-5 shadow-sm space-y-3">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                 {/* Search Team / Venue */}
                 <div className="relative flex-1 w-full">
@@ -673,7 +682,7 @@ export const TournamentExplorer = () => {
                     placeholder="Search teams or venue..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 h-10 sm:h-11 rounded-xl bg-slate-50 border-slate-200 font-medium text-xs text-slate-800 focus:bg-white transition-all w-full"
+                    className="pl-10 h-10 sm:h-11 rounded-xl bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-white/10 font-medium text-xs text-slate-800 dark:text-white focus:bg-white dark:focus:bg-slate-800 transition-all w-full"
                   />
                 </div>
 
@@ -681,7 +690,7 @@ export const TournamentExplorer = () => {
                 {availableRounds.length > 0 && (
                   <div className="w-full lg:w-56">
                     <Select value={selectedRound} onValueChange={(val: string | null) => setSelectedRound(val || 'all')}>
-                      <SelectTrigger className="h-10 sm:h-11 rounded-xl border-slate-200 bg-slate-50 font-bold text-xs uppercase tracking-wider text-slate-700">
+                      <SelectTrigger className="h-10 sm:h-11 rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800/80 font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200">
                         <SelectValue placeholder="All Elimination Stages" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl font-bold uppercase text-xs">
@@ -698,18 +707,18 @@ export const TournamentExplorer = () => {
 
             {/* Tabs for Live/Upcoming vs Match History */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col space-y-6 sm:space-y-8 min-w-0">
-              <div className="sticky top-0 z-20 pb-2 bg-slate-50/80 backdrop-blur-md w-full">
-                <TabsList className="p-1 h-11 sm:h-13 bg-slate-950/5 border border-slate-200/50 backdrop-blur-xl rounded-xl md:rounded-2xl w-full flex items-stretch">
+              <div className="sticky top-0 z-20 pb-2 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md w-full">
+                <TabsList className="p-1 h-11 sm:h-13 bg-slate-950/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/10 backdrop-blur-xl rounded-xl md:rounded-2xl w-full flex items-stretch">
                   <TabsTrigger 
                     value="live" 
-                    className="flex-1 px-2 sm:px-6 font-black uppercase italic tracking-tight text-[11px] sm:text-xs md:text-sm data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-lg rounded-lg md:rounded-xl transition-all flex items-center justify-center gap-1 sm:gap-2"
+                    className="flex-1 px-2 sm:px-6 font-black uppercase italic tracking-tight text-[11px] sm:text-xs md:text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-950 dark:data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg md:rounded-xl transition-all flex items-center justify-center gap-1 sm:gap-2"
                   >
                     <Clock className="size-3.5 md:size-4" /> Scheduled ({elimLiveAndUpcoming.length})
                   </TabsTrigger>
                   
                   <TabsTrigger 
                     value="history" 
-                    className="flex-1 px-2 sm:px-6 font-black uppercase italic tracking-tight text-[11px] sm:text-xs md:text-sm data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-lg rounded-lg md:rounded-xl transition-all flex items-center justify-center gap-1 sm:gap-2"
+                    className="flex-1 px-2 sm:px-6 font-black uppercase italic tracking-tight text-[11px] sm:text-xs md:text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:text-slate-950 dark:data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg md:rounded-xl transition-all flex items-center justify-center gap-1 sm:gap-2"
                   >
                     <History className="size-3.5 md:size-4" /> History ({elimHistory.length})
                   </TabsTrigger>
@@ -727,10 +736,10 @@ export const TournamentExplorer = () => {
                         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest mb-3">
                           Draft Phase • Recruitment Open
                         </div>
-                        <h3 className="text-xl sm:text-2xl font-black italic uppercase tracking-tight text-slate-900 mb-2">
+                        <h3 className="text-xl sm:text-2xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white mb-2">
                           {selectedTourObj?.name}
                         </h3>
-                        <p className="text-slate-500 font-medium text-xs sm:text-sm max-w-md mx-auto mb-6 leading-relaxed">
+                        <p className="text-slate-500 dark:text-slate-400 font-medium text-xs sm:text-sm max-w-md mx-auto mb-6 leading-relaxed">
                           This tournament is currently in the <strong>Draft Phase</strong>. Coaches are actively forming squads. Schedules will broadcast upon activation.
                         </p>
                       </Card>
@@ -739,9 +748,9 @@ export const TournamentExplorer = () => {
 
                   if (Object.keys(liveGroups).length === 0) {
                     return (
-                      <Card className="border-dashed border-2 py-16 sm:py-20 text-center bg-slate-50/50 rounded-2xl sm:rounded-[2rem]">
-                        <Clock className="size-10 sm:size-12 text-slate-300 mx-auto mb-3" />
-                        <p className="text-slate-500 font-medium italic text-xs sm:text-sm">No live or scheduled elimination matches for this selection.</p>
+                      <Card className="border-dashed border-2 py-16 sm:py-20 text-center bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-[2rem]">
+                        <Clock className="size-10 sm:size-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+                        <p className="text-slate-500 dark:text-slate-400 font-medium italic text-xs sm:text-sm">No live or scheduled elimination matches for this selection.</p>
                       </Card>
                     );
                   }
@@ -749,11 +758,11 @@ export const TournamentExplorer = () => {
                   return (
                     <>
                       {Object.entries(liveGroups).map(([date, dateMatches]) => (
-                        <div key={date} className="relative border-l-2 border-slate-200 pl-4 sm:pl-6 ml-2 sm:ml-3 mb-6 sm:mb-8 space-y-3 sm:space-y-4">
-                          <div className="absolute -left-[9px] sm:-left-[11px] top-0 bg-orange-500 size-4 sm:size-5 rounded-full border-4 border-slate-50 flex items-center justify-center"></div>
-                          <h4 className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-widest pt-0.5 mb-4 flex items-center gap-2 sm:gap-3">
+                        <div key={date} className="relative border-l-2 border-slate-200 dark:border-slate-800 pl-4 sm:pl-6 ml-2 sm:ml-3 mb-6 sm:mb-8 space-y-3 sm:space-y-4">
+                          <div className="absolute -left-[9px] sm:-left-[11px] top-0 bg-orange-500 size-4 sm:size-5 rounded-full border-4 border-slate-50 dark:border-slate-950 flex items-center justify-center"></div>
+                          <h4 className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest pt-0.5 mb-4 flex items-center gap-2 sm:gap-3">
                             {date}
-                            <span className="h-px flex-1 bg-slate-100" />
+                            <span className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
                           </h4>
                           
                           <div className="space-y-3">
@@ -762,7 +771,7 @@ export const TournamentExplorer = () => {
                               const SportIcon = getSportIcon(sportName);
 
                               return (
-                                <div key={match.id} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between bg-white border border-slate-200 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 hover:shadow-md transition-all gap-3">
+                                <div key={match.id} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 hover:shadow-md transition-all gap-3">
                                   {/* Status / Time / Venue */}
                                   <div className="flex items-center justify-between sm:flex-col sm:items-start gap-1.5 w-full sm:w-48">
                                     <div className="flex items-center gap-1.5 sm:gap-2">
@@ -775,21 +784,21 @@ export const TournamentExplorer = () => {
                                           LIVE
                                         </div>
                                       ) : (
-                                        <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-slate-50 border border-slate-200/80 rounded-md">
+                                        <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 rounded-md">
                                           <Clock className="size-3 text-slate-400" />
-                                          <span className="text-slate-700 font-bold text-[11px] tabular-nums">
+                                          <span className="text-slate-700 dark:text-slate-300 font-bold text-[11px] tabular-nums">
                                             {match.match_time ? new Date(match.match_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'TBD'}
                                           </span>
                                         </div>
                                       )}
-                                      <span className="px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 font-black text-[9px] uppercase border border-orange-500/20 inline-flex items-center gap-1">
+                                      <span className="px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 dark:text-orange-400 font-black text-[9px] uppercase border border-orange-500/20 inline-flex items-center gap-1">
                                         <SportIcon className="size-2.5 shrink-0" />
                                         <span>{sportName}</span>
                                       </span>
                                     </div>
 
                                     {match.venue && (
-                                      <div className="flex items-center gap-1 text-[10px] font-black text-slate-500 uppercase tracking-wider truncate">
+                                      <div className="flex items-center gap-1 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
                                         <MapPin className="size-3 text-orange-500 shrink-0" />
                                         <span className="truncate max-w-[120px] sm:max-w-none">{match.venue}</span>
                                       </div>
@@ -797,9 +806,9 @@ export const TournamentExplorer = () => {
                                   </div>
 
                                   {/* Matchup Scoreboard */}
-                                  <div className="flex items-center justify-between sm:justify-center gap-2 sm:gap-4 flex-1 my-1 sm:my-0 bg-slate-50/80 sm:bg-transparent p-2.5 sm:p-0 rounded-xl">
+                                  <div className="flex items-center justify-between sm:justify-center gap-2 sm:gap-4 flex-1 my-1 sm:my-0 bg-slate-50/80 dark:bg-slate-800/40 sm:bg-transparent p-2.5 sm:p-0 rounded-xl">
                                     <div className="flex-1 text-left sm:text-right truncate">
-                                      <span className="text-sm sm:text-base font-black text-slate-900 uppercase italic tracking-tight truncate block">{match.team_a?.name || 'TBD'}</span>
+                                      <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase italic tracking-tight truncate block">{match.team_a?.name || 'TBD'}</span>
                                     </div>
                                     <div className="px-3 py-1 bg-slate-950 text-white rounded-xl flex items-center gap-2 sm:gap-3 shadow-md">
                                       <span className="text-base sm:text-lg font-black text-orange-500 tabular-nums">{match.team_a_score || 0}</span>
@@ -807,7 +816,7 @@ export const TournamentExplorer = () => {
                                       <span className="text-base sm:text-lg font-black text-orange-500 tabular-nums">{match.team_b_score || 0}</span>
                                     </div>
                                     <div className="flex-1 text-right sm:text-left truncate">
-                                      <span className="text-sm sm:text-base font-black text-slate-900 uppercase italic tracking-tight truncate block">{match.team_b?.name || 'TBD'}</span>
+                                      <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase italic tracking-tight truncate block">{match.team_b?.name || 'TBD'}</span>
                                     </div>
                                   </div>
 
@@ -815,7 +824,7 @@ export const TournamentExplorer = () => {
                                   <div className="w-full sm:w-auto">
                                     <Button 
                                       variant="outline" 
-                                      className="w-full sm:w-auto border-orange-500 text-orange-600 hover:bg-orange-50 font-black uppercase italic tracking-widest text-[10px] h-10 px-5 rounded-xl transition-all"
+                                      className="w-full sm:w-auto border-orange-500 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-500/10 font-black uppercase italic tracking-widest text-[10px] h-10 px-5 rounded-xl transition-all"
                                       onClick={() => navigate(`/match/${match.id}`)}
                                     >
                                       Matchroom →
@@ -834,17 +843,17 @@ export const TournamentExplorer = () => {
 
               <TabsContent value="history" className="w-full min-w-0 outline-none mt-0 space-y-8 sm:space-y-12">
                 {Object.keys(historyGroups).length === 0 ? (
-                  <Card className="border-dashed border-2 py-16 sm:py-20 text-center bg-slate-50/50 rounded-2xl sm:rounded-[2rem]">
-                    <History className="size-10 sm:size-12 text-slate-300 mx-auto mb-3" />
-                    <p className="text-slate-500 font-medium italic text-xs sm:text-sm">No elimination match history found for this selection.</p>
+                  <Card className="border-dashed border-2 py-16 sm:py-20 text-center bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-white/10 rounded-2xl sm:rounded-[2rem]">
+                    <History className="size-10 sm:size-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+                    <p className="text-slate-500 dark:text-slate-400 font-medium italic text-xs sm:text-sm">No elimination match history found for this selection.</p>
                   </Card>
                 ) : (
                   Object.entries(historyGroups).map(([date, dateMatches]) => (
-                    <div key={date} className="relative border-l-2 border-slate-100 pl-4 sm:pl-6 ml-2 sm:ml-3 mb-6 sm:mb-8 space-y-3 sm:space-y-4">
-                      <div className="absolute -left-[9px] sm:-left-[11px] top-0 bg-slate-400 size-4 sm:size-5 rounded-full border-4 border-slate-50 flex items-center justify-center"></div>
-                      <h4 className="text-xs sm:text-sm font-black text-slate-500 uppercase tracking-widest pt-0.5 mb-4 flex items-center gap-2 sm:gap-3">
+                    <div key={date} className="relative border-l-2 border-slate-100 dark:border-slate-800 pl-4 sm:pl-6 ml-2 sm:ml-3 mb-6 sm:mb-8 space-y-3 sm:space-y-4">
+                      <div className="absolute -left-[9px] sm:-left-[11px] top-0 bg-slate-400 size-4 sm:size-5 rounded-full border-4 border-slate-50 dark:border-slate-950 flex items-center justify-center"></div>
+                      <h4 className="text-xs sm:text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest pt-0.5 mb-4 flex items-center gap-2 sm:gap-3">
                         {date}
-                        <span className="h-px flex-1 bg-slate-100" />
+                        <span className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
                       </h4>
                       
                       <div className="space-y-3">
@@ -853,13 +862,13 @@ export const TournamentExplorer = () => {
                           const SportIcon = getSportIcon(sportName);
 
                           return (
-                            <div key={match.id} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between bg-white border border-slate-100 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 hover:shadow-sm transition-all gap-3 opacity-90 hover:opacity-100">
+                            <div key={match.id} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 hover:shadow-sm transition-all gap-3 opacity-90 hover:opacity-100">
                               {/* Status / Final */}
                               <div className="flex items-center justify-between sm:flex-col sm:items-start gap-1.5 w-full sm:w-48">
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-slate-500 font-black uppercase tracking-widest text-[9px] px-2 py-0.5 bg-slate-100 rounded-md">FINAL</span>
-                                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-black text-[9px] uppercase inline-flex items-center gap-1">
-                                    <SportIcon className="size-2.5 shrink-0 text-slate-500" />
+                                  <span className="text-slate-500 dark:text-slate-400 font-black uppercase tracking-widest text-[9px] px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded-md">FINAL</span>
+                                  <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black text-[9px] uppercase inline-flex items-center gap-1">
+                                    <SportIcon className="size-2.5 shrink-0 text-slate-500 dark:text-slate-400" />
                                     <span>{sportName}</span>
                                   </span>
                                 </div>
@@ -871,9 +880,9 @@ export const TournamentExplorer = () => {
                               </div>
 
                               {/* Matchup with Final Score */}
-                              <div className="flex items-center justify-between sm:justify-center gap-2 sm:gap-4 flex-1 my-1 sm:my-0 bg-slate-50/80 sm:bg-transparent p-2.5 sm:p-0 rounded-xl">
+                              <div className="flex items-center justify-between sm:justify-center gap-2 sm:gap-4 flex-1 my-1 sm:my-0 bg-slate-50/80 dark:bg-slate-800/40 sm:bg-transparent p-2.5 sm:p-0 rounded-xl">
                                 <div className="flex-1 text-left sm:text-right truncate">
-                                  <span className={`text-sm sm:text-base font-black uppercase italic tracking-tight truncate block ${(match.team_a_score || 0) > (match.team_b_score || 0) ? 'text-slate-900' : 'text-slate-400'}`}>
+                                  <span className={`text-sm sm:text-base font-black uppercase italic tracking-tight truncate block ${(match.team_a_score || 0) > (match.team_b_score || 0) ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
                                     {match.team_a?.name || 'TBD'}
                                   </span>
                                 </div>
@@ -887,7 +896,7 @@ export const TournamentExplorer = () => {
                                   </span>
                                 </div>
                                 <div className="flex-1 text-right sm:text-left truncate">
-                                  <span className={`text-sm sm:text-base font-black uppercase italic tracking-tight truncate block ${(match.team_b_score || 0) > (match.team_a_score || 0) ? 'text-slate-900' : 'text-slate-400'}`}>
+                                  <span className={`text-sm sm:text-base font-black uppercase italic tracking-tight truncate block ${(match.team_b_score || 0) > (match.team_a_score || 0) ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
                                     {match.team_b?.name || 'TBD'}
                                   </span>
                                 </div>
@@ -897,7 +906,7 @@ export const TournamentExplorer = () => {
                               <div className="w-full sm:w-auto">
                                 <Button 
                                   variant="ghost" 
-                                  className="w-full sm:w-auto text-slate-400 hover:text-slate-900 hover:bg-slate-50 font-black uppercase italic tracking-widest text-[10px] h-10 px-5 rounded-xl transition-all"
+                                  className="w-full sm:w-auto text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 font-black uppercase italic tracking-widest text-[10px] h-10 px-5 rounded-xl transition-all"
                                   onClick={() => navigate(`/match/${match.id}`)}
                                 >
                                   Details

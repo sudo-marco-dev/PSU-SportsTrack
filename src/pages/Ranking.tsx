@@ -420,7 +420,7 @@ export const Ranking = () => {
               Standing Filters
             </h3>
             <span className="text-slate-300 dark:text-slate-700">|</span>
-            <span className="text-xs text-slate-500 font-normal">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
               Select parameters to refine leaderboard view
             </span>
           </div>
@@ -705,7 +705,7 @@ export const Ranking = () => {
             <h4 className="text-base font-bold text-slate-800 dark:text-white uppercase tracking-tight">
               No Standings Records Found
             </h4>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4 leading-relaxed">
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-1 mb-4 leading-relaxed">
               No tournament teams match the active criteria. Adjust filters or reset to view all university athletic standings.
             </p>
             <Button
@@ -871,7 +871,7 @@ export const Ranking = () => {
             <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
               Official University Athletic Records
             </h4>
-            <p className="text-[11px] text-slate-500 font-medium">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
               Rankings synchronize automatically upon tournament match finalization and administrative championship seals.
             </p>
           </div>
