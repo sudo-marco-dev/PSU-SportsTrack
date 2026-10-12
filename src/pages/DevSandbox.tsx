@@ -22,7 +22,9 @@ import {
   Maximize2,
   Check,
   X,
-  ExternalLink
+  ExternalLink,
+  Crown,
+  Medal
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,6 +37,7 @@ import {
   injectVerificationQueue,
   injectLiveHalftimeMatch,
   injectCompletedChampionship,
+  injectSuperDemo,
   simulateNextPlay,
 } from '@/lib/devScenarios';
 
@@ -565,6 +568,74 @@ export const DevSandbox = () => {
                   <span>Open College Medal Standings</span>
                   <ExternalLink className="size-3.5" />
                 </Button>
+              </CardContent>
+            </Card>
+
+            {/* Scenario 5: The Grand Binturungan Olympiad (Master Super Demo) */}
+            <Card className="md:col-span-2 bg-gradient-to-br from-orange-500/[0.04] to-amber-500/[0.06] dark:from-orange-500/[0.07] dark:to-amber-500/[0.05] bg-white dark:bg-slate-900 border-2 border-orange-500/40 hover:border-orange-500/70 rounded-2xl md:rounded-3xl relative overflow-hidden flex flex-col justify-between shadow-md hover:shadow-xl transition-all">
+              <CardHeader className="p-6 md:p-8 pb-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-orange-500 text-white font-black text-[10px] uppercase px-3 py-1 rounded-md shadow-sm">
+                      SCENARIO E • MASTER SUPER DEMO
+                    </Badge>
+                    <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-[10px] font-black uppercase px-2.5 py-0.5">
+                      ALL 9 SPORTS • ALL 9 COLLEGES
+                    </Badge>
+                  </div>
+                  <Crown className="size-5 text-amber-500 animate-pulse" />
+                </div>
+                <CardTitle className="text-xl sm:text-2xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
+                  The Grand Binturungan Olympiad (Master Multi-Sport Defense Simulation)
+                </CardTitle>
+                <CardDescription className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium leading-relaxed mt-2 max-w-4xl">
+                  Generates the comprehensive university sports festival: all 9 official disciplines (Basketball, Volleyball, Soccer, Futsal, Sepak Takraw, Baseball, Softball, Pickleball, Table Tennis), all 9 PSU colleges, authentic sport-specific player roles (starters &amp; bench subs), jerseys (#1 to #99), and coaches. Simulates a complete 8-team single elimination tournament tree (Quarterfinals, Semifinals, 3rd-Place Bronze, and Finals) crowning <strong>CEAT Red Scorpions</strong> as Gold Champion, <strong>CS Byte Titans</strong> as Silver, and <strong>CBA Golden Wolves</strong> as Bronze with official MVP Stars.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 md:p-8 pt-0 space-y-4">
+                <Button
+                  onClick={() => handleRunScenario('Grand Binturungan Olympiad', injectSuperDemo)}
+                  disabled={isScenarioLoading}
+                  className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs sm:text-sm uppercase tracking-wider rounded-xl h-14 shadow-xl shadow-orange-500/25 transition-all cursor-pointer flex items-center justify-center gap-2"
+                >
+                  {isScenarioLoading && loadingScenarioName === 'Grand Binturungan Olympiad' ? (
+                    <RefreshCw className="size-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Sparkles className="size-4" />
+                      <span>Inject Grand Binturungan Olympiad (Master All-Sport Simulation)</span>
+                    </>
+                  )}
+                </Button>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate('/explorer')}
+                    className="border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 text-xs font-black uppercase h-10 rounded-xl gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Trophy className="size-3.5 text-orange-500" />
+                    <span>Inspect Tournament Brackets</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate('/ranking')}
+                    className="border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 text-xs font-black uppercase h-10 rounded-xl gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Medal className="size-3.5 text-amber-500" />
+                    <span>View University Medal Standings</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => lastInjectedMatchId ? navigate(`/match/${lastInjectedMatchId}/kiosk`) : navigate('/explorer')}
+                    className="border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 text-xs font-black uppercase h-10 rounded-xl gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <LayoutGrid className="size-3.5 text-emerald-500" />
+                    <span>Launch Courtside Matchroom</span>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
