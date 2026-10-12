@@ -6,7 +6,7 @@
 - **Testing**: Playwright.
 
 ## 📍 Current State
-- **Active Phase**: Phase 5: Final Polish, Role Normalization, Theme Engine & Capstone Readiness.
+- **Active Phase**: Phase 7: Developer Portal, Capstone Command Center & Thesis Defense Workbench.
 - **Completed**: Project scaffolding, Playwright configuration, Supabase DB Schema & RLS initialization.
 - [x] Phase 3.1 Database Schema (Matches, Live Feed, MVP Stars).
 - [x] Phase 3.2 Dual-Mode Bracket Generation (Auto/Manual).
@@ -36,7 +36,7 @@
 - [x] Phase 5.6 Admin Audit Log Time Filters (Today, Week, Month)
 - [x] Phase 5.7 Registration Security (Confirm Password Field)
 - [x] Phase 5.8 Coach Recruitment Validation (Duplicate Sport Prevention)
-- [x] Phase 5.9 Role Normalization & Unified RBAC (`super_admin`, `facilitator`, `coach`, `player_student`, `player_faculty`)
+- [x] Phase 5.9 Role Normalization & Unified RBAC (`super_admin`, `facilitator`, `coach`, `player_student`, `player_faculty`, `dev`)
 - [x] Phase 5.10 Institutional PSU COR Verification & Student Corporate Email Parser
 - [x] Phase 5.11 Courtside Scorer Attribution, Score Deduction & Realtime Box Score Deck
 - [x] Phase 5.12 Anti-Slop Vector Sports Icon System (`react-icons/gi`, `react-icons/fa6` & centralized `sportIcons.ts`)
@@ -53,6 +53,13 @@
 - [x] Phase 6.8 Kiosk Direct Database Write Verification (`.select('id')` RLS rejection detection)
 - [x] Phase 6.9 Context-Aware Login Redirection (Preserving current route on courtside/in-progress pages)
 - [x] Phase 6.10 In-Tab SPA Navigation Harmonization (Replacing multi-tab spawning with seamless in-app navigation)
+- [x] Phase 7.1 Canonical `'dev'` Role & Root Access RBAC Bypass (`isDev = true`, full system traversal)
+- [x] Phase 7.2 Dedicated Developer Sandbox Workbench (`/dev` with 5-tab control center)
+- [x] Phase 7.3 Multi-Stage Capstone Scenario Injectors (`Clean Slate`, `Verification Queue`, `Live Halftime Showdown`, `Completed Championship`)
+- [x] Phase 7.4 Live Match Realtime Event Bot Simulator (6s interval auto-play pulse across WebSockets)
+- [x] Phase 7.5 User Ledger, Quick Role Switcher, Lockout Reset & Instant Verification Toggle
+- [x] Phase 7.6 Database Row Counter & System Health Tooling
+- [x] Phase 7.7 Guided Capstone Defense Script with Direct Interactive Deep Links
 
 ## 🛠️ Recent Modifications & Change Log
 
@@ -243,14 +250,45 @@
   - `src/App.tsx`
   - `vite.config.ts`
 
+### Phase 7: Developer Portal, Capstone Command Center & Thesis Defense Workbench
+- **Description**: Enterprise developer instrumentation suite, multi-stage thesis presentation scenarios, and canonical root persona:
+  1. **Canonical `dev` Role & Database Constraint**: Updated Supabase PostgreSQL `users_role_check` constraint to support `'dev'`. Created database migration `20261012_add_dev_role.sql`. Added `isDev` with complete root bypass across all RBAC evaluations (`isSuperAdmin`, `isCoach`, `isFacilitator`, `isStudentAthlete`).
+  2. **Dedicated Capstone Sandbox Workbench (`/dev`)**: Built standalone developer portal (`DevSandbox.tsx`) accessible via `/dev` with 5 specialized evaluation tabs.
+  3. **Multi-Stage Capstone Scenario Injectors (`devScenarios.ts`)**:
+     - *Clean Slate*: Safely clears ephemeral test tournaments, brackets, match events, and rosters without touching university colleges or user credentials.
+     - *COR Verification Queue*: Automatically provisions a draft tournament, mock athletes, and authentic OCR verification records with simulated confidence scores (95%, 80%, 45%) for live AIMS validation demos.
+     - *Live Halftime Showdown*: Injects a high-octane 4th quarter basketball match (CAS 68 vs CBA 65) complete with running clock, fouls, timeouts, player star tallies, and commentary feed ready for immediate kiosk or display demonstration.
+     - *Completed Championship*: Deploys championship and bronze matches, awards MVP Red & Gold Stars, and updates the official Palawan State University medal standing ledger (`/ranking`).
+  4. **User & Stats Ledger**: Real-time user browser with 1-click role switcher dropdown, 1-click verification toggle (`is_verified`), and brute-force lockout reset.
+  5. **Live Match Event Bot**: Interactive play simulator and auto-play bot pulsing real-time score events every 6s over WebSockets for multi-device sync testing.
+  6. **Database Health & Row Counter**: Live row counts across 6 primary tables with one-click cleanup routines.
+  7. **Capstone Defense Presentation Script**: 6-step guided walkthrough with direct interactive deep-links.
+  8. **Clean Admin Separation**: Removed the disruptive demo reset banner from `AdminDashboard.tsx`, replacing it with an elegant "Dev Sandbox" button in Quick Operations.
+- **Files Modified / Created**:
+  - `supabase/migrations/20261012_add_dev_role.sql`
+  - `src/context/AuthContext.tsx`
+  - `src/components/ProtectedRoute.tsx`
+  - `src/components/auth/LoginModal.tsx`
+  - `src/components/AppLayout.tsx`
+  - `src/pages/PlayerDashboard.tsx`
+  - `src/pages/AdminDashboard.tsx`
+  - `src/lib/devScenarios.ts`
+  - `src/pages/DevSandbox.tsx`
+  - `src/App.tsx`
+  - `user_roles_and_access_control.md`
+  - `PROJECT_STATE.md`
+  - `local_change_log.md`
+
 ## 🎯 Deployment & Capstone Readiness
 - [x] Phase 4: MVP Star System (Red & Gold Stars)
 - [x] Phase 4.1: Binturungan Multi-Sport Creation & Tournament Lifecycle
 - [x] Phase 5: Facilitator Governance, Offline Resilience & Bronze Brackets
 - [x] Phase 5.9 - 5.15: Role Normalization, COR Pipeline, Theme Engine & Icon Standardization
 - [x] Phase 6: Live Scoring Engine, Stadium Jumbotron Focus View, Facilitator Kiosk, Web Audio FX & Navigation Polish
+- [x] Phase 7: Developer Portal, Capstone Command Center, Multi-Stage Scenarios & Thesis Defense Script
 - [x] Production Build Validation: Zero TypeScript compiler errors (`tsc -b`), zero build failures (`vite build`)
 - [x] Code Quality Audit: Zero ESLint errors across entire `src/` codebase
 - [x] Database Synchronization: All migrations executed and active on remote Supabase project
 - [x] Deployment Configuration: `vercel.json` SPA routing rewrites and security redirects configured
+
 

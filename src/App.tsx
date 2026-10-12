@@ -26,6 +26,7 @@ const ResetPassword = React.lazy(() => import('@/pages/ResetPassword').then(m =>
 const AdminRecovery = React.lazy(() => import('@/pages/AdminRecovery').then(m => ({ default: m.AdminRecovery })));
 const StadiumDisplay = React.lazy(() => import('@/pages/StadiumDisplay').then(m => ({ default: m.StadiumDisplay })));
 const FacilitatorKiosk = React.lazy(() => import('@/pages/FacilitatorKiosk').then(m => ({ default: m.FacilitatorKiosk })));
+const DevSandbox = React.lazy(() => import('@/pages/DevSandbox').then(m => ({ default: m.DevSandbox })));
 
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 
@@ -72,12 +73,13 @@ function AppRoutes() {
             <Route path="/achievements" element={<Navigate to="/profile" replace />} />
 
             {/* Role-Specific Routes */}
-            <Route element={<ProtectedRoute requiredRole="super_admin" />}>
+            <Route element={<ProtectedRoute requiredRole={['super_admin', 'dev']} />}>
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/tournaments" element={<TournamentManagement />} />
               <Route path="/admin/verifications" element={<SystemVerifications />} />
               <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
               <Route path="/admin/recovery" element={<AdminRecovery />} />
+              <Route path="/dev" element={<DevSandbox />} />
             </Route>
 
             <Route element={<ProtectedRoute requiredRole="coach" />}>

@@ -15,7 +15,8 @@ import {
   Medal,
   Activity,
   Info,
-  RotateCcw
+  RotateCcw,
+  Terminal
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { ThemeToggle } from './ui/ThemeToggle';
@@ -24,7 +25,7 @@ import { LoginModal } from '@/components/auth/LoginModal';
 import { toast } from 'sonner';
 
 export const AppLayout = () => {
-  const { user, role, isSuperAdmin, isFacilitator, isCoach, isPlayer, signOut, openLoginModal } = useAuth();
+  const { user, role, isDev, isSuperAdmin, isFacilitator, isCoach, isPlayer, signOut, openLoginModal } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -32,6 +33,7 @@ export const AppLayout = () => {
 
   const formatRole = (r: string | null) => {
     if (!r) return 'Spectator';
+    if (r === 'dev') return 'Developer';
     if (r === 'super_admin') return 'Super Admin';
     if (r === 'facilitator') return 'Facilitator';
     if (r === 'coach') return 'Coach';
@@ -42,6 +44,7 @@ export const AppLayout = () => {
 
   const getDashboardHref = () => {
     if (!user) return '/';
+    if (isDev) return '/dev';
     if (isSuperAdmin) return '/admin';
     if (isCoach) return '/coach';
     if (isPlayer) return '/player';
@@ -64,13 +67,14 @@ export const AppLayout = () => {
       href: '/ranking',
       icon: Medal
     },
-    ...(isSuperAdmin ? [
+    ...(isSuperAdmin || isDev ? [
+      { name: 'Dev Sandbox', href: '/dev', icon: Terminal },
       { name: 'Tournaments', href: '/admin/tournaments', icon: Trophy },
       { name: 'System Verifications', href: '/admin/verifications', icon: ShieldCheck },
       { name: 'System Audit', href: '/admin/audit-logs', icon: ClipboardList },
       { name: 'Recovery Center', href: '/admin/recovery', icon: RotateCcw },
     ] : []),
-    ...(isFacilitator && !isSuperAdmin ? [
+    ...(isFacilitator && !isSuperAdmin && !isDev ? [
       { name: 'Live Scorer', href: '/explorer', icon: Activity },
     ] : []),
     ...(isCoach ? [
@@ -86,8 +90,8 @@ export const AppLayout = () => {
   const isActive = (path: string) => location.pathname === path;
 
   // Secondary management routes that make "More" tab show active state
-  const isMoreRouteActive = ['/about'].includes(location.pathname) || (isSuperAdmin
-    ? ['/admin/tournaments', '/admin/verifications', '/admin/audit-logs', '/admin/recovery'].includes(location.pathname)
+  const isMoreRouteActive = ['/about'].includes(location.pathname) || (isSuperAdmin || isDev
+    ? ['/admin/tournaments', '/admin/verifications', '/admin/audit-logs', '/admin/recovery', '/dev'].includes(location.pathname)
     : isCoach
     ? ['/coach/teams'].includes(location.pathname)
     : false);

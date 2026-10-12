@@ -7,7 +7,8 @@ export type UserRole =
   | 'facilitator'
   | 'coach'
   | 'player_student'
-  | 'player_faculty';
+  | 'player_faculty'
+  | 'dev';
 
 export type AccountStatus = 'active' | 'inactive' | 'archived' | 'soft_deleted';
 
@@ -17,6 +18,7 @@ interface AuthContextType {
   role: UserRole | null;
   isVerified: boolean;
   isLoading: boolean;
+  isDev: boolean;
   isSuperAdmin: boolean;
   isFacilitator: boolean;
   isCoach: boolean;
@@ -50,6 +52,7 @@ const AuthContext = createContext<AuthContextType>({
   role: null,
   isVerified: false,
   isLoading: true,
+  isDev: false,
   isSuperAdmin: false,
   isFacilitator: false,
   isCoach: false,
@@ -172,10 +175,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   // Derived role permission flags
-  const isSuperAdmin = role === 'super_admin';
+  const isDev = role === 'dev';
+  const isSuperAdmin = role === 'super_admin' || isDev;
   const isFacilitator = role === 'facilitator' || isSuperAdmin;
-  const isCoach = role === 'coach';
-  const isPlayer = role === 'player_student' || role === 'player_faculty';
+  const isCoach = role === 'coach' || isDev;
+  const isPlayer = role === 'player_student' || role === 'player_faculty' || isDev;
   const isFacultyAthlete = role === 'player_faculty';
   const isStudentAthlete = role === 'player_student';
 
@@ -186,6 +190,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       role,
       isVerified,
       isLoading,
+      isDev,
       isSuperAdmin,
       isFacilitator,
       isCoach,

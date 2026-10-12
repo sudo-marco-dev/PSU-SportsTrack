@@ -185,7 +185,9 @@ export const LoginModal = () => {
               .eq('id', authData.user.id)
               .single();
             const userRole = userRec?.role;
-            if (userRole === 'super_admin' || userRole === 'Admin') {
+            if (userRole === 'dev') {
+              destination = '/dev';
+            } else if (userRole === 'super_admin' || userRole === 'Admin') {
               destination = '/admin';
             } else if (userRole === 'coach' || userRole === 'Coach') {
               destination = '/coach';

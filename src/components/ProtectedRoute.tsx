@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
-  const { user, role, isSuperAdmin, isFacilitator, isCoach, isPlayer, isLoading, openLoginModal } = useAuth();
+  const { user, role, isDev, isSuperAdmin, isFacilitator, isCoach, isPlayer, isLoading, openLoginModal } = useAuth();
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -36,8 +36,14 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) 
   if (requiredRole) {
     const requiredRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
     
-    // Check permission with hierarchical logic
+    // Check permission with hierarchical logic (Dev has full platform access)
     const hasPermission = requiredRoles.some((req) => {
+      if (isDev) {
+        return true;
+      }
+      if (req === 'dev') {
+        return isDev;
+      }
       if (req === 'super_admin') {
         return isSuperAdmin;
       }

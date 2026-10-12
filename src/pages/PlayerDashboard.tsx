@@ -51,7 +51,7 @@ type PlayerStar = {
 };
 
 export const PlayerDashboard = () => {
-  const { isVerified, user, isSuperAdmin, isCoach, isPlayer } = useAuth();
+  const { isVerified, user, isDev, isSuperAdmin, isCoach, isPlayer } = useAuth();
   const navigate = useNavigate();
   const [hasPendingDocuments, setHasPendingDocuments] = useState(false);
   const [latestDoc, setLatestDoc] = useState<{
@@ -70,12 +70,14 @@ export const PlayerDashboard = () => {
   const [selectedTournament, setSelectedTournament] = useState<any | null>(null);
 
   useEffect(() => {
-    if (isSuperAdmin) {
+    if (isDev) {
+      navigate('/dev', { replace: true });
+    } else if (isSuperAdmin) {
       navigate('/admin', { replace: true });
     } else if (isCoach) {
       navigate('/coach', { replace: true });
     }
-  }, [isSuperAdmin, isCoach, navigate]);
+  }, [isDev, isSuperAdmin, isCoach, navigate]);
 
   useEffect(() => {
     if (user && isPlayer && !isVerified) {

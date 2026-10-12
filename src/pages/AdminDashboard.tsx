@@ -11,28 +11,17 @@ import {
   ShieldCheck,
   TrendingUp,
   History,
-  RotateCcw,
-  AlertTriangle,
-  Sparkles,
-  Loader2
+  Terminal,
+  RotateCcw
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { resetDemoState } from '@/lib/demoReset';
 import { FacilitatorManagementModal } from '@/components/admin/FacilitatorManagementModal';
 import { getSportIcon } from '@/lib/sportIcons';
 
 export const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { isSuperAdmin } = useAuth();
-  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
-  const [resetConfirmationText, setResetConfirmationText] = useState('');
-  const [isResetting, setIsResetting] = useState(false);
   const [stats, setStats] = useState({
     tournaments: 0,
     liveMatches: 0,
@@ -136,26 +125,6 @@ export const AdminDashboard = () => {
   useEffect(() => {
     fetchStats();
   }, []);
-
-  const handleResetDemoArena = async () => {
-    if (resetConfirmationText !== 'RESET DEMO') return;
-    setIsResetting(true);
-    try {
-      const res = await resetDemoState(supabase);
-      if (res.success) {
-        toast.success('Demo Arena successfully reset! 4 squads, championship bracket & live match ready.');
-        setIsResetDialogOpen(false);
-        setResetConfirmationText('');
-        fetchStats();
-      } else {
-        toast.error('Failed to reset demo: ' + res.error);
-      }
-    } catch (err: any) {
-      toast.error('Demo reset failed: ' + err.message);
-    } finally {
-      setIsResetting(false);
-    }
-  };
 
   const statCards = [
     {
@@ -405,39 +374,6 @@ export const AdminDashboard = () => {
       </Card>
 
       {/* Capstone Showcase Demo Tool - Only visible to SuperAdmin */}
-      {isSuperAdmin && (
-        <div className="relative overflow-hidden bg-white dark:bg-slate-900 border-2 border-orange-500/30 rounded-2xl md:rounded-[2.5rem] p-5 sm:p-6 md:p-7 shadow-xl bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent dark:from-orange-500/15 dark:via-slate-900/60 dark:to-slate-900/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 z-10 group">
-          {/* Subtle Ambient Glow */}
-          <div className="absolute -right-16 -top-16 size-48 bg-orange-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-orange-500/20 transition-all duration-700" />
-
-          <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0 relative z-10">
-            <div className="p-3.5 bg-orange-500 rounded-2xl shadow-lg shadow-orange-500/30 text-white shrink-0 group-hover:scale-105 group-hover:rotate-6 transition-transform duration-300">
-              <Sparkles className="size-6" />
-            </div>
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h3 className="text-base sm:text-lg font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
-                  Capstone Demonstration Arena
-                </h3>
-                <span className="text-[9px] font-black uppercase tracking-widest bg-orange-500 text-white px-2.5 py-0.5 rounded-full shrink-0 shadow-sm font-sans">
-                  SUPERADMIN
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-medium leading-relaxed max-w-3xl">
-                Instant reset to standard demo scenario: 4 campus squads, active Binturungan tournament, 3rd-place bronze bracket, and an ongoing basketball match with live commentary.
-              </p>
-            </div>
-          </div>
-          <Button
-            onClick={() => setIsResetDialogOpen(true)}
-            className="w-full sm:w-auto h-12 px-6 sm:px-7 bg-orange-500 hover:bg-orange-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 gap-2.5 shrink-0 transition-all active:scale-95 cursor-pointer relative z-10"
-          >
-            <RotateCcw className="size-4 group-hover:rotate-[-45deg] transition-transform duration-300" />
-            Reset Demo Arena
-          </Button>
-        </div>
-      )}
-
       <div className="grid lg:grid-cols-3 gap-8 relative z-10">
         {/* Quick Actions */}
         <div className="lg:col-span-2 space-y-6">
@@ -453,6 +389,22 @@ export const AdminDashboard = () => {
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
+            <Button
+              onClick={() => navigate('/dev')}
+              className="h-20 bg-white dark:bg-slate-900 border-2 border-orange-500/30 hover:border-orange-500 hover:bg-orange-50/50 dark:hover:bg-orange-500/10 rounded-3xl flex items-center justify-between px-6 group transition-all cursor-pointer shadow-sm"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-orange-500/10 rounded-xl group-hover:bg-orange-500 transition-colors">
+                  <Terminal className="size-5 text-orange-500 group-hover:text-white" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-black uppercase italic tracking-tight text-slate-900 dark:text-white leading-none mb-1">Dev Sandbox</p>
+                  <p className="text-[9px] font-bold text-orange-500 uppercase tracking-widest">Capstone Test Deck</p>
+                </div>
+              </div>
+              <ChevronRight className="size-4 text-orange-500 group-hover:translate-x-1 transition-transform" />
+            </Button>
+
             <Button
               onClick={() => navigate('/admin/tournaments')}
               className="h-20 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-500/5 rounded-3xl flex items-center justify-between px-6 group transition-all cursor-pointer"
@@ -562,68 +514,6 @@ export const AdminDashboard = () => {
           </div>
         </div>
       </div>
-
-      {/* Reset Demo Arena Confirmation Dialog */}
-      <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
-        <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/10 rounded-3xl p-6 shadow-2xl">
-          <DialogHeader>
-            <div className="size-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center mb-2">
-              <AlertTriangle className="size-6" />
-            </div>
-            <DialogTitle className="text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
-              Reset Demo Arena?
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 space-y-2 pt-1">
-              <p>
-                This action will rebuild the <strong>PSU Palaro 2026 - Men's Basketball</strong> tournament with 4 collegiate squads, re-link the playoff tree (including the 3rd-Place Bronze Playoff), and reset an ongoing live match with commentary.
-              </p>
-              <p className="font-bold text-red-600 dark:text-red-400">
-                To confirm, please type <span className="underline font-mono">RESET DEMO</span> below:
-              </p>
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-2">
-            <Input
-              value={resetConfirmationText}
-              onChange={(e) => setResetConfirmationText(e.target.value)}
-              placeholder="Type RESET DEMO"
-              className="font-mono text-center uppercase tracking-widest font-black text-sm h-11 bg-slate-50 dark:bg-slate-950 border-2 border-slate-200 dark:border-white/10 rounded-xl"
-            />
-          </div>
-
-          <DialogFooter className="flex gap-2 sm:gap-0 mt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsResetDialogOpen(false);
-                setResetConfirmationText('');
-              }}
-              disabled={isResetting}
-              className="rounded-xl font-black text-xs uppercase tracking-wider"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleResetDemoArena}
-              disabled={resetConfirmationText !== 'RESET DEMO' || isResetting}
-              className="bg-red-600 hover:bg-red-700 text-white rounded-xl font-black text-xs uppercase tracking-wider gap-2 shadow-lg shadow-red-600/20"
-            >
-              {isResetting ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Resetting Demo...
-                </>
-              ) : (
-                <>
-                  <RotateCcw className="size-4" />
-                  Confirm Reset
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <FacilitatorManagementModal
         open={isFacilitatorModalOpen}

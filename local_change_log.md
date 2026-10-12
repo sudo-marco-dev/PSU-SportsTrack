@@ -1050,6 +1050,47 @@ This log tracks every user prompt, database migration, code change, and Git oper
         *   Clicking "KIOSK DECK" navigates directly to `/match/:id/kiosk` in the same tab.
         *   Clicking the back chevron in Kiosk Deck navigates back to `/match/:id`.
 
+---
+
+### Prompt 53: Developer Role ('dev'), Dedicated Capstone Workbench (/dev) & Multi-Stage Evaluation Arena
+*   **Timestamp**: 2026-10-12T19:35:00+08:00
+*   **User Directive**: "lets move this into its own page and create a new user (like "dev" this stores all dev like actions like demos, quick table/ user naminpulations, data resets, user user stats etc. plan me what this new user would be and its features that is usefull for our capstone demo, user testing etc. /plan"
+*   **Context & Goal**:
+    *   Elevate developer and evaluation tools out of the main Admin Dashboard (`AdminDashboard.tsx`) into an isolated, dedicated Developer Portal (`/dev`).
+    *   Introduce a canonical 7th user role: `dev` (Platform Developer) with root access and bypass permissions across the entire application.
+    *   Equip the Capstone Workbench with realistic multi-stage scenario injectors, a live match bot simulator for real-time demonstration, user/stats management, database telemetry, and a defense presentation script.
+*   **Actions Taken**:
+    1.  **PostgreSQL Constraint & Migration**:
+        *   Updated database constraint `users_role_check` on Supabase to include `'dev'`:
+            `CHECK (role = ANY (ARRAY['super_admin', 'facilitator', 'coach', 'player_student', 'player_faculty', 'dev']))`.
+        *   Created migration file: [`supabase/migrations/20261012_add_dev_role.sql`](file:///f:/VScodes/SportsTrack/psu-sportstrack/supabase/migrations/20261012_add_dev_role.sql).
+    2.  **Auth Architecture & Root RBAC Bypass**:
+        *   [`src/context/AuthContext.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/context/AuthContext.tsx): Added `'dev'` to `UserRole` and exported `isDev: boolean`. Configured root bypass permissions so `isSuperAdmin`, `isCoach`, `isFacilitator`, and `isStudentAthlete` evaluate to `true` when `isDev` is active.
+        *   [`src/components/ProtectedRoute.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/ProtectedRoute.tsx): Permitted `isDev` root traversal through all protected routes.
+        *   [`src/components/auth/LoginModal.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/auth/LoginModal.tsx): Routes `dev` users directly to `/dev` upon login.
+        *   [`src/pages/PlayerDashboard.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/PlayerDashboard.tsx): Added redirect to `/dev` when a developer visits `/player`.
+    3.  **Multi-Stage Capstone Scenario Injectors ([`src/lib/devScenarios.ts`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/lib/devScenarios.ts))**:
+        *   `injectCleanSlate(supabase)`: Safely purges ephemeral matches, tournaments, brackets, and rosters.
+        *   `injectVerificationQueue(supabase)`: Generates mock student athletes and authentic OCR verification records with simulated confidence scores (95%, 80%, 45%) for live AIMS validation demos.
+        *   `injectLiveHalftimeMatch(supabase)`: Injects a high-octane 4th quarter basketball showdown (CAS 68 vs CBA 65) with live clock, fouls, timeouts, player star tallies, and commentary feed.
+        *   `injectCompletedChampionship(supabase)`: Populates finals and bronze matches, awards MVP Red/Gold stars, and updates the university medal standings.
+        *   `simulateNextPlay(supabase, matchId, team, points, description)`: Programmatically injects scoring plays, fouls, and commentary over WebSockets.
+    4.  **Dedicated Developer Portal ([`src/pages/DevSandbox.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/DevSandbox.tsx))**:
+        *   Built responsive, high-contrast 5-tab workbench adhering to Anti-Slop Directive.
+        *   **Tab 1 (Demo Scenarios)**: 4 multi-stage scenario injectors with real-time feedback and direct launch links.
+        *   **Tab 2 (User & Stats)**: Searchable user roster, 1-click role switcher, 1-click verification toggle (`is_verified`), and brute-force lockout reset.
+        *   **Tab 3 (Live Match Bot)**: Match selector, manual event injector (+2, +3, foul), and automated event pulse bot (6s intervals) with real-time event log.
+        *   **Tab 4 (Database & Health)**: Real-time table row counters, orphaned match purge, and stale lease force-release.
+        *   **Tab 5 (Capstone Script)**: 6-step guided defense presentation script with direct operational links.
+    5.  **Admin Separation & Layout Integration**:
+        *   [`src/pages/AdminDashboard.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/AdminDashboard.tsx): Removed the oversized reset banner and confirmation dialog; added a refined "Dev Sandbox" quick action button.
+        *   [`src/components/AppLayout.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/AppLayout.tsx): Added `/dev` navigation item in sidebar and mobile drawer for `isSuperAdmin || isDev`.
+        *   [`src/App.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/App.tsx): Registered lazy route `/dev` with `<ProtectedRoute requiredRole={['super_admin', 'dev']}>`.
+    6.  **Documentation Synchronization**:
+        *   Updated [`user_roles_and_access_control.md`](file:///f:/VScodes/SportsTrack/psu-sportstrack/user_roles_and_access_control.md) to document seven unified user roles including `dev`, Section 2.7 specifications, updated permission matrix, and updated PostgreSQL constraint.
+        *   Updated [`PROJECT_STATE.md`](file:///f:/VScodes/SportsTrack/psu-sportstrack/PROJECT_STATE.md) with Phase 7 milestones and deployment readiness.
+
+
 
 
 

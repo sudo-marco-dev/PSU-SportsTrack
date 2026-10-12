@@ -10,7 +10,7 @@ All roles are unified and enforced using standard PostgreSQL `snake_case` identi
 
 ## 1. Unified Role Hierarchy & Identity Keys
 
-The platform recognizes six user types:
+The platform recognizes seven user types:
 
 | User Type | Database Role Key (`users.role`) | Frontend Permission Flag | Default Landing Route | Description |
 | :--- | :--- | :--- | :--- | :--- |
@@ -20,6 +20,7 @@ The platform recognizes six user types:
 | **Coach** | `coach` | `isCoach = true` | `/coach` | Team mentor managing rosters, recruitments, uniform numbers, and lineups. |
 | **Facilitator** | `facilitator` | `isFacilitator = true` | `/explorer` | Court-side match official operating game timers, scorecards, fouls, and box scores. |
 | **Super Administrator** | `super_admin` | `isSuperAdmin = true` | `/admin` | University athletic directorate with complete administrative oversight and audit rights. |
+| **Platform Developer** | `dev` | `isDev = true` (Root Access) | `/dev` | System engineers and thesis evaluators with root sandbox controls, scenario injectors, and live test tools. |
 
 ---
 
@@ -132,25 +133,47 @@ Athletic directors, tournament commissioners, and university system administrato
 
 ---
 
+### 2.7 Platform Developer (`dev`)
+System architects, thesis developers, and capstone evaluators with unrestricted root access across the entire platform. Designed specifically for live defense demonstrations, empirical testing, stress-testing, and rapid state transitions.
+
+*   **Accessible Routes**: All platform views without restriction (`/`, `/explorer`, `/ranking`, `/about`, `/match/*`, `/player`, `/profile`, `/coach/*`, `/admin/*`, `/dev`).
+*   **Accessible Features**:
+    *   **Capstone Command Center & Workbench (`/dev`)**: Dedicated developer console containing testing instrumentation, scenario injectors, and live match simulators.
+    *   **Multi-Stage Scenario Injectors**:
+        *   *Clean Slate*: Wipes test matches, brackets, events, and rosters without touching core colleges or system user accounts.
+        *   *COR Verification Queue*: Seeds a draft tournament and generates mock student athletes with realistic OCR verification documents and confidence scores (95%, 80%, 45%) for instant live demo of the AIMS verification workflow.
+        *   *Live Halftime Showdown*: Injects a high-stakes, 4th quarter basketball match (CAS 68 vs CBA 65) with live clock, fouls, timeouts, player star tallies, and commentary feed ready for immediate kiosk or display testing.
+        *   *Completed Championship*: Populates championship finals, 3rd place bronze deciders, MVP Red/Gold stars, and updates the official Palawan State University medal tally (`/ranking`).
+    *   **User & Stats Manager**: Search and inspect all registered accounts, switch roles instantly (`dev`, `super_admin`, `facilitator`, `coach`, `player_student`, `player_faculty`), toggle `is_verified` status with one click, and reset rate-limiting lockouts.
+    *   **Live Match Event Bot**: Select any active match and pulse real-time scoring events (+2, +3, fouls, turnovers) every 6 seconds over WebSockets to demonstrate real-time telemetry across spectator screens, stadium displays, and mobile views.
+    *   **Database & System Health**: Monitor live row counts across 6 core tables (`tournaments`, `teams`, `matches`, `match_events`, `users`, `verification_documents`), purge orphaned records, and force-release expired scorekeeper leases.
+    *   **Capstone Defense Presentation Script**: 6-step guided walkthrough with direct deep-links for defense panelists.
+    *   **Root RBAC Bypass**: All permission checks (`isSuperAdmin`, `isCoach`, `isFacilitator`, `isStudentAthlete`) evaluate to `true` when logged in as `dev`, allowing the evaluator to inspect any interface without logging in and out of different accounts.
+
+---
+
 ## 3. Comprehensive Route Permission Matrix
 
-| Route Path | View / Component | Public | Student Athlete | Faculty Athlete | Coach | Facilitator | Super Admin |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| `/` | Live Dashboard & Ticker | Yes | Yes | Yes | Yes | Yes | Yes |
-| `/explorer` | Tournament Explorer & Brackets | Yes | Yes | Yes | Yes | Yes | Yes |
-| `/ranking` | University Medal Standings | Yes | Yes | Yes | Yes | Yes | Yes |
-| `/about` | Platform Rules & Information | Yes | Yes | Yes | Yes | Yes | Yes |
-| `/match/:matchId` | Live Matchroom (Viewer Mode) | Yes | Yes | Yes | Yes | Yes | Yes |
-| `/match/:matchId` | Live Matchroom (Scorekeeper Desk) | No | No | No | No | **Yes** | **Yes** |
-| `/player` | Athlete Console & COR Upload | No | **Yes** | **Yes** | No | No | Yes |
-| `/profile` | Profile, Invites & Achievements | No | **Yes** | **Yes** | **Yes** | **Yes** | Yes |
-| `/coach` | Coach Dashboard & Squad Stats | No | No | No | **Yes** | No | Yes |
-| `/coach/teams` | Roster & Lineup Management | No | No | No | **Yes** | No | Yes |
-| `/admin` | Executive Analytics & Appoint Modal | No | No | No | No | No | **Yes** |
-| `/admin/tournaments` | Bracket Engineering & Seeding | No | No | No | No | No | **Yes** |
-| `/admin/verifications` | COR PDF Review & AIMS Validation | No | No | No | No | No | **Yes** |
-| `/admin/audit-logs` | Security Event Audit Trail | No | No | No | No | No | **Yes** |
-| `/admin/recovery` | Soft-Deleted Entity Restoration | No | No | No | No | No | **Yes** |
+| Route Path | View / Component | Public | Student Athlete | Faculty Athlete | Coach | Facilitator | Super Admin | Platform Dev |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `/` | Live Dashboard & Ticker | Yes | Yes | Yes | Yes | Yes | Yes | **Yes** |
+| `/explorer` | Tournament Explorer & Brackets | Yes | Yes | Yes | Yes | Yes | Yes | **Yes** |
+| `/ranking` | University Medal Standings | Yes | Yes | Yes | Yes | Yes | Yes | **Yes** |
+| `/about` | Platform Rules & Information | Yes | Yes | Yes | Yes | Yes | Yes | **Yes** |
+| `/match/:matchId` | Live Matchroom (Viewer Mode) | Yes | Yes | Yes | Yes | Yes | Yes | **Yes** |
+| `/match/:matchId` | Live Matchroom (Scorekeeper Desk) | No | No | No | No | **Yes** | **Yes** | **Yes** |
+| `/match/:matchId/display` | Stadium Focus Jumbotron | Yes | Yes | Yes | Yes | Yes | Yes | **Yes** |
+| `/match/:matchId/kiosk` | Courtside Facilitator Kiosk | No | No | No | No | **Yes** | **Yes** | **Yes** |
+| `/player` | Athlete Console & COR Upload | No | **Yes** | **Yes** | No | No | Yes | **Yes** |
+| `/profile` | Profile, Invites & Achievements | No | **Yes** | **Yes** | **Yes** | **Yes** | Yes | **Yes** |
+| `/coach` | Coach Dashboard & Squad Stats | No | No | No | **Yes** | No | Yes | **Yes** |
+| `/coach/teams` | Roster & Lineup Management | No | No | No | **Yes** | No | Yes | **Yes** |
+| `/admin` | Executive Analytics & Appoint Modal | No | No | No | No | No | **Yes** | **Yes** |
+| `/admin/tournaments` | Bracket Engineering & Seeding | No | No | No | No | No | **Yes** | **Yes** |
+| `/admin/verifications` | COR PDF Review & AIMS Validation | No | No | No | No | No | **Yes** | **Yes** |
+| `/admin/audit-logs` | Security Event Audit Trail | No | No | No | No | No | **Yes** | **Yes** |
+| `/admin/recovery` | Soft-Deleted Entity Restoration | No | No | No | No | No | **Yes** | **Yes** |
+| `/dev` | Developer Sandbox & Thesis Command | No | No | No | No | No | **Yes** | **Yes** |
 
 ---
 
@@ -158,7 +181,7 @@ Athletic directors, tournament commissioners, and university system administrato
 
 Database constraint enforced on `users.role`:
 ```sql
-CHECK (role IN ('super_admin', 'facilitator', 'coach', 'player_student', 'player_faculty'))
+CHECK (role = ANY (ARRAY['super_admin', 'facilitator', 'coach', 'player_student', 'player_faculty', 'dev']))
 ```
 
 | Database Table | Select (Read) | Insert (Create) | Update (Modify) | Delete (Remove) |
