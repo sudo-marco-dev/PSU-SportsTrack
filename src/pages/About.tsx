@@ -62,7 +62,7 @@ export const About: React.FC = () => {
       <div className="space-y-4">
         <div className="flex items-center gap-2 px-1">
           <div className="size-6 sm:size-7 rounded-lg sm:rounded-xl bg-orange-500 text-white font-black text-xs flex items-center justify-center shadow-md">
-            ★
+            <Star className="size-3.5 fill-current" />
           </div>
           <h2 className="text-xs sm:text-sm font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
             Platform Capabilities &amp; Features

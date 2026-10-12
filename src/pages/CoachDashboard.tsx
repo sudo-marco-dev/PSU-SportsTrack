@@ -3,7 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TrendingUp, Users, UserPlus, Clock, ArrowUpRight, Activity, Trophy, ChevronRight } from 'lucide-react';
+import { TrendingUp, Users, UserPlus, Clock, ArrowUpRight, Activity, Trophy, ChevronRight, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -173,9 +173,10 @@ export const CoachDashboard = () => {
                   <span>Starts: {new Date(t.start_date || t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                   <button 
                     onClick={() => navigate('/coach/teams')} 
-                    className="text-orange-400 hover:text-orange-300 font-black uppercase tracking-wider cursor-pointer transition-all hover:translate-x-0.5 active:scale-95 duration-150 inline-flex items-center"
+                    className="text-orange-400 hover:text-orange-300 font-black uppercase tracking-wider cursor-pointer transition-all hover:translate-x-0.5 active:scale-95 duration-150 inline-flex items-center gap-1"
                   >
-                    Enroll →
+                    <span>Enroll</span>
+                    <ArrowRight className="size-3" />
                   </button>
                 </div>
               </div>

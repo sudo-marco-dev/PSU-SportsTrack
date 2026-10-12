@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { KeyRound, Trophy, Mail } from 'lucide-react';
+import { KeyRound, Trophy, Mail, ArrowLeft } from 'lucide-react';
 
 // ── Schemas ──
 
@@ -266,9 +266,10 @@ export const ResetPassword = () => {
               <div className="text-center mt-6">
                 <Link
                   to="/"
-                  className="text-[11px] font-bold uppercase tracking-widest text-slate-500 hover:text-orange-500 transition-colors underline underline-offset-4"
+                  className="text-[11px] font-bold uppercase tracking-widest text-slate-500 hover:text-orange-500 transition-colors underline underline-offset-4 inline-flex items-center gap-1.5"
                 >
-                  ← Return To Home
+                  <ArrowLeft className="size-3" />
+                  <span>Return To Home</span>
                 </Link>
               </div>
             </CardContent>

@@ -955,7 +955,7 @@ export const FacilitatorKiosk = () => {
     };
     const outName = resolveName(subOutPlayer.users) || (outJersey ? `Jersey #${outJersey}` : 'Player');
     const inName = resolveName(subInPlayer.users) || (inJersey ? `Jersey #${inJersey}` : 'Player');
-    const desc = `[Substitution]: ${outJersey ? '#' + outJersey + ' ' : ''}${outName} Off ➔ ${inJersey ? '#' + inJersey + ' ' : ''}${inName} On for ${teamName}.`;
+    const desc = `[Substitution]: ${outJersey ? '#' + outJersey + ' ' : ''}${outName} Off -> ${inJersey ? '#' + inJersey + ' ' : ''}${inName} On for ${teamName}.`;
     toast.success(desc);
 
     if (broadcastChannelRef.current) {

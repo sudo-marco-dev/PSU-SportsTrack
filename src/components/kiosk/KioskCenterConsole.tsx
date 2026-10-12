@@ -285,7 +285,7 @@ export const KioskCenterConsole = ({
             <span className={`${compact ? 'text-[9px]' : 'text-[11px]'} font-black uppercase tracking-wider`}>Swap</span>
           </div>
           <span className="text-[8px] text-slate-400 truncate max-w-full">
-            {isSwappedSides ? 'B Left ⇄ A Right' : 'Standard (A Left)'}
+            {isSwappedSides ? 'B Left / A Right' : 'Standard (A Left)'}
           </span>
         </button>
 

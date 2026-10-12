@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Activity, Trophy, Clock, Star, User, CalendarDays, Dumbbell, Swords, MapPin, XCircle, CheckCircle2, Zap } from 'lucide-react';
+import { Activity, Trophy, Clock, Star, User, CalendarDays, Dumbbell, Swords, MapPin, XCircle, CheckCircle2, Zap, ArrowRight } from 'lucide-react';
 
 type RosterInvite = {
   id: string;
@@ -475,8 +475,9 @@ export const PlayerDashboard = () => {
                 </h4>
                 <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/10 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
                   <span>Kickoff: {new Date(t.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                  <span className="text-orange-600 dark:text-orange-400 font-black uppercase tracking-wider group-hover:translate-x-1 transition-transform inline-flex items-center gap-0.5">
-                    View Details →
+                  <span className="text-orange-600 dark:text-orange-400 font-black uppercase tracking-wider group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
+                    <span>View Details</span>
+                    <ArrowRight className="size-3" />
                   </span>
                 </div>
               </div>

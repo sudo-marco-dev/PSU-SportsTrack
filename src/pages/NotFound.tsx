@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export function NotFound() {
@@ -14,19 +15,19 @@ export function NotFound() {
 
   const handleSmartRedirect = () => {
     if (!user) {
-      // Not authenticated → redirect to public dashboard
+      // Not authenticated -> redirect to public dashboard
       navigate('/', { replace: true });
     } else if (isSuperAdmin) {
-      // Super Admin → redirect to admin dashboard
+      // Super Admin -> redirect to admin dashboard
       navigate('/admin', { replace: true });
     } else if (isCoach) {
-      // Coach → redirect to coach dashboard
+      // Coach -> redirect to coach dashboard
       navigate('/coach', { replace: true });
     } else if (isPlayer) {
-      // Player → redirect to player dashboard
+      // Player -> redirect to player dashboard
       navigate('/player', { replace: true });
     } else if (isFacilitator) {
-      // Facilitator → redirect to match center
+      // Facilitator -> redirect to match center
       navigate('/explorer', { replace: true });
     } else {
       // Default fallback
@@ -93,9 +94,10 @@ export function NotFound() {
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="w-full py-2 text-slate-500 hover:text-slate-300 font-bold text-[11px] uppercase tracking-wider cursor-pointer active:scale-[0.98] transition-all"
+              className="w-full py-2 text-slate-500 hover:text-slate-300 font-bold text-[11px] uppercase tracking-wider cursor-pointer active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
             >
-              ← Go Back to Previous View
+              <ArrowLeft className="size-3.5" />
+              <span>Go Back to Previous View</span>
             </button>
           </div>
 

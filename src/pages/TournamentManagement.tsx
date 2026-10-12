@@ -32,7 +32,8 @@ import {
   MapPin,
   Eye,
   RotateCcw,
-  Medal
+  Medal,
+  ArrowLeft
 } from 'lucide-react';
 import type { IconType } from 'react-icons';
 import { 
@@ -2342,8 +2343,9 @@ export const TournamentManagement = () => {
                           Set the place (venue text), time, and date for each match below before launching the tournament tree.
                         </p>
                       </div>
-                      <Button variant="ghost" size="sm" className="text-[10px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400 h-8 shrink-0 border border-orange-300 dark:border-orange-500/30" onClick={() => { setWizardStep(1); setProposedMatches([]); }}>
-                        ← Re-Seed Bracket
+                      <Button variant="ghost" size="sm" className="text-[10px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400 h-8 shrink-0 border border-orange-300 dark:border-orange-500/30 inline-flex items-center gap-1" onClick={() => { setWizardStep(1); setProposedMatches([]); }}>
+                        <ArrowLeft className="size-3" />
+                        <span>Re-Seed Bracket</span>
                       </Button>
                     </div>
 

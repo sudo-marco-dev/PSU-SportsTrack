@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   Crown,
   ArrowRight,
+  ArrowLeft,
   Medal
 } from 'lucide-react';
 import { SPORT_ICONS, getSportIcon } from '@/lib/sportIcons';
@@ -535,9 +536,10 @@ export const TournamentExplorer = () => {
             <button
               type="button"
               onClick={() => setSelectedSport('all')}
-              className="text-[10px] sm:text-xs font-bold text-orange-500 hover:text-orange-600 uppercase tracking-widest cursor-pointer transition-colors duration-150 hover:underline"
+              className="text-[10px] sm:text-xs font-bold text-orange-500 hover:text-orange-600 uppercase tracking-widest cursor-pointer transition-colors duration-150 hover:underline inline-flex items-center gap-1"
             >
-              Show All →
+              <span>Show All</span>
+              <ArrowRight className="size-3" />
             </button>
           )}
         </div>
@@ -667,7 +669,7 @@ export const TournamentExplorer = () => {
                 >
                   <span>View Playoff Bracket</span>
                   <Trophy className="size-3.5" />
-                  <span>→</span>
+                  <ArrowRight className="size-3.5" />
                 </Button>
               </div>
             )}
@@ -827,7 +829,7 @@ export const TournamentExplorer = () => {
                                       className="w-full sm:w-auto border-orange-500 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-500/10 font-black uppercase italic tracking-widest text-[10px] h-10 px-5 rounded-xl transition-all"
                                       onClick={() => navigate(`/match/${match.id}`)}
                                     >
-                                      Matchroom →
+                                      Matchroom <ArrowRight className="size-3 inline ml-1" />
                                     </Button>
                                   </div>
                                 </div>
@@ -948,9 +950,10 @@ export const TournamentExplorer = () => {
                   <div className="pt-2 flex justify-center">
                     <Button
                       onClick={() => setActivePhase('elimination')}
-                      className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic text-xs tracking-wider h-10 sm:h-11 px-5 sm:px-6 rounded-xl shadow-lg shadow-orange-500/20 transition-all w-full sm:w-auto"
+                      className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic text-xs tracking-wider h-10 sm:h-11 px-5 sm:px-6 rounded-xl shadow-lg shadow-orange-500/20 transition-all w-full sm:w-auto inline-flex items-center justify-center gap-1.5"
                     >
-                      ← Back to Elimination Matches
+                      <ArrowLeft className="size-3.5" />
+                      <span>Back to Elimination Matches</span>
                     </Button>
                   </div>
                 </div>
@@ -1193,8 +1196,9 @@ const BracketMatchCard = ({ match, isFinals = false, isBronze = false, onNavigat
       </div>
 
       <div className="mt-2 text-right">
-        <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 group-hover:text-orange-400 transition-colors">
-          Matchroom Details →
+        <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 group-hover:text-orange-400 transition-colors inline-flex items-center gap-1">
+          <span>Matchroom Details</span>
+          <ArrowRight className="size-2.5" />
         </span>
       </div>
     </div>

@@ -24,7 +24,7 @@ export function useAuthRedirect() {
 
     // Check if this is an old route that should be redirected
     if (currentPath in REDIRECT_MAP) {
-      console.warn(`[Redirect] Old route detected: ${currentPath} → ${REDIRECT_MAP[currentPath]}`);
+      console.warn(`[Redirect] Old route detected: ${currentPath} -> ${REDIRECT_MAP[currentPath]}`);
       navigate(REDIRECT_MAP[currentPath], { replace: true });
     }
   }, [location.pathname, navigate]);

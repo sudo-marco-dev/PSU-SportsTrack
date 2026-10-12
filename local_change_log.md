@@ -1162,6 +1162,63 @@ This log tracks every user prompt, database migration, code change, and Git oper
     *   `npx eslint src/pages/DevSandbox.tsx` passed with **0 errors and 0 warnings**.
     *   Visual verification in browser subagent confirmed smooth curved surfaces, cohesive palette, and vibrant, readable function navigation.
 
+---
+
+### Prompt 56: Dev Sandbox Universal Palette Alignment (Light & Dark Theme Harmonization)
+*   **Timestamp**: 2026-10-12T20:34:00+08:00
+*   **User Directive**: "why is the color pallet like that? match it with the design of the whole project"
+*   **Root Cause Identified**:
+    *   `DevSandbox.tsx` had hardcoded dark slate and black background classes (`bg-slate-900/90 dark:bg-slate-950`, `border-slate-800`, `text-white`) across its `TabsList`, `Card` containers, tables, inputs, and simulation widgets without light mode counterparts.
+    *   When viewed in the platform's default light mode (`bg-slate-50`), `DevSandbox` presented jarring pitch-black monolithic blocks floating on a light gray page, completely breaking visual continuity with [`AdminDashboard.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/AdminDashboard.tsx), [`TournamentExplorer.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/TournamentExplorer.tsx), and [`Ranking.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/Ranking.tsx).
+    *   Additionally, Scenario B was using generic blue tones (`bg-blue-600`, `text-blue-300`) rather than PSU SportsTrack's canonical Emerald verification tokens.
+*   **Actions Taken**:
+    1.  **Collegiate Hero Banner Synchronization**:
+        *   Standardized the top hero strip to match `AdminDashboard` and `TournamentExplorer`: `bg-slate-950 text-white py-5 md:py-8 px-5 md:px-10 rounded-2xl md:rounded-[2.5rem] shadow-2xl border border-white/5` with authentic uppercase collegiate typography (`DEVELOPER & CAPSTONE COMMAND DECK`).
+    2.  **Adaptive Light/Dark Function Navigation Rail**:
+        *   Refactored `TabsList` to `bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 p-1.5 rounded-2xl shadow-sm`.
+        *   Configured `TabsTrigger` to render `text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5` when inactive, and vibrant Palawan Solar Orange (`data-[state=active]:bg-orange-500 data-[state=active]:text-white shadow-md shadow-orange-500/20`) when active.
+    3.  **Adaptive Surface Cards & Semantic Tokens Across All 5 Tabs**:
+        *   **Tab 1 (Scenarios)**: Cards now use `bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white rounded-2xl md:rounded-3xl shadow-sm`. Scenario B aligned to Emerald clearance (`bg-emerald-600`, `bg-emerald-500/10 text-emerald-700 dark:text-emerald-400`); Scenario C aligned to Solar Orange; Scenario D aligned to Championship Gold/Amber.
+        *   **Tab 2 (User Ledger)**: Replaced dark table styles with light-mode adaptive table (`bg-slate-50/70 dark:bg-slate-900/50` header, `text-slate-900 dark:text-white` names, `bg-white dark:bg-slate-950` role select).
+        *   **Tab 3 (Live Match Bot)**: Replaced dark card backgrounds with `bg-slate-50 dark:bg-slate-950/80` match selector cards, crisp Orange (+2/+3 Team A) and Cyan (+2/+3 Team B) scoring triggers.
+        *   **Tab 4 (Database & Health)**: Metric stat cards use clean `bg-white dark:bg-slate-900` cards with large tabular digits; maintenance actions restyled to slate outlines.
+        *   **Tab 5 (Capstone Defense Script)**: Step cards restyled with `bg-slate-50 dark:bg-slate-950/80 border-slate-200/80 dark:border-slate-800` and high-contrast launch action buttons.
+*   **Verification**:
+    *   `npm run build` compiled with **Exit Code 0** in 3.88s (zero TypeScript compilation errors).
+    *   `npx eslint src/pages/DevSandbox.tsx` passed with **0 errors and 0 warnings**.
+    *   Browser verification via Chrome DevTools confirmed seamless visual harmony across Tab 1, Tab 2, and Tab 3 in light mode and dark mode.
+
+---
+
+### Prompt 57: Zero-Emoji Discipline & Strict Vector Design System Enforcement
+*   **Timestamp**: 2026-10-12T20:45:00+08:00
+*   **User Directive**: "and again no emojis follow our design documentation always"
+*   **Root Cause Identified**:
+    *   A fire emoji had been embedded inside a step string in `DevSandbox.tsx` (`🔥 6-0 RUN`).
+    *   Several legacy pages (`NotFound.tsx`, `CoachDashboard.tsx`, `PlayerDashboard.tsx`, `ResetPassword.tsx`, `TournamentExplorer.tsx`, `TournamentManagement.tsx`) retained raw unicode glyphs (`←`, `→`, `✓`, `✗`, `★`, `➔`, `⇄`) in button labels and text spans instead of scalable Lucide SVG vectors, violating Section 1.1 (#4) and Section 5 of `design_context.md`.
+*   **Actions Taken**:
+    1.  **Codebase-Wide Non-ASCII & Emoji Sweep**:
+        *   Audited all 2,196 modules across `src/` for unicode surrogate pairs (`[\uD83C-\uDBFF\uDC00-\uDFFF]`), miscellaneous symbols and dingbats (`[\u2600-\u27BF]`), arrows (`[\u2190-\u21FF]`), and geometric symbols (`[\u25A0-\u25FF]`).
+        *   Replaced all occurrences with typed Lucide SVG vector components:
+            - `DevSandbox.tsx`: Replaced raw emoji text with pure text `(6-0 RUN alerts)`. Replaced unicode `✓` and `✗` with typed Lucide `<Check />` and `<X />` vectors. Replaced unicode `↗` with `<ExternalLink />`.
+            - `About.tsx`: Replaced unicode star `★` with typed `<Star className="size-3.5 fill-current" />`.
+            - `FacilitatorKiosk.tsx`: Replaced unicode arrow `➔` with standard ASCII `->`.
+            - `KioskCenterConsole.tsx`: Replaced unicode swap `⇄` with standard ASCII `/`.
+            - `NotFound.tsx`: Replaced `← Go Back to Previous View` with `<ArrowLeft className="size-3.5" /> <span>Go Back to Previous View</span>`. Converted comment arrows to ASCII `->`.
+            - `CoachDashboard.tsx`: Replaced `Enroll →` with `<span>Enroll</span><ArrowRight className="size-3" />`.
+            - `PlayerDashboard.tsx`: Replaced `View Details →` with `<span>View Details</span><ArrowRight className="size-3" />`.
+            - `ResetPassword.tsx`: Replaced `← Return To Home` with `<ArrowLeft className="size-3" /><span>Return To Home</span>`.
+            - `TournamentExplorer.tsx`: Replaced `Show All →`, `<span>→</span>`, `Matchroom →`, `← Back to Elimination Matches`, and `Matchroom Details →` with Lucide `<ArrowRight />` and `<ArrowLeft />` icons.
+            - `TournamentManagement.tsx`: Replaced `← Re-Seed Bracket` with `<ArrowLeft className="size-3" /><span>Re-Seed Bracket</span>`.
+            - `useAuthRedirect.ts`: Replaced unicode arrow in debug warning log with standard ASCII `->`.
+    2.  **Strict Zero-Symbol Verification**:
+        *   Automated regex scanner verifies **0 arrows, 0 dingbats, 0 emojis, and 0 geometric pseudo-icons** across the entire `src/` application directory.
+*   **Verification**:
+    *   `npm run build` compiled with **Exit Code 0** in 4.05s (2,196 modules transformed).
+    *   `npx eslint` passed across all modified files with **0 errors**.
+
+
+
 
 
 
