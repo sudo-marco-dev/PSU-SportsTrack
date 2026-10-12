@@ -1217,6 +1217,25 @@ This log tracks every user prompt, database migration, code change, and Git oper
     *   `npm run build` compiled with **Exit Code 0** in 4.05s (2,196 modules transformed).
     *   `npx eslint` passed across all modified files with **0 errors**.
 
+---
+
+### Prompt 58: Access Control Documentation Hardening & Design Document Consolidation
+*   **Timestamp**: 2026-10-12T21:35:00+08:00
+*   **User Directive**: "yes purge them and also update the @user_roles_and_access_control.md so that everthing mentioning the dev "mode"/role is at the bottom in the debbuging or dev section this will not be in the "final prod" and check why is there @design.md and @design_context.md are they the same why is there a duplicate if so keep one and merge them"
+*   **Actions Taken**:
+    1.  **Access Control Documentation Hardening ([`user_roles_and_access_control.md`](file:///f:/VScodes/SportsTrack/psu-sportstrack/user_roles_and_access_control.md))**:
+        *   **Purged Hallucinations**: Eradicated all references to "achievement badges" and "fan engagement star votes" (lines 43, 56, 57). Corrected athlete rewards to accurately reflect the official Trophy Case displaying MVP Red Stars (match honors awarded by table officials) and Gold Stars (tournament honors awarded by athletic directors).
+        *   **Production Hierarchy Clarified**: Reorganized the core specification into 6 production user categories and 5 canonical production database roles (`super_admin`, `facilitator`, `coach`, `player_student`, `player_faculty`).
+        *   **Relocated Dev Role & Workbench**: Moved all documentation concerning the `'dev'` role, `/dev` workbench, scenario injectors, and live test bots into a dedicated bottom section: **Section 6: Developer Workbench & Pre-Production Debugging Suite (Non-Production Only)**. Clearly labeled this environment as an ephemeral, transient evaluation tool that will not exist in final production.
+    2.  **Design Specification Consolidation**:
+        *   Investigated `design.md` vs `design_context.md`. Byte comparison verified they were 100% identical duplicates (created in Prompt 26 as a mirror).
+        *   Removed duplicate `design.md` via `git rm design.md`.
+        *   Preserved [`design_context.md`](file:///f:/VScodes/SportsTrack/psu-sportstrack/design_context.md) as the single canonical design system specification and Anti-Slop Directive for the platform.
+*   **Verification**:
+    *   `npm run build` verified: zero TypeScript or bundling issues.
+    *   `user_roles_and_access_control.md` accurately matches the active codebase and security schema.
+
+
 
 
 

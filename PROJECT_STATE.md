@@ -187,7 +187,6 @@
   - `src/components/ui/tabs.tsx`
   - `src/pages/About.tsx`
   - `design_context.md`
-  - `design.md`
 
 ### Dynamic Theme Engine (Next-Themes) & Nocturnal Color Architecture
 - **Description**: Integrated dark/light mode switching system:
