@@ -72,13 +72,17 @@ function AppRoutes() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/achievements" element={<Navigate to="/profile" replace />} />
 
-            {/* Role-Specific Routes */}
-            <Route element={<ProtectedRoute requiredRole={['super_admin', 'dev']} />}>
+            {/* Super Admin Protected Routes */}
+            <Route element={<ProtectedRoute requiredRole="super_admin" />}>
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/tournaments" element={<TournamentManagement />} />
               <Route path="/admin/verifications" element={<SystemVerifications />} />
               <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
               <Route path="/admin/recovery" element={<AdminRecovery />} />
+            </Route>
+
+            {/* Platform Developer Isolated Protected Route */}
+            <Route element={<ProtectedRoute requiredRole="dev" />}>
               <Route path="/dev" element={<DevSandbox />} />
             </Route>
 

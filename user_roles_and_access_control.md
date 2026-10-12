@@ -148,7 +148,8 @@ System architects, thesis developers, and capstone evaluators with unrestricted 
     *   **Live Match Event Bot**: Select any active match and pulse real-time scoring events (+2, +3, fouls, turnovers) every 6 seconds over WebSockets to demonstrate real-time telemetry across spectator screens, stadium displays, and mobile views.
     *   **Database & System Health**: Monitor live row counts across 6 core tables (`tournaments`, `teams`, `matches`, `match_events`, `users`, `verification_documents`), purge orphaned records, and force-release expired scorekeeper leases.
     *   **Capstone Defense Presentation Script**: 6-step guided walkthrough with direct deep-links for defense panelists.
-    *   **Root RBAC Bypass**: All permission checks (`isSuperAdmin`, `isCoach`, `isFacilitator`, `isStudentAthlete`) evaluate to `true` when logged in as `dev`, allowing the evaluator to inspect any interface without logging in and out of different accounts.
+    *   **Dedicated Account & Database Provisioning**: Developer accounts are strictly separated from Super Admin credentials with their own distinct email and password. To assign or provision a `dev` account, the `role` column must be manually edited in the Supabase database table (`public.users.role = 'dev'`). The public registration portal cannot register developer accounts.
+    *   **Strict Access Boundary**: Platform Developers operate within the `/dev` command center and cannot access super administrator management suites (`/admin/*`). Likewise, Super Administrators cannot access developer sandbox controls (`/dev`).
 
 ---
 
@@ -156,24 +157,24 @@ System architects, thesis developers, and capstone evaluators with unrestricted 
 
 | Route Path | View / Component | Public | Student Athlete | Faculty Athlete | Coach | Facilitator | Super Admin | Platform Dev |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `/` | Live Dashboard & Ticker | Yes | Yes | Yes | Yes | Yes | Yes | **Yes** |
-| `/explorer` | Tournament Explorer & Brackets | Yes | Yes | Yes | Yes | Yes | Yes | **Yes** |
-| `/ranking` | University Medal Standings | Yes | Yes | Yes | Yes | Yes | Yes | **Yes** |
-| `/about` | Platform Rules & Information | Yes | Yes | Yes | Yes | Yes | Yes | **Yes** |
-| `/match/:matchId` | Live Matchroom (Viewer Mode) | Yes | Yes | Yes | Yes | Yes | Yes | **Yes** |
-| `/match/:matchId` | Live Matchroom (Scorekeeper Desk) | No | No | No | No | **Yes** | **Yes** | **Yes** |
-| `/match/:matchId/display` | Stadium Focus Jumbotron | Yes | Yes | Yes | Yes | Yes | Yes | **Yes** |
-| `/match/:matchId/kiosk` | Courtside Facilitator Kiosk | No | No | No | No | **Yes** | **Yes** | **Yes** |
-| `/player` | Athlete Console & COR Upload | No | **Yes** | **Yes** | No | No | Yes | **Yes** |
-| `/profile` | Profile, Invites & Achievements | No | **Yes** | **Yes** | **Yes** | **Yes** | Yes | **Yes** |
-| `/coach` | Coach Dashboard & Squad Stats | No | No | No | **Yes** | No | Yes | **Yes** |
-| `/coach/teams` | Roster & Lineup Management | No | No | No | **Yes** | No | Yes | **Yes** |
-| `/admin` | Executive Analytics & Appoint Modal | No | No | No | No | No | **Yes** | **Yes** |
-| `/admin/tournaments` | Bracket Engineering & Seeding | No | No | No | No | No | **Yes** | **Yes** |
-| `/admin/verifications` | COR PDF Review & AIMS Validation | No | No | No | No | No | **Yes** | **Yes** |
-| `/admin/audit-logs` | Security Event Audit Trail | No | No | No | No | No | **Yes** | **Yes** |
-| `/admin/recovery` | Soft-Deleted Entity Restoration | No | No | No | No | No | **Yes** | **Yes** |
-| `/dev` | Developer Sandbox & Thesis Command | No | No | No | No | No | **Yes** | **Yes** |
+| `/` | Live Dashboard & Ticker | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| `/explorer` | Tournament Explorer & Brackets | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| `/ranking` | University Medal Standings | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| `/about` | Platform Rules & Information | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| `/match/:matchId` | Live Matchroom (Viewer Mode) | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| `/match/:matchId` | Live Matchroom (Scorekeeper Desk) | No | No | No | No | **Yes** | **Yes** | No |
+| `/match/:matchId/display` | Stadium Focus Jumbotron | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| `/match/:matchId/kiosk` | Courtside Facilitator Kiosk | No | No | No | No | **Yes** | **Yes** | No |
+| `/player` | Athlete Console & COR Upload | No | **Yes** | **Yes** | No | No | No | No |
+| `/profile` | Profile, Invites & Achievements | No | **Yes** | **Yes** | **Yes** | **Yes** | **Yes** | **Yes** |
+| `/coach` | Coach Dashboard & Squad Stats | No | No | No | **Yes** | No | No | No |
+| `/coach/teams` | Roster & Lineup Management | No | No | No | **Yes** | No | No | No |
+| `/admin` | Executive Analytics & Appoint Modal | No | No | No | No | No | **Yes** | No |
+| `/admin/tournaments` | Bracket Engineering & Seeding | No | No | No | No | No | **Yes** | No |
+| `/admin/verifications` | COR PDF Review & AIMS Validation | No | No | No | No | No | **Yes** | No |
+| `/admin/audit-logs` | Security Event Audit Trail | No | No | No | No | No | **Yes** | No |
+| `/admin/recovery` | Soft-Deleted Entity Restoration | No | No | No | No | No | **Yes** | No |
+| `/dev` | Developer Sandbox & Thesis Command | No | No | No | No | No | No | **Yes** |
 
 ---
 

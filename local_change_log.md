@@ -1090,6 +1090,39 @@ This log tracks every user prompt, database migration, code change, and Git oper
         *   Updated [`user_roles_and_access_control.md`](file:///f:/VScodes/SportsTrack/psu-sportstrack/user_roles_and_access_control.md) to document seven unified user roles including `dev`, Section 2.7 specifications, updated permission matrix, and updated PostgreSQL constraint.
         *   Updated [`PROJECT_STATE.md`](file:///f:/VScodes/SportsTrack/psu-sportstrack/PROJECT_STATE.md) with Phase 7 milestones and deployment readiness.
 
+---
+
+### Prompt 54: Strict Decoupling of Super Admin and Dev Roles & Database Provisioning
+*   **Timestamp**: 2026-10-12T19:55:00+08:00
+*   **User Directive**: "dont place it with the superadmin account it should have a seperate email and pass with role to the database and to make that dev account it should be edited in the supabase table"
+*   **Root Motivation**:
+    *   Previously, the Developer Sandbox was partially co-located with `super_admin` in `ProtectedRoute requiredRole={['super_admin', 'dev']}` and `AppLayout`.
+    *   The user clarified that the Super Admin role (`super_admin`) must remain strictly dedicated to university athletic directorate operations without developer sandbox tools.
+    *   Developer access requires a dedicated separate user account with its own independent email and password, provisioned by editing the `role` column in the Supabase `public.users` table (`role = 'dev'`).
+*   **Actions Taken**:
+    1.  **Dedicated Developer Account Provisioned in Supabase**:
+        *   Executed secure PostgreSQL SQL script creating `dev@sportstrack.com` with password `test1234` in `auth.users` and `auth.identities`.
+        *   Set `role = 'dev'` directly in `public.users` (UUID: `4af94002-41b0-4629-8950-e38263f28fb6`).
+        *   Documented that assigning or promoting any user to `dev` is done by directly modifying the `role` column in the Supabase `public.users` table.
+    2.  **Strict Route Isolation ([`src/App.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/App.tsx))**:
+        *   Separated `/admin/*` routes into `<ProtectedRoute requiredRole="super_admin">`.
+        *   Isolated `/dev` route into `<ProtectedRoute requiredRole="dev">`.
+        *   Super Administrators can no longer access `/dev`, and Developers can no longer access `/admin/*`.
+    3.  **Role Flag Decoupling ([`src/context/AuthContext.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/context/AuthContext.tsx))**:
+        *   Reverted `isSuperAdmin` to strict equality `role === 'super_admin'`.
+        *   `isDev` remains strict equality `role === 'dev'`.
+        *   Prevented permission leakage between administrator and developer roles.
+    4.  **Route Guard Hardening ([`src/components/ProtectedRoute.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/ProtectedRoute.tsx))**:
+        *   Updated route evaluation so `req === 'dev'` strictly checks `isDev` and `req === 'super_admin'` strictly checks `isSuperAdmin`.
+    5.  **Navigation Segregation ([`src/components/AppLayout.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/AppLayout.tsx))**:
+        *   Dev Sandbox nav link now only appears when `isDev`.
+        *   Super Admin nav links (Tournaments, System Verifications, Audit Logs, Recovery Center) now only appear when `isSuperAdmin`.
+        *   Removed `Terminal` from `AdminDashboard.tsx`.
+    6.  **Documentation Synchronization**:
+        *   Updated [`user_roles_and_access_control.md`](file:///f:/VScodes/SportsTrack/psu-sportstrack/user_roles_and_access_control.md) matrix and section 2.7 to specify the strict boundary and table-based role editing.
+        *   Updated [`PROJECT_STATE.md`](file:///f:/VScodes/SportsTrack/psu-sportstrack/PROJECT_STATE.md).
+
+
 
 
 

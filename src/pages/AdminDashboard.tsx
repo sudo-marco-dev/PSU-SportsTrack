@@ -11,7 +11,6 @@ import {
   ShieldCheck,
   TrendingUp,
   History,
-  Terminal,
   RotateCcw
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -389,22 +388,6 @@ export const AdminDashboard = () => {
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
-            <Button
-              onClick={() => navigate('/dev')}
-              className="h-20 bg-white dark:bg-slate-900 border-2 border-orange-500/30 hover:border-orange-500 hover:bg-orange-50/50 dark:hover:bg-orange-500/10 rounded-3xl flex items-center justify-between px-6 group transition-all cursor-pointer shadow-sm"
-            >
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-orange-500/10 rounded-xl group-hover:bg-orange-500 transition-colors">
-                  <Terminal className="size-5 text-orange-500 group-hover:text-white" />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-black uppercase italic tracking-tight text-slate-900 dark:text-white leading-none mb-1">Dev Sandbox</p>
-                  <p className="text-[9px] font-bold text-orange-500 uppercase tracking-widest">Capstone Test Deck</p>
-                </div>
-              </div>
-              <ChevronRight className="size-4 text-orange-500 group-hover:translate-x-1 transition-transform" />
-            </Button>
-
             <Button
               onClick={() => navigate('/admin/tournaments')}
               className="h-20 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-500/5 rounded-3xl flex items-center justify-between px-6 group transition-all cursor-pointer"

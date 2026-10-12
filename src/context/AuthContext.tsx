@@ -176,10 +176,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Derived role permission flags
   const isDev = role === 'dev';
-  const isSuperAdmin = role === 'super_admin' || isDev;
+  const isSuperAdmin = role === 'super_admin';
   const isFacilitator = role === 'facilitator' || isSuperAdmin;
-  const isCoach = role === 'coach' || isDev;
-  const isPlayer = role === 'player_student' || role === 'player_faculty' || isDev;
+  const isCoach = role === 'coach';
+  const isPlayer = role === 'player_student' || role === 'player_faculty';
   const isFacultyAthlete = role === 'player_faculty';
   const isStudentAthlete = role === 'player_student';
 

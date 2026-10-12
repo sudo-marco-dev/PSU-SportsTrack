@@ -67,14 +67,16 @@ export const AppLayout = () => {
       href: '/ranking',
       icon: Medal
     },
-    ...(isSuperAdmin || isDev ? [
+    ...(isDev ? [
       { name: 'Dev Sandbox', href: '/dev', icon: Terminal },
+    ] : []),
+    ...(isSuperAdmin ? [
       { name: 'Tournaments', href: '/admin/tournaments', icon: Trophy },
       { name: 'System Verifications', href: '/admin/verifications', icon: ShieldCheck },
       { name: 'System Audit', href: '/admin/audit-logs', icon: ClipboardList },
       { name: 'Recovery Center', href: '/admin/recovery', icon: RotateCcw },
     ] : []),
-    ...(isFacilitator && !isSuperAdmin && !isDev ? [
+    ...(isFacilitator && !isSuperAdmin ? [
       { name: 'Live Scorer', href: '/explorer', icon: Activity },
     ] : []),
     ...(isCoach ? [
@@ -90,8 +92,10 @@ export const AppLayout = () => {
   const isActive = (path: string) => location.pathname === path;
 
   // Secondary management routes that make "More" tab show active state
-  const isMoreRouteActive = ['/about'].includes(location.pathname) || (isSuperAdmin || isDev
-    ? ['/admin/tournaments', '/admin/verifications', '/admin/audit-logs', '/admin/recovery', '/dev'].includes(location.pathname)
+  const isMoreRouteActive = ['/about'].includes(location.pathname) || (isDev
+    ? ['/dev'].includes(location.pathname)
+    : isSuperAdmin
+    ? ['/admin/tournaments', '/admin/verifications', '/admin/audit-logs', '/admin/recovery'].includes(location.pathname)
     : isCoach
     ? ['/coach/teams'].includes(location.pathname)
     : false);

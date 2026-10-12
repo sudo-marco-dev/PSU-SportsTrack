@@ -252,7 +252,7 @@
 
 ### Phase 7: Developer Portal, Capstone Command Center & Thesis Defense Workbench
 - **Description**: Enterprise developer instrumentation suite, multi-stage thesis presentation scenarios, and canonical root persona:
-  1. **Canonical `dev` Role & Database Constraint**: Updated Supabase PostgreSQL `users_role_check` constraint to support `'dev'`. Created database migration `20261012_add_dev_role.sql`. Added `isDev` with complete root bypass across all RBAC evaluations (`isSuperAdmin`, `isCoach`, `isFacilitator`, `isStudentAthlete`).
+  1. **Canonical `dev` Role & Database Table Provisioning**: Updated Supabase PostgreSQL `users_role_check` constraint to support `'dev'`. Created database migration `20261012_add_dev_role.sql`. Provisioned standalone developer account (`dev@sportstrack.com`). To grant developer access, the role is manually assigned/edited directly in the Supabase database table (`public.users.role = 'dev'`).
   2. **Dedicated Capstone Sandbox Workbench (`/dev`)**: Built standalone developer portal (`DevSandbox.tsx`) accessible via `/dev` with 5 specialized evaluation tabs.
   3. **Multi-Stage Capstone Scenario Injectors (`devScenarios.ts`)**:
      - *Clean Slate*: Safely clears ephemeral test tournaments, brackets, match events, and rosters without touching university colleges or user credentials.
@@ -263,7 +263,7 @@
   5. **Live Match Event Bot**: Interactive play simulator and auto-play bot pulsing real-time score events every 6s over WebSockets for multi-device sync testing.
   6. **Database Health & Row Counter**: Live row counts across 6 primary tables with one-click cleanup routines.
   7. **Capstone Defense Presentation Script**: 6-step guided walkthrough with direct interactive deep-links.
-  8. **Clean Admin Separation**: Removed the disruptive demo reset banner from `AdminDashboard.tsx`, replacing it with an elegant "Dev Sandbox" button in Quick Operations.
+  8. **Strict Admin & Dev Isolation**: Completely segregated Super Admin from Developer tools. Super Administrators have zero access to `/dev`, no dev buttons on `AdminDashboard.tsx`, and no dev links in navigation. Platform Developers operate within `/dev` with their own independent login credentials.
 - **Files Modified / Created**:
   - `supabase/migrations/20261012_add_dev_role.sql`
   - `src/context/AuthContext.tsx`
