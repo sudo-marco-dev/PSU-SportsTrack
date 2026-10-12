@@ -1121,6 +1121,47 @@ This log tracks every user prompt, database migration, code change, and Git oper
     6.  **Documentation Synchronization**:
         *   Updated [`user_roles_and_access_control.md`](file:///f:/VScodes/SportsTrack/psu-sportstrack/user_roles_and_access_control.md) matrix and section 2.7 to specify the strict boundary and table-based role editing.
         *   Updated [`PROJECT_STATE.md`](file:///f:/VScodes/SportsTrack/psu-sportstrack/PROJECT_STATE.md).
+    *   **Verification**:
+        *   `npm run build` compiled with exit code 0.
+        *   Dev user created in Supabase (`dev@sportstrack.com`).
+        *   Verified `/admin` redirects non-superadmins and `/dev` is only accessible to dev role.
+
+---
+
+### Prompt 55: Dev Sandbox UI Polish, Soft Rounded Hero Banner & High-Contrast Function Navs
+*   **Timestamp**: 2026-10-12T20:20:00+08:00
+*   **User Directive**: "fix the ui the black hard angle box is a bit odd and also some text contrast are hard to see like the fucntion navs"
+*   **Root Causes Identified**:
+    1.  **Outer Hard Angle Pitch-Black Box**:
+        *   In [`src/pages/DevSandbox.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/DevSandbox.tsx), the root element was `<div className="min-h-screen bg-[#020617] p-4 sm:p-8 space-y-8">`.
+        *   Because `DevSandbox` is rendered inside `AppLayout`'s `<main className="max-w-7xl mx-auto px-4 ...">`, nesting a full `min-h-screen bg-[#020617]` created an inner pitch-black rectangular box with sharp 90-degree corners that clashed with the platform's curved nocturnal aesthetic (`rounded-2xl` / `rounded-[2.5rem]`).
+    2.  **Low-Contrast Function Tabs & Triggers**:
+        *   Default shadcn `TabsList` and `TabsTrigger` inherited muted foreground classes that rendered dark slate text (`#64748b`) against `#0f172a`, making the 5 workbench tabs (`Demo Scenarios`, `User & Stats Manager`, `Live Match Bot Simulator`, `Database & Health`, `Capstone Defense Script`) dim and barely readable.
+        *   Scenario descriptions and secondary card actions lacked sufficient contrast against dark card surfaces.
+*   **Actions Taken**:
+    1.  **Container Flow & Soft Curved Hero Banner ([`src/pages/DevSandbox.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/DevSandbox.tsx))**:
+        *   Eliminated the rigid `min-h-screen bg-[#020617]` wrapper. Replaced with `<div className="space-y-6 md:space-y-8 relative w-full pb-10">` that seamlessly integrates into `AppLayout`.
+        *   Crafted a soft curved hero banner (`bg-slate-900/90 dark:bg-slate-950 rounded-2xl md:rounded-[2.5rem] border border-white/10 dark:border-white/5 backdrop-blur-xl shadow-2xl`) featuring an ambient orange radial glow sphere (`blur-[120px]`).
+        *   Preserved tactile header tools (Admin Center, Match Center shortcuts, and Reset Lockout trigger) with high-contrast pill styling and clear hover states.
+    2.  **High-Contrast Function Navigation ("Function Navs")**:
+        *   Upgraded `TabsList` to a modern nocturnal pill bar (`bg-slate-900/90 dark:bg-slate-950 border border-white/10 p-1.5 rounded-2xl md:rounded-3xl gap-1`).
+        *   Configured high-contrast `TabsTrigger` states:
+            *   **Inactive Tabs**: `text-slate-300 font-black text-xs uppercase tracking-wider hover:text-white hover:bg-white/10` with crisp vector Lucide icons.
+            *   **Active Tab**: `data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-orange-500/30 font-black`.
+        *   Guaranteed WCAG AAA legibility across all 5 evaluation tabs.
+    3.  **Scenario Cards & Action Polish**:
+        *   Refactored Scenarios A, B, C, and D cards to smooth rounded surfaces (`rounded-2xl md:rounded-3xl border-white/10`) with vibrant collegiate tags (`border-orange-500/30 text-orange-400 bg-orange-500/10`).
+        *   Enhanced description contrast: `text-slate-300 font-normal leading-relaxed text-xs sm:text-sm`.
+        *   Standardized 44px+ tactile buttons (`h-11 rounded-xl font-black text-xs uppercase tracking-wider active:scale-[0.98] transition-all`).
+    4.  **Tables, Bot Simulator & Telemetry Contrast**:
+        *   Elevated User Ledger table typography with clear headers (`text-slate-400 font-mono text-xs uppercase tracking-wider`) and readable user rows.
+        *   Brightened Live Match Bot score buttons and real-time commentary stream.
+        *   Upgraded Database Health counters and Capstone Defense Script walkthrough steps with readable step numbers and high-contrast links.
+*   **Verification**:
+    *   `npm run build` compiled with **Exit Code 0** in 3.85s (2196 modules transformed cleanly).
+    *   `npx eslint src/pages/DevSandbox.tsx` passed with **0 errors and 0 warnings**.
+    *   Visual verification in browser subagent confirmed smooth curved surfaces, cohesive palette, and vibrant, readable function navigation.
+
 
 
 

@@ -264,6 +264,7 @@
   6. **Database Health & Row Counter**: Live row counts across 6 primary tables with one-click cleanup routines.
   7. **Capstone Defense Presentation Script**: 6-step guided walkthrough with direct interactive deep-links.
   8. **Strict Admin & Dev Isolation**: Completely segregated Super Admin from Developer tools. Super Administrators have zero access to `/dev`, no dev buttons on `AdminDashboard.tsx`, and no dev links in navigation. Platform Developers operate within `/dev` with their own independent login credentials.
+  9. **UI Polish & Contrast Elevation**: Softened the Developer Workbench layout by removing the pitch-black hard-angle box wrapper, introducing a curved hero banner (`rounded-[2.5rem]`) with ambient radial glow, and engineering high-contrast pill navigation triggers (`TabsList` / `TabsTrigger`) with bold uppercase collegiate typography and WCAG AAA legibility.
 - **Files Modified / Created**:
   - `supabase/migrations/20261012_add_dev_role.sql`
   - `src/context/AuthContext.tsx`

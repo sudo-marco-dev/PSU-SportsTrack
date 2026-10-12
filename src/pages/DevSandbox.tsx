@@ -178,9 +178,17 @@ export const DevSandbox = () => {
   }, []);
 
   useEffect(() => {
-    fetchUsers();
-    fetchActiveMatches();
-    fetchMetrics();
+    let mounted = true;
+    const init = async () => {
+      if (!mounted) return;
+      await fetchUsers();
+      await fetchActiveMatches();
+      await fetchMetrics();
+    };
+    init();
+    return () => {
+      mounted = false;
+    };
   }, [fetchUsers, fetchActiveMatches, fetchMetrics]);
 
   // Scenario Execution Handler
@@ -298,98 +306,98 @@ export const DevSandbox = () => {
   });
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white p-4 sm:p-8 space-y-8 select-none">
-      {/* Top Header Command Strip */}
-      <header className="border-b border-white/10 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
+    <div className="space-y-6 md:space-y-8 relative w-full pb-10">
+      {/* Top Header Command Strip - Curved Hero Banner Matching Platform Design */}
+      <div className="bg-slate-900/90 dark:bg-slate-950 text-white py-6 md:py-8 px-6 md:px-10 rounded-2xl md:rounded-[2.5rem] shadow-2xl border border-white/10 dark:border-white/5 relative overflow-hidden group flex flex-col md:flex-row md:items-center justify-between gap-6 backdrop-blur-xl">
+        <div className="relative z-10">
           <div className="flex items-center gap-3 mb-2 flex-wrap">
-            <div className="size-10 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-400">
+            <div className="size-10 rounded-xl bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-orange-400 shadow-md">
               <Terminal className="size-5" />
             </div>
             <div>
-              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-orange-400 block">
+              <span className="text-[11px] font-black uppercase tracking-[0.25em] text-orange-400 block font-mono">
                 PSU SPORTSTRACK CAPSTONE ARCHITECTURE
               </span>
-              <h1 className="text-2xl sm:text-3xl font-black uppercase italic tracking-tight text-white">
-                Developer & Capstone Command Deck
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black uppercase italic tracking-tight text-white leading-none">
+                DEVELOPER & CAPSTONE <span className="text-orange-500">COMMAND DECK</span>
               </h1>
             </div>
-            <Badge className="bg-orange-500/20 text-orange-400 border border-orange-500/40 text-[10px] font-black uppercase tracking-wider px-2 py-0.5">
+            <Badge className="bg-orange-500 text-white font-black uppercase tracking-wider text-[10px] px-2.5 py-0.5 rounded-full shadow-md">
               DEV SANDBOX
             </Badge>
           </div>
-          <p className="text-xs sm:text-sm text-slate-400 max-w-2xl font-medium">
-            Centralized orchestration hub for thesis defense scenarios, live WebSocket match simulation, rapid role impersonation, database inspection, and instant test state injection.
+          <p className="text-slate-300 font-sans font-medium text-xs sm:text-sm tracking-wide mt-2 max-w-2xl leading-relaxed">
+            Centralized orchestration hub for thesis defense scenarios, live WebSocket match simulation, user role controls, database inspection, and instant test state injection.
           </p>
         </div>
 
         {/* Header Navigation Shortcuts */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative z-10 shrink-0 flex items-center gap-2.5 flex-wrap">
           <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/admin')}
-            className="rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold uppercase tracking-wider gap-1.5"
-          >
-            <span>Admin Center</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
             onClick={() => navigate('/explorer')}
-            className="rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold uppercase tracking-wider gap-1.5"
+            variant="ghost"
+            className="h-11 border border-white/15 hover:border-orange-500/60 bg-white/5 hover:bg-orange-500/20 text-white hover:text-white font-bold gap-2 px-4 rounded-xl text-xs uppercase tracking-wider group cursor-pointer"
           >
             <span>Match Center</span>
           </Button>
           <Button
-            variant="outline"
-            size="sm"
+            onClick={() => navigate('/ranking')}
+            variant="ghost"
+            className="h-11 border border-white/15 hover:border-orange-500/60 bg-white/5 hover:bg-orange-500/20 text-white hover:text-white font-bold gap-2 px-4 rounded-xl text-xs uppercase tracking-wider group cursor-pointer"
+          >
+            <span>Leaderboard</span>
+          </Button>
+          <Button
             onClick={handleClearLockout}
-            className="rounded-xl border-orange-500/30 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 text-xs font-bold uppercase tracking-wider gap-1.5"
+            variant="ghost"
+            className="h-11 border border-orange-500/40 hover:border-orange-500 bg-orange-500/15 hover:bg-orange-500/25 text-orange-300 hover:text-orange-200 font-black gap-2 px-4 rounded-xl text-xs uppercase tracking-wider cursor-pointer shadow-sm"
             title="Reset 5-minute lockout timer from failed logins"
           >
-            <ShieldAlert className="size-3.5" />
+            <ShieldAlert className="size-4 text-orange-400" />
             <span>Reset Lockout</span>
           </Button>
         </div>
-      </header>
 
-      {/* Main Workbench Tabs */}
+        {/* Subtle Ambient Glow */}
+        <div className="absolute -right-20 -top-20 size-[28rem] bg-orange-500/10 rounded-full blur-[120px] pointer-events-none group-hover:bg-orange-500/20 transition-all duration-1000" />
+      </div>
+
+      {/* Main Workbench Tabs with High-Contrast Pill Nav */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-slate-900 border border-white/10 p-1 rounded-2xl flex flex-wrap h-auto gap-1">
+        <TabsList className="bg-slate-900/90 dark:bg-slate-950 border border-slate-700/80 dark:border-white/10 p-1.5 rounded-2xl flex flex-wrap h-auto gap-1.5 shadow-xl backdrop-blur-md">
           <TabsTrigger
             value="scenarios"
-            className="rounded-xl font-bold text-xs uppercase tracking-wider data-[state=active]:bg-orange-500 data-[state=active]:text-slate-950 gap-2 h-10 px-4"
+            className="rounded-xl font-black text-xs uppercase tracking-wider px-5 py-2.5 transition-all duration-200 cursor-pointer flex items-center gap-2 text-slate-300 hover:text-white hover:bg-white/10 data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-orange-500/30"
           >
-            <Sparkles className="size-3.5" />
+            <Sparkles className="size-4" />
             <span>Demo Scenarios</span>
           </TabsTrigger>
           <TabsTrigger
             value="users"
-            className="rounded-xl font-bold text-xs uppercase tracking-wider data-[state=active]:bg-orange-500 data-[state=active]:text-slate-950 gap-2 h-10 px-4"
+            className="rounded-xl font-black text-xs uppercase tracking-wider px-5 py-2.5 transition-all duration-200 cursor-pointer flex items-center gap-2 text-slate-300 hover:text-white hover:bg-white/10 data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-orange-500/30"
           >
-            <Users className="size-3.5" />
+            <Users className="size-4" />
             <span>User & Stats Manager</span>
           </TabsTrigger>
           <TabsTrigger
             value="bot"
-            className="rounded-xl font-bold text-xs uppercase tracking-wider data-[state=active]:bg-orange-500 data-[state=active]:text-slate-950 gap-2 h-10 px-4"
+            className="rounded-xl font-black text-xs uppercase tracking-wider px-5 py-2.5 transition-all duration-200 cursor-pointer flex items-center gap-2 text-slate-300 hover:text-white hover:bg-white/10 data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-orange-500/30"
           >
-            <Bot className="size-3.5" />
+            <Bot className="size-4" />
             <span>Live Match Bot Simulator</span>
           </TabsTrigger>
           <TabsTrigger
             value="metrics"
-            className="rounded-xl font-bold text-xs uppercase tracking-wider data-[state=active]:bg-orange-500 data-[state=active]:text-slate-950 gap-2 h-10 px-4"
+            className="rounded-xl font-black text-xs uppercase tracking-wider px-5 py-2.5 transition-all duration-200 cursor-pointer flex items-center gap-2 text-slate-300 hover:text-white hover:bg-white/10 data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-orange-500/30"
           >
-            <Database className="size-3.5" />
+            <Database className="size-4" />
             <span>Database & Health</span>
           </TabsTrigger>
           <TabsTrigger
             value="checklist"
-            className="rounded-xl font-bold text-xs uppercase tracking-wider data-[state=active]:bg-orange-500 data-[state=active]:text-slate-950 gap-2 h-10 px-4"
+            className="rounded-xl font-black text-xs uppercase tracking-wider px-5 py-2.5 transition-all duration-200 cursor-pointer flex items-center gap-2 text-slate-300 hover:text-white hover:bg-white/10 data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-orange-500/30"
           >
-            <FileCheck2 className="size-3.5" />
+            <Trophy className="size-4" />
             <span>Capstone Defense Script</span>
           </TabsTrigger>
         </TabsList>
@@ -398,26 +406,26 @@ export const DevSandbox = () => {
         <TabsContent value="scenarios" className="space-y-6">
           <div className="grid md:grid-cols-2 gap-6">
             {/* Scenario 1: Fresh Slate */}
-            <Card className="bg-slate-900/90 border-white/10 text-white rounded-2xl relative overflow-hidden flex flex-col justify-between">
-              <CardHeader className="p-6 pb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <Badge className="bg-slate-800 text-slate-300 border-white/10 text-[9px] font-black uppercase">
+            <Card className="bg-slate-900/90 dark:bg-slate-950 border border-slate-800 dark:border-white/10 hover:border-slate-700 text-white rounded-2xl md:rounded-3xl relative overflow-hidden flex flex-col justify-between shadow-xl transition-all">
+              <CardHeader className="p-6 md:p-7 pb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <Badge className="bg-slate-800 text-slate-200 border border-slate-700 text-[10px] font-black uppercase px-2.5 py-0.5">
                     SCENARIO A
                   </Badge>
-                  <RotateCcw className="size-4 text-slate-500" />
+                  <RotateCcw className="size-4 text-slate-400" />
                 </div>
-                <CardTitle className="text-lg font-black uppercase italic tracking-tight">
+                <CardTitle className="text-xl font-black uppercase italic tracking-tight text-white">
                   Clean Season Slate
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-400">
+                <CardDescription className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed mt-1">
                   Wipes all test tournaments, matches, teams, and temporary records. Keeps campus colleges, clusters, and user accounts clean and ready for a fresh semester setup.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-6 pt-0">
+              <CardContent className="p-6 md:p-7 pt-0">
                 <Button
                   onClick={() => handleRunScenario('Clean Slate', injectCleanSlate)}
                   disabled={isScenarioLoading}
-                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black text-xs uppercase tracking-wider rounded-xl h-11"
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-slate-100 hover:text-white font-black text-xs uppercase tracking-wider rounded-xl h-12 border border-slate-700 hover:border-slate-600 transition-all shadow-md cursor-pointer"
                 >
                   {isScenarioLoading && loadingScenarioName === 'Clean Slate' ? (
                     <RefreshCw className="size-4 animate-spin" />
@@ -429,26 +437,26 @@ export const DevSandbox = () => {
             </Card>
 
             {/* Scenario 2: Verification Queue */}
-            <Card className="bg-slate-900/90 border-white/10 text-white rounded-2xl relative overflow-hidden flex flex-col justify-between">
-              <CardHeader className="p-6 pb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-[9px] font-black uppercase">
+            <Card className="bg-slate-900/90 dark:bg-slate-950 border border-blue-500/20 hover:border-blue-500/40 text-white rounded-2xl md:rounded-3xl relative overflow-hidden flex flex-col justify-between shadow-xl transition-all">
+              <CardHeader className="p-6 md:p-7 pb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <Badge className="bg-blue-500/20 text-blue-300 border border-blue-500/40 text-[10px] font-black uppercase px-2.5 py-0.5">
                     SCENARIO B
                   </Badge>
                   <FileCheck2 className="size-4 text-blue-400" />
                 </div>
-                <CardTitle className="text-lg font-black uppercase italic tracking-tight">
+                <CardTitle className="text-xl font-black uppercase italic tracking-tight text-white">
                   Recruitment & COR Verification Queue
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-400">
+                <CardDescription className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed mt-1">
                   Creates draft tournaments, teams, and populates the Admin Clearance queue with sample pending Certificate of Registration (COR) uploads with OCR confidence scores (95%, 80%, 45%).
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-6 pt-0 space-y-2">
+              <CardContent className="p-6 md:p-7 pt-0 space-y-3">
                 <Button
                   onClick={() => handleRunScenario('Verification Queue', injectVerificationQueue)}
                   disabled={isScenarioLoading}
-                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-wider rounded-xl h-11"
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-wider rounded-xl h-12 shadow-lg shadow-blue-600/25 transition-all cursor-pointer"
                 >
                   {isScenarioLoading && loadingScenarioName === 'Verification Queue' ? (
                     <RefreshCw className="size-4 animate-spin" />
@@ -460,7 +468,7 @@ export const DevSandbox = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => navigate('/admin/verifications')}
-                  className="w-full text-[11px] font-bold uppercase text-blue-400 hover:text-blue-300 h-8"
+                  className="w-full text-xs font-bold uppercase text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 h-9 rounded-xl transition-colors cursor-pointer"
                 >
                   Open Verifications Desk ↗
                 </Button>
@@ -468,26 +476,26 @@ export const DevSandbox = () => {
             </Card>
 
             {/* Scenario 3: Live Halftime Match */}
-            <Card className="bg-slate-900/90 border-orange-500/30 text-white rounded-2xl relative overflow-hidden shadow-[0_0_30px_rgba(249,115,22,0.1)] flex flex-col justify-between">
-              <CardHeader className="p-6 pb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <Badge className="bg-orange-500 text-slate-950 font-black text-[9px] uppercase">
+            <Card className="bg-slate-900/90 dark:bg-slate-950 border border-orange-500/40 hover:border-orange-500 text-white rounded-2xl md:rounded-3xl relative overflow-hidden shadow-[0_0_35px_rgba(249,115,22,0.15)] flex flex-col justify-between transition-all">
+              <CardHeader className="p-6 md:p-7 pb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <Badge className="bg-orange-500 text-white font-black text-[10px] uppercase px-2.5 py-0.5 shadow-md">
                     SCENARIO C • PRIMARY DEFENSE
                   </Badge>
                   <Flame className="size-4 text-orange-400 animate-pulse" />
                 </div>
-                <CardTitle className="text-lg font-black uppercase italic tracking-tight text-white">
+                <CardTitle className="text-xl font-black uppercase italic tracking-tight text-white">
                   Active Tournament & Live Halftime Match
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-400">
+                <CardDescription className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed mt-1">
                   Injects the 4 campus squads, active bracket tree, and an ongoing Semifinals game (CAS Titans 68 vs CBA Wolves 65) with live commentary, master clock, fouls, and bronze playoff link.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-6 pt-0 space-y-2">
+              <CardContent className="p-6 md:p-7 pt-0 space-y-3">
                 <Button
                   onClick={() => handleRunScenario('Live Halftime Match', injectLiveHalftimeMatch)}
                   disabled={isScenarioLoading}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl h-11 shadow-lg shadow-orange-500/25"
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black text-xs uppercase tracking-wider rounded-xl h-12 shadow-lg shadow-orange-500/30 transition-all cursor-pointer"
                 >
                   {isScenarioLoading && loadingScenarioName === 'Live Halftime Match' ? (
                     <RefreshCw className="size-4 animate-spin" />
@@ -501,18 +509,18 @@ export const DevSandbox = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => navigate(`/match/${lastInjectedMatchId}/kiosk`)}
-                      className="border-orange-500/40 text-orange-400 bg-orange-500/10 text-[10px] font-black uppercase h-8 rounded-lg gap-1"
+                      className="border-orange-500/40 text-orange-300 hover:text-white bg-orange-500/10 hover:bg-orange-500/25 text-xs font-black uppercase h-9 rounded-xl gap-1.5 transition-colors cursor-pointer"
                     >
-                      <LayoutGrid className="size-3" />
+                      <LayoutGrid className="size-3.5" />
                       <span>Launch Kiosk Deck</span>
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => navigate(`/match/${lastInjectedMatchId}/display`)}
-                      className="border-orange-500/40 text-orange-400 bg-orange-500/10 text-[10px] font-black uppercase h-8 rounded-lg gap-1"
+                      className="border-orange-500/40 text-orange-300 hover:text-white bg-orange-500/10 hover:bg-orange-500/25 text-xs font-black uppercase h-9 rounded-xl gap-1.5 transition-colors cursor-pointer"
                     >
-                      <Maximize2 className="size-3" />
+                      <Maximize2 className="size-3.5" />
                       <span>Launch Focus View</span>
                     </Button>
                   </div>
@@ -521,26 +529,26 @@ export const DevSandbox = () => {
             </Card>
 
             {/* Scenario 4: Completed Championship */}
-            <Card className="bg-slate-900/90 border-white/10 text-white rounded-2xl relative overflow-hidden flex flex-col justify-between">
-              <CardHeader className="p-6 pb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[9px] font-black uppercase">
+            <Card className="bg-slate-900/90 dark:bg-slate-950 border border-amber-500/25 hover:border-amber-500/50 text-white rounded-2xl md:rounded-3xl relative overflow-hidden flex flex-col justify-between shadow-xl transition-all">
+              <CardHeader className="p-6 md:p-7 pb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <Badge className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black uppercase px-2.5 py-0.5">
                     SCENARIO D
                   </Badge>
                   <Trophy className="size-4 text-amber-400" />
                 </div>
-                <CardTitle className="text-lg font-black uppercase italic tracking-tight">
+                <CardTitle className="text-xl font-black uppercase italic tracking-tight text-white">
                   Completed Championship & Medal Podium
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-400">
+                <CardDescription className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed mt-1">
                   Fast-forwards tournament to completion: CAS Titans crowned Champions (Gold), CIT Knights (Silver), CBA Wolves (Bronze), and awards MVP Gold & Red Stars for the `/ranking` podium showcase.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-6 pt-0 space-y-2">
+              <CardContent className="p-6 md:p-7 pt-0 space-y-3">
                 <Button
                   onClick={() => handleRunScenario('Championship', injectCompletedChampionship)}
                   disabled={isScenarioLoading}
-                  className="w-full bg-amber-600 hover:bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl h-11"
+                  className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl h-12 shadow-lg shadow-amber-500/25 transition-all cursor-pointer"
                 >
                   {isScenarioLoading && loadingScenarioName === 'Championship' ? (
                     <RefreshCw className="size-4 animate-spin" />
@@ -552,7 +560,7 @@ export const DevSandbox = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => navigate('/ranking')}
-                  className="w-full text-[11px] font-bold uppercase text-amber-400 hover:text-amber-300 h-8"
+                  className="w-full text-xs font-bold uppercase text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 h-9 rounded-xl transition-colors cursor-pointer"
                 >
                   Open College Medal Standings ↗
                 </Button>
@@ -563,41 +571,41 @@ export const DevSandbox = () => {
 
         {/* TAB 2: USER & STATS MANAGER */}
         <TabsContent value="users" className="space-y-6">
-          <Card className="bg-slate-900/90 border-white/10 text-white rounded-2xl">
-            <CardHeader className="p-6 pb-3">
+          <Card className="bg-slate-900/90 dark:bg-slate-950 border border-slate-800 dark:border-white/10 text-white rounded-2xl md:rounded-3xl shadow-xl overflow-hidden">
+            <CardHeader className="p-6 md:p-7 pb-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <CardTitle className="text-lg font-black uppercase italic tracking-tight">
+                  <CardTitle className="text-xl font-black uppercase italic tracking-tight text-white">
                     User Accounts & Role Permissions Ledger
                   </CardTitle>
-                  <CardDescription className="text-xs text-slate-400">
+                  <CardDescription className="text-xs sm:text-sm text-slate-300 font-normal mt-1 leading-relaxed">
                     Instantly change user roles, toggle verification clearance, and modify stats without database queries.
                   </CardDescription>
                 </div>
-                <div className="relative w-full sm:w-64">
-                  <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <div className="relative w-full sm:w-72">
+                  <Search className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <Input
                     placeholder="Search name, email, or role..."
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
-                    className="pl-9 bg-slate-950 border-white/10 text-white text-xs rounded-xl"
+                    className="pl-10 h-11 bg-slate-950/80 border border-slate-700/80 text-white text-xs rounded-xl placeholder:text-slate-500 focus:border-orange-500"
                   />
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-6 pt-2">
+            <CardContent className="p-6 md:p-7 pt-2">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="border-b border-white/10 text-slate-400 uppercase tracking-wider text-[10px] font-bold">
+                  <thead className="border-b border-slate-800 text-slate-300 uppercase tracking-wider text-[11px] font-black">
                     <tr>
-                      <th className="py-3 px-3">Athlete / Official</th>
-                      <th className="py-3 px-3">Email Address</th>
-                      <th className="py-3 px-3">Active Role</th>
-                      <th className="py-3 px-3">Verification</th>
-                      <th className="py-3 px-3 text-right">Quick Actions</th>
+                      <th className="py-3.5 px-4">Athlete / Official</th>
+                      <th className="py-3.5 px-4">Email Address</th>
+                      <th className="py-3.5 px-4">Active Role</th>
+                      <th className="py-3.5 px-4">Verification</th>
+                      <th className="py-3.5 px-4 text-right">Quick Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5 font-medium">
+                  <tbody className="divide-y divide-slate-800/60 font-medium">
                     {isLoadingUsers ? (
                       <tr>
                         <td colSpan={5} className="py-8 text-center text-slate-400">
@@ -614,7 +622,7 @@ export const DevSandbox = () => {
                     ) : (
                       filteredUsers.map((u) => (
                         <tr key={u.id} className="hover:bg-white/5 transition-colors">
-                          <td className="py-3 px-3 font-bold text-white">
+                          <td className="py-3.5 px-4 font-bold text-white">
                             <div className="flex items-center gap-2">
                               <span>{u.full_name || 'Anonymous User'}</span>
                               {u.id === user?.id && (
@@ -624,14 +632,14 @@ export const DevSandbox = () => {
                               )}
                             </div>
                           </td>
-                          <td className="py-3 px-3 text-slate-400 font-mono text-[11px]">
+                          <td className="py-3.5 px-4 text-slate-300 font-mono text-xs">
                             {u.email || 'No email attached'}
                           </td>
-                          <td className="py-3 px-3">
+                          <td className="py-3.5 px-4">
                             <select
                               value={u.role}
                               onChange={(e) => handleUpdateRole(u.id, e.target.value as UserRole)}
-                              className="bg-slate-950 border border-white/15 text-white text-[11px] font-bold rounded-lg px-2 py-1 cursor-pointer focus:border-orange-500"
+                              className="bg-slate-950 border border-slate-700 text-white text-xs font-bold rounded-xl px-3 py-1.5 cursor-pointer focus:border-orange-500"
                             >
                               <option value="super_admin">super_admin</option>
                               <option value="dev">dev</option>
@@ -641,12 +649,12 @@ export const DevSandbox = () => {
                               <option value="player_faculty">player_faculty</option>
                             </select>
                           </td>
-                          <td className="py-3 px-3">
+                          <td className="py-3.5 px-4">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleToggleVerification(u.id, u.is_verified)}
-                              className={`h-7 px-2 text-[10px] font-black uppercase rounded-lg border ${
+                              className={`h-7 px-2.5 text-[10px] font-black uppercase rounded-lg border ${
                                 u.is_verified
                                   ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25'
                                   : 'bg-red-500/15 text-red-400 border-red-500/30 hover:bg-red-500/25'
@@ -655,12 +663,12 @@ export const DevSandbox = () => {
                               {u.is_verified ? 'Verified ✓' : 'Unverified ✗'}
                             </Button>
                           </td>
-                          <td className="py-3 px-3 text-right">
+                          <td className="py-3.5 px-4 text-right">
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => handleUpdateRole(u.id, 'facilitator')}
-                              className="h-7 px-2.5 text-[10px] font-bold uppercase rounded-lg border-white/10 hover:border-orange-500 text-slate-300"
+                              className="h-7 px-3 text-[10px] font-bold uppercase rounded-lg border-white/10 hover:border-orange-500 text-slate-300 hover:text-white"
                             >
                               Make Faci
                             </Button>
@@ -677,23 +685,23 @@ export const DevSandbox = () => {
 
         {/* TAB 3: LIVE MATCH BOT SIMULATOR */}
         <TabsContent value="bot" className="space-y-6">
-          <Card className="bg-slate-900/90 border-white/10 text-white rounded-2xl">
-            <CardHeader className="p-6 pb-4">
+          <Card className="bg-slate-900/90 dark:bg-slate-950 border border-slate-800 dark:border-white/10 text-white rounded-2xl md:rounded-3xl shadow-xl">
+            <CardHeader className="p-6 md:p-7 pb-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <CardTitle className="text-lg font-black uppercase italic tracking-tight">
+                  <CardTitle className="text-xl font-black uppercase italic tracking-tight text-white">
                     Live Match Event Bot & WebSocket Pulse Generator
                   </CardTitle>
-                  <CardDescription className="text-xs text-slate-400">
+                  <CardDescription className="text-xs sm:text-sm text-slate-300 font-normal mt-1 leading-relaxed">
                     Remotely stream live scoring events and commentary into active matches to demonstrate real-time synchronization on the Focus View and Kiosk screens.
                   </CardDescription>
                 </div>
                 <Button
                   onClick={() => setIsAutoPlayRunning(!isAutoPlayRunning)}
-                  className={`h-11 px-5 rounded-xl font-black text-xs uppercase tracking-wider gap-2 ${
+                  className={`h-11 px-6 rounded-xl font-black text-xs uppercase tracking-wider gap-2 shadow-lg transition-all ${
                     isAutoPlayRunning
-                      ? 'bg-red-500 hover:bg-red-600 text-white'
-                      : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950'
+                      ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/25'
+                      : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-emerald-500/25'
                   }`}
                 >
                   {isAutoPlayRunning ? (
@@ -710,10 +718,10 @@ export const DevSandbox = () => {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="p-6 pt-2 space-y-6">
+            <CardContent className="p-6 md:p-7 pt-2 space-y-6">
               {/* Select Match */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+              <div className="space-y-2.5">
+                <label className="text-xs font-black uppercase tracking-wider text-slate-300 block">
                   Select Target Match to Simulate:
                 </label>
                 <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -723,15 +731,15 @@ export const DevSandbox = () => {
                       <div
                         key={m.id}
                         onClick={() => setSelectedMatchId(m.id)}
-                        className={`p-3 rounded-xl border transition-all cursor-pointer ${
+                        className={`p-4 rounded-2xl border transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-orange-500/15 border-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.15)]'
-                            : 'bg-slate-950 border-white/10 text-slate-400 hover:border-white/20'
+                            ? 'bg-orange-500/15 border-orange-500 text-white shadow-lg shadow-orange-500/15'
+                            : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:border-slate-700'
                         }`}
                       >
-                        <div className="flex items-center justify-between text-[10px] font-black uppercase mb-1">
+                        <div className="flex items-center justify-between text-[10px] font-black uppercase mb-1.5">
                           <span className="text-orange-400">{m.tournament?.sport || 'Game'} • {m.round}</span>
-                          <Badge className="bg-red-500/20 text-red-400 text-[8px] h-3.5 px-1">{m.status}</Badge>
+                          <Badge className="bg-red-500/20 text-red-400 text-[8px] h-3.5 px-1 font-bold">{m.status}</Badge>
                         </div>
                         <div className="text-sm font-black uppercase text-white truncate">
                           {m.team_a?.name || 'Team A'} ({m.team_a_score}) vs {m.team_b?.name || 'Team B'} ({m.team_b_score})
@@ -744,9 +752,9 @@ export const DevSandbox = () => {
 
               {/* Bot Simulation Actions */}
               {selectedMatchId && (
-                <div className="p-4 rounded-xl bg-slate-950 border border-white/10 space-y-4">
+                <div className="p-5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-black uppercase tracking-wider text-slate-300">
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-200">
                       Manual Play-by-Play Event Injection:
                     </span>
                     <div className="flex items-center gap-2">
@@ -754,7 +762,7 @@ export const DevSandbox = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => navigate(`/match/${selectedMatchId}/display`)}
-                        className="text-[10px] font-bold uppercase text-orange-400 h-7"
+                        className="text-xs font-bold uppercase text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 h-8 rounded-xl"
                       >
                         Open Focus View ↗
                       </Button>
@@ -762,7 +770,7 @@ export const DevSandbox = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => navigate(`/match/${selectedMatchId}/kiosk`)}
-                        className="text-[10px] font-bold uppercase text-orange-400 h-7"
+                        className="text-xs font-bold uppercase text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 h-8 rounded-xl"
                       >
                         Open Kiosk ↗
                       </Button>
@@ -772,25 +780,25 @@ export const DevSandbox = () => {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <Button
                       onClick={() => handleSimulatePlay('team_a', 2, 'Mid-range Jumper')}
-                      className="bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/40 font-bold text-xs uppercase h-10 rounded-xl"
+                      className="bg-orange-500/20 hover:bg-orange-500/30 text-orange-200 border border-orange-500/50 font-black text-xs uppercase h-11 rounded-xl transition-all cursor-pointer shadow-sm"
                     >
                       +2 Pts Team A
                     </Button>
                     <Button
                       onClick={() => handleSimulatePlay('team_a', 3, 'Corner 3-Pointer')}
-                      className="bg-orange-500/25 hover:bg-orange-500/35 text-orange-200 border border-orange-500/50 font-black text-xs uppercase h-10 rounded-xl"
+                      className="bg-orange-500/30 hover:bg-orange-500/40 text-orange-100 border border-orange-500/60 font-black text-xs uppercase h-11 rounded-xl transition-all cursor-pointer shadow-sm"
                     >
                       +3 Pts Team A
                     </Button>
                     <Button
                       onClick={() => handleSimulatePlay('team_b', 2, 'Driving Layup')}
-                      className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-bold text-xs uppercase h-10 rounded-xl"
+                      className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 border border-cyan-500/50 font-black text-xs uppercase h-11 rounded-xl transition-all cursor-pointer shadow-sm"
                     >
                       +2 Pts Team B
                     </Button>
                     <Button
                       onClick={() => handleSimulatePlay('team_b', 3, 'Clutch Triple')}
-                      className="bg-cyan-500/25 hover:bg-cyan-500/35 text-cyan-200 border border-cyan-500/50 font-black text-xs uppercase h-10 rounded-xl"
+                      className="bg-cyan-500/30 hover:bg-cyan-500/40 text-cyan-100 border border-cyan-500/60 font-black text-xs uppercase h-11 rounded-xl transition-all cursor-pointer shadow-sm"
                     >
                       +3 Pts Team B
                     </Button>
@@ -814,11 +822,11 @@ export const DevSandbox = () => {
               { label: 'Events', val: metrics.events },
               { label: 'MVP Stars', val: metrics.stars },
             ].map((m, idx) => (
-              <Card key={idx} className="bg-slate-900 border-white/10 text-white rounded-xl p-3 text-center">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">
+              <Card key={idx} className="bg-slate-900/90 dark:bg-slate-950 border border-slate-800 text-white rounded-2xl p-4 text-center shadow-lg">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-300 block mb-1">
                   {m.label}
                 </span>
-                <span className="text-2xl font-black tabular-nums text-orange-400">
+                <span className="text-3xl font-black tabular-nums text-orange-400">
                   {m.val}
                 </span>
               </Card>
@@ -826,16 +834,16 @@ export const DevSandbox = () => {
           </div>
 
           {/* Database Maintenance Actions */}
-          <Card className="bg-slate-900/90 border-white/10 text-white rounded-2xl">
-            <CardHeader className="p-6 pb-4">
-              <CardTitle className="text-lg font-black uppercase italic tracking-tight">
+          <Card className="bg-slate-900/90 dark:bg-slate-950 border border-slate-800 dark:border-white/10 text-white rounded-2xl md:rounded-3xl shadow-xl">
+            <CardHeader className="p-6 md:p-7 pb-4">
+              <CardTitle className="text-xl font-black uppercase italic tracking-tight text-white">
                 Database Hygiene & Sandbox Maintenance
               </CardTitle>
-              <CardDescription className="text-xs text-slate-400">
+              <CardDescription className="text-xs sm:text-sm text-slate-300 font-normal mt-1 leading-relaxed">
                 Execute safe maintenance actions to maintain clean relational integrity during testing.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-6 pt-0 space-y-4">
+            <CardContent className="p-6 md:p-7 pt-0 space-y-4">
               <div className="grid sm:grid-cols-3 gap-3">
                 <Button
                   onClick={async () => {
@@ -843,7 +851,7 @@ export const DevSandbox = () => {
                     toast.success('All active facilitator console leases cleared.');
                   }}
                   variant="outline"
-                  className="h-11 rounded-xl border-white/10 hover:border-white/20 font-bold text-xs uppercase"
+                  className="h-12 rounded-xl border border-slate-700 hover:border-slate-600 bg-slate-800/80 hover:bg-slate-700 text-white font-bold text-xs uppercase cursor-pointer"
                 >
                   Clear Stale Leases
                 </Button>
@@ -854,7 +862,7 @@ export const DevSandbox = () => {
                     fetchMetrics();
                   }}
                   variant="outline"
-                  className="h-11 rounded-xl border-white/10 hover:border-white/20 font-bold text-xs uppercase"
+                  className="h-12 rounded-xl border border-slate-700 hover:border-slate-600 bg-slate-800/80 hover:bg-slate-700 text-white font-bold text-xs uppercase cursor-pointer"
                 >
                   Purge Soft-Deleted
                 </Button>
@@ -864,7 +872,7 @@ export const DevSandbox = () => {
                     toast.success('Database table counts refreshed.');
                   }}
                   variant="outline"
-                  className="h-11 rounded-xl border-orange-500/40 text-orange-400 bg-orange-500/10 font-black text-xs uppercase"
+                  className="h-12 rounded-xl border border-orange-500/40 text-orange-300 hover:text-white bg-orange-500/15 hover:bg-orange-500/25 font-black text-xs uppercase cursor-pointer"
                 >
                   Refresh Table Counts
                 </Button>
@@ -875,16 +883,16 @@ export const DevSandbox = () => {
 
         {/* TAB 5: CAPSTONE DEFENSE SCRIPT */}
         <TabsContent value="checklist" className="space-y-6">
-          <Card className="bg-slate-900/90 border-white/10 text-white rounded-2xl">
-            <CardHeader className="p-6 pb-4">
-              <CardTitle className="text-lg font-black uppercase italic tracking-tight">
+          <Card className="bg-slate-900/90 dark:bg-slate-950 border border-slate-800 dark:border-white/10 text-white rounded-2xl md:rounded-3xl shadow-xl">
+            <CardHeader className="p-6 md:p-7 pb-4">
+              <CardTitle className="text-xl font-black uppercase italic tracking-tight text-white">
                 Capstone Defense Presentation Sequence
               </CardTitle>
-              <CardDescription className="text-xs text-slate-400">
+              <CardDescription className="text-xs sm:text-sm text-slate-300 font-normal mt-1 leading-relaxed">
                 Step-by-step walkthrough script for the academic panel evaluation with 1-click launch triggers for each system component.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-6 pt-0 space-y-4">
+            <CardContent className="p-6 md:p-7 pt-0 space-y-4">
               {[
                 {
                   step: '01',
@@ -931,23 +939,23 @@ export const DevSandbox = () => {
               ].map((s, idx) => (
                 <div
                   key={idx}
-                  className="p-4 rounded-xl bg-slate-950 border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-orange-500/40 transition-colors"
+                  className="p-5 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-orange-500/40 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm"
                 >
-                  <div className="flex items-start gap-3.5">
-                    <span className="size-8 rounded-lg bg-orange-500/20 text-orange-400 border border-orange-500/30 flex items-center justify-center font-black text-xs shrink-0">
+                  <div className="flex items-start gap-4">
+                    <span className="size-9 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/40 flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
                       {s.step}
                     </span>
                     <div>
-                      <h4 className="text-sm font-black uppercase text-white mb-0.5">{s.title}</h4>
-                      <p className="text-xs text-slate-400 font-medium max-w-2xl">{s.desc}</p>
+                      <h4 className="text-sm sm:text-base font-black uppercase text-white mb-0.5">{s.title}</h4>
+                      <p className="text-xs sm:text-sm text-slate-300 font-medium max-w-2xl leading-relaxed">{s.desc}</p>
                     </div>
                   </div>
                   <Button
                     onClick={() => navigate(s.url)}
-                    className="bg-slate-800 hover:bg-orange-500 hover:text-slate-950 text-white font-bold text-xs uppercase tracking-wider h-10 px-4 rounded-xl shrink-0 transition-all gap-1.5"
+                    className="bg-slate-800 hover:bg-orange-500 hover:text-white text-slate-100 font-black text-xs uppercase tracking-wider h-11 px-5 rounded-xl border border-slate-700 shrink-0 transition-all gap-2 cursor-pointer shadow-sm"
                   >
                     <span>{s.btn}</span>
-                    <ArrowRight className="size-3.5" />
+                    <ArrowRight className="size-4" />
                   </Button>
                 </div>
               ))}
