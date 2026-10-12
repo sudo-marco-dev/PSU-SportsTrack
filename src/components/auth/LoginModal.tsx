@@ -13,7 +13,7 @@ import {
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -54,6 +54,7 @@ const registerSchema = z.object({
 export const LoginModal = () => {
   const { isLoginModalOpen, closeLoginModal } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -169,24 +170,31 @@ export const LoginModal = () => {
         loginForm.reset();
         closeLoginModal();
 
-        // Check role and route immediately to the appropriate dashboard
-        let destination = '/';
-        if (authData?.user?.id) {
-          const { data: userRec } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', authData.user.id)
-            .single();
-          const userRole = userRec?.role;
-          if (userRole === 'super_admin' || userRole === 'Admin') {
-            destination = '/admin';
-          } else if (userRole === 'coach' || userRole === 'Coach') {
-            destination = '/coach';
-          } else {
-            destination = '/player';
+        // If the user logged in from a contextual page (e.g. courtside kiosk, live match, tournament bracket),
+        // keep them on their current page instead of abruptly redirecting away to their role dashboard.
+        const currentPath = location.pathname;
+        const isAuthOrLanding = currentPath === '/' || currentPath === '/login' || currentPath === '/register';
+
+        if (isAuthOrLanding) {
+          // Check role and route immediately to the appropriate dashboard
+          let destination = '/';
+          if (authData?.user?.id) {
+            const { data: userRec } = await supabase
+              .from('users')
+              .select('role')
+              .eq('id', authData.user.id)
+              .single();
+            const userRole = userRec?.role;
+            if (userRole === 'super_admin' || userRole === 'Admin') {
+              destination = '/admin';
+            } else if (userRole === 'coach' || userRole === 'Coach') {
+              destination = '/coach';
+            } else {
+              destination = '/player';
+            }
           }
+          navigate(destination, { replace: true });
         }
-        navigate(destination, { replace: true });
       }
     } catch {
       toast.error('An unexpected error occurred during login');

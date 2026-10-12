@@ -1,73 +1,45 @@
-# React + TypeScript + Vite
+# 🏆 PSU SportsTrack
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Official Palawan State University (PSU) Sports Tracking, Live Scoring & Tournament Arena Portal.
 
-Currently, two official plugins are available:
+## 🏛️ System Overview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+**PSU SportsTrack** is an enterprise-grade collegiate athletic management system engineered for Palawan State University. The platform coordinates multi-sport tournaments (e.g., PSU Binturungan, STRASUC), authenticates athlete clearances via university Certificate of Registration (COR) verification, and provides high-speed courtside match operations with real-time broadcasting.
 
-## React Compiler
+## ✨ Core Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Courtside Facilitator Kiosk Mode**: Tactile Stream Deck style console (`/match/:id/kiosk`) featuring zero-scroll mobile viewport snapping (`h-dvh`), dual-thumb split-view controls, 2-tap substitutions, fouls counters with bonus indicators, timeout LED pips, master digital game clock, and court side swap.
+- **Stadium Jumbotron / Focus View**: Distraction-free big-screen arena presentation (`/match/:id/display`) with Screen Wake Lock API, live action ticker, digital scoreboard clock, spectator URL, and fullscreen toggle.
+- **Web Audio FX Synthesizer**: Procedural, zero-dependency browser synthesizer generating dynamic score chimes, referee Fox 40 whistle, arena buzzer klaxon, timeout klaxon, and scorer's table sub horns.
+- **Picture-in-Picture Multitasking**: Canvas-piped live scoreboard stream for native OS Picture-in-Picture window multitasking outside the browser.
+- **Dynamic Scoreboard Telemetry**: Visual score-pop spring physics, floating delta badges (+1, +2, +3, -1), lead-change alerts, and unanswered momentum run detection.
+- **Sport-Specific Scoring Profiles**: Dedicated scoring logic for 9 collegiate ball sports (Basketball, Volleyball, Soccer, Sepak Takraw, Baseball, Softball, Table Tennis, Pickleball, Esports).
+- **Institutional Athlete Verification**: Student corporate email validation and in-browser PDF.js canvas viewer for university Certificates of Registration.
+- **Strict Role-Based Access Control**: Standardized permissions across 5 canonical roles: `super_admin`, `facilitator`, `coach`, `player_student`, and `player_faculty`.
 
-## Expanding the ESLint configuration
+## 🛠️ Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Frontend**: React 19, TypeScript, Vite 8, Tailwind CSS, shadcn/ui, next-themes, Lucide Icons, React Icons.
+- **Backend & Database**: Supabase (PostgreSQL, Row Level Security, Supabase Auth, Storage, Realtime WebSockets).
+- **Audio & Media**: Web Audio API Procedural Synthesizer, HTML5 Canvas, Screen Wake Lock API, Picture-in-Picture API.
+- **Testing**: Playwright.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 🚀 Getting Started
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Prerequisites
+- Node.js 18+
+- npm
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Installation & Local Development
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Production Build
+```bash
+npm run build
 ```

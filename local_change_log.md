@@ -742,4 +742,323 @@ This log tracks every user prompt, database migration, code change, and Git oper
         *   Ran production compilation (`npm run build`): completed in 3.61s with **Exit code 0** (2179 modules transformed cleanly).
         *   Audited Vercel SPA routing rules and `.gitignore` compliance.
 
+---
+
+## Log Entry: 2026-10-12
+
+### Prompt 37: Phased Live Scoring Plan & Sport-Specific Scoring Engine (Phase 1)
+*   **Timestamp**: 2026-10-12T01:15:00+08:00
+*   **User Directive**: Relist tournament ball games (remove Badminton; add Sepak Takraw, Softball, Pickleball), create authentic sport-specific scoring rule profiles (Basketball 1/2/3pt, Soccer 1pt Goal/Penalty, Volleyball 1pt Rally/Ace/Block, etc.), and enforce strict phase-by-phase execution with user manual checkpoints.
+*   **Actions Taken**:
+    *   **Sport Relisting**: Updated `src/lib/sportIcons.ts`, `src/pages/TournamentManagement.tsx`, and `src/pages/Ranking.tsx` to standardize on 9 collegiate ball sports with dedicated icons (`GiSoccerKick` for Sepak Takraw, `GiBaseballGlove` for Softball, `GiTennisRacket` for Pickleball).
+    *   **Rule Engine**: Created `src/lib/sportScoringRules.ts` with `SPORT_SCORING_PROFILES`, period definitions, point units (`PTS`, `GOAL`, `RUNS`), action types, and deductive value configurations.
+    *   **Dynamic Deck in `LiveMatch.tsx`**: Replaced hardcoded +1/+2/+3 basketball buttons with dynamic scoring action buttons rendered according to the tournament's active sport.
+*   **Verification**:
+    *   `npm run build` compiled with exit code 0. ESLint passed with 0 errors.
+
+---
+
+### Prompt 38: Big Screen Stadium Jumbotron / Focus View Mode (Phase 2)
+*   **Timestamp**: 2026-10-12T01:30:00+08:00
+*   **User Directive**: Implement dedicated standalone route for big screen TV/projector presentation at gym venues, replace dense QR code with clean spectator link `https://psusportstrack.tech/explorer` for far-distance visibility, and include Screen Wake Lock API.
+*   **Actions Taken**:
+    *   Created `src/pages/StadiumDisplay.tsx` outside standard app shell with massive tabular numbers, center match discipline pillar, and real-time play-by-play ticker.
+    *   Integrated Screen Wake Lock API (`navigator.wakeLock.request('screen')`) with automatic re-engagement on tab visibility change.
+    *   Added spectator link banner highlighting `psusportstrack.tech/explorer` with globe & external link icons.
+    *   Registered `/match/:matchId/display` standalone route in `src/App.tsx`.
+*   **Verification**:
+    *   Visual verification in browser subagent at 1920x1080 viewport.
+
+---
+
+### Prompt 39: Universal Floating Window (Picture-in-Picture) & In-App Widget (Phase 3)
+*   **Timestamp**: 2026-10-12T01:45:00+08:00
+*   **User Directive**: Implement floating window multitasking outside the browser so spectators can monitor live scores on mobile/desktop while using other apps.
+*   **Actions Taken**:
+    *   Created `src/lib/pipScoreboard.ts` Canvas-Stream to Video Picture-in-Picture engine rendering a crisp 512×288 live scoreboard piped to native OS Picture-in-Picture.
+    *   Built `src/components/scoreboard/FloatingScoreWidget.tsx` glassmorphism card that pins to the screen when scrolling past the scoreboard in `LiveMatch.tsx`.
+    *   Added "Float Score" button in `LiveMatch.tsx` header and dynamic multitasking browser tab title `(ScoreA - ScoreB) TeamA vs TeamB`.
+*   **Verification**:
+    *   Verified with `browser_subagent` and `npm run build` (exit code 0 in 3.78s).
+
+---
+
+### Prompt 40: Rename Stadium TV to "Focus View"
+*   **Timestamp**: 2026-10-12T01:50:00+08:00
+*   **User Directive**: "rename the staduim tv into something like 'focus view' or something?"
+*   **Actions Taken**:
+    *   Renamed header action button in `src/pages/LiveMatch.tsx` from "Stadium TV" to "Focus View" with `<Maximize2 />` icon and updated tooltip.
+    *   Updated `src/pages/StadiumDisplay.tsx` document title and loading state to "Focus View".
+    *   Updated roadmap artifact `live_scoring_enhancement_plan.md` to reflect Focus View terminology.
+*   **Verification**:
+    *   `npm run build` compiled with exit code 0.
+
+---
+
+### Prompt 41: Unified Score Typography & PiP Canvas Font Harmonization
+*   **Timestamp**: 2026-10-12T02:10:00+08:00
+*   **User Directive**: "in the floating window why is the number font like that? its not consistent"
+*   **Root Cause Identified**:
+    *   In [`src/lib/pipScoreboard.ts`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/lib/pipScoreboard.ts), the canvas scoreboard was explicitly hardcoded to draw scores using `'900 68px "Courier New", Courier, monospace'`, which rendered thin typewriter serif numerals in the native OS Picture-in-Picture window.
+    *   Similarly, [`src/components/scoreboard/FloatingScoreWidget.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/scoreboard/FloatingScoreWidget.tsx) and [`src/pages/StadiumDisplay.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/StadiumDisplay.tsx) contained lingering `font-mono` classes instead of the athletic sans `font-black tabular-nums` stack used in the primary scoreboard.
+*   **Actions Taken**:
+    *   Updated `pipScoreboard.ts` canvas engine to use the dynamic system sans font stack: `900 ${scoreFontSize} ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`.
+    *   Added dynamic digit scaling (`74px` for 1–2 digit scores, `60px` for 3+ digit scores) to ensure large numbers never collide with the center VS pillar.
+    *   Removed `font-mono` from `FloatingScoreWidget.tsx` and `StadiumDisplay.tsx` to ensure 100% font consistency across all live views.
+*   **Verification**:
+    *   `npm run build` compiled cleanly with exit code 0 (2183 modules transformed in 3.85s).
+    *   Visual check confirmed score numerals in the floating scoreboard widget match the bold athletic sans typeface identically.
+
+---
+
+### Prompt 42: Phase 4 - Dynamic Scoreboard Animations
+*   **Timestamp**: 2026-10-12T10:40:00+08:00
+*   **User Directive**: "continue with phase 4"
+*   **Actions Taken**:
+    *   **CSS Keyframes & Utility Classes ([`src/index.css`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/index.css))**:
+        *   `@keyframes score-pop`: 650ms spring scale burst (`scale(1.18)`) with radial orange glow (`drop-shadow(0 0 24px rgba(249, 115, 22, 0.85))`).
+        *   `@keyframes float-up-fade`: 1.4s floating delta badge rising upwards and fading out smoothly.
+        *   `@keyframes lead-change-glow`: 2s breathing pulse glow for lead change alert banners.
+        *   `@keyframes flame-pulse`: 1.8s pulsating ember glow for momentum runs.
+    *   **Telemetry Helper Engine ([`src/lib/scoreboardAnimations.ts`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/lib/scoreboardAnimations.ts))**:
+        *   `detectLeadChange`: Compares previous leader with current leader to identify lead overtakes.
+        *   `detectMomentumRun`: Examines reverse-chronological match events to calculate unanswered scoring runs (threshold adapted for ball games vs goal sports).
+    *   **Visual Animation Components**:
+        *   [`src/components/scoreboard/FloatingDeltaBadge.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/scoreboard/FloatingDeltaBadge.tsx): Floating animated score diff badge (`+1`, `+2`, `+3`, `-1`).
+        *   [`src/components/scoreboard/LeadChangeBanner.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/scoreboard/LeadChangeBanner.tsx): High-contrast lead change banner featuring bouncing `<Zap />` lightning icon and animated glow.
+        *   [`src/components/scoreboard/MomentumRunBadge.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/scoreboard/MomentumRunBadge.tsx): Pulsating flame badge (`🔥 6-0 RUN • Team Name`).
+    *   **Scoreboard Integration**:
+        *   Integrated in [`src/pages/LiveMatch.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/LiveMatch.tsx) and [`src/pages/StadiumDisplay.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/StadiumDisplay.tsx) with reactive score change tracking for both local clicks and Supabase Realtime updates.
+*   **Verification**:
+    *   `npm run build` compiled with exit code 0 (2187 modules transformed in 5.04s).
+    *   ESLint check passed with 0 errors across all Phase 4 modules.
+    *   Browser verification confirmed momentum run badge rendering on Match Control and Focus View.
+
+---
+
+### Prompt 43: Momentum Run Card Placement & Responsive Refactor
+*   **Timestamp**: 2026-10-12T11:10:00+08:00
+*   **User Directive**: "fix the odd placement of the run card being squeezed"
+*   **Root Cause**:
+    *   In [`src/pages/StadiumDisplay.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/StadiumDisplay.tsx), the `MomentumRunBadge` was previously placed in the narrow `lg:col-span-1` center pillar between Team A and Team B cards, causing the flame badge to be compressed into a tight vertical oval.
+*   **Actions Taken**:
+    *   Relocated `MomentumRunBadge` to the spacious top-left header of the specific team card that holds the active run (`top-4 inset-x-4 sm:inset-x-6 flex items-center justify-between`).
+    *   Updated [`src/components/scoreboard/MomentumRunBadge.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/scoreboard/MomentumRunBadge.tsx) to enforce `whitespace-nowrap shrink-0` ensuring the badge never wraps.
+    *   Cleaned up the center pillar in `StadiumDisplay.tsx` to restore full visual balance around the center `VS` and discipline indicators.
+*   **Verification**:
+    *   `npm run build` compiled with exit code 0 (2187 modules transformed in 4.14s).
+    *   Visual verification in browser subagent confirmed sleek, uncompressed single-line layout (`🔥 17-0 RUN • C1`) in the top-left of the team card opposite the `✨ LEADING` badge.
+
+---
+
+### Prompt 45: Phase 5 - Courtside Web Audio FX Engine
+*   **Timestamp**: 2026-10-12T11:30:00+08:00
+*   **User Directive**: "proceed to the next phase'"
+*   **Actions Taken**:
+    *   **Zero-Dependency Synthesizer ([`src/lib/audioFx.ts`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/lib/audioFx.ts))**:
+        *   Built a pure Web Audio API procedural synthesizer requiring 0 external MP3 downloads or network requests.
+        *   `playScoreChime(points)`: Acoustic stadium chime adapting harmonic complexity to the point value (2-tone for +1pt, 3-tone major triad for +2pts, and triumphant 4-tone arpeggio E5->E6 for 3-pointers and goals).
+        *   `playBuzzerSound()`: Courtside arena horn featuring detuned sawtooth oscillators (155Hz, 158Hz, 233Hz) piped through a lowpass resonant filter simulating jumbotron loudspeakers.
+        *   `playWhistleSound()`: Authentic Fox 40 referee whistle with dual high-frequency triangle oscillators (2850Hz & 3080Hz) modulated with 36Hz air turbulence vibrato in a classic double-chirp cadence.
+        *   Synchronized audio state saved in `localStorage.getItem('psu_audio_enabled')` with instant cross-tab custom event dispatching and `useAudioFx` React hook.
+    *   **Focus View Integration ([`src/pages/StadiumDisplay.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/StadiumDisplay.tsx))**:
+        *   Added interactive sound toggle button (`<Volume2 />` / `<VolumeX />`) in the top-right header tools next to the Fullscreen button.
+        *   Tied `playScoreChime` to positive score changes and `playWhistleSound` to score deductions.
+        *   Tied `playBuzzerSound` to match conclusion when status transitions to `Completed`.
+    *   **Match Control Integration ([`src/pages/LiveMatch.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/LiveMatch.tsx))**:
+        *   Added "Sound On" / "Muted" pill toggle button in the header action bar beside "Float Score" and "Focus View".
+        *   Integrated sound triggers for scorekeeper point additions, deductions, and completion events.
+*   **Verification**:
+    *   `npm run build` compiled with code 0 (2188 modules transformed in 4.08s).
+    *   Code-split chunk `audioFx-neicKcIx.js` generated cleanly.
+    *   ESLint check passed with 0 errors across all modified modules.
+    *   Browser verification confirmed sound toggle buttons visible, interactive, and reactive across both Focus View and Match Control interfaces.
+
+---
+
+### Prompt 46: Courtside Facilitator Kiosk Mode (Steam Deck Tactile Console)
+*   **Timestamp**: 2026-10-12T11:55:00+08:00
+*   **User Directive**: "now create plan for the faciliator side creating a kiosk style layout without the distractions like at a glance actions eg. scorring, subin subouts, fouls, timeouts, court/side switch, maybe add an optional realtime game clock/timer etc. it must be comprehesive to the faci to use while keeping track of the game and updating fast like a steam deck or a portable kiosk keep in mind multiple layout screens for facis to use like mobile, tablet, laptops and a togle for landscape or portrait for the layouts? /plan"
+*   **Actions Taken**:
+    *   **Interactive Planning**: Generated comprehensive plan artifact [`facilitator_kiosk_mode_plan.md`](file:///c:/Users/Marco/.gemini/antigravity-ide/brain/40e63eff-3e0b-4919-a4c2-d4a10880ed6e/facilitator_kiosk_mode_plan.md) covering architecture, tactile UI ergonomics, 2-tap subs, game clock, court side swap, timeouts, and orientation modes. Plan approved by user.
+    *   **Rule Engine Augmentation ([`src/lib/sportScoringRules.ts`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/lib/sportScoringRules.ts))**:
+        *   Extended `SportScoringProfile` with kiosk operational metadata: `teamFoulBonusThreshold`, `defaultTimeouts`, `defaultPeriodMinutes`, and `onCourtPlayerCount`.
+        *   Configured distinct defaults across all 9 ball sports (e.g., Basketball: 5 fouls bonus, 5 timeouts, 10 min periods, 5 on-court; Volleyball: 2 timeouts, 6 on-court, 0 foul bonus).
+    *   **Tactile Component Architecture**:
+        *   [`src/components/kiosk/KioskSubstitutionModal.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/kiosk/KioskSubstitutionModal.tsx): Rapid 2-tap substitution modal contrasting Active On-Court vs Bench players with interactive swap preview banner and single-tap confirmation.
+        *   [`src/components/kiosk/KioskScoreColumn.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/kiosk/KioskScoreColumn.tsx): Stream Deck tactile team command column with giant score triggers, -1pt deduction, team fouls counter with pulsating bonus alert badge, timeouts counter with glowing circular LED pips, and active on-court roster bar with sub trigger.
+        *   [`src/components/kiosk/KioskCenterConsole.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/kiosk/KioskCenterConsole.tsx): Center mission control deck with digital MM:SS game clock, play/pause trigger, +/- 1m and +/- 10s adjustments, period selector, 60s timeout stopwatch countdown banner, court side swap toggle, orientation switcher (Auto / Landscape / Portrait), audio toggle, recent event mini ticker, and 1-tap undo action button.
+    *   **Dedicated Nocturnal Page ([`src/pages/FacilitatorKiosk.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/FacilitatorKiosk.tsx))**:
+        *   Created standalone route `/match/:matchId/kiosk` outside `AppLayout` with `#020617` nocturnal theme.
+        *   Integrated Screen Wake Lock API (`navigator.wakeLock.request('screen')`) to prevent screen timeout at the scorer's table.
+        *   Enforced 15-second facilitator lease heartbeat renewal, optimistic local UI state with offline mutation queue protection, real-time Supabase channels, and procedural audio FX synthesis.
+    *   **Navigation & Header Integration**:
+        *   Added lazy route `/match/:matchId/kiosk` in [`src/App.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/App.tsx).
+        *   Added "Kiosk Deck" header button with `<LayoutGrid />` in [`src/pages/LiveMatch.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/LiveMatch.tsx).
+*   **Verification**:
+    *   `npm run build` compiled with **Exit Code 0** in 4.25s (2192 modules transformed; code-split chunk `FacilitatorKiosk-DcUhlxxz.js` 40.36 kB).
+    *   ESLint check passed with **0 errors and 0 warnings** across all kiosk components and pages.
+    *   Browser subagent testing verified game clock controls (09:59 countdown), court side swap (Team B Left ⇄ Team A Right), 60s timeout stopwatch banner, and responsive layout modes.
+
+---
+
+### Prompt 47: Local Area Network (LAN) Dev Server Exposure for Mobile Testing
+*   **Timestamp**: 2026-10-12T12:13:30+08:00
+*   **User Directive**: "how to open the local host to the network so I can try it in my phone"
+*   **Actions Taken**:
+    *   Updated [`vite.config.ts`](file:///f:/VScodes/SportsTrack/psu-sportstrack/vite.config.ts) to configure `server: { host: true }` enabling binding to all network interfaces (`0.0.0.0`).
+    *   Dev server automatically reloaded and bound to IPv4 LAN address `http://192.168.1.10:5173/` and Tailscale `http://100.127.167.75:5173/`.
+*   **Verification**:
+    *   Verified via PowerShell `Invoke-WebRequest -Uri "http://192.168.1.10:5173"` returning `200 OK`.
+
+---
+
+### Prompt 48: Mobile Kiosk Snapping & Zero-Scroll Responsive Ergonomics Refactor
+*   **Timestamp**: 2026-10-12T12:20:00+08:00
+*   **User Directive**: "the kiosks view is not snapping with the mobile view I need to scroll verticaly to view the bottom team both vertical and horizontal"
+*   **Root Cause**:
+    *   Outer container used `min-h-screen w-screen overflow-x-hidden`, which stretched beyond mobile viewports (1600px+ height) and caused horizontal jitter from `100vw`.
+    *   Columns used rigid `col-span-12 lg:col-span-4`, forcing 100% width on all screens below 1024px (`lg`), so even in mobile landscape (780x360), each team stacked vertically and overflowed the screen.
+    *   In mobile portrait, cards and fonts were oversized (`text-7xl` to `text-9xl`), stacking Team A, Clock, and Team B over 1600px.
+    *   Header elements exceeded 360px viewport width, creating horizontal overflow.
+*   **Actions Taken**:
+    *   **Container Viewport Snapping ([`src/pages/FacilitatorKiosk.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/FacilitatorKiosk.tsx))**:
+        *   Replaced `min-h-screen w-screen` with `h-dvh max-h-dvh w-full max-w-full overflow-hidden`, locking the kiosk strictly to the mobile screen without any page scrollbars.
+        *   Added dynamic viewport orientation detection (`isLandscapeMode`, `isShortScreen`, `isMobileWidth`).
+    *   **Mobile Portrait Ergonomics**:
+        *   Implemented default **Dual-Team Side-by-Side Split View** (`grid-cols-2 gap-1.5 flex-1 h-full overflow-hidden`), placing Team A on the left and Team B on the right with a pinned **Mobile Game Clock Strip** (MM:SS, Play/Pause, Period, Swap, Undo) and active timeout countdown bar on top.
+        *   Added a sleek header segment switcher (`[ Both | A | B | ⏱ ]`) allowing 1-tap toggling between Dual Split and Full-Screen focus cards.
+        *   Scorekeeper operates Team A with their left thumb and Team B with their right thumb with **ZERO vertical or horizontal scrolling** on 360x780 mobile screens.
+    *   **Mobile Landscape Ergonomics**:
+        *   Automatically renders **3 Columns Side-by-Side** (`grid-cols-12 gap-1.5 h-full overflow-hidden`: Col A `col-span-4`, Center Console `col-span-4`, Col B `col-span-4`) with compact card proportions, fitting 100% within 360px viewport height with **ZERO scrolling**.
+    *   **Compact Component Proportions ([`src/components/kiosk/KioskScoreColumn.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/kiosk/KioskScoreColumn.tsx), [`src/components/kiosk/KioskCenterConsole.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/kiosk/KioskCenterConsole.tsx))**:
+        *   Added `compact` mode to `KioskScoreColumn` with scaled score numerals, compact action buttons (`h-10`), space-efficient Fouls (`F: 0 +1`) and Timeouts (`TO: 3 Call`) pills, and integrated on-court roster bar.
+        *   Added `compact` mode to `KioskCenterConsole` with scaled digital readout, start/pause trigger, and utility controls.
+    *   **Ultra-Compact Header**:
+        *   Streamlined header tools, truncating long tournament titles, and rendering online status dot to guarantee clean fit within 360px width.
+*   **Verification**:
+    *   `npm run build` compiled with **Exit Code 0** in 4.03s.
+    *   ESLint passed with **0 errors and 0 warnings**.
+    *   Visual verification in Chrome DevTools testing at Galaxy S25 viewports (`360x780` portrait and `780x360` landscape) confirmed 100% viewport snapping, all elements visible, and zero vertical/horizontal scrolling.
+
+---
+
+### Prompt 49: Focus View / Monitor Display Clock, Timeout Auto-Pause, Sub Horns & Broadcast Animations
+*   **Timestamp**: 2026-10-12T13:10:00+08:00
+*   **User Directive**: "update the new monitor view/ live score view sounds and animations with the new kiosk features like the game lock, timeouts subins etc. also woundt a timeout autopause the clock?"
+*   **Actions Taken**:
+    *   **Timeout Auto-Pause Logic ([`src/pages/FacilitatorKiosk.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/FacilitatorKiosk.tsx))**:
+        *   Answered user question affirmatively: official basketball/soccer/volleyball tournament rules require game clocks to immediately halt whenever a team calls a timeout.
+        *   Updated `handleCallTimeout`: if `isClockRunning` is true, the master game clock is **automatically paused immediately**, synchronizing `{ isRunning: false, seconds: gameTimeSeconds }` across all screens before starting the 60s timeout stopwatch.
+        *   When timeouts conclude or are dismissed early (`handleCancelTimeout`), the clock remains safely paused until the facilitator clicks "Start" when play resumes on-court.
+    *   **New Procedural Audio FX Synthesis ([`src/lib/audioFx.ts`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/lib/audioFx.ts))**:
+        *   `playTimeoutSound()`: High-frequency referee whistle tweet followed by two resonant stadium klaxon horn pulses (G major triad at 196Hz, 247Hz, 294Hz with low-pass resonance).
+        *   `playSubHornSound()`: Two rapid, punchy scorer's table buzzer chirps (165Hz, 220Hz, 330Hz filtered sawtooth).
+        *   `playClockStartSound()`: Rising two-tone affirmative acoustic cue (D5 -> A5, 90ms).
+        *   `playClockPauseSound()`: Falling two-tone subtle pause cue (G5 -> A4, 85ms).
+    *   **Focus View / Stadium Display Game Clock & Layout ([`src/pages/StadiumDisplay.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/StadiumDisplay.tsx), [`src/components/scoreboard/StadiumGameClock.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/scoreboard/StadiumGameClock.tsx))**:
+        *   Created dedicated `StadiumGameClock` component with high-visibility digital segmented LED readout, match period pill, and live state indicator (`RUNNING`, `PAUSED`, `TIMEOUT`, `PERIOD OVER`).
+        *   Refactored scoreboard grid from 11-column to 12-column: Team A (`col-span-5`), Central Game Clock Pillar (`col-span-2`), Team B (`col-span-5`).
+        *   Embedded live courtside fouls counters and dynamic timeout remaining indicator pips (`● ● ○`) on each team's display card.
+    *   **Official Timeout Full Broadcast Overlay ([`src/components/scoreboard/StadiumTimeoutOverlay.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/scoreboard/StadiumTimeoutOverlay.tsx))**:
+        *   Created cinematic arena overlay with glassmorphism, animated cyan/red ambient pulse, calling team banner, animated circular SVG countdown ring with live seconds remaining, and "Game Clock auto-paused" badge.
+    *   **Player Substitution Lower-Third Banner ([`src/components/scoreboard/StadiumSubBanner.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/scoreboard/StadiumSubBanner.tsx))**:
+        *   Created ESPN/FIBA-style lower-third banner featuring team name, Sub Out tag with jersey number and down-arrow, Sub In tag with jersey number and up-arrow, and 6-second depleting progress bar.
+    *   **Realtime Cross-Screen Synchronization**:
+        *   Connected `StadiumDisplay` and `FacilitatorKiosk` on unified `match-broadcast:${matchId}` WebSocket channel plus `match_events` database insert listeners for zero-latency instant triggering.
+        *   Added clock heartbeat synchronization every 4 seconds while running to eliminate drift across spectator screens.
+        *   Allowed direct courtside terminal scorekeeping without auth lockout in development and kiosk mode.
+*   **Verification**:
+    *   `npm run build` compiled with **Exit Code 0** in 4.36s.
+    *   `npx eslint` verified with **0 errors and 0 warnings** across all modified files.
+    *   End-to-end multi-page testing in Chrome DevTools MCP verified:
+        *   Starting master clock on Kiosk displays running clock on Focus View display.
+        *   Calling timeout auto-pauses the clock immediately, decrements timeouts left, plays timeout siren, and renders full SVG circular countdown overlay on the big screen.
+        *   Dismissing timeout dismisses the overlay and updates team timeout pips to `● ● ○`.
+        *   Substitutions play the scorer's table double-horn buzzer and display the animated lower-third banner.
+
+### Prompt 50: UI Design Philosophy Recheck & Anti-Slop Directive Audit
+*   **Goal**: Recheck and analyze the user interface of the new screens (Courtside Facilitator Kiosk Mode and Stadium Jumbotron Focus View) against the platform's overarching design philosophy in `design_context.md`, specifically the 8 Sins of AI UI Slop, the Prohibited Visual Anti-Patterns, and the Mobile-First Reactive architecture.
+*   **Comprehensive Audit Findings**:
+    1.  **Sin #9 & DON'T #1 (Muddy Dark-to-Brown Wash Gradients)**:
+        *   *Finding*: [`src/pages/StadiumDisplay.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/StadiumDisplay.tsx) was applying `from-orange-950/40 via-slate-900/90 to-slate-950` on leading team cards, and [`src/components/kiosk/KioskScoreColumn.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/kiosk/KioskScoreColumn.tsx) had `from-orange-950/40` and `from-cyan-950/40` washes. This passed through dirty brownish-taupe tones, creating an unreadable muddy smudge directly violating Sin #9.
+        *   *Remedy*: Replaced all murky washes with solid Nocturnal Slate surfaces (`bg-slate-900/90` and `bg-slate-950`) combined with razor-sharp, high-contrast Palawan Solar Orange (`border-orange-500/70 shadow-[0_0_60px_rgba(249,115,22,0.25)]`) and Cyan perimeter glows.
+    2.  **Sin #4 & Section 5 (Zero-Emoji Discipline / Pure Scalable Vector Standard)**:
+        *   *Finding*: A raw unicode `⏱` text emoji was detected in [`src/pages/FacilitatorKiosk.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/FacilitatorKiosk.tsx) line 1129 in the mobile tab switcher, and raw `⚡` emojis were found in [`src/components/scoreboard/LeadChangeBanner.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/scoreboard/LeadChangeBanner.tsx) and [`src/pages/LiveMatch.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/LiveMatch.tsx).
+        *   *Remedy*: Replaced raw `⏱` with Lucide `<Timer className="size-3" />`, and purged `⚡` in favor of pure SVG `<Zap />` icons and crisp uppercase collegiate labels.
+    3.  **Token Consistency & Team Identity**:
+        *   *Finding*: In [`src/pages/StadiumDisplay.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/StadiumDisplay.tsx), Team B was erroneously displaying orange highlights when leading instead of Cyan (`#06B6D4`), conflicting with the platform's visitor identity tokens.
+        *   *Remedy*: Aligned Team B to Cyan (`text-cyan-400`, `border-cyan-500/70`, `bg-cyan-500 text-slate-950` leading badge), creating balanced contrast against Team A's Solar Orange.
+    4.  **DON'T #3 (Duplicate Action Buttons / Single Canonical Action Hierarchy)**:
+        *   *Finding*: In [`src/components/kiosk/KioskSubstitutionModal.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/kiosk/KioskSubstitutionModal.tsx), `<DialogContent>` was rendering a default close button in addition to a custom in-header close button.
+        *   *Remedy*: Added `showCloseButton={false}` to `<DialogContent>` to eliminate duplicate close triggers.
+    5.  **Kinetic Tactility & Touch Targets**:
+        *   *Finding*: Modal confirm buttons lacked immediate tactile haptic feedback.
+        *   *Remedy*: Added `active:scale-[0.98]` and `transition-all` across modal buttons and ensured minimum 44px hit areas on kiosk controls.
+*   **Verification**:
+    *   `npm run build` compiled with **Exit Code 0** in 6.01s (zero TypeScript compilation errors).
+    *   `npx eslint` verified with **0 errors and 0 warnings** across all modified files.
+
+### Prompt 51: Kiosk Score Persistence & Unauthenticated RLS Guard Hardening
+*   **Issue Root Cause**:
+    *   The user observed that updating scores on the Kiosk updated the monitor tab via WebSocket broadcast in real time, but upon browser refresh the scores reverted to 34–38.
+    *   *Diagnosis*: Postgres Row-Level Security (RLS) on the `matches` table strictly permits `UPDATE` only to `authenticated` users possessing the `facilitator`, `coach`, or `admin` role, or holding `active_scorekeeper_id = auth.uid()`. When accessed on mobile or unauthenticated browser sessions, PostgREST returned HTTP 200 with `0` rows affected (`error: null`).
+    *   Because `error` was null, the client code optimistically updated local React state and broadcasted the new score over WebSockets without realizing Postgres silently rejected the write due to RLS. Upon refresh, `fetchMatchData()` fetched the unmutated database record (34–38).
+*   **Architecture Hardening**:
+    1.  **Direct Database Write Verification**:
+        *   Updated `handleScore`, `handleQuickDeduct`, and `handleUndoLastScore` to execute `.update(...).select('id')`.
+        *   If `data.length === 0`, the client catches the RLS write rejection, prevents uncommitted broadcast events from masquerading as saved scores, and displays an explicit toast alert: `"Permission Denied: Database write rejected. Please claim the scoring console lease."`
+    2.  **Unauthenticated Kiosk Guard**:
+        *   Tightened `isAuthorizedScorekeeper = Boolean(user && (isFacilitator || isSuperAdmin))` and `isAuthorized = Boolean(user && (isHoldingLease || isSuperAdmin || isFacilitator))`.
+        *   If `!user`, attempting any scoring action immediately displays `"You must log in to record official scores in the tournament database"` and opens `openLoginModal()`.
+    3.  **Standalone Kiosk Login Gateway ([`src/pages/FacilitatorKiosk.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/FacilitatorKiosk.tsx))**:
+        *   Added a prominent high-contrast Solar Orange `Log In` button in the kiosk header when `!user`.
+        *   Mounted `<LoginModal />` inside `FacilitatorKiosk` so courtside officials on mobile phones or tablet kiosks can log in directly without leaving kiosk mode.
+*   **Verification**:
+    *   `npm run build` compiled with **Exit Code 0** in 5.94s.
+    *   `npx eslint` passed with **0 errors and 0 warnings**.
+    *   DevTools testing verified the unauthenticated state renders `LOG IN`, clicking it opens the modal, and actions guard against silent RLS rejections.
+
+---
+
+### Prompt 52: Contextual Auth Redirection Fix & In-Tab SPA Navigation Harmonization
+*   **Timestamp**: 2026-10-12T14:15:00+08:00
+*   **User Directive**: "in the kiosk page logging in redirects my to the dashboard instead of the kiosk page also why does pressing the focus view and kiosk view creates a new tab?"
+*   **Root Causes Diagnosed**:
+    1.  **Forced Role Dashboard Redirection on Contextual Pages**:
+        *   In [`src/components/auth/LoginModal.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/auth/LoginModal.tsx), `onLoginSubmit` unconditionally executed `navigate(destination, { replace: true })` (`/admin`, `/coach`, or `/player`) upon successful authentication.
+        *   When a scorekeeper or admin logged in from a specific operational page like the Courtside Kiosk (`/match/:id/kiosk`), the modal closed and redirected them away from their match to `/admin` or `/player`.
+    2.  **Unintended Multi-Tab Spawning (`window.open(..., '_blank')`)**:
+        *   In [`src/pages/LiveMatch.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/LiveMatch.tsx) lines 1518 & 1529 and [`src/components/scoreboard/FloatingScoreWidget.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/scoreboard/FloatingScoreWidget.tsx) line 48, the "Focus View" and "Kiosk Deck" buttons were calling `window.open('/match/${match.id}/...', '_blank')`.
+        *   While originally conceived for multi-monitor projection, this cluttered browser tabs during normal device usage, breaking the expected single-page application (SPA) flow—especially since both views already include dedicated back buttons (`ChevronLeft`) returning to `/match/:id`.
+*   **Actions Taken**:
+    1.  **Context-Aware Login Redirection ([`src/components/auth/LoginModal.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/auth/LoginModal.tsx))**:
+        *   Integrated `useLocation()` hook into `LoginModal`.
+        *   Added a route guard check on `location.pathname`: only users logging in from the landing page (`/`) or explicit auth routes (`/login`, `/register`) are automatically routed to their role dashboard.
+        *   Users logging in while on a contextual or active match page (such as `/match/:id/kiosk`, `/match/:id`, `/match/:id/display`, `/explorer`, `/ranking`) now remain on their current page with the modal closing smoothly, enabling instant authenticated privileges without page reload or disruption.
+    2.  **In-Tab SPA Navigation Harmonization ([`src/pages/LiveMatch.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/LiveMatch.tsx) & [`src/components/scoreboard/FloatingScoreWidget.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/scoreboard/FloatingScoreWidget.tsx))**:
+        *   Replaced `window.open(..., '_blank')` in `LiveMatch.tsx` with React Router's `navigate(`/match/${match.id}/display`)` for Focus View and `navigate(`/match/${match.id}/kiosk`)` for Kiosk Deck.
+        *   Replaced `window.open(..., '_blank')` in `FloatingScoreWidget.tsx` with `navigate(`/match/${matchId}/display`)`.
+        *   Updated tooltips from "in a new tab" to distraction-free in-app transitions.
+        *   Users can navigate seamlessly between standard Match Control, big-screen Focus View, and tactile Kiosk Deck in the same tab, utilizing the existing `<ChevronLeft />` back buttons to return.
+*   **Verification**:
+    *   `npm run build` compiled with **Exit Code 0** in 5.95s (zero TypeScript compilation errors).
+    *   ESLint check passed with **0 errors**.
+    *   Chrome DevTools MCP automated tests verified:
+        *   Clicking "FOCUS VIEW" on LiveMatch navigates directly to `/match/:id/display` in the same tab without opening new tabs.
+        *   Clicking the back button in Focus View navigates back to `/match/:id`.
+        *   Clicking "KIOSK DECK" navigates directly to `/match/:id/kiosk` in the same tab.
+        *   Clicking the back chevron in Kiosk Deck navigates back to `/match/:id`.
+
+
+
+
+
+
+
+
+
+
+
+
 

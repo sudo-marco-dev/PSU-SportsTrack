@@ -43,6 +43,16 @@
 - [x] Phase 5.13 Universal Mobile-First App Shell (Persistent 5-tier bottom nav rail, safe-area insets & zero-overflow dialogs)
 - [x] Phase 5.14 Next-Themes Dynamic Dark/Light Mode Engine & Nocturnal Color Architecture
 - [x] Phase 5.15 Public Users Email Synchronization (`trg_sync_user_email` trigger & registration pipeline persistence)
+- [x] Phase 6.1 Authentic Sport Scoring Rule Profiles (`sportScoringRules.ts` for 9 ball sports)
+- [x] Phase 6.2 Standalone Big Screen Stadium Jumbotron / Focus View (`/match/:id/display`)
+- [x] Phase 6.3 Universal Picture-in-Picture Floating Window & In-App Widget (`pipScoreboard.ts`, `FloatingScoreWidget.tsx`)
+- [x] Phase 6.4 Dynamic Scoreboard Keyframe Animations & Telemetry (Score pop, floating deltas, lead-change alerts, momentum runs)
+- [x] Phase 6.5 Procedural Courtside Web Audio FX Synthesizer (Score chimes, buzzer klaxon, Fox 40 whistle, timeout klaxon, sub horns)
+- [x] Phase 6.6 Courtside Facilitator Kiosk Mode (`/match/:id/kiosk` Steam Deck tactile console, zero-scroll mobile viewport snapping, dual split / full card thumb controls, 2-tap subs, master game clock, timeouts, fouls, court swap)
+- [x] Phase 6.7 Official Timeout Clock Auto-Pause & Stadium Lower-Third Substitution Banner
+- [x] Phase 6.8 Kiosk Direct Database Write Verification (`.select('id')` RLS rejection detection)
+- [x] Phase 6.9 Context-Aware Login Redirection (Preserving current route on courtside/in-progress pages)
+- [x] Phase 6.10 In-Tab SPA Navigation Harmonization (Replacing multi-tab spawning with seamless in-app navigation)
 
 ## 🛠️ Recent Modifications & Change Log
 
@@ -205,12 +215,42 @@
   - `src/components/auth/LoginModal.tsx`
   - `src/pages/SystemVerifications.tsx`
 
+### Phase 6: Live Scoring Ecosystem, Focus View Jumbotron, Courtside Kiosk & Audio FX Engine
+- **Description**: Enterprise-grade live match presentation and courtside operations suite:
+  1. **Sport Scoring Rules**: Authentic sport-specific scoring profiles for 9 ball sports (`SPORT_SCORING_PROFILES`) with custom units, action buttons, and period structures.
+  2. **Focus View / Stadium Jumbotron (`/match/:id/display`)**: Standalone, edge-to-edge arena presentation with Screen Wake Lock, jumbotron clock pillar, live action ticker, spectator URL, and fullscreen toggle.
+  3. **Multitasking PiP & In-App Widget**: Native OS Picture-in-Picture scoreboard canvas pipeline (`pipScoreboard.ts`) and reactive floating scoreboard badge (`FloatingScoreWidget.tsx`).
+  4. **Procedural Web Audio FX Synthesizer (`audioFx.ts`)**: Pure Web Audio API synthesis (zero external audio files) providing score chimes, referee Fox 40 whistle, arena buzzer klaxon, timeout klaxon, sub horns, and clock chimes.
+  5. **Tactile Courtside Facilitator Kiosk (`/match/:id/kiosk`)**: Steam Deck style console with zero-scroll mobile viewport snapping (`h-dvh max-h-dvh`), dual-thumb side-by-side split view, master digital game clock, 2-tap substitutions modal, timeouts with LED pips, fouls counter with bonus threshold alert, and court side swap.
+  6. **Official Timeout Clock Auto-Pause & Broadcast Overlays**: Calling timeout auto-pauses the master clock and synchronizes SVG countdown overlay and lower-third substitution banners across all screens over WebSockets.
+  7. **RLS Write Verification & Contextual Navigation**: Secured kiosk mutations with `.select('id')` verification to catch RLS rejections, preserved current path during in-kiosk login, and harmonized Focus View/Kiosk navigation to in-tab SPA transitions.
+- **Files Modified**:
+  - `src/lib/sportScoringRules.ts`
+  - `src/lib/audioFx.ts`
+  - `src/lib/pipScoreboard.ts`
+  - `src/lib/scoreboardAnimations.ts`
+  - `src/pages/StadiumDisplay.tsx`
+  - `src/pages/FacilitatorKiosk.tsx`
+  - `src/components/kiosk/KioskScoreColumn.tsx`
+  - `src/components/kiosk/KioskCenterConsole.tsx`
+  - `src/components/kiosk/KioskSubstitutionModal.tsx`
+  - `src/components/scoreboard/StadiumGameClock.tsx`
+  - `src/components/scoreboard/StadiumTimeoutOverlay.tsx`
+  - `src/components/scoreboard/StadiumSubBanner.tsx`
+  - `src/components/scoreboard/FloatingScoreWidget.tsx`
+  - `src/components/auth/LoginModal.tsx`
+  - `src/pages/LiveMatch.tsx`
+  - `src/App.tsx`
+  - `vite.config.ts`
+
 ## 🎯 Deployment & Capstone Readiness
 - [x] Phase 4: MVP Star System (Red & Gold Stars)
 - [x] Phase 4.1: Binturungan Multi-Sport Creation & Tournament Lifecycle
 - [x] Phase 5: Facilitator Governance, Offline Resilience & Bronze Brackets
 - [x] Phase 5.9 - 5.15: Role Normalization, COR Pipeline, Theme Engine & Icon Standardization
+- [x] Phase 6: Live Scoring Engine, Stadium Jumbotron Focus View, Facilitator Kiosk, Web Audio FX & Navigation Polish
 - [x] Production Build Validation: Zero TypeScript compiler errors (`tsc -b`), zero build failures (`vite build`)
 - [x] Code Quality Audit: Zero ESLint errors across entire `src/` codebase
 - [x] Database Synchronization: All migrations executed and active on remote Supabase project
 - [x] Deployment Configuration: `vercel.json` SPA routing rewrites and security redirects configured
+

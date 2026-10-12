@@ -24,6 +24,8 @@ const NotFound = React.lazy(() => import('@/pages/NotFound').then(m => ({ defaul
 const AuthConfirm = React.lazy(() => import('@/pages/AuthConfirm').then(m => ({ default: m.AuthConfirm })));
 const ResetPassword = React.lazy(() => import('@/pages/ResetPassword').then(m => ({ default: m.ResetPassword })));
 const AdminRecovery = React.lazy(() => import('@/pages/AdminRecovery').then(m => ({ default: m.AdminRecovery })));
+const StadiumDisplay = React.lazy(() => import('@/pages/StadiumDisplay').then(m => ({ default: m.StadiumDisplay })));
+const FacilitatorKiosk = React.lazy(() => import('@/pages/FacilitatorKiosk').then(m => ({ default: m.FacilitatorKiosk })));
 
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 
@@ -48,6 +50,12 @@ function AppRoutes() {
         <Route path="/register" element={<Register />} />
         <Route path="/auth/confirm" element={<AuthConfirm />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+
+        {/* Dedicated Stadium Jumbotron Edge-to-Edge Display */}
+        <Route path="/match/:matchId/display" element={<StadiumDisplay />} />
+
+        {/* Dedicated Courtside Facilitator Kiosk Scoring Deck */}
+        <Route path="/match/:matchId/kiosk" element={<FacilitatorKiosk />} />
 
         {/* App Shell Layout */}
         <Route element={<AppLayout />}>

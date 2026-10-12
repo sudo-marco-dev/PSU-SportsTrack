@@ -39,10 +39,11 @@ import {
   GiBasketballBall, 
   GiVolleyballBall, 
   GiSoccerBall, 
-  GiShuttlecock, 
   GiBaseballBat, 
+  GiBaseballGlove,
   GiSoccerKick, 
-  GiPingPongBat 
+  GiPingPongBat,
+  GiTennisRacket
 } from 'react-icons/gi';
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
@@ -84,9 +85,11 @@ const BINTURUNGAN_DEFAULT_SPORTS: SportConfig[] = [
   { name: 'Basketball', icon: GiBasketballBall, category: 'Court' },
   { name: 'Volleyball', icon: GiVolleyballBall, category: 'Court' },
   { name: 'Soccer', icon: GiSoccerBall, category: 'Pitch' },
-  { name: 'Badminton', icon: GiShuttlecock, category: 'Racket' },
-  { name: 'Baseball', icon: GiBaseballBat, category: 'Diamond' },
   { name: 'Futsal', icon: GiSoccerKick, category: 'Indoor' },
+  { name: 'Sepak Takraw', icon: GiSoccerKick, category: 'Court' },
+  { name: 'Baseball', icon: GiBaseballBat, category: 'Diamond' },
+  { name: 'Softball', icon: GiBaseballGlove, category: 'Diamond' },
+  { name: 'Pickleball', icon: GiTennisRacket, category: 'Paddle' },
   { name: 'Table Tennis', icon: GiPingPongBat, category: 'Paddle' },
 ];
 

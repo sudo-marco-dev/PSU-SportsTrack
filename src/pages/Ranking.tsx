@@ -474,11 +474,12 @@ export const Ranking = () => {
                   <SelectItem value="all" className="text-xs font-medium">All Sports</SelectItem>
                   <SelectItem value="Basketball" className="text-xs font-medium">Basketball</SelectItem>
                   <SelectItem value="Volleyball" className="text-xs font-medium">Volleyball</SelectItem>
-                  <SelectItem value="Badminton" className="text-xs font-medium">Badminton</SelectItem>
                   <SelectItem value="Soccer" className="text-xs font-medium">Soccer / Football</SelectItem>
                   <SelectItem value="Sepak Takraw" className="text-xs font-medium">Sepak Takraw</SelectItem>
-                  <SelectItem value="Table Tennis" className="text-xs font-medium">Table Tennis</SelectItem>
                   <SelectItem value="Baseball" className="text-xs font-medium">Baseball</SelectItem>
+                  <SelectItem value="Softball" className="text-xs font-medium">Softball</SelectItem>
+                  <SelectItem value="Pickleball" className="text-xs font-medium">Pickleball</SelectItem>
+                  <SelectItem value="Table Tennis" className="text-xs font-medium">Table Tennis</SelectItem>
                   <SelectItem value="Futsal" className="text-xs font-medium">Futsal</SelectItem>
                   <SelectItem value="Chess" className="text-xs font-medium">Chess</SelectItem>
                 </SelectContent>

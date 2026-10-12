@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, createElement } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
@@ -24,7 +24,12 @@ import {
   Loader2,
   MinusCircle,
   AlertTriangle,
-  Users
+  Users,
+  Maximize2,
+  PictureInPicture2,
+  Volume2,
+  VolumeX,
+  LayoutGrid
 } from 'lucide-react';
 
 import {
@@ -36,6 +41,25 @@ import {
 } from '@/components/ui/dialog';
 import { offlineQueue } from '@/lib/offlineQueue';
 import { FacilitatorManagementModal } from '@/components/admin/FacilitatorManagementModal';
+import { getSportScoringProfile } from '@/lib/sportScoringRules';
+import { getSportIcon } from '@/lib/sportIcons';
+import { pipScoreboard } from '@/lib/pipScoreboard';
+import { FloatingScoreWidget } from '@/components/scoreboard/FloatingScoreWidget';
+import {
+  type FloatingDelta,
+  type LeadChangeAlert,
+  detectLeadChange,
+  detectMomentumRun,
+} from '@/lib/scoreboardAnimations';
+import { FloatingDeltaBadge } from '@/components/scoreboard/FloatingDeltaBadge';
+import { LeadChangeBanner } from '@/components/scoreboard/LeadChangeBanner';
+import { MomentumRunBadge } from '@/components/scoreboard/MomentumRunBadge';
+import {
+  useAudioFx,
+  playScoreChime,
+  playBuzzerSound,
+  playWhistleSound
+} from '@/lib/audioFx';
 
 type Match = {
   id: string;
@@ -49,6 +73,10 @@ type Match = {
   team_a: { name: string } | null;
   team_b: { name: string } | null;
   tournament_id: string;
+  tournament?: {
+    name: string;
+    sport: string;
+  } | null;
   next_match_id?: string | null;
   next_match_slot?: 'team_a' | 'team_b' | null;
   loser_next_match_id?: string | null;
@@ -143,7 +171,8 @@ export const LiveMatch = () => {
     teamId: string;
     teamName: string;
     points: number;
-    actionType: 'FT' | 'Field' | 'Triple';
+    actionType: string;
+    actionDescription?: string;
   } | null>(null);
   const [showCustomJersey, setShowCustomJersey] = useState(false);
   const [customJerseyInput, setCustomJerseyInput] = useState('');
@@ -155,10 +184,176 @@ export const LiveMatch = () => {
     teamId: string;
     teamName: string;
   } | null>(null);
-  const [deductPoints, setDeductPoints] = useState<1 | 2 | 3>(1);
+  const [deductPoints, setDeductPoints] = useState<number>(1);
   const [deductPlayerId, setDeductPlayerId] = useState<string>('');
   const [deductReason, setDeductReason] = useState<string>('Referee Wave-off / Offensive Foul');
   const [customDeductNote, setCustomDeductNote] = useState<string>('');
+
+  // Sport Scoring Profile
+  const sportProfile = useMemo(() => getSportScoringProfile(match?.tournament?.sport), [match?.tournament?.sport]);
+
+  // Floating PiP & In-App Widget State
+  const [isPipActive, setIsPipActive] = useState(false);
+  const [isScrolledPastScoreboard, setIsScrolledPastScoreboard] = useState(false);
+
+  // Scroll detector for bottom floating scoreboard
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolledPastScoreboard(window.scrollY > 420);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Listen to native OS PiP window state
+  useEffect(() => {
+    const unsubscribe = pipScoreboard.subscribeStateChange((active) => {
+      setIsPipActive(active);
+    });
+    return unsubscribe;
+  }, []);
+
+  // Synchronize canvas Picture-in-Picture window when scores or events change
+  useEffect(() => {
+    if (match && pipScoreboard.isActive()) {
+      pipScoreboard.draw({
+        sport: match.tournament?.sport || 'General',
+        round: match.round,
+        status: match.status,
+        teamAName: match.team_a?.name || 'Team A',
+        teamBName: match.team_b?.name || 'Team B',
+        teamAScore: match.team_a_score,
+        teamBScore: match.team_b_score,
+        pointUnit: sportProfile.pointUnit,
+        latestEvent: events[0]?.description,
+      });
+    }
+  }, [match, events, sportProfile.pointUnit]);
+
+  // Dynamic Document Title for background multitasking
+  useEffect(() => {
+    if (!match) return;
+    const teamAName = match.team_a?.name || 'Team A';
+    const teamBName = match.team_b?.name || 'Team B';
+    document.title = `(${match.team_a_score} - ${match.team_b_score}) ${teamAName} vs ${teamBName} • ${match.round} | PSU SportsTrack`;
+  }, [match]);
+
+  // Dynamic Scoreboard Animations (Phase 4)
+  const prevScoresRef = useRef<{ a: number; b: number; hasInitialized: boolean }>({
+    a: 0,
+    b: 0,
+    hasInitialized: false,
+  });
+  const [deltasA, setDeltasA] = useState<FloatingDelta[]>([]);
+  const [deltasB, setDeltasB] = useState<FloatingDelta[]>([]);
+  const [isPoppingA, setIsPoppingA] = useState(false);
+  const [isPoppingB, setIsPoppingB] = useState(false);
+  const [leadChangeAlert, setLeadChangeAlert] = useState<LeadChangeAlert | null>(null);
+
+  // Courtside Web Audio FX Engine
+  const { enabled: isAudioActive, toggle: toggleAudioActive } = useAudioFx();
+  const prevStatusRef = useRef<string | null>(null);
+
+  // Match completion arena buzzer trigger
+  useEffect(() => {
+    if (!match) return;
+    if (prevStatusRef.current && prevStatusRef.current !== 'Completed' && match.status === 'Completed') {
+      playBuzzerSound();
+    }
+    prevStatusRef.current = match.status;
+  }, [match]);
+
+  // Score pop, floating delta, audio FX, and lead change detector
+  useEffect(() => {
+    if (!match) return;
+
+    if (!prevScoresRef.current.hasInitialized) {
+      prevScoresRef.current = {
+        a: match.team_a_score,
+        b: match.team_b_score,
+        hasInitialized: true,
+      };
+      return;
+    }
+
+    const prevA = prevScoresRef.current.a;
+    const prevB = prevScoresRef.current.b;
+    const currA = match.team_a_score;
+    const currB = match.team_b_score;
+
+    const diffA = currA - prevA;
+    const diffB = currB - prevB;
+
+    if (diffA !== 0) {
+      setIsPoppingA(true);
+      setTimeout(() => setIsPoppingA(false), 650);
+      const newDelta: FloatingDelta = {
+        id: `delta-a-${Date.now()}-${Math.random()}`,
+        delta: diffA > 0 ? `+${diffA}` : `${diffA}`,
+        isPositive: diffA > 0,
+        timestamp: Date.now(),
+      };
+      setDeltasA((prev) => [...prev, newDelta]);
+      setTimeout(() => {
+        setDeltasA((prev) => prev.filter((d) => d.id !== newDelta.id));
+      }, 1400);
+    }
+
+    if (diffB !== 0) {
+      setIsPoppingB(true);
+      setTimeout(() => setIsPoppingB(false), 650);
+      const newDelta: FloatingDelta = {
+        id: `delta-b-${Date.now()}-${Math.random()}`,
+        delta: diffB > 0 ? `+${diffB}` : `${diffB}`,
+        isPositive: diffB > 0,
+        timestamp: Date.now(),
+      };
+      setDeltasB((prev) => [...prev, newDelta]);
+      setTimeout(() => {
+        setDeltasB((prev) => prev.filter((d) => d.id !== newDelta.id));
+      }, 1400);
+    }
+
+    // Audio FX triggers: chime for points scored, whistle for deductions
+    if (diffA > 0 || diffB > 0) {
+      playScoreChime(Math.max(diffA, diffB));
+    } else if (diffA < 0 || diffB < 0) {
+      playWhistleSound();
+    }
+
+    // Lead Change Alert detection
+    const leadChange = detectLeadChange(
+      prevA,
+      prevB,
+      currA,
+      currB,
+      match.team_a?.name || 'Team A',
+      match.team_b?.name || 'Team B'
+    );
+
+    if (leadChange) {
+      setLeadChangeAlert(leadChange);
+      toast.info(`LEAD CHANGE: ${leadChange.teamName} takes the lead (${currA} - ${currB})!`, {
+        duration: 4500,
+      });
+      setTimeout(() => {
+        setLeadChangeAlert((prev) => (prev?.timestamp === leadChange.timestamp ? null : prev));
+      }, 5000);
+    }
+
+    prevScoresRef.current = { a: currA, b: currB, hasInitialized: true };
+  }, [match]);
+
+  // Momentum Run detection
+  const momentumRun = useMemo(() => {
+    if (!match) return null;
+    return detectMomentumRun(
+      events,
+      match.team_a?.name || 'Team A',
+      match.team_b?.name || 'Team B',
+      sportProfile.pointUnit
+    );
+  }, [events, match?.team_a?.name, match?.team_b?.name, sportProfile.pointUnit]);
 
   // Facilitator Lease & Claim Handover State
   const [isHoldingLease, setIsHoldingLease] = useState(false);
@@ -357,7 +552,7 @@ export const LiveMatch = () => {
         (payload) => {
           if (import.meta.env.DEV) console.log('[Realtime] matches UPDATE received:', payload);
           const updatedMatch = payload.new as Match;
-          setMatch((prev) => prev ? { ...prev, ...updatedMatch } : updatedMatch);
+          setMatch((prev) => prev ? { ...prev, ...updatedMatch, tournament: prev.tournament } : updatedMatch);
           if (user?.id && updatedMatch.active_scorekeeper_id !== user.id) {
             setIsHoldingLease(false);
           }
@@ -445,7 +640,7 @@ export const LiveMatch = () => {
       const [matchRes, eventsRes, starRes] = await Promise.all([
         supabase
           .from('matches')
-          .select('*, team_a:team_a_id(name), team_b:team_b_id(name)')
+          .select('*, team_a:team_a_id(name), team_b:team_b_id(name), tournament:tournament_id(name, sport)')
           .eq('id', matchId)
           .single(),
         supabase
@@ -752,7 +947,31 @@ export const LiveMatch = () => {
     }
   };
 
-  const handleInitiateScore = (team: 'a' | 'b', points: number, actionType: 'FT' | 'Field' | 'Triple') => {
+  const handleTogglePip = async () => {
+    if (!match) return;
+    if (!pipScoreboard.isSupported()) {
+      toast.info("Picture-in-Picture floating windows are not supported on this browser. Try Focus View instead!");
+      return;
+    }
+
+    const active = await pipScoreboard.togglePip({
+      sport: match.tournament?.sport || 'General',
+      round: match.round,
+      status: match.status,
+      teamAName: match.team_a?.name || 'Team A',
+      teamBName: match.team_b?.name || 'Team B',
+      teamAScore: match.team_a_score,
+      teamBScore: match.team_b_score,
+      pointUnit: sportProfile.pointUnit,
+      latestEvent: events[0]?.description,
+    });
+
+    if (active) {
+      toast.success("Floating scoreboard active! You can now multitask outside the browser.");
+    }
+  };
+
+  const handleInitiateScore = (team: 'a' | 'b', points: number, actionType: string, actionDescription?: string) => {
     if (!isAuthorizedScorekeeper || !match || match.status !== 'Ongoing') return;
 
     if (!isHoldingLease && !isSuperAdmin) {
@@ -774,6 +993,7 @@ export const LiveMatch = () => {
       teamName,
       points,
       actionType,
+      actionDescription,
     });
   };
 
@@ -803,9 +1023,10 @@ export const LiveMatch = () => {
         : '';
     }
 
+    const unitLabel = sportProfile.pointUnit;
     const scoreDescription = (selectedPlayer || customAttribution) && (playerName || jerseyDisplay)
-      ? `[${jerseyDisplay || 'Player'}] ${playerName || 'Player'} scored ${points} point${points > 1 ? 's' : ''} (${actionType}) for ${teamName}!`
-      : `${teamName} scored ${points} point${points > 1 ? 's' : ''} (${actionType})!`;
+      ? `[${jerseyDisplay || 'Player'}] ${playerName || 'Player'} scored ${points} ${unitLabel} (${actionType}) for ${teamName}!`
+      : `${teamName} scored ${points} ${unitLabel} (${actionType})!`;
 
     // Offline Buffering Guard
     if (!navigator.onLine) {
@@ -937,7 +1158,7 @@ export const LiveMatch = () => {
 
     const currentScore = team === 'a' ? match.team_a_score : match.team_b_score;
     if (currentScore <= 0) {
-      toast.warning(`${teamName} currently has 0 points. Cannot deduct further.`);
+      toast.warning(`${teamName} currently has 0 ${sportProfile.pointUnit}. Cannot deduct further.`);
       return;
     }
 
@@ -946,9 +1167,9 @@ export const LiveMatch = () => {
       teamId,
       teamName,
     });
-    setDeductPoints(1);
+    setDeductPoints(sportProfile.deductibleValues[0] || 1);
     setDeductPlayerId('');
-    setDeductReason('Referee Wave-off / Offensive Foul');
+    setDeductReason('Referee Wave-off / Correction');
     setCustomDeductNote('');
   };
 
@@ -959,7 +1180,7 @@ export const LiveMatch = () => {
     const currentScore = team === 'a' ? match.team_a_score : match.team_b_score;
 
     if (currentScore < deductPoints) {
-      toast.error(`Cannot deduct ${deductPoints} points. ${teamName} only has ${currentScore} points.`);
+      toast.error(`Cannot deduct ${deductPoints} ${sportProfile.pointUnit}. ${teamName} only has ${currentScore} ${sportProfile.pointUnit}.`);
       return;
     }
 
@@ -984,7 +1205,7 @@ export const LiveMatch = () => {
 
     const reasonSummary = customDeductNote.trim() ? `${deductReason}: ${customDeductNote.trim()}` : deductReason;
     const playerSummary = targetPlayer && playerName ? ` (${jerseyDisplay || 'Player'} ${playerName})` : '';
-    const deductDescription = `[Score Correction]: -${deductPoints} PTS from ${teamName}${playerSummary} - Reason: ${reasonSummary}`;
+    const deductDescription = `[Score Correction]: -${deductPoints} ${sportProfile.pointUnit} from ${teamName}${playerSummary} - Reason: ${reasonSummary}`;
 
     // Offline Buffering Guard
     if (!navigator.onLine) {
@@ -1261,9 +1482,9 @@ export const LiveMatch = () => {
             </Button>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <Activity className="w-4 h-4 text-orange-500" />
+                {createElement(getSportIcon(match.tournament?.sport), { className: 'w-4 h-4 text-orange-500' })}
                 <span className="text-orange-500 font-bold text-xs tracking-[0.2em] uppercase">
-                  {match.status === 'Completed' ? 'Post-Game Record' : 'Live Match Control'}
+                  {match.tournament?.sport || 'Live Match'} • {match.status === 'Completed' ? 'Post-Game Record' : 'Match Control'}
                 </span>
               </div>
               <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
@@ -1276,7 +1497,57 @@ export const LiveMatch = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTogglePip}
+              className={`h-9 px-3.5 rounded-full border-orange-500/40 font-bold text-xs uppercase tracking-tight gap-1.5 transition-all cursor-pointer shadow-sm ${
+                isPipActive
+                  ? 'bg-orange-500 text-slate-950 hover:bg-orange-600'
+                  : 'text-orange-400 bg-orange-500/10 hover:bg-orange-500/20'
+              }`}
+              title="Pop out floating scoreboard window for multitasking outside browser"
+            >
+              <PictureInPicture2 className="size-3.5" />
+              <span>{isPipActive ? 'Floating Active' : 'Float Score'}</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/match/${match.id}/display`)}
+              className="h-9 px-3.5 rounded-full border-orange-500/40 text-orange-400 bg-orange-500/10 hover:bg-orange-500/20 font-bold text-xs uppercase tracking-tight gap-1.5 transition-all cursor-pointer shadow-sm"
+              title="Open distraction-free live scoreboard Focus View"
+            >
+              <Maximize2 className="size-3.5 text-orange-400" />
+              <span>Focus View</span>
+            </Button>
+            {isAuthorizedScorekeeper && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/match/${match.id}/kiosk`)}
+                className="h-9 px-3.5 rounded-full border-orange-500 bg-orange-500/15 hover:bg-orange-500/25 text-orange-400 font-black text-xs uppercase tracking-tight gap-1.5 transition-all cursor-pointer shadow-sm"
+                title="Launch tactile courtside Kiosk Deck (Stream Deck style scoring console)"
+              >
+                <LayoutGrid className="size-3.5" />
+                <span>Kiosk Deck</span>
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleAudioActive}
+              className={`h-9 px-3.5 rounded-full border-orange-500/40 font-bold text-xs uppercase tracking-tight gap-1.5 transition-all cursor-pointer shadow-sm ${
+                isAudioActive
+                  ? 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 shadow-[0_0_12px_rgba(249,115,22,0.2)]'
+                  : 'text-slate-400 bg-white/5 hover:bg-white/10 border-white/10'
+              }`}
+              title={isAudioActive ? 'Courtside Sound FX Active (Click to Mute)' : 'Sound Muted (Click to Enable Sound FX)'}
+            >
+              {isAudioActive ? <Volume2 className="size-3.5 text-orange-400" /> : <VolumeX className="size-3.5" />}
+              <span>{isAudioActive ? 'Sound On' : 'Muted'}</span>
+            </Button>
             <div className="flex items-center gap-2 px-3.5 py-1.5 bg-white/5 rounded-full border border-white/10 text-xs">
               <Activity className="size-3.5 text-orange-500 animate-pulse" />
               <span className="font-bold uppercase tracking-wider">{match.status}</span>
@@ -1296,31 +1567,48 @@ export const LiveMatch = () => {
       </div>
 
       <div className="max-w-5xl mx-auto space-y-6">
+        {/* Lead Change Alert Banner */}
+        <LeadChangeBanner
+          alert={leadChangeAlert}
+          onDismiss={() => setLeadChangeAlert(null)}
+        />
+
         {/* Scoreboard */}
-        <Card className="bg-primary text-primary-foreground shadow-xl overflow-hidden border-none rounded-2xl">
+        <Card className="bg-primary text-primary-foreground shadow-xl overflow-hidden border-none rounded-2xl relative">
           <CardContent className="p-0">
-            <div className="bg-black/20 px-4 py-2.5 text-center text-xs font-bold uppercase tracking-widest opacity-80 flex items-center justify-center gap-2">
-              <span>{match.round}</span>
-              {match.venue && (
-                <>
-                  <span>•</span>
-                  <span className="flex items-center gap-1"><MapPin className="size-3 text-orange-400" /> {match.venue}</span>
-                </>
+            <div className="bg-black/20 px-4 py-2.5 text-center text-xs font-bold uppercase tracking-widest opacity-80 flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span>{match.round}</span>
+                {match.venue && (
+                  <>
+                    <span>•</span>
+                    <span className="flex items-center gap-1"><MapPin className="size-3 text-orange-400" /> {match.venue}</span>
+                  </>
+                )}
+                <span>•</span>
+                <span>{sportProfile.sport} ({sportProfile.pointUnit})</span>
+              </div>
+              {momentumRun && (
+                <MomentumRunBadge run={momentumRun} />
               )}
-              <span>•</span>
-              <span>Live Scoring</span>
             </div>
             <div className="flex items-center justify-between p-6 md:p-8">
-              <div className="flex-1 text-center">
+              <div className="flex-1 text-center relative">
+                <FloatingDeltaBadge deltas={deltasA} />
                 <h2 className="text-lg md:text-xl font-bold mb-1 uppercase">{match.team_a?.name || 'Team A'}</h2>
-                <div className="text-5xl md:text-7xl font-black tabular-nums">{match.team_a_score}</div>
+                <div className={`text-5xl md:text-7xl font-black tabular-nums transition-transform ${isPoppingA ? 'animate-score-pop' : ''}`}>
+                  {match.team_a_score}
+                </div>
               </div>
 
               <div className="px-6 text-3xl font-black italic opacity-40">VS</div>
 
-              <div className="flex-1 text-center">
+              <div className="flex-1 text-center relative">
+                <FloatingDeltaBadge deltas={deltasB} />
                 <h2 className="text-lg md:text-xl font-bold mb-1 uppercase">{match.team_b?.name || 'BYE'}</h2>
-                <div className="text-5xl md:text-7xl font-black tabular-nums">{match.team_b_score}</div>
+                <div className={`text-5xl md:text-7xl font-black tabular-nums transition-transform ${isPoppingB ? 'animate-score-pop' : ''}`}>
+                  {match.team_b_score}
+                </div>
               </div>
             </div>
             {/* Facilitator Action Bar on Scoreboard */}
@@ -1540,34 +1828,19 @@ export const LiveMatch = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-4 sm:p-5 space-y-3">
-                    <div className="grid grid-cols-3 gap-2.5">
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        className="flex flex-col h-16 sm:h-18 gap-1 border-2 rounded-xl active:scale-95 hover:border-orange-500/50 hover:bg-orange-500/5 transition-all"
-                        onClick={() => handleInitiateScore('a', 1, 'FT')}
-                      >
-                        <span className="text-lg font-black">+1</span>
-                        <span className="text-[10px] uppercase font-bold opacity-60">FT</span>
-                      </Button>
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        className="flex flex-col h-16 sm:h-18 gap-1 border-2 rounded-xl active:scale-95 hover:border-orange-500/50 hover:bg-orange-500/5 transition-all"
-                        onClick={() => handleInitiateScore('a', 2, 'Field')}
-                      >
-                        <span className="text-lg font-black">+2</span>
-                        <span className="text-[10px] uppercase font-bold opacity-60">Field</span>
-                      </Button>
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        className="flex flex-col h-16 sm:h-18 gap-1 border-2 rounded-xl active:scale-95 hover:border-orange-500/50 hover:bg-orange-500/5 transition-all"
-                        onClick={() => handleInitiateScore('a', 3, 'Triple')}
-                      >
-                        <span className="text-lg font-black">+3</span>
-                        <span className="text-[10px] uppercase font-bold opacity-60">Triple</span>
-                      </Button>
+                    <div className={`grid gap-2.5 ${sportProfile.actions.length <= 2 ? 'grid-cols-2' : sportProfile.actions.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}>
+                      {sportProfile.actions.map((act, idx) => (
+                        <Button
+                          key={idx}
+                          size="lg"
+                          variant="outline"
+                          className="flex flex-col h-16 sm:h-18 gap-1 border-2 rounded-xl active:scale-95 hover:border-orange-500/50 hover:bg-orange-500/5 transition-all text-left justify-center"
+                          onClick={() => handleInitiateScore('a', act.points, act.actionType, act.description)}
+                        >
+                          <span className="text-lg font-black">{act.label}</span>
+                          <span className="text-[10px] uppercase font-bold opacity-60 truncate max-w-full px-0.5">{act.sublabel}</span>
+                        </Button>
+                      ))}
                     </div>
                     <Button
                       size="sm"
@@ -1589,34 +1862,19 @@ export const LiveMatch = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-4 sm:p-5 space-y-3">
-                    <div className="grid grid-cols-3 gap-2.5">
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        className="flex flex-col h-16 sm:h-18 gap-1 border-2 rounded-xl active:scale-95 hover:border-orange-500/50 hover:bg-orange-500/5 transition-all"
-                        onClick={() => handleInitiateScore('b', 1, 'FT')}
-                      >
-                        <span className="text-lg font-black">+1</span>
-                        <span className="text-[10px] uppercase font-bold opacity-60">FT</span>
-                      </Button>
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        className="flex flex-col h-16 sm:h-18 gap-1 border-2 rounded-xl active:scale-95 hover:border-orange-500/50 hover:bg-orange-500/5 transition-all"
-                        onClick={() => handleInitiateScore('b', 2, 'Field')}
-                      >
-                        <span className="text-lg font-black">+2</span>
-                        <span className="text-[10px] uppercase font-bold opacity-60">Field</span>
-                      </Button>
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        className="flex flex-col h-16 sm:h-18 gap-1 border-2 rounded-xl active:scale-95 hover:border-orange-500/50 hover:bg-orange-500/5 transition-all"
-                        onClick={() => handleInitiateScore('b', 3, 'Triple')}
-                      >
-                        <span className="text-lg font-black">+3</span>
-                        <span className="text-[10px] uppercase font-bold opacity-60">Triple</span>
-                      </Button>
+                    <div className={`grid gap-2.5 ${sportProfile.actions.length <= 2 ? 'grid-cols-2' : sportProfile.actions.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}>
+                      {sportProfile.actions.map((act, idx) => (
+                        <Button
+                          key={idx}
+                          size="lg"
+                          variant="outline"
+                          className="flex flex-col h-16 sm:h-18 gap-1 border-2 rounded-xl active:scale-95 hover:border-orange-500/50 hover:bg-orange-500/5 transition-all text-left justify-center"
+                          onClick={() => handleInitiateScore('b', act.points, act.actionType, act.description)}
+                        >
+                          <span className="text-lg font-black">{act.label}</span>
+                          <span className="text-[10px] uppercase font-bold opacity-60 truncate max-w-full px-0.5">{act.sublabel}</span>
+                        </Button>
+                      ))}
                     </div>
                     <Button
                       size="sm"
@@ -1938,7 +2196,7 @@ export const LiveMatch = () => {
               Who scored for <span className="text-orange-400">{pendingScore?.teamName}</span>?
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-400 mt-0.5">
-              Select the scoring player by jersey number to attribute +{pendingScore?.points} PTS, or credit to the team directly.
+              Select the scoring player by jersey number to attribute +{pendingScore?.points} {sportProfile.pointUnit}, or credit to the team directly.
             </DialogDescription>
           </div>
 
@@ -1979,7 +2237,7 @@ export const LiveMatch = () => {
                         {/* Top: Current Match Points */}
                         <div className="w-full flex items-center justify-between mb-1.5 text-[10px]">
                           <span className="font-mono text-slate-400 group-hover:text-orange-300">
-                            {currentPts} PTS
+                            {currentPts} {sportProfile.pointUnit}
                           </span>
                           {player.is_captain && (
                             <span className="text-[9px] font-black uppercase text-amber-400 bg-amber-400/10 px-1 py-0.5 rounded">C</span>
@@ -2099,7 +2357,7 @@ export const LiveMatch = () => {
               onClick={() => handleConfirmScore(null)}
               className="w-full sm:w-auto text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 shadow-sm transition-all active:scale-95 cursor-pointer"
             >
-              Record as Team Point (Uncredited)
+              Record as Team Score (Uncredited)
             </Button>
           </div>
         </DialogContent>
@@ -2118,7 +2376,7 @@ export const LiveMatch = () => {
                   Score Correction & Deduction
                 </DialogTitle>
                 <span className="text-[11px] font-bold text-slate-400">
-                  {pendingDeduct?.teamName} (Current: {pendingDeduct?.team === 'a' ? match.team_a_score : match.team_b_score} PTS)
+                  {pendingDeduct?.teamName} (Current: {pendingDeduct?.team === 'a' ? match.team_a_score : match.team_b_score} {sportProfile.pointUnit})
                 </span>
               </div>
             </div>
@@ -2131,10 +2389,10 @@ export const LiveMatch = () => {
             {/* 1. Points Selection */}
             <div className="space-y-1.5">
               <label className="text-[11px] font-black uppercase tracking-wider text-slate-400">
-                Points to Deduct:
+                {sportProfile.pointUnit} to Deduct:
               </label>
-              <div className="grid grid-cols-3 gap-2">
-                {([1, 2, 3] as const).map((pts) => {
+              <div className={`grid gap-2 ${sportProfile.deductibleValues.length <= 2 ? 'grid-cols-2' : sportProfile.deductibleValues.length === 3 ? 'grid-cols-3' : 'grid-cols-4'}`}>
+                {sportProfile.deductibleValues.map((pts) => {
                   const currentScore = pendingDeduct?.team === 'a' ? match.team_a_score : match.team_b_score;
                   const disabled = currentScore < pts;
                   const selected = deductPoints === pts;
@@ -2152,7 +2410,7 @@ export const LiveMatch = () => {
                           : 'bg-slate-900 border-white/10 hover:border-red-500/40 text-slate-200'
                       }`}
                     >
-                      -{pts} PTS
+                      -{pts} {sportProfile.pointUnit}
                     </button>
                   );
                 })}
@@ -2243,7 +2501,7 @@ export const LiveMatch = () => {
               ) : (
                 <MinusCircle className="size-3.5" />
               )}
-              Confirm -{deductPoints} PTS Deduction
+              Confirm -{deductPoints} {sportProfile.pointUnit} Deduction
             </Button>
           </div>
         </DialogContent>
@@ -2254,6 +2512,23 @@ export const LiveMatch = () => {
         onOpenChange={setIsFacilitatorModalOpen}
         onUpdated={fetchInitialData}
       />
+
+      {/* Floating In-App Score Widget (Pinned when scrolling) */}
+      {isScrolledPastScoreboard && match && (
+        <FloatingScoreWidget
+          sport={match.tournament?.sport}
+          round={match.round}
+          status={match.status}
+          teamAName={match.team_a?.name || 'Team A'}
+          teamBName={match.team_b?.name || 'Team B'}
+          teamAScore={match.team_a_score}
+          teamBScore={match.team_b_score}
+          pointUnit={sportProfile.pointUnit}
+          matchId={match.id}
+          isPipActive={isPipActive}
+          onTogglePip={handleTogglePip}
+        />
+      )}
     </div>
   );
 };
