@@ -438,7 +438,7 @@ export async function injectSuperDemo(supabase: SupabaseClient): Promise<Scenari
   try {
     await ensureClusters(supabase);
 
-    // 1. Fetch colleges
+    // 1. Fetch colleges & clusters
     const { data: collegeList, error: colErr } = await supabase
       .from('colleges')
       .select('id, college_name');
@@ -446,6 +446,14 @@ export async function injectSuperDemo(supabase: SupabaseClient): Promise<Scenari
     if (colErr || !collegeList || collegeList.length === 0) {
       throw new Error('Colleges table is empty or inaccessible');
     }
+
+    const { data: dbClusters } = await supabase.from('clusters').select('id, name, college_codes');
+    const tribeByCollegeCode: Record<string, string> = {};
+    (dbClusters || []).forEach((cl) => {
+      (cl.college_codes || []).forEach((cCode: string) => {
+        tribeByCollegeCode[cCode] = cl.id;
+      });
+    });
 
     // Map college codes
     const getCode = (name: string): string => {
@@ -524,98 +532,401 @@ export async function injectSuperDemo(supabase: SupabaseClient): Promise<Scenari
       }
     });
 
-    const samplePlayerNames = [
-      'Aris Thorne', 'Gabriel Vance', 'Christian Cruz', 'Paolo Reyes', 'Jiro Mendoza',
-      'Angelo Santos', 'Nathaniel Diaz', 'Dominic Flores', 'Mark Bautista', 'Rafael Ramos',
-      'Joshua Dalisay', 'Ezekiel Castro', 'Adrian Del Rosario', 'Kurt Alcantara'
-    ];
-
-    for (const code of activeCodes) {
-      const currentCount = studentsByCollege[code].length;
-      if (currentCount < 8) {
-        const needed = 8 - currentCount;
-        const newAthletes = [];
-        for (let i = 0; i < needed; i++) {
-          const idx = (currentCount + i) % samplePlayerNames.length;
-          newAthletes.push({
-            full_name: `${samplePlayerNames[idx]} (${code})`,
-            email: `athlete.${code.toLowerCase()}.${currentCount + i + 1}@psu.palawan.edu.ph`,
-            role: 'player_student',
-            college_id: collegeMap[code].id,
-            student_number: `2024-8-0${(Math.floor(Math.random() * 899) + 100)}`,
-            program: `BS ${code} Degree Program`,
-            year_level: `${(i % 4) + 1}st Year`,
-            is_verified: true,
-          });
-        }
-        const { data: insertedAthletes } = await supabase.from('users').insert(newAthletes).select('id, full_name');
-        if (insertedAthletes) {
-          studentsByCollege[code].push(...insertedAthletes);
-        }
-      }
-    }
-
-    // 4. The 9 Available PSU Sports
-    const ALL_SPORTS = [
-      { sport: 'Basketball', title: 'Basketball Championship (Marquee)', isMarquee: true },
-      { sport: 'Volleyball', title: "Men's Volleyball Tournament", isVolleyball: true },
-      { sport: 'Soccer', title: 'Football / Soccer Cup' },
-      { sport: 'Futsal', title: 'Indoor Futsal Arena' },
-      { sport: 'Sepak Takraw', title: 'Sepak Takraw Regu' },
-      { sport: 'Baseball', title: 'Baseball Classic Series' },
-      { sport: 'Softball', title: 'Softball Diamond League' },
-      { sport: 'Pickleball', title: 'Pickleball Open Division' },
-      { sport: 'Table Tennis', title: 'Table Tennis Singles & Doubles' },
-    ];
+    // Ensure all 9 colleges have their student athlete roster pools initialized
+    activeCodes.forEach((code) => {
+      if (!studentsByCollege[code]) studentsByCollege[code] = [];
+    });
 
     const todayStr = new Date().toISOString().split('T')[0];
     const nextTwoWeeks = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
+    const matchTime = (offsetHours = 0) => {
+      const d = new Date();
+      d.setHours(d.getHours() + offsetHours);
+      return d.toISOString();
+    };
+
     const sportRosterRoles: Record<string, { starters: string[]; subs: string[] }> = {
       Basketball: {
         starters: ['Point Guard (PG)', 'Shooting Guard (SG)', 'Small Forward (SF)', 'Power Forward (PF)', 'Center (C)'],
-        subs: ['6th Man Guard (G)', 'Backup Forward (F)', 'Backup Center (C)'],
+        subs: ['6th Man Guard (G)', 'Backup Small Forward (SF)', 'Backup Power Forward (PF)', 'Backup Center (C)'],
       },
       Volleyball: {
-        starters: ['Setter (S)', 'Outside Hitter 1 (OH)', 'Outside Hitter 2 (OH)', 'Middle Blocker (MB)', 'Opposite Hitter (OPP)', 'Libero (L)'],
-        subs: ['Defensive Specialist (DS)', 'Backup Setter (S)'],
+        starters: ['Setter (S)', 'Outside Hitter 1 (OH)', 'Outside Hitter 2 (OH)', 'Middle Blocker 1 (MB)', 'Opposite Hitter (OPP)', 'Libero (L)'],
+        subs: ['Defensive Specialist (DS)', 'Backup Setter (S)', 'Middle Blocker 2 (MB)', 'Serving Specialist (SS)'],
       },
       Soccer: {
-        starters: ['Goalkeeper (GK)', 'Center Back (CB)', 'Left Back (LB)', 'Right Back (RB)', 'Central Midfield (CM)', 'Attacking Midfield (CAM)', 'Striker (ST)', 'Winger (LW)', 'Winger (RW)'],
-        subs: ['Sub Striker (ST)', 'Sub Midfielder (CM)'],
+        starters: [
+          'Goalkeeper (GK)', 'Center Back (CB)', 'Center Back 2 (CB)', 'Left Back (LB)', 'Right Back (RB)',
+          'Defensive Midfield (CDM)', 'Central Midfield (CM)', 'Attacking Midfield (CAM)', 'Left Wing (LW)', 'Right Wing (RW)', 'Striker (ST)'
+        ],
+        subs: ['Backup Goalkeeper (GK)', 'Sub Midfielder (CM)', 'Sub Winger (W)', 'Sub Striker (ST)'],
       },
       Futsal: {
         starters: ['Goalkeeper (GK)', 'Fixo (Defender)', 'Ala Right (Winger)', 'Ala Left (Winger)', 'Pivo (Pivot/Striker)'],
-        subs: ['Sub Ala', 'Sub Fixo'],
+        subs: ['Backup Goalkeeper (GK)', 'Sub Ala (Winger)', 'Sub Fixo (Defender)', 'Sub Pivo (Pivot)'],
       },
       'Sepak Takraw': {
         starters: ['Tekong (Server)', 'Killer (Striker)', 'Feeder (Setter)'],
-        subs: ['Sub Feeder', 'Sub Killer'],
+        subs: ['Alternate Tekong (Server)', 'Alternate Feeder (Setter)', 'Alternate Killer (Striker)'],
       },
       Baseball: {
-        starters: ['Pitcher (P)', 'Catcher (C)', 'First Base (1B)', 'Second Base (2B)', 'Third Base (3B)', 'Shortstop (SS)', 'Left Field (LF)', 'Center Field (CF)', 'Right Field (RF)'],
-        subs: ['Relief Pitcher (RP)', 'Pinch Hitter (DH)'],
+        starters: [
+          'Pitcher (P)', 'Catcher (C)', 'First Base (1B)', 'Second Base (2B)', 'Third Base (3B)',
+          'Shortstop (SS)', 'Left Field (LF)', 'Center Field (CF)', 'Right Field (RF)'
+        ],
+        subs: ['Relief Pitcher (RP)', 'Backup Catcher (C)', 'Utility Infielder (IF)', 'Pinch Hitter (PH)'],
       },
       Softball: {
-        starters: ['Pitcher (P)', 'Catcher (C)', 'First Base (1B)', 'Second Base (2B)', 'Third Base (3B)', 'Shortstop (SS)', 'Outfield (OF)'],
-        subs: ['Relief Pitcher (RP)', 'Alternate Player'],
+        starters: [
+          'Pitcher (P)', 'Catcher (C)', 'First Base (1B)', 'Second Base (2B)', 'Third Base (3B)',
+          'Shortstop (SS)', 'Left Field (LF)', 'Center Field (CF)', 'Right Field (RF)'
+        ],
+        subs: ['Relief Pitcher (RP)', 'Backup Catcher (C)', 'Utility Outfielder (OF)', 'Pinch Hitter (PH)'],
       },
       Pickleball: {
-        starters: ['Singles Seed #1', 'Doubles Specialist #1', 'Doubles Specialist #2'],
-        subs: ['Singles Seed #2', 'Alternate'],
+        starters: ['Singles Ace #1', 'Singles Ace #2', 'Doubles Specialist #1', 'Doubles Specialist #2'],
+        subs: ['Alternate Singles #1', 'Alternate Doubles #1', 'Reserve Player'],
       },
       'Table Tennis': {
-        starters: ['Singles Seed #1', 'Doubles Ace #1', 'Doubles Ace #2'],
-        subs: ['Singles Seed #2', 'Alternate'],
+        starters: ['Singles Ace #1', 'Singles Ace #2', 'Doubles Ace #1', 'Doubles Ace #2'],
+        subs: ['Alternate Singles #1', 'Alternate Doubles #1', 'Reserve Player'],
       },
     };
+
+    interface MatchSpec {
+      teamA?: string;
+      teamB?: string;
+      scoreA: number;
+      scoreB: number;
+      status: 'Scheduled' | 'Ongoing' | 'Completed';
+      offsetHours: number;
+      court: string;
+      events?: string[];
+    }
+
+    interface SportScenarioDef {
+      sport: string;
+      title: string;
+      status: 'Active' | 'Completed';
+      venuePrefix: string;
+      isMarquee?: boolean;
+      elimMatches: {
+        round: string;
+        teamA: string;
+        teamB: string;
+        scoreA: number;
+        scoreB: number;
+        status: 'Scheduled' | 'Ongoing' | 'Completed';
+        offsetHours: number;
+        court: string;
+        events?: string[];
+      }[];
+      quarters: [MatchSpec, MatchSpec, MatchSpec, MatchSpec];
+      semis: [MatchSpec, MatchSpec];
+      bronze: MatchSpec;
+      finals: MatchSpec;
+      mvpStars?: { collegeCode: string; starType: 'Gold' | 'Red' }[];
+    }
+
+    const ALL_SPORTS_CONFIG: SportScenarioDef[] = [
+      // 1. BASKETBALL: Completed Marquee Tournament (CEAT Gold, CS Silver, CBA Bronze)
+      {
+        sport: 'Basketball',
+        title: 'Basketball Championship (Marquee)',
+        isMarquee: true,
+        status: 'Completed',
+        venuePrefix: 'PSU Main Gymnasium',
+        elimMatches: [
+          { round: 'Group Stage - Pool A', teamA: 'CEAT', teamB: 'CCJE', scoreA: 88, scoreB: 74, status: 'Completed', offsetHours: -48, court: 'Court 1' },
+          { round: 'Group Stage - Pool A', teamA: 'CBA', teamB: 'CCRD', scoreA: 82, scoreB: 71, status: 'Completed', offsetHours: -46, court: 'Court 2' },
+          { round: 'Group Stage - Pool B', teamA: 'CS', teamB: 'CTE', scoreA: 90, scoreB: 78, status: 'Completed', offsetHours: -44, court: 'Court 1' },
+          { round: 'Group Stage - Pool B', teamA: 'CHMT', teamB: 'CAH', scoreA: 76, scoreB: 70, status: 'Completed', offsetHours: -42, court: 'Court 2' },
+        ],
+        quarters: [
+          { teamA: 'CEAT', teamB: 'CCRD', scoreA: 84, scoreB: 72, status: 'Completed', offsetHours: -30, court: 'Court 1' },
+          { teamA: 'CBA', teamB: 'CHMT', scoreA: 79, scoreB: 68, status: 'Completed', offsetHours: -28, court: 'Court 2' },
+          { teamA: 'CS', teamB: 'CAH', scoreA: 82, scoreB: 75, status: 'Completed', offsetHours: -26, court: 'Court 1' },
+          { teamA: 'CCJE', teamB: 'CTE', scoreA: 77, scoreB: 73, status: 'Completed', offsetHours: -24, court: 'Court 2' },
+        ],
+        semis: [
+          { teamA: 'CEAT', teamB: 'CBA', scoreA: 86, scoreB: 81, status: 'Completed', offsetHours: -16, court: 'Court 1' },
+          { teamA: 'CS', teamB: 'CCJE', scoreA: 80, scoreB: 74, status: 'Completed', offsetHours: -14, court: 'Court 1' },
+        ],
+        bronze: { teamA: 'CBA', teamB: 'CCJE', scoreA: 78, scoreB: 72, status: 'Completed', offsetHours: -4, court: 'Court 2' },
+        finals: {
+          teamA: 'CEAT', teamB: 'CS', scoreA: 92, scoreB: 88, status: 'Completed', offsetHours: -2, court: 'Court 1',
+          events: [
+            'Championship buzzer sounds: CEAT Red Scorpions (92) defeat CS Byte Titans (88)!',
+            'Tournament MVP Gold Star officially awarded to CEAT Team Captain.'
+          ]
+        },
+        mvpStars: [
+          { collegeCode: 'CEAT', starType: 'Gold' },
+          { collegeCode: 'CEAT', starType: 'Red' },
+          { collegeCode: 'CS', starType: 'Red' },
+        ],
+      },
+
+      // 2. VOLLEYBALL: Active Tournament with Live Semifinals (CEAT vs CCJE)
+      {
+        sport: 'Volleyball',
+        title: "Men's Volleyball Tournament",
+        status: 'Active',
+        venuePrefix: 'PSU Sports Complex',
+        elimMatches: [
+          { round: 'Group Stage - Pool A', teamA: 'CS', teamB: 'CNHS', scoreA: 25, scoreB: 21, status: 'Completed', offsetHours: -40, court: 'Arena Court A' },
+          { round: 'Group Stage - Pool A', teamA: 'CEAT', teamB: 'CTE', scoreA: 25, scoreB: 20, status: 'Completed', offsetHours: -38, court: 'Arena Court B' },
+          { round: 'Group Stage - Pool B', teamA: 'CBA', teamB: 'CAH', scoreA: 25, scoreB: 22, status: 'Completed', offsetHours: -36, court: 'Arena Court A' },
+          { round: 'Group Stage - Pool B', teamA: 'CCJE', teamB: 'CHMT', scoreA: 25, scoreB: 18, status: 'Completed', offsetHours: -34, court: 'Arena Court B' },
+        ],
+        quarters: [
+          { teamA: 'CS', teamB: 'CNHS', scoreA: 25, scoreB: 19, status: 'Completed', offsetHours: -24, court: 'Arena Court A' },
+          { teamA: 'CBA', teamB: 'CAH', scoreA: 25, scoreB: 21, status: 'Completed', offsetHours: -22, court: 'Arena Court B' },
+          { teamA: 'CEAT', teamB: 'CTE', scoreA: 25, scoreB: 23, status: 'Completed', offsetHours: -20, court: 'Arena Court A' },
+          { teamA: 'CCJE', teamB: 'CHMT', scoreA: 25, scoreB: 20, status: 'Completed', offsetHours: -18, court: 'Arena Court B' },
+        ],
+        semis: [
+          { teamA: 'CS', teamB: 'CBA', scoreA: 25, scoreB: 22, status: 'Completed', offsetHours: -6, court: 'Arena Court A' },
+          {
+            teamA: 'CEAT', teamB: 'CCJE', scoreA: 25, scoreB: 23, status: 'Ongoing', offsetHours: 0, court: 'Arena Court A',
+            events: [
+              'Set 1: CEAT outside hitter converts cross-court spike (25-23).',
+              'Set 2: CCJE answers with massive double block at the net.',
+              'Set 3 underway: Intense deuce rally in progress courtside!'
+            ]
+          },
+        ],
+        bronze: { teamA: 'CBA', scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 4, court: 'Arena Court B' },
+        finals: { teamA: 'CS', scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 6, court: 'Arena Court A' },
+      },
+
+      // 3. SOCCER: Active Tournament with Live Semifinals (CEAT vs CBA)
+      {
+        sport: 'Soccer',
+        title: 'Football / Soccer Cup',
+        status: 'Active',
+        venuePrefix: 'PSU Main Athletic Oval',
+        elimMatches: [
+          { round: 'Group Stage - Pool A', teamA: 'CEAT', teamB: 'CCRD', scoreA: 3, scoreB: 1, status: 'Completed', offsetHours: -36, court: 'Field 1' },
+          { round: 'Group Stage - Pool A', teamA: 'CBA', teamB: 'CTE', scoreA: 2, scoreB: 0, status: 'Completed', offsetHours: -34, court: 'Field 2' },
+          { round: 'Group Stage - Pool B', teamA: 'CS', teamB: 'CHMT', scoreA: 1, scoreB: 0, status: 'Completed', offsetHours: -32, court: 'Field 1' },
+          { round: 'Group Stage - Pool B', teamA: 'CCJE', teamB: 'CAH', scoreA: 2, scoreB: 1, status: 'Completed', offsetHours: -30, court: 'Field 2' },
+        ],
+        quarters: [
+          { teamA: 'CEAT', teamB: 'CCRD', scoreA: 2, scoreB: 1, status: 'Completed', offsetHours: -20, court: 'Field 1' },
+          { teamA: 'CBA', teamB: 'CTE', scoreA: 3, scoreB: 0, status: 'Completed', offsetHours: -18, court: 'Field 2' },
+          { teamA: 'CS', teamB: 'CHMT', scoreA: 2, scoreB: 1, status: 'Completed', offsetHours: -16, court: 'Field 1' },
+          { teamA: 'CCJE', teamB: 'CAH', scoreA: 1, scoreB: 0, status: 'Completed', offsetHours: -14, court: 'Field 2' },
+        ],
+        semis: [
+          {
+            teamA: 'CEAT', teamB: 'CBA', scoreA: 2, scoreB: 1, status: 'Ongoing', offsetHours: 0, court: 'Field 1',
+            events: [
+              '12\': Header goal scored by CEAT striker off corner delivery.',
+              '44\': Equalizer curled into top corner by CBA midfielder!',
+              '78\': Breakthrough counter-attack goal finished by CEAT left winger!'
+            ]
+          },
+          { teamA: 'CS', teamB: 'CCJE', scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 3, court: 'Field 1' },
+        ],
+        bronze: { scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 24, court: 'Field 2' },
+        finals: { scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 26, court: 'Field 1' },
+      },
+
+      // 4. FUTSAL: Active Tournament with Ongoing Elimination Decider (CAH vs CCRD)
+      {
+        sport: 'Futsal',
+        title: 'Indoor Futsal Arena',
+        status: 'Active',
+        venuePrefix: 'PSU Covered Court',
+        elimMatches: [
+          { round: 'Group Stage - Pool A', teamA: 'CEAT', teamB: 'CS', scoreA: 5, scoreB: 3, status: 'Completed', offsetHours: -24, court: 'Pitch 1' },
+          { round: 'Group Stage - Pool A', teamA: 'CBA', teamB: 'CCJE', scoreA: 4, scoreB: 2, status: 'Completed', offsetHours: -22, court: 'Pitch 2' },
+          { round: 'Group Stage - Pool B', teamA: 'CHMT', teamB: 'CTE', scoreA: 6, scoreB: 5, status: 'Completed', offsetHours: -20, court: 'Pitch 1' },
+          {
+            round: 'Group Stage - Pool B', teamA: 'CAH', teamB: 'CCRD', scoreA: 3, scoreB: 3, status: 'Ongoing', offsetHours: 0, court: 'Pitch 1',
+            events: [
+              'Lightning counter: CAH Pivo scores into the bottom left corner.',
+              'CCRD Fixo launches long-range screamer into top netting!',
+              '2nd Half decider: Both squads pushing for the final playoff qualification slot!'
+            ]
+          },
+        ],
+        quarters: [
+          { teamA: 'CEAT', teamB: 'CCRD', scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 12, court: 'Pitch 1' },
+          { teamA: 'CBA', teamB: 'CHMT', scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 14, court: 'Pitch 2' },
+          { teamA: 'CS', teamB: 'CAH', scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 16, court: 'Pitch 1' },
+          { teamA: 'CCJE', teamB: 'CTE', scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 18, court: 'Pitch 2' },
+        ],
+        semis: [
+          { scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 28, court: 'Pitch 1' },
+          { scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 30, court: 'Pitch 2' },
+        ],
+        bronze: { scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 40, court: 'Pitch 2' },
+        finals: { scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 42, court: 'Pitch 1' },
+      },
+
+      // 5. SEPAK TAKRAW: Active Tournament in Preliminary Elimination Stage
+      {
+        sport: 'Sepak Takraw',
+        title: 'Sepak Takraw Regu',
+        status: 'Active',
+        venuePrefix: 'PSU Regu Stadium',
+        elimMatches: [
+          { round: 'Group Stage - Pool A', teamA: 'CTE', teamB: 'CAH', scoreA: 21, scoreB: 18, status: 'Completed', offsetHours: -18, court: 'Court A' },
+          { round: 'Group Stage - Pool A', teamA: 'CCJE', teamB: 'CCRD', scoreA: 21, scoreB: 15, status: 'Completed', offsetHours: -16, court: 'Court B' },
+          { round: 'Group Stage - Pool B', teamA: 'CEAT', teamB: 'CS', scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 2, court: 'Court A' },
+          { round: 'Group Stage - Pool B', teamA: 'CBA', teamB: 'CHMT', scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 4, court: 'Court B' },
+        ],
+        quarters: [
+          { teamA: 'CTE', teamB: 'CCRD', scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 16, court: 'Court A' },
+          { teamA: 'CCJE', teamB: 'CAH', scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 18, court: 'Court B' },
+          { teamA: 'CEAT', teamB: 'CHMT', scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 20, court: 'Court A' },
+          { teamA: 'CBA', teamB: 'CS', scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 22, court: 'Court B' },
+        ],
+        semis: [
+          { scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 32, court: 'Court A' },
+          { scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 34, court: 'Court B' },
+        ],
+        bronze: { scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 46, court: 'Court B' },
+        finals: { scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 48, court: 'Court A' },
+      },
+
+      // 6. BASEBALL: Completed Championship (CBA Gold, CCJE Silver, CEAT Bronze)
+      {
+        sport: 'Baseball',
+        title: 'Baseball Classic Series',
+        status: 'Completed',
+        venuePrefix: 'PSU Diamond Ballfield',
+        elimMatches: [
+          { round: 'Group Stage - Pool A', teamA: 'CBA', teamB: 'CHMT', scoreA: 7, scoreB: 2, status: 'Completed', offsetHours: -50, court: 'Diamond 1' },
+          { round: 'Group Stage - Pool A', teamA: 'CEAT', teamB: 'CCRD', scoreA: 6, scoreB: 3, status: 'Completed', offsetHours: -48, court: 'Diamond 2' },
+          { round: 'Group Stage - Pool B', teamA: 'CCJE', teamB: 'CTE', scoreA: 5, scoreB: 3, status: 'Completed', offsetHours: -46, court: 'Diamond 1' },
+          { round: 'Group Stage - Pool B', teamA: 'CS', teamB: 'CAH', scoreA: 8, scoreB: 4, status: 'Completed', offsetHours: -44, court: 'Diamond 2' },
+        ],
+        quarters: [
+          { teamA: 'CBA', teamB: 'CHMT', scoreA: 6, scoreB: 2, status: 'Completed', offsetHours: -32, court: 'Diamond 1' },
+          { teamA: 'CEAT', teamB: 'CCRD', scoreA: 7, scoreB: 3, status: 'Completed', offsetHours: -30, court: 'Diamond 2' },
+          { teamA: 'CCJE', teamB: 'CTE', scoreA: 4, scoreB: 3, status: 'Completed', offsetHours: -28, court: 'Diamond 1' },
+          { teamA: 'CS', teamB: 'CAH', scoreA: 5, scoreB: 1, status: 'Completed', offsetHours: -26, court: 'Diamond 2' },
+        ],
+        semis: [
+          { teamA: 'CBA', teamB: 'CEAT', scoreA: 8, scoreB: 4, status: 'Completed', offsetHours: -18, court: 'Diamond 1' },
+          { teamA: 'CCJE', teamB: 'CS', scoreA: 5, scoreB: 3, status: 'Completed', offsetHours: -16, court: 'Diamond 1' },
+        ],
+        bronze: { teamA: 'CEAT', teamB: 'CS', scoreA: 6, scoreB: 4, status: 'Completed', offsetHours: -6, court: 'Diamond 2' },
+        finals: {
+          teamA: 'CBA', teamB: 'CCJE', scoreA: 9, scoreB: 5, status: 'Completed', offsetHours: -3, court: 'Diamond 1',
+          events: [
+            'Bottom of 9th: CBA ace relief pitcher strikes out the side to seal the championship!',
+            'CBA Golden Wolves crowned Binturungan Baseball Champions.'
+          ]
+        },
+        mvpStars: [
+          { collegeCode: 'CBA', starType: 'Gold' },
+          { collegeCode: 'CBA', starType: 'Red' },
+          { collegeCode: 'CCJE', starType: 'Red' },
+        ],
+      },
+
+      // 7. SOFTBALL: Active Tournament with Upcoming Semifinals
+      {
+        sport: 'Softball',
+        title: 'Softball Diamond League',
+        status: 'Active',
+        venuePrefix: 'PSU Softball Diamond',
+        elimMatches: [
+          { round: 'Group Stage - Pool A', teamA: 'CHMT', teamB: 'CTE', scoreA: 6, scoreB: 3, status: 'Completed', offsetHours: -30, court: 'Field 1' },
+          { round: 'Group Stage - Pool A', teamA: 'CEAT', teamB: 'CAH', scoreA: 5, scoreB: 2, status: 'Completed', offsetHours: -28, court: 'Field 2' },
+          { round: 'Group Stage - Pool B', teamA: 'CS', teamB: 'CCRD', scoreA: 8, scoreB: 7, status: 'Completed', offsetHours: -26, court: 'Field 1' },
+          { round: 'Group Stage - Pool B', teamA: 'CBA', teamB: 'CCJE', scoreA: 4, scoreB: 2, status: 'Completed', offsetHours: -24, court: 'Field 2' },
+        ],
+        quarters: [
+          { teamA: 'CHMT', teamB: 'CTE', scoreA: 5, scoreB: 3, status: 'Completed', offsetHours: -16, court: 'Field 1' },
+          { teamA: 'CEAT', teamB: 'CAH', scoreA: 4, scoreB: 2, status: 'Completed', offsetHours: -14, court: 'Field 2' },
+          { teamA: 'CS', teamB: 'CCRD', scoreA: 7, scoreB: 6, status: 'Completed', offsetHours: -12, court: 'Field 1' },
+          { teamA: 'CBA', teamB: 'CCJE', scoreA: 3, scoreB: 1, status: 'Completed', offsetHours: -10, court: 'Field 2' },
+        ],
+        semis: [
+          { teamA: 'CHMT', teamB: 'CEAT', scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 5, court: 'Field 1' },
+          { teamA: 'CS', teamB: 'CBA', scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 7, court: 'Field 2' },
+        ],
+        bronze: { scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 22, court: 'Field 2' },
+        finals: { scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 24, court: 'Field 1' },
+      },
+
+      // 8. PICKLEBALL: Active Tournament with Live Semifinals (CCJE vs CEAT)
+      {
+        sport: 'Pickleball',
+        title: 'Pickleball Open Division',
+        status: 'Active',
+        venuePrefix: 'PSU Racket Sports Center',
+        elimMatches: [
+          { round: 'Group Stage - Pool A', teamA: 'CS', teamB: 'CCRD', scoreA: 11, scoreB: 7, status: 'Completed', offsetHours: -28, court: 'Court 1' },
+          { round: 'Group Stage - Pool A', teamA: 'CBA', teamB: 'CTE', scoreA: 11, scoreB: 6, status: 'Completed', offsetHours: -26, court: 'Court 2' },
+          { round: 'Group Stage - Pool B', teamA: 'CCJE', teamB: 'CHMT', scoreA: 12, scoreB: 10, status: 'Completed', offsetHours: -24, court: 'Court 1' },
+          { round: 'Group Stage - Pool B', teamA: 'CEAT', teamB: 'CAH', scoreA: 11, scoreB: 8, status: 'Completed', offsetHours: -22, court: 'Court 2' },
+        ],
+        quarters: [
+          { teamA: 'CS', teamB: 'CCRD', scoreA: 11, scoreB: 7, status: 'Completed', offsetHours: -14, court: 'Court 1' },
+          { teamA: 'CBA', teamB: 'CTE', scoreA: 11, scoreB: 6, status: 'Completed', offsetHours: -12, court: 'Court 2' },
+          { teamA: 'CCJE', teamB: 'CHMT', scoreA: 12, scoreB: 10, status: 'Completed', offsetHours: -10, court: 'Court 1' },
+          { teamA: 'CEAT', teamB: 'CAH', scoreA: 11, scoreB: 8, status: 'Completed', offsetHours: -8, court: 'Court 2' },
+        ],
+        semis: [
+          { teamA: 'CS', teamB: 'CBA', scoreA: 11, scoreB: 9, status: 'Completed', offsetHours: -3, court: 'Court 1' },
+          {
+            teamA: 'CCJE', teamB: 'CEAT', scoreA: 10, scoreB: 9, status: 'Ongoing', offsetHours: 0, court: 'Court 1',
+            events: [
+              'Set 1: CCJE doubles ace takes first game 11-9.',
+              'Set 2 tied 9-9: Rapid dink exchanges at the kitchen line!'
+            ]
+          },
+        ],
+        bronze: { teamA: 'CBA', scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 5, court: 'Court 2' },
+        finals: { teamA: 'CS', scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 7, court: 'Court 1' },
+      },
+
+      // 9. TABLE TENNIS: Active Tournament with Concluded Semifinals and Tonight's Marquee Final (CTE vs CEAT)
+      {
+        sport: 'Table Tennis',
+        title: 'Table Tennis Singles & Doubles',
+        status: 'Active',
+        venuePrefix: 'PSU Student Pavilion',
+        elimMatches: [
+          { round: 'Group Stage - Pool A', teamA: 'CTE', teamB: 'CCRD', scoreA: 11, scoreB: 7, status: 'Completed', offsetHours: -26, court: 'Table 1' },
+          { round: 'Group Stage - Pool A', teamA: 'CS', teamB: 'CAH', scoreA: 11, scoreB: 5, status: 'Completed', offsetHours: -24, court: 'Table 2' },
+          { round: 'Group Stage - Pool B', teamA: 'CEAT', teamB: 'CBA', scoreA: 11, scoreB: 8, status: 'Completed', offsetHours: -22, court: 'Table 1' },
+          { round: 'Group Stage - Pool B', teamA: 'CCJE', teamB: 'CHMT', scoreA: 11, scoreB: 9, status: 'Completed', offsetHours: -20, court: 'Table 2' },
+        ],
+        quarters: [
+          { teamA: 'CTE', teamB: 'CHMT', scoreA: 11, scoreB: 6, status: 'Completed', offsetHours: -12, court: 'Table 1' },
+          { teamA: 'CS', teamB: 'CBA', scoreA: 11, scoreB: 4, status: 'Completed', offsetHours: -10, court: 'Table 2' },
+          { teamA: 'CEAT', teamB: 'CAH', scoreA: 11, scoreB: 8, status: 'Completed', offsetHours: -8, court: 'Table 1' },
+          { teamA: 'CCJE', teamB: 'CCRD', scoreA: 11, scoreB: 7, status: 'Completed', offsetHours: -6, court: 'Table 2' },
+        ],
+        semis: [
+          { teamA: 'CTE', teamB: 'CS', scoreA: 11, scoreB: 8, status: 'Completed', offsetHours: -4, court: 'Table 1' },
+          { teamA: 'CEAT', teamB: 'CCJE', scoreA: 11, scoreB: 9, status: 'Completed', offsetHours: -2, court: 'Table 1' },
+        ],
+        bronze: {
+          teamA: 'CS', teamB: 'CCJE', scoreA: 11, scoreB: 7, status: 'Completed', offsetHours: -1, court: 'Table 2',
+          events: ['Bronze medal playoff concluded: CS Byte Titans (11) defeat CCJE (7) for the Bronze Medal!']
+        },
+        finals: { teamA: 'CTE', teamB: 'CEAT', scoreA: 0, scoreB: 0, status: 'Scheduled', offsetHours: 3, court: 'Table 1' },
+      },
+    ];
 
     let marqueeBasketballTournId = '';
     let liveVolleyballMatchId = '';
 
-    // Loop through all 9 sports and inject tournament + all 9 colleges + rosters
-    for (const sportObj of ALL_SPORTS) {
-      const tName = `PSU Binturungan 2026 - ${sportObj.title}`;
+    // Loop through all 9 sports and inject complete tournament lifecycle:
+    // - Full Phase 1 Elimination Fixtures (Pool A & Pool B)
+    // - Full Phase 2 Playoff Knockout Tree (Quarterfinals, Semifinals, 3rd Place Bronze, Championship Final)
+    // - Complete rosters with starters and bench substitutes for all 9 colleges
+    for (const sportDef of ALL_SPORTS_CONFIG) {
+      const tName = `PSU Binturungan 2026 - ${sportDef.title}`;
 
       // Clean existing tournament with this name if present
       const { data: existingT } = await supabase.from('tournaments').select('id').eq('name', tName).maybeSingle();
@@ -633,23 +944,22 @@ export async function injectSuperDemo(supabase: SupabaseClient): Promise<Scenari
       }
 
       // 1. Create Tournament
-      const isCompleted = !!sportObj.isMarquee;
       const { data: tourn, error: tErr } = await supabase
         .from('tournaments')
         .insert({
           name: tName,
-          sport: sportObj.sport,
+          sport: sportDef.sport,
           type: 'Binturungan',
-          status: isCompleted ? 'Completed' : 'Active',
+          status: sportDef.status,
           start_date: todayStr,
           end_date: nextTwoWeeks,
         })
         .select('id')
         .single();
 
-      if (tErr || !tourn) throw tErr || new Error(`Failed to create tournament for ${sportObj.sport}`);
+      if (tErr || !tourn) throw tErr || new Error(`Failed to create tournament for ${sportDef.sport}`);
       const tId = tourn.id;
-      if (sportObj.isMarquee) marqueeBasketballTournId = tId;
+      if (sportDef.isMarquee) marqueeBasketballTournId = tId;
 
       // 2. Insert Teams for all 9 colleges
       const teamInsertPayload = activeCodes.map((code) => {
@@ -659,6 +969,9 @@ export async function injectSuperDemo(supabase: SupabaseClient): Promise<Scenari
           tournament_id: tId,
           status: 'Approved',
           coach_id: coachByCollege[col.id] || null,
+          college_id: col.id,
+          cluster_id: tribeByCollegeCode[code] || null,
+          affiliation_type: 'college',
         };
       });
 
@@ -667,31 +980,57 @@ export async function injectSuperDemo(supabase: SupabaseClient): Promise<Scenari
         .insert(teamInsertPayload)
         .select('id, name');
 
-      if (teamInsErr || !createdTeams) throw teamInsErr || new Error(`Failed to insert teams for ${sportObj.sport}`);
+      if (teamInsErr || !createdTeams) throw teamInsErr || new Error(`Failed to insert teams for ${sportDef.sport}`);
 
       const teamLookup: Record<string, string> = {};
       createdTeams.forEach((t) => {
         teamLookup[t.name] = t.id;
       });
 
-      // 3. Populate Sport-Specific Rosters for every college team
-      const rosterEntries = [];
-      const rolesConfig = sportRosterRoles[sportObj.sport] || sportRosterRoles['Basketball'];
-      const jerseyNumbers = [1, 3, 7, 10, 11, 15, 23, 24, 33, 44, 99];
+      // 3. Populate Sport-Specific Rosters for every college team (full starting lineup + full bench substitutes)
+      const rosterEntries: {
+        team_id: string;
+        player_id: string;
+        jersey_number: number;
+        is_starter: boolean;
+        is_captain: boolean;
+        position: string;
+        status: string;
+        availability_status: string;
+      }[] = [];
+      const rolesConfig = sportRosterRoles[sportDef.sport] || sportRosterRoles['Basketball'];
+      const jerseyNumbers = [1, 3, 5, 7, 8, 10, 11, 13, 15, 17, 21, 23, 24, 30, 33, 44, 99];
 
       for (const code of activeCodes) {
         const col = collegeMap[code];
         const teamId = teamLookup[col.squadName];
-        const players = studentsByCollege[code] || [];
-        if (!teamId || players.length === 0) continue;
+        if (!teamId) continue;
 
-        let pIdx = 0;
-        // Assign starters
-        for (let sIdx = 0; sIdx < rolesConfig.starters.length && pIdx < players.length; sIdx++, pIdx++) {
+        // Collect available players for this team (prioritize college's own student athletes)
+        const collegeAthletes = [...(studentsByCollege[code] || [])];
+        const assignedIds = new Set(collegeAthletes.map((a) => a.id));
+        const neededAthletes = rolesConfig.starters.length + rolesConfig.subs.length;
+
+        // Supplement from campus athlete pool if needed to ensure 100% full starting lineup and bench substitutes
+        if (collegeAthletes.length < neededAthletes && allStudents && allStudents.length > 0) {
+          for (const extra of allStudents) {
+            if (!assignedIds.has(extra.id)) {
+              collegeAthletes.push(extra);
+              assignedIds.add(extra.id);
+              if (collegeAthletes.length >= neededAthletes) break;
+            }
+          }
+        }
+
+        const players = collegeAthletes;
+        if (players.length === 0) continue;
+
+        // Assign starters (is_starter=true, availability_status='Active')
+        for (let sIdx = 0; sIdx < rolesConfig.starters.length && sIdx < players.length; sIdx++) {
           rosterEntries.push({
             team_id: teamId,
-            player_id: players[pIdx].id,
-            jersey_number: jerseyNumbers[pIdx % jerseyNumbers.length],
+            player_id: players[sIdx].id,
+            jersey_number: jerseyNumbers[sIdx % jerseyNumbers.length],
             is_starter: true,
             is_captain: sIdx === 0,
             position: rolesConfig.starters[sIdx],
@@ -699,18 +1038,23 @@ export async function injectSuperDemo(supabase: SupabaseClient): Promise<Scenari
             availability_status: 'Active',
           });
         }
-        // Assign subs
-        for (let subIdx = 0; subIdx < rolesConfig.subs.length && pIdx < players.length; subIdx++, pIdx++) {
-          rosterEntries.push({
-            team_id: teamId,
-            player_id: players[pIdx].id,
-            jersey_number: jerseyNumbers[pIdx % jerseyNumbers.length],
-            is_starter: false,
-            is_captain: false,
-            position: rolesConfig.subs[subIdx],
-            status: 'Approved',
-            availability_status: 'Bench',
-          });
+
+        // Assign subs (is_starter=false, availability_status='Bench')
+        const starterCount = rolesConfig.starters.length;
+        for (let subIdx = 0; subIdx < rolesConfig.subs.length; subIdx++) {
+          const pIdx = starterCount + subIdx;
+          if (pIdx < players.length) {
+            rosterEntries.push({
+              team_id: teamId,
+              player_id: players[pIdx].id,
+              jersey_number: jerseyNumbers[pIdx % jerseyNumbers.length],
+              is_starter: false,
+              is_captain: false,
+              position: rolesConfig.subs[subIdx],
+              status: 'Approved',
+              availability_status: 'Bench',
+            });
+          }
         }
       }
 
@@ -718,243 +1062,225 @@ export async function injectSuperDemo(supabase: SupabaseClient): Promise<Scenari
         await supabase.from('team_roster').insert(rosterEntries);
       }
 
-      // 4. Bracket & Matches Generation
-      if (sportObj.isMarquee) {
-        // Complete 8-team Single Elimination Tournament Lifecycle for Basketball
-        // Finals: CEAT (92) def CS (88) -> CEAT Gold, CS Silver
-        // Bronze: CBA (78) def CCJE (72) -> CBA Bronze
-        const teamCeat = teamLookup[collegeMap['CEAT'].squadName];
-        const teamCs = teamLookup[collegeMap['CS'].squadName];
-        const teamCba = teamLookup[collegeMap['CBA'].squadName];
-        const teamCcje = teamLookup[collegeMap['CCJE'].squadName];
-        const teamChmt = teamLookup[collegeMap['CHMT'].squadName];
-        const teamCte = teamLookup[collegeMap['CTE'].squadName];
-        const teamCah = teamLookup[collegeMap['CAH'].squadName];
-        const teamCcrd = teamLookup[collegeMap['CCRD'].squadName];
+      // 4. PHASE 2: Knockout Bracket Matches Generation
+      // A. Insert Finals match
+      const { data: finM } = await supabase
+        .from('matches')
+        .insert({
+          tournament_id: tId,
+          team_a_id: sportDef.finals.teamA ? teamLookup[collegeMap[sportDef.finals.teamA]?.squadName] || null : null,
+          team_b_id: sportDef.finals.teamB ? teamLookup[collegeMap[sportDef.finals.teamB]?.squadName] || null : null,
+          team_a_score: sportDef.finals.scoreA,
+          team_b_score: sportDef.finals.scoreB,
+          round: 'Finals',
+          status: sportDef.finals.status,
+          match_time: matchTime(sportDef.finals.offsetHours),
+          venue: `${sportDef.venuePrefix} - ${sportDef.finals.court}`,
+        })
+        .select('id')
+        .single();
 
-        const matchTime = (offsetHours = 0) => {
-          const d = new Date();
-          d.setHours(d.getHours() + offsetHours);
-          return d.toISOString();
-        };
+      // B. Insert 3rd Place Bronze Playoff match
+      const { data: brzM } = await supabase
+        .from('matches')
+        .insert({
+          tournament_id: tId,
+          team_a_id: sportDef.bronze.teamA ? teamLookup[collegeMap[sportDef.bronze.teamA]?.squadName] || null : null,
+          team_b_id: sportDef.bronze.teamB ? teamLookup[collegeMap[sportDef.bronze.teamB]?.squadName] || null : null,
+          team_a_score: sportDef.bronze.scoreA,
+          team_b_score: sportDef.bronze.scoreB,
+          round: '3rd Place Playoff',
+          status: sportDef.bronze.status,
+          match_time: matchTime(sportDef.bronze.offsetHours),
+          venue: `${sportDef.venuePrefix} - ${sportDef.bronze.court}`,
+        })
+        .select('id')
+        .single();
 
-        // A. Insert Finals & Bronze matches
-        const { data: finM } = await supabase
-          .from('matches')
-          .insert({
-            tournament_id: tId,
-            team_a_id: teamCeat,
-            team_b_id: teamCs,
-            team_a_score: 92,
-            team_b_score: 88,
-            round: 'Finals',
-            status: 'Completed',
-            match_time: matchTime(-2),
-            venue: 'PSU Main Gymnasium - Court 1',
-          })
-          .select('id')
-          .single();
+      // C. Insert Semifinals (linking to Finals and 3rd Place Bronze)
+      const { data: sf1M } = await supabase
+        .from('matches')
+        .insert({
+          tournament_id: tId,
+          team_a_id: sportDef.semis[0].teamA ? teamLookup[collegeMap[sportDef.semis[0].teamA]?.squadName] || null : null,
+          team_b_id: sportDef.semis[0].teamB ? teamLookup[collegeMap[sportDef.semis[0].teamB]?.squadName] || null : null,
+          team_a_score: sportDef.semis[0].scoreA,
+          team_b_score: sportDef.semis[0].scoreB,
+          round: 'Semifinals',
+          status: sportDef.semis[0].status,
+          match_time: matchTime(sportDef.semis[0].offsetHours),
+          next_match_id: finM?.id || null,
+          next_match_slot: 'team_a',
+          loser_next_match_id: brzM?.id || null,
+          loser_next_match_slot: 'team_a',
+          venue: `${sportDef.venuePrefix} - ${sportDef.semis[0].court}`,
+        })
+        .select('id')
+        .single();
 
-        const { data: brzM } = await supabase
-          .from('matches')
-          .insert({
-            tournament_id: tId,
-            team_a_id: teamCba,
-            team_b_id: teamCcje,
-            team_a_score: 78,
-            team_b_score: 72,
-            round: '3rd Place Playoff',
-            status: 'Completed',
-            match_time: matchTime(-4),
-            venue: 'PSU Main Gymnasium - Court 2',
-          })
-          .select('id')
-          .single();
+      const { data: sf2M } = await supabase
+        .from('matches')
+        .insert({
+          tournament_id: tId,
+          team_a_id: sportDef.semis[1].teamA ? teamLookup[collegeMap[sportDef.semis[1].teamA]?.squadName] || null : null,
+          team_b_id: sportDef.semis[1].teamB ? teamLookup[collegeMap[sportDef.semis[1].teamB]?.squadName] || null : null,
+          team_a_score: sportDef.semis[1].scoreA,
+          team_b_score: sportDef.semis[1].scoreB,
+          round: 'Semifinals',
+          status: sportDef.semis[1].status,
+          match_time: matchTime(sportDef.semis[1].offsetHours),
+          next_match_id: finM?.id || null,
+          next_match_slot: 'team_b',
+          loser_next_match_id: brzM?.id || null,
+          loser_next_match_slot: 'team_b',
+          venue: `${sportDef.venuePrefix} - ${sportDef.semis[1].court}`,
+        })
+        .select('id')
+        .single();
 
-        // B. Insert Semifinals (linking to Finals and Bronze)
-        const { data: sf1M } = await supabase
-          .from('matches')
-          .insert({
-            tournament_id: tId,
-            team_a_id: teamCeat,
-            team_b_id: teamCba,
-            team_a_score: 86,
-            team_b_score: 81,
-            round: 'Semifinals',
-            status: 'Completed',
-            match_time: matchTime(-20),
-            next_match_id: finM?.id,
-            next_match_slot: 'team_a',
-            loser_next_match_id: brzM?.id,
-            loser_next_match_slot: 'team_a',
-            venue: 'PSU Main Gymnasium - Court 1',
-          })
-          .select('id')
-          .single();
+      if (sportDef.semis[1].status === 'Ongoing' && sf2M) {
+        liveVolleyballMatchId = sf2M.id;
+      }
 
-        const { data: sf2M } = await supabase
-          .from('matches')
-          .insert({
-            tournament_id: tId,
-            team_a_id: teamCs,
-            team_b_id: teamCcje,
-            team_a_score: 80,
-            team_b_score: 74,
-            round: 'Semifinals',
-            status: 'Completed',
-            match_time: matchTime(-18),
-            next_match_id: finM?.id,
-            next_match_slot: 'team_b',
-            loser_next_match_id: brzM?.id,
-            loser_next_match_slot: 'team_b',
-            venue: 'PSU Main Gymnasium - Court 1',
-          })
-          .select('id')
-          .single();
+      // D. Insert 4 Quarterfinals (linking to Semifinals)
+      const qfPayload = [
+        {
+          tournament_id: tId,
+          team_a_id: sportDef.quarters[0].teamA ? teamLookup[collegeMap[sportDef.quarters[0].teamA]?.squadName] || null : null,
+          team_b_id: sportDef.quarters[0].teamB ? teamLookup[collegeMap[sportDef.quarters[0].teamB]?.squadName] || null : null,
+          team_a_score: sportDef.quarters[0].scoreA,
+          team_b_score: sportDef.quarters[0].scoreB,
+          round: 'Quarterfinals',
+          status: sportDef.quarters[0].status,
+          match_time: matchTime(sportDef.quarters[0].offsetHours),
+          next_match_id: sf1M?.id || null,
+          next_match_slot: 'team_a',
+          venue: `${sportDef.venuePrefix} - ${sportDef.quarters[0].court}`,
+        },
+        {
+          tournament_id: tId,
+          team_a_id: sportDef.quarters[1].teamA ? teamLookup[collegeMap[sportDef.quarters[1].teamA]?.squadName] || null : null,
+          team_b_id: sportDef.quarters[1].teamB ? teamLookup[collegeMap[sportDef.quarters[1].teamB]?.squadName] || null : null,
+          team_a_score: sportDef.quarters[1].scoreA,
+          team_b_score: sportDef.quarters[1].scoreB,
+          round: 'Quarterfinals',
+          status: sportDef.quarters[1].status,
+          match_time: matchTime(sportDef.quarters[1].offsetHours),
+          next_match_id: sf1M?.id || null,
+          next_match_slot: 'team_b',
+          venue: `${sportDef.venuePrefix} - ${sportDef.quarters[1].court}`,
+        },
+        {
+          tournament_id: tId,
+          team_a_id: sportDef.quarters[2].teamA ? teamLookup[collegeMap[sportDef.quarters[2].teamA]?.squadName] || null : null,
+          team_b_id: sportDef.quarters[2].teamB ? teamLookup[collegeMap[sportDef.quarters[2].teamB]?.squadName] || null : null,
+          team_a_score: sportDef.quarters[2].scoreA,
+          team_b_score: sportDef.quarters[2].scoreB,
+          round: 'Quarterfinals',
+          status: sportDef.quarters[2].status,
+          match_time: matchTime(sportDef.quarters[2].offsetHours),
+          next_match_id: sf2M?.id || null,
+          next_match_slot: 'team_a',
+          venue: `${sportDef.venuePrefix} - ${sportDef.quarters[2].court}`,
+        },
+        {
+          tournament_id: tId,
+          team_a_id: sportDef.quarters[3].teamA ? teamLookup[collegeMap[sportDef.quarters[3].teamA]?.squadName] || null : null,
+          team_b_id: sportDef.quarters[3].teamB ? teamLookup[collegeMap[sportDef.quarters[3].teamB]?.squadName] || null : null,
+          team_a_score: sportDef.quarters[3].scoreA,
+          team_b_score: sportDef.quarters[3].scoreB,
+          round: 'Quarterfinals',
+          status: sportDef.quarters[3].status,
+          match_time: matchTime(sportDef.quarters[3].offsetHours),
+          next_match_id: sf2M?.id || null,
+          next_match_slot: 'team_b',
+          venue: `${sportDef.venuePrefix} - ${sportDef.quarters[3].court}`,
+        },
+      ];
 
-        // C. Insert 4 Quarterfinals (linking to Semifinals)
-        const qfMatches = [
-          {
-            tournament_id: tId,
-            team_a_id: teamCeat,
-            team_b_id: teamCcrd,
-            team_a_score: 84,
-            team_b_score: 72,
-            round: 'Quarterfinals',
-            status: 'Completed',
-            match_time: matchTime(-40),
-            next_match_id: sf1M?.id,
-            next_match_slot: 'team_a',
-            venue: 'PSU Main Gymnasium - Court 1',
-          },
-          {
-            tournament_id: tId,
-            team_a_id: teamCba,
-            team_b_id: teamChmt,
-            team_a_score: 79,
-            team_b_score: 68,
-            round: 'Quarterfinals',
-            status: 'Completed',
-            match_time: matchTime(-38),
-            next_match_id: sf1M?.id,
-            next_match_slot: 'team_b',
-            venue: 'PSU Main Gymnasium - Court 2',
-          },
-          {
-            tournament_id: tId,
-            team_a_id: teamCs,
-            team_b_id: teamCah,
-            team_a_score: 82,
-            team_b_score: 75,
-            round: 'Quarterfinals',
-            status: 'Completed',
-            match_time: matchTime(-36),
-            next_match_id: sf2M?.id,
-            next_match_slot: 'team_a',
-            venue: 'PSU Main Gymnasium - Court 1',
-          },
-          {
-            tournament_id: tId,
-            team_a_id: teamCcje,
-            team_b_id: teamCte,
-            team_a_score: 77,
-            team_b_score: 73,
-            round: 'Quarterfinals',
-            status: 'Completed',
-            match_time: matchTime(-34),
-            next_match_id: sf2M?.id,
-            next_match_slot: 'team_b',
-            venue: 'PSU Main Gymnasium - Court 2',
-          },
-        ];
+      await supabase.from('matches').insert(qfPayload);
 
-        await supabase.from('matches').insert(qfMatches);
+      // 5. PHASE 1: Elimination Fixtures (Pool A & Pool B)
+      const elimPayload = sportDef.elimMatches.map((em) => ({
+        tournament_id: tId,
+        team_a_id: teamLookup[collegeMap[em.teamA]?.squadName] || null,
+        team_b_id: teamLookup[collegeMap[em.teamB]?.squadName] || null,
+        team_a_score: em.scoreA,
+        team_b_score: em.scoreB,
+        round: em.round,
+        status: em.status,
+        match_time: matchTime(em.offsetHours),
+        next_match_id: null,
+        loser_next_match_id: null,
+        venue: `${sportDef.venuePrefix} - ${em.court}`,
+      }));
 
-        // D. Award Official MVP Stars
-        if (finM && studentsByCollege['CEAT']?.length > 0 && studentsByCollege['CS']?.length > 0) {
-          const ceatMvp = studentsByCollege['CEAT'][0].id;
-          const csTopScorer = studentsByCollege['CS'][0].id;
+      const { data: createdElims } = await supabase.from('matches').insert(elimPayload).select('id, round, status');
 
-          await supabase.from('player_stars').insert([
-            { player_id: ceatMvp, match_id: finM.id, tournament_id: tId, star_type: 'Gold' },
-            { player_id: ceatMvp, match_id: finM.id, tournament_id: tId, star_type: 'Red' },
-            { player_id: csTopScorer, match_id: finM.id, tournament_id: tId, star_type: 'Red' },
-          ]);
+      // 6. Log Events and Commentary
+      const eventsToInsert: { match_id: string; description: string }[] = [];
+      if (finM && sportDef.finals.events) {
+        sportDef.finals.events.forEach((desc) => {
+          eventsToInsert.push({ match_id: finM.id, description: desc });
+        });
+      }
+      if (sf2M && sportDef.semis[1].events) {
+        sportDef.semis[1].events.forEach((desc) => {
+          eventsToInsert.push({ match_id: sf2M.id, description: desc });
+        });
+      }
+      if (sf1M && sportDef.semis[0].events) {
+        sportDef.semis[0].events.forEach((desc) => {
+          eventsToInsert.push({ match_id: sf1M.id, description: desc });
+        });
+      }
+      if (brzM && sportDef.bronze.events) {
+        sportDef.bronze.events.forEach((desc) => {
+          eventsToInsert.push({ match_id: brzM.id, description: desc });
+        });
+      }
+      if (createdElims) {
+        sportDef.elimMatches.forEach((em, idx) => {
+          if (em.events && createdElims[idx]) {
+            em.events.forEach((desc) => {
+              eventsToInsert.push({ match_id: createdElims[idx].id, description: desc });
+            });
+          }
+        });
+      }
 
-          await supabase.from('match_events').insert([
-            { match_id: finM.id, description: 'Championship buzzer sounds: CEAT Red Scorpions (92) defeat CS Byte Titans (88)!' },
-            { match_id: finM.id, description: 'Tournament MVP Gold Star officially awarded to CEAT Team Captain.' },
-          ]);
-        }
-      } else if (sportObj.isVolleyball) {
-        // Active Volleyball Match for courtside kiosk testing
-        const teamCs = teamLookup[collegeMap['CS']?.squadName];
-        const teamCeat = teamLookup[collegeMap['CEAT']?.squadName];
+      if (eventsToInsert.length > 0) {
+        await supabase.from('match_events').insert(eventsToInsert);
+      }
 
-        const { data: vbMatch } = await supabase
-          .from('matches')
-          .insert({
-            tournament_id: tId,
-            team_a_id: teamCs,
-            team_b_id: teamCeat,
-            team_a_score: 25,
-            team_b_score: 23,
-            round: 'Semifinals',
-            status: 'Ongoing',
-            match_time: new Date().toISOString(),
-            venue: 'PSU Sports Complex - Court B',
-          })
-          .select('id')
-          .single();
-
-        if (vbMatch) {
-          liveVolleyballMatchId = vbMatch.id;
-          await supabase.from('match_events').insert([
-            { match_id: vbMatch.id, description: 'Set 1 won by CS Byte Titans (25 - 23).' },
-            { match_id: vbMatch.id, description: 'Set 2 underway: Spike by CEAT outside hitter down the line.' },
-          ]);
-        }
-      } else {
-        // Scheduled/Group Fixtures for other sports
-        const team1 = teamLookup[collegeMap['CCJE']?.squadName];
-        const team2 = teamLookup[collegeMap['CBA']?.squadName];
-        const team3 = teamLookup[collegeMap['CHMT']?.squadName];
-        const team4 = teamLookup[collegeMap['CTE']?.squadName];
-
-        if (team1 && team2) {
-          await supabase.from('matches').insert([
-            {
+      // 7. Award Official MVP Stars for Completed Championships
+      if (finM && sportDef.mvpStars && sportDef.mvpStars.length > 0) {
+        const starEntries: {
+          player_id: string;
+          match_id: string;
+          tournament_id: string;
+          star_type: 'Gold' | 'Red';
+        }[] = [];
+        for (const s of sportDef.mvpStars) {
+          const playerId = studentsByCollege[s.collegeCode]?.[0]?.id;
+          if (playerId) {
+            starEntries.push({
+              player_id: playerId,
+              match_id: finM.id,
               tournament_id: tId,
-              team_a_id: team1,
-              team_b_id: team2,
-              team_a_score: 1,
-              team_b_score: 0,
-              round: 'Group Stage Match 1',
-              status: 'Completed',
-              match_time: new Date(Date.now() - 4 * 3600000).toISOString(),
-              venue: 'University Field A',
-            },
-            ...(team3 && team4
-              ? [{
-                  tournament_id: tId,
-                  team_a_id: team3,
-                  team_b_id: team4,
-                  team_a_score: 0,
-                  team_b_score: 0,
-                  round: 'Group Stage Match 2',
-                  status: 'Scheduled',
-                  match_time: new Date(Date.now() + 2 * 3600000).toISOString(),
-                  venue: 'University Field B',
-                }]
-              : []),
-          ]);
+              star_type: s.starType,
+            });
+          }
+        }
+        if (starEntries.length > 0) {
+          await supabase.from('player_stars').insert(starEntries);
         }
       }
     }
 
     return {
       success: true,
-      message: 'The Grand Binturungan Olympiad injected: All 9 sports created, 9 college squads fully rostered with positions & jerseys, complete tournament tree, and CEAT crowned Gold Champion!',
+      message: 'The Grand Binturungan Olympiad injected: All 9 sports created with full Phase 1 elimination fixtures & Phase 2 playoff brackets, full starting lineups and bench subs on all teams, and realistic tournament event simulation!',
       tournamentId: marqueeBasketballTournId,
       liveMatchId: liveVolleyballMatchId,
     };
@@ -968,17 +1294,19 @@ export async function injectSuperDemo(supabase: SupabaseClient): Promise<Scenari
 }
 
 /**
- * Helper to ensure the 4 PSU campus clusters exist.
+ * Helper to ensure authentic PSU Binturungan tribes exist in clusters table.
  */
 async function ensureClusters(supabase: SupabaseClient) {
-  const demoClusters = [
-    { name: 'Cluster A - Titans', description: 'College of Arts and Sciences', college_codes: ['CAS'] },
-    { name: 'Cluster B - Wolves', description: 'College of Business Administration', college_codes: ['CBA'] },
-    { name: 'Cluster C - Builders', description: 'College of Engineering', college_codes: ['COE'] },
-    { name: 'Cluster D - Cyber Knights', description: 'College of Information Technology', college_codes: ['CIT'] },
+  const authenticClusters = [
+    { name: 'Tribo Apolaki', description: 'God of Sun & War — College of Teacher Education (CTE), College of Criminal Justice Education (CCJE), Laboratory High School', college_codes: ['CTE', 'CCJE'] },
+    { name: 'Tribo Libulan', description: 'Deity of the Moon & Guidance — College of Engineering, Architecture and Technology (CEAT), College of Nursing and Health Sciences (CNHS), School of Law, School of Medicine', college_codes: ['CEAT', 'CNHS'] },
+    { name: 'Tribo Tala', description: 'Goddess of the Morning & Evening Star — College of Business and Accountancy (CBA), College of Hospitality Management and Tourism (CHMT)', college_codes: ['CBA', 'CHMT'] },
+    { name: 'Tribo Haliya', description: 'Goddess of Moonlight & Protection — College of Sciences (CS), College of Arts and Humanities (CAH)', college_codes: ['CS', 'CAH'] },
+    { name: 'Tribo Mapulon', description: 'God of Seasons & Harvest — CCRD Del Sur (Brooke\'s Point, Bataraza, Balabac, Sofronio Española Campuses)', college_codes: ['CCRD'] },
+    { name: 'Tribo Dumangan', description: 'God of Bountiful Harvest — CCRD Del Norte (Roxas, Taytay, Coron, San Vicente, El Nido, Cuyo, Dumaran, Linapacan Campuses)', college_codes: ['CCRD'] },
   ];
 
-  for (const c of demoClusters) {
+  for (const c of authenticClusters) {
     const { data: existing } = await supabase.from('clusters').select('id').eq('name', c.name).maybeSingle();
     if (!existing) {
       await supabase.from('clusters').insert(c);

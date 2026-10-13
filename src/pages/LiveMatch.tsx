@@ -1994,16 +1994,36 @@ export const LiveMatch = () => {
                             <span className="font-mono font-black text-xs px-1.5 py-0.5 rounded bg-slate-900 border border-white/10 text-orange-400 shrink-0">
                               {jersey}
                             </span>
-                            <span className="font-semibold text-slate-200 truncate">
-                              {name || 'Unknown'}
-                            </span>
-                            {player.is_captain && (
-                              <span className="text-[9px] font-black uppercase text-amber-400 bg-amber-400/20 px-1 rounded shrink-0">C</span>
-                            )}
+                            <div className="min-w-0 flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="font-semibold text-slate-200 truncate">
+                                  {name || 'Unknown'}
+                                </span>
+                                {player.is_captain && (
+                                  <span className="text-[9px] font-black uppercase text-amber-400 bg-amber-400/20 px-1 rounded shrink-0">C</span>
+                                )}
+                              </div>
+                              {player.position && (
+                                <span className="text-[10px] text-slate-400 font-medium truncate max-w-[130px]">
+                                  {player.position}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <span className={`font-black font-mono shrink-0 ml-2 ${pts > 0 ? 'text-orange-400' : 'text-slate-500'}`}>
-                            {pts} PTS
-                          </span>
+                          <div className="flex items-center gap-2 shrink-0 ml-2">
+                            <span
+                              className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded border ${
+                                player.is_starter
+                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                  : 'bg-slate-500/10 text-slate-400 border-white/10'
+                              }`}
+                            >
+                              {player.is_starter ? 'Starter' : 'Sub'}
+                            </span>
+                            <span className={`font-black font-mono ${pts > 0 ? 'text-orange-400' : 'text-slate-500'}`}>
+                              {pts} PTS
+                            </span>
+                          </div>
                         </div>
                       );
                     });
@@ -2040,16 +2060,36 @@ export const LiveMatch = () => {
                             <span className="font-mono font-black text-xs px-1.5 py-0.5 rounded bg-slate-900 border border-white/10 text-orange-400 shrink-0">
                               {jersey}
                             </span>
-                            <span className="font-semibold text-slate-200 truncate">
-                              {name || 'Unknown'}
-                            </span>
-                            {player.is_captain && (
-                              <span className="text-[9px] font-black uppercase text-amber-400 bg-amber-400/20 px-1 rounded shrink-0">C</span>
-                            )}
+                            <div className="min-w-0 flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="font-semibold text-slate-200 truncate">
+                                  {name || 'Unknown'}
+                                </span>
+                                {player.is_captain && (
+                                  <span className="text-[9px] font-black uppercase text-amber-400 bg-amber-400/20 px-1 rounded shrink-0">C</span>
+                                )}
+                              </div>
+                              {player.position && (
+                                <span className="text-[10px] text-slate-400 font-medium truncate max-w-[130px]">
+                                  {player.position}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <span className={`font-black font-mono shrink-0 ml-2 ${pts > 0 ? 'text-orange-400' : 'text-slate-500'}`}>
-                            {pts} PTS
-                          </span>
+                          <div className="flex items-center gap-2 shrink-0 ml-2">
+                            <span
+                              className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded border ${
+                                player.is_starter
+                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                  : 'bg-slate-500/10 text-slate-400 border-white/10'
+                              }`}
+                            >
+                              {player.is_starter ? 'Starter' : 'Sub'}
+                            </span>
+                            <span className={`font-black font-mono ${pts > 0 ? 'text-orange-400' : 'text-slate-500'}`}>
+                              {pts} PTS
+                            </span>
+                          </div>
                         </div>
                       );
                     });

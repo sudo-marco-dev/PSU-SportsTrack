@@ -65,8 +65,45 @@
 - [x] Phase 7.10 Developer Role RLS Permission Elevation (Updated `has_role(role_name text)` PostgreSQL function to grant `'dev'` role test bench write permissions across all tables)
 - [x] Phase 7.11 Sandbox Scenario Engine Hardening (Resolved check constraint serialization in Scenario B `verification_documents.status = 'Pending'`, Scenario D `player_stars` foreign key and `'Gold'/'Red'` constraints, and added `formatErrorMessage` for clean PostgREST error reporting)
 - [x] Phase 7.12 The Grand Binturungan Olympiad Super Demo (Scenario E: Provisions all 9 official PSU sports, 9 collegiate squads, regulation rosters with jersey numbers `#1`–`#99`, sport-specific positions, starters/subs, team captains, coaches, complete 8-team tournament brackets, live volleyball match, and Gold/Silver/Bronze podium crowning CEAT, CS, and CBA)
+- [x] Phase 7.13 Match Center Filter Revamp & Tree-Like Tournament Bracketing (Unified single-tier sport discipline rail, compact tournament dropdown & search toolbar, reactive auto-open of Phase 2 playoffs when elimination is complete, orthogonal SVG bracket tree connector forks linking Quarters -> Semis -> Finals, and isolated Battle for 3rd Place bronze podium stage)
+- [x] Phase 7.14 PSU Binturungan Cluster / Tribe System & Bracket Tree Scoping Fix (Strict single-tournament bracket ladder scoping resolving duplicate bronze matches, PostgreSQL migration adding `affiliation_type`, `college_id`, `cluster_id` to `teams`, seeding 6 authentic Binturungan tribes into `clusters`, Coach team registration toggle between College Squad vs Cluster/Tribe, and 3-way Standing View toggle on `/ranking` crowning College or Tribe champions on the Gold podium)
+- [x] Phase 7.15 Match Center UI/UX Architecture Decomposition (`BracketMatchCard`, `KnockoutBracketTree`, `BronzeMatchCard`, `MatchCenterToolbar`, `MatchCenterHeader`, `MatchScheduleList`) with clutter reduction (eliminated per-card stage headers, trimmed venue clutter, balanced bronze podium intensity)
+- [x] Phase 7.16 Dual-Phase Tournament Ecosystem (Phase 1 Elimination group stage pools + Phase 2 Playoff Knockout Brackets across all 9 sports, totaling 108 matches)
+- [x] Phase 7.17 Full Team Roster Provisioning & Authentic Roster Simulation (144+ student athlete accounts provisioned across 9 colleges with starters, subs, captaincy, and authentic sport positions)
+- [x] Phase 7.18 Live Court-side Box Score Roster Enrichment (Player cards displaying `#jersey`, athlete name, captain indicator, sport position, and `[STARTER]` / `[SUB]` badges)
 
 ## 🛠️ Recent Modifications & Change Log
+
+### Match Center UI/UX Redesign, Dual-Phase Bracketing & Full Roster Simulation
+- **Description**: Rebuilt the Match Center from the ground up to reduce clutter, established modular bracket architecture, and upgraded dev seeding to simulate fully booked events across all 9 sports:
+  1. **Match Center UI/UX Modernization & Modular Decomposition**:
+     - Decomposed monolithic `TournamentExplorer.tsx` into focused modules: `MatchCenterHeader.tsx`, `MatchCenterToolbar.tsx`, `KnockoutBracketTree.tsx`, `BracketMatchCard.tsx`, `BronzeMatchCard.tsx`, `MatchScheduleList.tsx`, and `types.ts`.
+     - De-cluttered bracket cards by removing redundant "Quarter Finals" tags from every card and moving venue info to detail views.
+     - Toned down the 3rd-Place Bronze podium styling to sit harmoniously below the Championship Finals without overpowering it.
+  2. **Phase 1 Elimination & Phase 2 Playoff Brackets Across All 9 Sports**:
+     - Configured all 9 sports in `ALL_SPORTS_CONFIG` with 4 Phase 1 Elimination fixtures (Pool A & Pool B) and 8 Phase 2 Playoff Knockout fixtures (QF1-QF4 -> SF1-SF2 -> Finals & Bronze Playoff). Total of 108 fixtures in DB.
+     - Diverse lifecycle states: Completed championships (Basketball, Baseball), live ongoing playoff semifinals and elimination deciders with commentary feeds (Soccer, Volleyball, Futsal, Pickleball), and scheduled finals.
+  3. **Full Team Roster Simulation (Starters & Substitutes)**:
+     - Authored `scripts/seed_athletes.js` provisioning 144 authentic student athletes across all 9 colleges in Supabase Auth and `public.users`.
+     - Updated `devScenarios.ts` to assign full starting lineups (`is_starter: true`, `Active`) and full bench substitutes (`is_starter: false`, `Bench`) for every team across all 9 sports.
+     - Assigned 1 captain per team (`is_captain: true`), unique jersey numbers (`#1`-`#99`), and sport-specific positions.
+  4. **LiveMatch Box Score Roster Enrichment**:
+     - Enhanced `LiveMatch.tsx` Box Score deck to display jersey number, athlete name, captain badge, sport position, `[STARTER]` / `[SUB]` badges, and real-time points.
+- **Files Modified / Created**:
+  - `src/components/match-center/MatchCenterHeader.tsx`
+  - `src/components/match-center/MatchCenterToolbar.tsx`
+  - `src/components/match-center/KnockoutBracketTree.tsx`
+  - `src/components/match-center/BracketMatchCard.tsx`
+  - `src/components/match-center/BronzeMatchCard.tsx`
+  - `src/components/match-center/BracketConnectors.tsx`
+  - `src/components/match-center/MatchScheduleList.tsx`
+  - `src/components/match-center/types.ts`
+  - `src/pages/TournamentExplorer.tsx`
+  - `src/pages/LiveMatch.tsx`
+  - `src/lib/devScenarios.ts`
+  - `scripts/seed_athletes.js`
+  - `PROJECT_STATE.md`
+  - `local_change_log.md`
 
 ### Developer Sandbox RLS Bypass & Grand Binturungan Olympiad Super Demo
 - **Description**: Resolved RLS permission barriers for the developer role, fixed schema check constraints across scenarios B, C, and D, and built the comprehensive multi-sport collegiate festival simulator (Scenario E):

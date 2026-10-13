@@ -5,13 +5,32 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trophy, Medal, Filter, Sparkles, Shield, RotateCcw, Search, CheckCircle2 } from 'lucide-react';
+import { Trophy, Medal, Filter, Sparkles, Shield, RotateCcw, Search, CheckCircle2, GraduationCap, Users, Crown } from 'lucide-react';
 
-interface RankedTeam {
+interface CollegeEntity {
+  id: string;
+  college_name: string;
+}
+
+interface ClusterEntity {
+  id: string;
+  name: string;
+  description: string;
+  college_codes?: string[];
+}
+
+interface RankedEntity {
   key: string;
-  teamName: string;
-  sport: string;
-  category: string;
+  id?: string;
+  name: string;
+  code?: string;
+  subtitle?: string;
+  type: 'college' | 'cluster' | 'squad';
+  clusterName?: string;
+  collegeName?: string;
+  memberColleges?: string[];
+  sport?: string;
+  category?: string;
   tournaments: string[];
   matchesPlayed: number;
   wins: number;
@@ -20,13 +39,18 @@ interface RankedTeam {
   pointsFor: number;
   pointsAgainst: number;
   pointDiff: number;
-  championships: number;
-  runnerUps: number;
-  bronzeFinishes: number;
+  championships: number; // Gold
+  runnerUps: number;     // Silver
+  bronzeFinishes: number;// Bronze
   goldStars: number;
+  squadCount?: number;
+  disciplines?: string[];
 }
 
 export const Ranking = () => {
+  // Standing View Mode: College vs Cluster vs Squad
+  const [standingView, setStandingView] = useState<'college' | 'cluster' | 'squad'>('college');
+
   // Filter States
   const [tournamentType, setTournamentType] = useState<string>('all');
   const [sportCategory, setSportCategory] = useState<string>('all');
@@ -39,6 +63,8 @@ export const Ranking = () => {
   const [teams, setTeams] = useState<any[]>([]);
   const [matches, setMatches] = useState<any[]>([]);
   const [stars, setStars] = useState<any[]>([]);
+  const [colleges, setColleges] = useState<CollegeEntity[]>([]);
+  const [clusters, setClusters] = useState<ClusterEntity[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Fetch all relevant athletic datasets
@@ -49,14 +75,14 @@ export const Ranking = () => {
   const fetchRankingDatasets = async () => {
     setIsLoading(true);
     try {
-      const [tRes, tmRes, mRes, sRes] = await Promise.all([
+      const [tRes, tmRes, mRes, sRes, colRes, clRes] = await Promise.all([
         supabase
           .from('tournaments')
           .select('id, name, sport, type, status, start_date, end_date')
           .or('is_deleted.is.null,is_deleted.eq.false'),
         supabase
           .from('teams')
-          .select('id, name, tournament_id, status')
+          .select('id, name, tournament_id, status, affiliation_type, college_id, cluster_id, colleges:college_id(id, college_name), clusters:cluster_id(id, name, description)')
           .eq('status', 'Approved')
           .or('is_deleted.is.null,is_deleted.eq.false'),
         supabase
@@ -64,7 +90,13 @@ export const Ranking = () => {
           .select('id, tournament_id, round, status, team_a_id, team_b_id, team_a_score, team_b_score, match_time, venue, team_a:team_a_id(name), team_b:team_b_id(name)'),
         supabase
           .from('player_stars')
-          .select('id, player_id, tournament_id, star_type')
+          .select('id, player_id, tournament_id, star_type'),
+        supabase
+          .from('colleges')
+          .select('id, college_name'),
+        supabase
+          .from('clusters')
+          .select('id, name, description, college_codes')
       ]);
 
       if (tRes.data) setTournaments(tRes.data);
@@ -77,6 +109,8 @@ export const Ranking = () => {
         })));
       }
       if (sRes.data) setStars(sRes.data);
+      if (colRes.data) setColleges(colRes.data);
+      if (clRes.data) setClusters(clRes.data);
     } catch (err) {
       console.error('Error fetching leaderboard datasets:', err);
     } finally {
@@ -90,6 +124,19 @@ export const Ranking = () => {
     setWinMetric('overall_wins');
     setAcademicYear('current');
     setSearchQuery('');
+    setStandingView('college');
+  };
+
+  // Helper: Extract abbreviation code from full college title
+  const extractCollegeCode = (name: string): string => {
+    const match = name.match(/\(([^)]+)\)/);
+    if (match) return match[1].trim();
+    return name.trim();
+  };
+
+  // Helper: Extract human readable short department title
+  const getCollegeShortName = (name: string): string => {
+    return name.replace(/\s*\([^)]*\)/g, '').replace(/^College of\s+/i, '').replace(/^School of\s+/i, '').trim();
   };
 
   // 1. Filter Tournaments based on active controls
@@ -130,8 +177,8 @@ export const Ranking = () => {
     });
   }, [tournaments, tournamentType, sportCategory, academicYear]);
 
-  // 2. Compute live team standings across filtered tournaments
-  const rankedTeams = useMemo<RankedTeam[]>(() => {
+  // 2. Compute dynamic standings: College, Cluster / Tribe, or Squad
+  const rankedEntities = useMemo<RankedEntity[]>(() => {
     if (filteredTournaments.length === 0) return [];
 
     const tournMap = new Map(filteredTournaments.map(t => [t.id, t]));
@@ -140,10 +187,42 @@ export const Ranking = () => {
     const relevantMatches = matches.filter(m => tournIds.has(m.tournament_id));
     const relevantTeams = teams.filter(t => tournIds.has(t.tournament_id));
 
-    // Map crowned champions and runner-ups per tournament
+    const collegesMap = new Map(colleges.map(c => [c.id, c]));
+    const clustersMap = new Map(clusters.map(cl => [cl.id, cl]));
+    const teamsMap = new Map(teams.map(tm => [tm.id, tm]));
+
+    // Helper: Resolve College for any team record
+    const getTeamCollege = (team: any): CollegeEntity | null => {
+      if (!team) return null;
+      if (team.college_id && collegesMap.has(team.college_id)) {
+        return collegesMap.get(team.college_id)!;
+      }
+      const tName = (team.name || '').toLowerCase();
+      for (const col of colleges) {
+        const code = extractCollegeCode(col.college_name).toLowerCase();
+        if (tName.includes(code)) return col;
+      }
+      return null;
+    };
+
+    // Helper: Resolve Cluster / Tribe for any team or college record
+    const getTeamCluster = (team: any, teamCollege?: CollegeEntity | null): ClusterEntity | null => {
+      if (team?.cluster_id && clustersMap.has(team.cluster_id)) {
+        return clustersMap.get(team.cluster_id)!;
+      }
+      const col = teamCollege || getTeamCollege(team);
+      if (col) {
+        const code = extractCollegeCode(col.college_name);
+        const matched = clusters.find(cl => cl.college_codes && cl.college_codes.includes(code));
+        if (matched) return matched;
+      }
+      return null;
+    };
+
+    // Map crowned champions, runner-ups, and bronze finishes per tournament
     const tournChampions = new Map<string, string>(); // tournId -> champion teamId
     const tournRunnerUps = new Map<string, string>(); // tournId -> runner-up teamId
-    const tournBronze = new Map<string, string>(); // tournId -> bronze teamId
+    const tournBronze = new Map<string, string>();    // tournId -> bronze teamId
 
     filteredTournaments.forEach(tourn => {
       const tourMatches = relevantMatches.filter(m => m.tournament_id === tourn.id);
@@ -179,16 +258,308 @@ export const Ranking = () => {
       }
     });
 
-    // MVP Gold Stars count per tournament
-    const tournGoldStars = new Map<string, number>();
-    stars.filter(s => s.star_type === 'Gold').forEach(s => {
-      if (s.tournament_id) {
-        tournGoldStars.set(s.tournament_id, (tournGoldStars.get(s.tournament_id) || 0) + 1);
-      }
-    });
+    // Sort comparator
+    const sortEntities = (list: RankedEntity[]) => {
+      return list.sort((a, b) => {
+        if (winMetric === 'overall_wins') {
+          if (b.championships !== a.championships) return b.championships - a.championships;
+          if (b.runnerUps !== a.runnerUps) return b.runnerUps - a.runnerUps;
+          if (b.bronzeFinishes !== a.bronzeFinishes) return b.bronzeFinishes - a.bronzeFinishes;
+          if (b.wins !== a.wins) return b.wins - a.wins;
+          if (b.winRate !== a.winRate) return b.winRate - a.winRate;
+          if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
+          return b.pointsFor - a.pointsFor;
+        } else if (winMetric === 'most_wins') {
+          if (b.wins !== a.wins) return b.wins - a.wins;
+          if (b.championships !== a.championships) return b.championships - a.championships;
+          if (b.winRate !== a.winRate) return b.winRate - a.winRate;
+          if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
+          return b.pointsFor - a.pointsFor;
+        } else if (winMetric === 'win_rate') {
+          if (b.winRate !== a.winRate) return b.winRate - a.winRate;
+          if (b.wins !== a.wins) return b.wins - a.wins;
+          if (b.championships !== a.championships) return b.championships - a.championships;
+          return b.pointDiff - a.pointDiff;
+        } else if (winMetric === 'mvp_stars') {
+          if (b.goldStars !== a.goldStars) return b.goldStars - a.goldStars;
+          if (b.championships !== a.championships) return b.championships - a.championships;
+          if (b.wins !== a.wins) return b.wins - a.wins;
+          return b.pointDiff - a.pointDiff;
+        }
+        return 0;
+      });
+    };
 
-    // Aggregate squads by normalized name + sport
-    const teamStatsMap = new Map<string, RankedTeam>();
+    // =========================================================================
+    // OPTION 1: COLLEGE STANDINGS
+    // =========================================================================
+    if (standingView === 'college') {
+      const collegeStats = new Map<string, RankedEntity>();
+
+      colleges.forEach(col => {
+        const code = extractCollegeCode(col.college_name);
+        const cluster = getTeamCluster(null, col);
+        collegeStats.set(col.id, {
+          key: col.id,
+          id: col.id,
+          name: col.college_name,
+          code,
+          subtitle: getCollegeShortName(col.college_name),
+          type: 'college',
+          clusterName: cluster?.name,
+          tournaments: [],
+          matchesPlayed: 0,
+          wins: 0,
+          losses: 0,
+          winRate: 0,
+          pointsFor: 0,
+          pointsAgainst: 0,
+          pointDiff: 0,
+          championships: 0,
+          runnerUps: 0,
+          bronzeFinishes: 0,
+          goldStars: 0,
+          squadCount: 0,
+          disciplines: []
+        });
+      });
+
+      // Populate participating squads and tournaments
+      relevantTeams.forEach(t => {
+        const col = getTeamCollege(t);
+        if (col && collegeStats.has(col.id)) {
+          const stat = collegeStats.get(col.id)!;
+          stat.squadCount = (stat.squadCount || 0) + 1;
+          const tourn = tournMap.get(t.tournament_id);
+          if (tourn?.name && !stat.tournaments.includes(tourn.name)) {
+            stat.tournaments.push(tourn.name);
+          }
+          if (tourn?.sport && !stat.disciplines?.includes(tourn.sport)) {
+            stat.disciplines?.push(tourn.sport);
+          }
+        }
+      });
+
+      // Medals from Tournament podium finishes
+      filteredTournaments.forEach(tourn => {
+        const champId = tournChampions.get(tourn.id);
+        if (champId) {
+          const champTeam = teamsMap.get(champId);
+          const col = getTeamCollege(champTeam);
+          if (col && collegeStats.has(col.id)) {
+            collegeStats.get(col.id)!.championships += 1;
+          }
+        }
+        const runnerUpId = tournRunnerUps.get(tourn.id);
+        if (runnerUpId) {
+          const runnerTeam = teamsMap.get(runnerUpId);
+          const col = getTeamCollege(runnerTeam);
+          if (col && collegeStats.has(col.id)) {
+            collegeStats.get(col.id)!.runnerUps += 1;
+          }
+        }
+        const bronzeId = tournBronze.get(tourn.id);
+        if (bronzeId) {
+          const bronzeTeam = teamsMap.get(bronzeId);
+          const col = getTeamCollege(bronzeTeam);
+          if (col && collegeStats.has(col.id)) {
+            collegeStats.get(col.id)!.bronzeFinishes += 1;
+          }
+        }
+      });
+
+      // Process match scores and records
+      relevantMatches.forEach(m => {
+        if (m.status === 'Completed' || (m.team_a_score || 0) > 0 || (m.team_b_score || 0) > 0) {
+          const scoreA = m.team_a_score || 0;
+          const scoreB = m.team_b_score || 0;
+
+          const teamA = teamsMap.get(m.team_a_id) || { name: m.team_a_name };
+          const teamB = teamsMap.get(m.team_b_id) || { name: m.team_b_name };
+
+          const colA = getTeamCollege(teamA);
+          const colB = getTeamCollege(teamB);
+
+          if (colA && collegeStats.has(colA.id)) {
+            const statA = collegeStats.get(colA.id)!;
+            statA.matchesPlayed += 1;
+            statA.pointsFor += scoreA;
+            statA.pointsAgainst += scoreB;
+            if (scoreA > scoreB) statA.wins += 1;
+            else if (scoreA < scoreB) statA.losses += 1;
+          }
+
+          if (colB && collegeStats.has(colB.id)) {
+            const statB = collegeStats.get(colB.id)!;
+            statB.matchesPlayed += 1;
+            statB.pointsFor += scoreB;
+            statB.pointsAgainst += scoreA;
+            if (scoreB > scoreA) statB.wins += 1;
+            else if (scoreB < scoreA) statB.losses += 1;
+          }
+        }
+      });
+
+      let results = Array.from(collegeStats.values()).map(c => ({
+        ...c,
+        pointDiff: c.pointsFor - c.pointsAgainst,
+        winRate: c.matchesPlayed > 0 ? (c.wins / c.matchesPlayed) * 100 : 0
+      }));
+
+      // If sport filter is active, only show colleges active in that sport
+      if (sportCategory !== 'all') {
+        results = results.filter(c => c.matchesPlayed > 0 || c.championships > 0 || (c.squadCount || 0) > 0);
+      }
+
+      // Search filter
+      const filtered = results.filter(c => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        return c.name.toLowerCase().includes(q) ||
+               (c.code && c.code.toLowerCase().includes(q)) ||
+               (c.subtitle && c.subtitle.toLowerCase().includes(q)) ||
+               (c.clusterName && c.clusterName.toLowerCase().includes(q));
+      });
+
+      return sortEntities(filtered);
+    }
+
+    // =========================================================================
+    // OPTION 2: CLUSTER / TRIBE STANDINGS
+    // =========================================================================
+    if (standingView === 'cluster') {
+      const clusterStats = new Map<string, RankedEntity>();
+
+      clusters.forEach(cl => {
+        clusterStats.set(cl.id, {
+          key: cl.id,
+          id: cl.id,
+          name: cl.name,
+          subtitle: cl.description,
+          type: 'cluster',
+          memberColleges: cl.college_codes || [],
+          tournaments: [],
+          matchesPlayed: 0,
+          wins: 0,
+          losses: 0,
+          winRate: 0,
+          pointsFor: 0,
+          pointsAgainst: 0,
+          pointDiff: 0,
+          championships: 0,
+          runnerUps: 0,
+          bronzeFinishes: 0,
+          goldStars: 0,
+          squadCount: 0,
+          disciplines: []
+        });
+      });
+
+      // Count squads per tribe
+      relevantTeams.forEach(t => {
+        const col = getTeamCollege(t);
+        const cluster = getTeamCluster(t, col);
+        if (cluster && clusterStats.has(cluster.id)) {
+          const stat = clusterStats.get(cluster.id)!;
+          stat.squadCount = (stat.squadCount || 0) + 1;
+          const tourn = tournMap.get(t.tournament_id);
+          if (tourn?.name && !stat.tournaments.includes(tourn.name)) {
+            stat.tournaments.push(tourn.name);
+          }
+          if (tourn?.sport && !stat.disciplines?.includes(tourn.sport)) {
+            stat.disciplines?.push(tourn.sport);
+          }
+        }
+      });
+
+      // Medals from Tournament podium finishes
+      filteredTournaments.forEach(tourn => {
+        const champId = tournChampions.get(tourn.id);
+        if (champId) {
+          const champTeam = teamsMap.get(champId);
+          const col = getTeamCollege(champTeam);
+          const cluster = getTeamCluster(champTeam, col);
+          if (cluster && clusterStats.has(cluster.id)) {
+            clusterStats.get(cluster.id)!.championships += 1;
+          }
+        }
+        const runnerUpId = tournRunnerUps.get(tourn.id);
+        if (runnerUpId) {
+          const runnerTeam = teamsMap.get(runnerUpId);
+          const col = getTeamCollege(runnerTeam);
+          const cluster = getTeamCluster(runnerTeam, col);
+          if (cluster && clusterStats.has(cluster.id)) {
+            clusterStats.get(cluster.id)!.runnerUps += 1;
+          }
+        }
+        const bronzeId = tournBronze.get(tourn.id);
+        if (bronzeId) {
+          const bronzeTeam = teamsMap.get(bronzeId);
+          const col = getTeamCollege(bronzeTeam);
+          const cluster = getTeamCluster(bronzeTeam, col);
+          if (cluster && clusterStats.has(cluster.id)) {
+            clusterStats.get(cluster.id)!.bronzeFinishes += 1;
+          }
+        }
+      });
+
+      // Process match scores and records
+      relevantMatches.forEach(m => {
+        if (m.status === 'Completed' || (m.team_a_score || 0) > 0 || (m.team_b_score || 0) > 0) {
+          const scoreA = m.team_a_score || 0;
+          const scoreB = m.team_b_score || 0;
+
+          const teamA = teamsMap.get(m.team_a_id) || { name: m.team_a_name };
+          const teamB = teamsMap.get(m.team_b_id) || { name: m.team_b_name };
+
+          const colA = getTeamCollege(teamA);
+          const colB = getTeamCollege(teamB);
+
+          const clA = getTeamCluster(teamA, colA);
+          const clB = getTeamCluster(teamB, colB);
+
+          if (clA && clusterStats.has(clA.id)) {
+            const statA = clusterStats.get(clA.id)!;
+            statA.matchesPlayed += 1;
+            statA.pointsFor += scoreA;
+            statA.pointsAgainst += scoreB;
+            if (scoreA > scoreB) statA.wins += 1;
+            else if (scoreA < scoreB) statA.losses += 1;
+          }
+
+          if (clB && clusterStats.has(clB.id)) {
+            const statB = clusterStats.get(clB.id)!;
+            statB.matchesPlayed += 1;
+            statB.pointsFor += scoreB;
+            statB.pointsAgainst += scoreA;
+            if (scoreB > scoreA) statB.wins += 1;
+            else if (scoreB < scoreA) statB.losses += 1;
+          }
+        }
+      });
+
+      let results = Array.from(clusterStats.values()).map(c => ({
+        ...c,
+        pointDiff: c.pointsFor - c.pointsAgainst,
+        winRate: c.matchesPlayed > 0 ? (c.wins / c.matchesPlayed) * 100 : 0
+      }));
+
+      // Search filter
+      const filtered = results.filter(c => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        return c.name.toLowerCase().includes(q) ||
+               (c.subtitle && c.subtitle.toLowerCase().includes(q)) ||
+               (c.memberColleges && c.memberColleges.some(m => m.toLowerCase().includes(q)));
+      });
+
+      return sortEntities(filtered);
+    }
+
+    // =========================================================================
+    // OPTION 3: SQUAD STANDINGS (INDIVIDUAL TEAMS)
+    // =========================================================================
+    const teamStatsMap = new Map<string, RankedEntity>();
 
     relevantTeams.forEach(t => {
       const tourn = tournMap.get(t.tournament_id);
@@ -196,12 +567,20 @@ export const Ranking = () => {
       const category = tourn?.type || 'Binturungan';
       const key = `${t.name.trim().toLowerCase()}__${sport.toLowerCase()}`;
 
+      const col = getTeamCollege(t);
+      const cluster = getTeamCluster(t, col);
+
       if (!teamStatsMap.has(key)) {
         teamStatsMap.set(key, {
           key,
-          teamName: t.name.trim(),
+          id: t.id,
+          name: t.name.trim(),
           sport,
           category,
+          type: 'squad',
+          code: col ? extractCollegeCode(col.college_name) : undefined,
+          collegeName: col?.college_name,
+          clusterName: cluster?.name,
           tournaments: tourn?.name ? [tourn.name] : [],
           matchesPlayed: 0,
           wins: 0,
@@ -234,7 +613,7 @@ export const Ranking = () => {
       }
     });
 
-    // Ensure teams appearing in relevant matches are included in teamStatsMap
+    // Ensure teams appearing in matches are tracked
     relevantMatches.forEach(m => {
       const tourn = tournMap.get(m.tournament_id);
       const sport = tourn?.sport || 'General';
@@ -248,11 +627,17 @@ export const Ranking = () => {
       if (nameA && nameA !== 'BYE' && nameA !== 'TBD') {
         const keyA = `${nameA.trim().toLowerCase()}__${sport.toLowerCase()}`;
         if (!teamStatsMap.has(keyA)) {
+          const colA = getTeamCollege(teamAObj);
+          const clA = getTeamCluster(teamAObj, colA);
           teamStatsMap.set(keyA, {
             key: keyA,
-            teamName: nameA.trim(),
+            name: nameA.trim(),
             sport,
             category,
+            type: 'squad',
+            code: colA ? extractCollegeCode(colA.college_name) : undefined,
+            collegeName: colA?.college_name,
+            clusterName: clA?.name,
             tournaments: tourn?.name ? [tourn.name] : [],
             matchesPlayed: 0,
             wins: 0,
@@ -272,11 +657,17 @@ export const Ranking = () => {
       if (nameB && nameB !== 'BYE' && nameB !== 'TBD') {
         const keyB = `${nameB.trim().toLowerCase()}__${sport.toLowerCase()}`;
         if (!teamStatsMap.has(keyB)) {
+          const colB = getTeamCollege(teamBObj);
+          const clB = getTeamCluster(teamBObj, colB);
           teamStatsMap.set(keyB, {
             key: keyB,
-            teamName: nameB.trim(),
+            name: nameB.trim(),
             sport,
             category,
+            type: 'squad',
+            code: colB ? extractCollegeCode(colB.college_name) : undefined,
+            collegeName: colB?.college_name,
+            clusterName: clB?.name,
             tournaments: tourn?.name ? [tourn.name] : [],
             matchesPlayed: 0,
             wins: 0,
@@ -294,7 +685,7 @@ export const Ranking = () => {
       }
     });
 
-    // Process all match results
+    // Process squad matches
     relevantMatches.forEach(m => {
       if (m.status === 'Completed' || (m.team_a_score || 0) > 0 || (m.team_b_score || 0) > 0) {
         const scoreA = m.team_a_score || 0;
@@ -333,7 +724,6 @@ export const Ranking = () => {
       }
     });
 
-    // Calculate rates and differentials
     const allList = Array.from(teamStatsMap.values()).map(t => {
       const pointDiff = t.pointsFor - t.pointsAgainst;
       const winRate = t.matchesPlayed > 0 ? (t.wins / t.matchesPlayed) * 100 : 0;
@@ -344,49 +734,22 @@ export const Ranking = () => {
       };
     });
 
-    // Filter by search query
     const filtered = allList.filter(t => {
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
-      return t.teamName.toLowerCase().includes(q) || 
-             t.sport.toLowerCase().includes(q) || 
-             t.category.toLowerCase().includes(q);
+      return t.name.toLowerCase().includes(q) || 
+             (t.code && t.code.toLowerCase().includes(q)) ||
+             (t.clusterName && t.clusterName.toLowerCase().includes(q)) ||
+             (t.sport && t.sport.toLowerCase().includes(q)) || 
+             (t.category && t.category.toLowerCase().includes(q));
     });
 
-    // Sort according to active Ranking Criterion
-    filtered.sort((a, b) => {
-      if (winMetric === 'overall_wins') {
-        if (b.championships !== a.championships) return b.championships - a.championships;
-        if (b.wins !== a.wins) return b.wins - a.wins;
-        if (b.winRate !== a.winRate) return b.winRate - a.winRate;
-        if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
-        return b.pointsFor - a.pointsFor;
-      } else if (winMetric === 'most_wins') {
-        if (b.wins !== a.wins) return b.wins - a.wins;
-        if (b.championships !== a.championships) return b.championships - a.championships;
-        if (b.winRate !== a.winRate) return b.winRate - a.winRate;
-        if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
-        return b.pointsFor - a.pointsFor;
-      } else if (winMetric === 'win_rate') {
-        if (b.winRate !== a.winRate) return b.winRate - a.winRate;
-        if (b.wins !== a.wins) return b.wins - a.wins;
-        if (b.championships !== a.championships) return b.championships - a.championships;
-        return b.pointDiff - a.pointDiff;
-      } else if (winMetric === 'mvp_stars') {
-        if (b.goldStars !== a.goldStars) return b.goldStars - a.goldStars;
-        if (b.championships !== a.championships) return b.championships - a.championships;
-        if (b.wins !== a.wins) return b.wins - a.wins;
-        return b.pointDiff - a.pointDiff;
-      }
-      return 0;
-    });
+    return sortEntities(filtered);
+  }, [filteredTournaments, matches, teams, stars, colleges, clusters, winMetric, searchQuery, standingView]);
 
-    return filtered;
-  }, [filteredTournaments, matches, teams, stars, winMetric, searchQuery]);
-
-  const championTeam = rankedTeams[0];
-  const silverTeam = rankedTeams[1];
-  const bronzeTeam = rankedTeams[2];
+  const championEntity = rankedEntities[0];
+  const silverEntity = rankedEntities[1];
+  const bronzeEntity = rankedEntities[2];
 
   return (
     <div className="space-y-8 pb-10 animate-in fade-in duration-500">
@@ -403,14 +766,71 @@ export const Ranking = () => {
             LEADERBOARD <span className="text-orange-500">& RANKINGS</span>
           </h1>
           <p className="text-slate-400 font-medium text-xs md:text-sm leading-relaxed max-w-2xl opacity-90">
-            Institutional sports performance standings, championship tier lists, and athlete win analytics across PSU sports tournaments.
+            Institutional sports performance standings, championship tier lists, and authentic Palawan State University Binturungan festival leaderboards.
           </p>
         </div>
         <div className="absolute -right-16 -top-16 size-80 bg-orange-500/10 rounded-full blur-[100px] group-hover:bg-orange-500/20 transition-all duration-1000" />
         <Trophy className="absolute -bottom-10 -right-8 size-52 text-white/5 rotate-12 group-hover:rotate-6 transition-all duration-700 pointer-events-none" />
       </div>
 
-      {/* Filter Control Section - Clean & Formal Enterprise Styling */}
+      {/* Standings View Format Selector: College Standings vs Binturungan Tribe Standings vs Squad Standings */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 md:p-5 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="size-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 shrink-0">
+            <Crown className="size-5" />
+          </div>
+          <div>
+            <h2 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+              Standings Aggregation Format
+            </h2>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+              Toggle institutional standings by College, authentic Binturungan Tribe, or individual squad division.
+            </p>
+          </div>
+        </div>
+
+        {/* 3-Way Segmented Toggle */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/80 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => setStandingView('college')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+              standingView === 'college'
+                ? 'bg-white dark:bg-slate-900 text-orange-600 dark:text-orange-400 shadow-sm border border-slate-200/50 dark:border-slate-700/50'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <GraduationCap className="size-3.5" />
+            College Standings
+          </button>
+          <button
+            type="button"
+            onClick={() => setStandingView('cluster')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+              standingView === 'cluster'
+                ? 'bg-white dark:bg-slate-900 text-orange-600 dark:text-orange-400 shadow-sm border border-slate-200/50 dark:border-slate-700/50'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Users className="size-3.5" />
+            Cluster / Tribe Standings
+          </button>
+          <button
+            type="button"
+            onClick={() => setStandingView('squad')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+              standingView === 'squad'
+                ? 'bg-white dark:bg-slate-900 text-orange-600 dark:text-orange-400 shadow-sm border border-slate-200/50 dark:border-slate-700/50'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Shield className="size-3.5" />
+            Squad Standings
+          </button>
+        </div>
+      </div>
+
+      {/* Filter Control Section */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden transition-all">
         {/* Filter Toolbar Header */}
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
@@ -426,7 +846,7 @@ export const Ranking = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            {(tournamentType !== 'all' || sportCategory !== 'all' || winMetric !== 'overall_wins' || academicYear !== 'current' || searchQuery) && (
+            {(tournamentType !== 'all' || sportCategory !== 'all' || winMetric !== 'overall_wins' || academicYear !== 'current' || searchQuery || standingView !== 'college') && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -527,6 +947,9 @@ export const Ranking = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-5 mt-5 border-t border-slate-100 dark:border-slate-800">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[11px] font-medium text-slate-400">Active Criteria:</span>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border border-orange-200/60 dark:border-orange-500/30">
+                {standingView === 'college' ? 'College Standings' : standingView === 'cluster' ? 'Cluster / Tribe Standings' : 'Squad Standings'}
+              </span>
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700">
                 {tournamentType === 'all' ? 'All Competitions' : tournamentType}
               </span>
@@ -544,7 +967,7 @@ export const Ranking = () => {
             <div className="relative w-full sm:w-64">
               <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <Input
-                placeholder="Search squad name..."
+                placeholder={standingView === 'college' ? 'Search college or code...' : standingView === 'cluster' ? 'Search tribe or campus...' : 'Search squad name...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-8 pl-8 text-xs rounded-lg border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus-visible:ring-1 focus-visible:ring-orange-500"
@@ -567,21 +990,23 @@ export const Ranking = () => {
             </Badge>
           </div>
           <h4 className="font-black italic uppercase tracking-tight text-xl text-slate-900 dark:text-white truncate">
-            {silverTeam?.teamName || 'Silver Spot Open'}
+            {silverEntity?.name || 'Silver Spot Open'}
           </h4>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 truncate">
-            {silverTeam ? `${silverTeam.sport} • ${silverTeam.category}` : 'Runner-Up Standings'}
+            {silverEntity
+              ? (standingView === 'college' ? `Tribe: ${silverEntity.clusterName || 'Affiliated'}` : standingView === 'cluster' ? (silverEntity.subtitle || 'Binturungan Tribe') : `${silverEntity.sport} • ${silverEntity.category}`)
+              : 'Runner-Up Standings'}
           </p>
 
           <div className="mt-5 py-4 border-t border-dashed border-slate-200 dark:border-white/10">
-            {silverTeam ? (
+            {silverEntity ? (
               <div className="flex items-center justify-center gap-3 text-xs font-bold text-slate-600 dark:text-slate-300">
-                <span>{silverTeam.wins}W - {silverTeam.losses}L</span>
+                <span>{silverEntity.wins}W - {silverEntity.losses}L</span>
                 <span>•</span>
-                <span>{silverTeam.winRate.toFixed(0)}% Win</span>
+                <span>{silverEntity.winRate.toFixed(0)}% Win</span>
                 <span>•</span>
-                <span className={silverTeam.pointDiff >= 0 ? 'text-emerald-500' : 'text-slate-400'}>
-                  {silverTeam.pointDiff >= 0 ? `+${silverTeam.pointDiff}` : silverTeam.pointDiff} Diff
+                <span className={silverEntity.pointDiff >= 0 ? 'text-emerald-500' : 'text-slate-400'}>
+                  {silverEntity.pointDiff >= 0 ? `+${silverEntity.pointDiff}` : silverEntity.pointDiff} Diff
                 </span>
               </div>
             ) : (
@@ -597,37 +1022,51 @@ export const Ranking = () => {
           </div>
           <div className="flex justify-center mb-2">
             <Badge className="bg-orange-500 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 shadow-sm">
-              Top Seed • Official Champion
+              {standingView === 'college' ? 'Top Seed • College Champion' : standingView === 'cluster' ? 'Top Seed • Binturungan Tribe Champion' : 'Top Seed • Official Squad Champion'}
             </Badge>
           </div>
           <h4 className="font-black italic uppercase tracking-tight text-2xl md:text-3xl text-slate-900 dark:text-white truncate">
-            {championTeam?.teamName || 'Champion Tier'}
+            {championEntity?.name || 'Champion Tier'}
           </h4>
           <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mt-0.5 truncate">
-            {championTeam ? `${championTeam.sport} • ${championTeam.category}` : 'First Place Leaderboard'}
+            {championEntity
+              ? (standingView === 'college' ? `Designated Tribe: ${championEntity.clusterName || 'Authentic Binturungan'}` : standingView === 'cluster' ? (championEntity.subtitle || 'Palawan State University Tribe') : `${championEntity.sport} • ${championEntity.category}`)
+              : 'First Place Leaderboard'}
           </p>
 
           <div className="mt-5 py-4 border-t border-dashed border-orange-200 dark:border-orange-500/20">
-            {championTeam ? (
+            {championEntity ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-center gap-2 flex-wrap">
-                  {championTeam.championships > 0 && (
+                  {championEntity.championships > 0 && (
                     <Badge className="bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5">
                       <Trophy className="size-3 mr-1 inline" />
-                      {championTeam.championships} {championTeam.championships === 1 ? 'Title' : 'Titles'}
+                      {championEntity.championships} {championEntity.championships === 1 ? 'Gold Title' : 'Gold Titles'}
+                    </Badge>
+                  )}
+                  {championEntity.runnerUps > 0 && (
+                    <Badge variant="outline" className="border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-black uppercase tracking-wider px-2 py-0.5">
+                      <Medal className="size-3 mr-1 inline text-slate-400" />
+                      {championEntity.runnerUps} Silver
+                    </Badge>
+                  )}
+                  {championEntity.bronzeFinishes > 0 && (
+                    <Badge variant="outline" className="border-amber-700/30 text-amber-700 dark:text-amber-500 text-[10px] font-black uppercase tracking-wider px-2 py-0.5">
+                      <Medal className="size-3 mr-1 inline text-amber-700" />
+                      {championEntity.bronzeFinishes} Bronze
                     </Badge>
                   )}
                   <Badge variant="outline" className="border-orange-500/30 text-orange-600 dark:text-orange-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5">
-                    {championTeam.wins}W - {championTeam.losses}L Record
+                    {championEntity.wins}W - {championEntity.losses}L Record
                   </Badge>
                 </div>
                 <div className="flex items-center justify-center gap-3 text-xs font-bold text-slate-600 dark:text-slate-300">
-                  <span>{championTeam.winRate.toFixed(0)}% Win Rate</span>
+                  <span>{championEntity.winRate.toFixed(0)}% Win Rate</span>
                   <span>•</span>
-                  <span>{championTeam.pointsFor} PF</span>
+                  <span>{championEntity.pointsFor} PF</span>
                   <span>•</span>
                   <span className="text-emerald-600 dark:text-emerald-400">
-                    +{championTeam.pointDiff} Diff
+                    +{championEntity.pointDiff} Diff
                   </span>
                 </div>
               </div>
@@ -648,26 +1087,28 @@ export const Ranking = () => {
             </Badge>
           </div>
           <h4 className="font-black italic uppercase tracking-tight text-xl text-slate-900 dark:text-white truncate">
-            {bronzeTeam?.teamName || (rankedTeams.length <= 2 && rankedTeams.length > 0 ? 'Spot Open (2-Team Division)' : 'Bronze Spot Open')}
+            {bronzeEntity?.name || (rankedEntities.length <= 2 && rankedEntities.length > 0 ? 'Spot Open' : 'Bronze Spot Open')}
           </h4>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 truncate">
-            {bronzeTeam ? `${bronzeTeam.sport} • ${bronzeTeam.category}` : '3rd Place Standings'}
+            {bronzeEntity
+              ? (standingView === 'college' ? `Tribe: ${bronzeEntity.clusterName || 'Affiliated'}` : standingView === 'cluster' ? (bronzeEntity.subtitle || 'Binturungan Tribe') : `${bronzeEntity.sport} • ${bronzeEntity.category}`)
+              : '3rd Place Standings'}
           </p>
 
           <div className="mt-5 py-4 border-t border-dashed border-slate-200 dark:border-white/10">
-            {bronzeTeam ? (
+            {bronzeEntity ? (
               <div className="flex items-center justify-center gap-3 text-xs font-bold text-slate-600 dark:text-slate-300">
-                <span>{bronzeTeam.wins}W - {bronzeTeam.losses}L</span>
+                <span>{bronzeEntity.wins}W - {bronzeEntity.losses}L</span>
                 <span>•</span>
-                <span>{bronzeTeam.winRate.toFixed(0)}% Win</span>
+                <span>{bronzeEntity.winRate.toFixed(0)}% Win</span>
                 <span>•</span>
-                <span className={bronzeTeam.pointDiff >= 0 ? 'text-emerald-500' : 'text-slate-400'}>
-                  {bronzeTeam.pointDiff >= 0 ? `+${bronzeTeam.pointDiff}` : bronzeTeam.pointDiff} Diff
+                <span className={bronzeEntity.pointDiff >= 0 ? 'text-emerald-500' : 'text-slate-400'}>
+                  {bronzeEntity.pointDiff >= 0 ? `+${bronzeEntity.pointDiff}` : bronzeEntity.pointDiff} Diff
                 </span>
               </div>
             ) : (
               <span className="text-xs font-bold text-slate-400 italic">
-                {rankedTeams.length <= 2 && rankedTeams.length > 0 ? 'Requires 3+ teams in bracket' : 'Standings compiling...'}
+                {rankedEntities.length <= 2 && rankedEntities.length > 0 ? 'Requires 3+ participants' : 'Standings compiling...'}
               </span>
             )}
           </div>
@@ -676,15 +1117,19 @@ export const Ranking = () => {
 
       {/* Official PSU Standings & Leaderboard Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
           <div className="flex items-center gap-2.5">
             <Trophy className="size-4 text-orange-500" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-              Official Athletic Leaderboard
+              {standingView === 'college'
+                ? 'Official Palawan State University College Standings'
+                : standingView === 'cluster'
+                ? 'Official PSU Binturungan Tribe Standings'
+                : 'Official Athletic Squad Leaderboard'}
             </h3>
             <span className="text-slate-300 dark:text-slate-700">|</span>
             <span className="text-xs text-slate-500 font-normal">
-              {rankedTeams.length} {rankedTeams.length === 1 ? 'Squad Ranked' : 'Squads Ranked'}
+              {rankedEntities.length} {standingView === 'college' ? (rankedEntities.length === 1 ? 'College Ranked' : 'Colleges Ranked') : standingView === 'cluster' ? (rankedEntities.length === 1 ? 'Tribe Ranked' : 'Tribes Ranked') : (rankedEntities.length === 1 ? 'Squad Ranked' : 'Squads Ranked')}
             </span>
           </div>
 
@@ -698,7 +1143,7 @@ export const Ranking = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500" />
             <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Loading live rankings...</p>
           </div>
-        ) : rankedTeams.length === 0 ? (
+        ) : rankedEntities.length === 0 ? (
           <div className="py-16 px-6 text-center">
             <div className="size-12 rounded-2xl bg-orange-500/10 flex items-center justify-center mx-auto text-orange-500 mb-3">
               <Shield className="size-6" />
@@ -707,7 +1152,7 @@ export const Ranking = () => {
               No Standings Records Found
             </h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-1 mb-4 leading-relaxed">
-              No tournament teams match the active criteria. Adjust filters or reset to view all university athletic standings.
+              No records match the active criteria. Adjust filters or reset to view all university athletic standings.
             </p>
             <Button
               variant="outline"
@@ -725,25 +1170,40 @@ export const Ranking = () => {
               <thead className="bg-slate-50/80 dark:bg-slate-900/80 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800">
                 <tr>
                   <th className="py-3.5 px-6">Rank</th>
-                  <th className="py-3.5 px-4">Squad / Program</th>
-                  <th className="py-3.5 px-4">Discipline</th>
-                  <th className="py-3.5 px-4">Category</th>
+                  {standingView === 'college' ? (
+                    <>
+                      <th className="py-3.5 px-4">College / Academic Unit</th>
+                      <th className="py-3.5 px-4">Binturungan Tribe</th>
+                    </>
+                  ) : standingView === 'cluster' ? (
+                    <>
+                      <th className="py-3.5 px-4">Binturungan Cluster / Tribe</th>
+                      <th className="py-3.5 px-4">Represented Units / Campuses</th>
+                      <th className="py-3.5 px-3 text-center">Squads</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="py-3.5 px-4">Squad / Program</th>
+                      <th className="py-3.5 px-4">Affiliation</th>
+                      <th className="py-3.5 px-4">Discipline</th>
+                    </>
+                  )}
                   <th className="py-3.5 px-3 text-center">MP</th>
                   <th className="py-3.5 px-3 text-center">W</th>
                   <th className="py-3.5 px-3 text-center">L</th>
                   <th className="py-3.5 px-4 text-center">Win %</th>
                   <th className="py-3.5 px-4 text-center">PF - PA</th>
                   <th className="py-3.5 px-4 text-center">Diff</th>
-                  <th className="py-3.5 px-4 text-center">Titles</th>
+                  <th className="py-3.5 px-4 text-center">Medals</th>
                   <th className="py-3.5 px-6 text-right">Standing Tier</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {rankedTeams.map((team, idx) => {
+                {rankedEntities.map((item, idx) => {
                   const rank = idx + 1;
                   return (
                     <tr
-                      key={team.key}
+                      key={item.key}
                       className={`transition-colors ${
                         rank === 1
                           ? 'bg-orange-50/40 dark:bg-orange-500/5 font-semibold'
@@ -774,64 +1234,156 @@ export const Ranking = () => {
                         </div>
                       </td>
 
-                      <td className="py-4 px-4">
-                        <div className="flex flex-col">
-                          <span className="font-black italic uppercase tracking-tight text-slate-900 dark:text-white text-sm">
-                            {team.teamName}
-                          </span>
-                          <span className="text-[10px] font-medium text-slate-400 truncate max-w-[220px]">
-                            {team.tournaments.join(', ') || 'PSU Athletic League'}
-                          </span>
-                        </div>
-                      </td>
+                      {/* Dynamic Columns based on Standing View */}
+                      {standingView === 'college' ? (
+                        <>
+                          <td className="py-4 px-4">
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                <span className="font-black italic uppercase tracking-tight text-slate-900 dark:text-white text-sm">
+                                  {item.name}
+                                </span>
+                                {item.code && (
+                                  <Badge variant="outline" className="text-[10px] font-black border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
+                                    {item.code}
+                                  </Badge>
+                                )}
+                              </div>
+                              <span className="text-[10px] font-medium text-slate-400 truncate max-w-sm">
+                                {item.tournaments.join(', ') || 'Palawan State University Sports League'}
+                              </span>
+                            </div>
+                          </td>
 
-                      <td className="py-4 px-4">
-                        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
-                          {team.sport}
-                        </Badge>
-                      </td>
+                          <td className="py-4 px-4">
+                            {item.clusterName ? (
+                              <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider border-orange-500/20 text-orange-600 dark:text-orange-400 bg-orange-50/50 dark:bg-orange-950/20 gap-1 inline-flex items-center">
+                                <Users className="size-2.5" />
+                                {item.clusterName}
+                              </Badge>
+                            ) : (
+                              <span className="text-slate-400 text-xs font-semibold">-</span>
+                            )}
+                          </td>
+                        </>
+                      ) : standingView === 'cluster' ? (
+                        <>
+                          <td className="py-4 px-4">
+                            <div className="flex flex-col">
+                              <span className="font-black italic uppercase tracking-tight text-slate-900 dark:text-white text-sm">
+                                {item.name}
+                              </span>
+                              <span className="text-[10px] font-medium text-slate-400 truncate max-w-md">
+                                {item.subtitle || 'Palawan State University Binturungan Tribe'}
+                              </span>
+                            </div>
+                          </td>
 
-                      <td className="py-4 px-4">
-                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                          {team.category}
-                        </span>
-                      </td>
+                          <td className="py-4 px-4">
+                            <div className="flex items-center gap-1.5 flex-wrap max-w-xs">
+                              {item.memberColleges && item.memberColleges.length > 0 ? (
+                                item.memberColleges.map((code) => (
+                                  <Badge key={code} variant="secondary" className="text-[9px] font-black uppercase px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50">
+                                    {code}
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="text-[10px] text-slate-400">All Campuses</span>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="py-4 px-3 text-center font-bold text-slate-600 dark:text-slate-300">
+                            {item.squadCount || 0}
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="py-4 px-4">
+                            <div className="flex flex-col">
+                              <span className="font-black italic uppercase tracking-tight text-slate-900 dark:text-white text-sm">
+                                {item.name}
+                              </span>
+                              <span className="text-[10px] font-medium text-slate-400 truncate max-w-[220px]">
+                                {item.tournaments.join(', ') || 'PSU Athletic League'}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className="py-4 px-4">
+                            <div className="flex items-center gap-1.5">
+                              {item.code && (
+                                <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+                                  {item.code}
+                                </Badge>
+                              )}
+                              {item.clusterName && (
+                                <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider border-orange-500/20 text-orange-600 dark:text-orange-400 bg-orange-50/50 dark:bg-orange-950/20">
+                                  {item.clusterName}
+                                </Badge>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="py-4 px-4">
+                            <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+                              {item.sport}
+                            </Badge>
+                          </td>
+                        </>
+                      )}
 
                       <td className="py-4 px-3 text-center font-bold text-slate-600 dark:text-slate-300">
-                        {team.matchesPlayed}
+                        {item.matchesPlayed}
                       </td>
 
                       <td className="py-4 px-3 text-center font-black text-emerald-600 dark:text-emerald-400">
-                        {team.wins}
+                        {item.wins}
                       </td>
 
                       <td className="py-4 px-3 text-center font-black text-slate-400">
-                        {team.losses}
+                        {item.losses}
                       </td>
 
                       <td className="py-4 px-4 text-center font-bold text-slate-700 dark:text-slate-200">
-                        {team.winRate.toFixed(1)}%
+                        {item.winRate.toFixed(1)}%
                       </td>
 
                       <td className="py-4 px-4 text-center font-mono text-[11px] font-bold text-slate-600 dark:text-slate-300">
-                        {team.pointsFor} - {team.pointsAgainst}
+                        {item.pointsFor} - {item.pointsAgainst}
                       </td>
 
                       <td className="py-4 px-4 text-center font-black">
-                        <span className={team.pointDiff > 0 ? 'text-emerald-600 dark:text-emerald-400' : team.pointDiff < 0 ? 'text-rose-500' : 'text-slate-400'}>
-                          {team.pointDiff > 0 ? `+${team.pointDiff}` : team.pointDiff}
+                        <span className={item.pointDiff > 0 ? 'text-emerald-600 dark:text-emerald-400' : item.pointDiff < 0 ? 'text-rose-500' : 'text-slate-400'}>
+                          {item.pointDiff > 0 ? `+${item.pointDiff}` : item.pointDiff}
                         </span>
                       </td>
 
+                      {/* Medals Column */}
                       <td className="py-4 px-4 text-center">
-                        {team.championships > 0 ? (
-                          <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-black text-[10px] px-2 py-0.5 gap-1 inline-flex items-center">
-                            <Trophy className="size-3" />
-                            {team.championships} {team.championships === 1 ? 'Gold' : 'Golds'}
-                          </Badge>
-                        ) : (
-                          <span className="text-slate-400 font-bold">-</span>
-                        )}
+                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                          {item.championships > 0 && (
+                            <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-black text-[10px] px-1.5 py-0.5 gap-0.5">
+                              <Trophy className="size-2.5" />
+                              {item.championships}G
+                            </Badge>
+                          )}
+                          {item.runnerUps > 0 && (
+                            <Badge variant="outline" className="border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold text-[10px] px-1.5 py-0.5 gap-0.5">
+                              <Medal className="size-2.5 text-slate-400" />
+                              {item.runnerUps}S
+                            </Badge>
+                          )}
+                          {item.bronzeFinishes > 0 && (
+                            <Badge variant="outline" className="border-amber-700/30 text-amber-700 dark:text-amber-500 font-bold text-[10px] px-1.5 py-0.5 gap-0.5">
+                              <Medal className="size-2.5 text-amber-700" />
+                              {item.bronzeFinishes}B
+                            </Badge>
+                          )}
+                          {item.championships === 0 && item.runnerUps === 0 && item.bronzeFinishes === 0 && (
+                            <span className="text-slate-400 font-bold text-xs">-</span>
+                          )}
+                        </div>
                       </td>
 
                       <td className="py-4 px-6 text-right">
@@ -885,4 +1437,3 @@ export const Ranking = () => {
     </div>
   );
 };
-

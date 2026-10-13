@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Users, UserPlus, ClipboardList, Star, AlertTriangle, Zap, Circle } from 'lucide-react';
+import { Users, UserPlus, ClipboardList, Star, AlertTriangle, Zap, Circle, GraduationCap } from 'lucide-react';
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
 
@@ -18,11 +18,32 @@ type Team = {
   name: string;
   status: string;
   tournament_id: string;
+  affiliation_type?: 'college' | 'cluster';
+  college_id?: string | null;
+  cluster_id?: string | null;
   created_at: string;
   tournaments: {
     name: string;
     sport?: string;
   };
+  colleges?: {
+    college_name: string;
+  } | null;
+  clusters?: {
+    name: string;
+  } | null;
+};
+
+type CollegeItem = {
+  id: string;
+  college_name: string;
+};
+
+type ClusterItem = {
+  id: string;
+  name: string;
+  description: string;
+  college_codes: string[];
 };
 
 type Player = {
@@ -74,6 +95,11 @@ export const TeamManagement = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [selectedTournament, setSelectedTournament] = useState('');
+  const [affiliationType, setAffiliationType] = useState<'college' | 'cluster'>('college');
+  const [selectedCollegeId, setSelectedCollegeId] = useState('');
+  const [selectedClusterId, setSelectedClusterId] = useState('');
+  const [colleges, setColleges] = useState<CollegeItem[]>([]);
+  const [clusters, setClusters] = useState<ClusterItem[]>([]);
 
   // Invite Player State
   const [invitePlayerId, setInvitePlayerId] = useState<string | null>(null);
@@ -89,14 +115,24 @@ export const TeamManagement = () => {
       fetchTeams();
       fetchPlayers();
       fetchTournaments();
+      fetchCollegesAndClusters();
     }
   }, [user]);
+
+  const fetchCollegesAndClusters = async () => {
+    const [colRes, clusRes] = await Promise.all([
+      supabase.from('colleges').select('id, college_name').order('college_name'),
+      supabase.from('clusters').select('id, name, description, college_codes').order('name')
+    ]);
+    if (colRes.data) setColleges(colRes.data as CollegeItem[]);
+    if (clusRes.data) setClusters(clusRes.data as ClusterItem[]);
+  };
 
   const fetchTeams = async () => {
     setIsLoadingTeams(true);
     const { data, error } = await supabase
       .from('teams')
-      .select('*, tournaments(name, sport)')
+      .select('*, tournaments(name, sport), colleges(college_name), clusters(name)')
       .eq('coach_id', user?.id)
       .order('created_at', { ascending: false });
 
@@ -137,25 +173,41 @@ export const TeamManagement = () => {
   };
 
   const handleCreateTeam = async () => {
-    if (!newTeamName || !selectedTournament) {
+    if (!newTeamName.trim() || !selectedTournament) {
       toast.error('Please provide a team name and select a tournament.');
       return;
     }
 
+    if (affiliationType === 'college' && !selectedCollegeId) {
+      toast.error('Please select an affiliated PSU College for your squad.');
+      return;
+    }
+
+    if (affiliationType === 'cluster' && !selectedClusterId) {
+      toast.error('Please select an affiliated Binturungan Tribe / Cluster.');
+      return;
+    }
+
     const { error } = await supabase.from('teams').insert({
-      name: newTeamName,
+      name: newTeamName.trim(),
       tournament_id: selectedTournament,
       coach_id: user?.id,
       status: 'Pending',
+      affiliation_type: affiliationType,
+      college_id: affiliationType === 'college' ? selectedCollegeId : null,
+      cluster_id: affiliationType === 'cluster' ? selectedClusterId : null,
     });
 
     if (error) {
       toast.error('Error creating team: ' + error.message);
     } else {
-      toast.success('Team created successfully.');
+      toast.success('Team created successfully and submitted for facilitator review.');
       setIsCreateOpen(false);
       setNewTeamName('');
       setSelectedTournament('');
+      setSelectedCollegeId('');
+      setSelectedClusterId('');
+      setAffiliationType('college');
       fetchTeams();
     }
   };
@@ -354,10 +406,123 @@ export const TeamManagement = () => {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4 min-w-0">
+                  {/* Affiliation Format Toggle */}
+                  <div className="space-y-2 min-w-0">
+                    <label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">
+                      Affiliation Format
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-white/5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAffiliationType('college');
+                          setSelectedClusterId('');
+                        }}
+                        className={`py-2 px-3 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                          affiliationType === 'college'
+                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                            : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                        }`}
+                      >
+                        College Squad
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAffiliationType('cluster');
+                          setSelectedCollegeId('');
+                        }}
+                        className={`py-2 px-3 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                          affiliationType === 'cluster'
+                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                            : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                        }`}
+                      >
+                        Cluster / Tribe
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* College or Cluster Selector */}
+                  {affiliationType === 'college' ? (
+                    <div className="space-y-2 min-w-0">
+                      <label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">
+                        Affiliated PSU College
+                      </label>
+                      <Select
+                        value={selectedCollegeId}
+                        onValueChange={(val) => {
+                          const id = val || '';
+                          setSelectedCollegeId(id);
+                          const col = colleges.find(c => c.id === id);
+                          if (col && !newTeamName) {
+                            const match = col.college_name.match(/\(([^)]+)\)/);
+                            const code = match ? match[1] : col.college_name.slice(0, 4);
+                            setNewTeamName(`${code} Squad`);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="h-12 w-full min-w-0 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-xl font-bold px-3">
+                          <SelectValue placeholder="Select PSU College" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl max-w-[calc(100vw-3rem)] sm:max-w-md">
+                          {colleges.map((c) => (
+                            <SelectItem key={c.id} value={c.id} className="rounded-lg">
+                              <span className="font-bold text-xs truncate">{c.college_name}</span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 min-w-0">
+                      <label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">
+                        Affiliated Binturungan Tribe / Cluster
+                      </label>
+                      <Select
+                        value={selectedClusterId}
+                        onValueChange={(val) => {
+                          const id = val || '';
+                          setSelectedClusterId(id);
+                          const cl = clusters.find(c => c.id === id);
+                          if (cl && !newTeamName) {
+                            setNewTeamName(`${cl.name} Squad`);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="h-12 w-full min-w-0 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-xl font-bold px-3">
+                          <SelectValue placeholder="Select Binturungan Tribe" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl max-w-[calc(100vw-3rem)] sm:max-w-md">
+                          {clusters.map((cl) => (
+                            <SelectItem key={cl.id} value={cl.id} className="rounded-lg">
+                              <div className="flex flex-col gap-0.5 min-w-0 text-left py-0.5">
+                                <span className="font-black text-sm truncate">{cl.name}</span>
+                                {cl.description && (
+                                  <span className="text-[10px] text-slate-400 font-medium truncate max-w-sm">
+                                    {cl.description}
+                                  </span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {selectedClusterId && (() => {
+                        const cl = clusters.find(c => c.id === selectedClusterId);
+                        return cl ? (
+                          <p className="text-[10px] text-orange-500 font-bold px-1 leading-snug">
+                            {cl.description}
+                          </p>
+                        ) : null;
+                      })()}
+                    </div>
+                  )}
+
                   <div className="space-y-2 min-w-0">
                     <label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] ml-1">Team Identity</label>
                     <Input
-                      placeholder="e.g., PSU Tigers"
+                      placeholder={affiliationType === 'cluster' ? "e.g., Tribo Libulan Warriors" : "e.g., CEAT Red Scorpions"}
                       value={newTeamName}
                       onChange={(e) => setNewTeamName(e.target.value)}
                       className="h-12 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-xl font-bold px-3"
@@ -469,6 +634,19 @@ export const TeamManagement = () => {
                         </Badge>
                       </div>
                       <CardTitle className="text-xl sm:text-2xl font-black italic uppercase tracking-tighter text-slate-900 dark:text-white group-hover:text-orange-500 transition-colors truncate" title={team.name}>{team.name}</CardTitle>
+                      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                        {team.affiliation_type === 'cluster' && team.clusters?.name ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 font-black text-[9px] uppercase tracking-wider border border-purple-500/20">
+                            <Users className="size-3" />
+                            {team.clusters.name}
+                          </span>
+                        ) : team.colleges?.college_name ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 dark:text-orange-400 font-black text-[9px] uppercase tracking-wider border border-orange-500/20">
+                            <GraduationCap className="size-3" />
+                            {team.colleges.college_name.match(/\(([^)]+)\)/)?.[1] || team.colleges.college_name.slice(0, 4)}
+                          </span>
+                        ) : null}
+                      </div>
                       <CardDescription className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest mt-1 flex items-center gap-2 truncate">
                         <span className="truncate">{team.tournaments?.name}</span>
                         {team.tournaments?.sport && (
@@ -510,7 +688,20 @@ export const TeamManagement = () => {
                   <tbody>
                     {filteredTeams.map((team) => (
                       <tr key={team.id} className="border-b border-slate-50 dark:border-white/5 last:border-none hover:bg-orange-50/30 dark:hover:bg-orange-500/5 transition-colors group">
-                        <td className="py-4 px-8 font-black italic uppercase tracking-tighter text-lg text-slate-900 dark:text-white">{team.name}</td>
+                        <td className="py-4 px-8 font-black italic uppercase tracking-tighter text-lg text-slate-900 dark:text-white">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span>{team.name}</span>
+                            {team.affiliation_type === 'cluster' && team.clusters?.name ? (
+                              <span className="not-italic px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 font-black text-[9px] uppercase tracking-wider border border-purple-500/20">
+                                {team.clusters.name}
+                              </span>
+                            ) : team.colleges?.college_name ? (
+                              <span className="not-italic px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 dark:text-orange-400 font-black text-[9px] uppercase tracking-wider border border-orange-500/20">
+                                {team.colleges.college_name.match(/\(([^)]+)\)/)?.[1] || team.colleges.college_name.slice(0, 4)}
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
                         <td className="py-4 px-8 font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest">
                           {team.tournaments?.name}
                           {team.tournaments?.sport && <span className="text-orange-500 ml-2">({team.tournaments.sport})</span>}

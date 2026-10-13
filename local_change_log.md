@@ -1273,6 +1273,126 @@ This log tracks every user prompt, database migration, code change, and Git oper
     *   Automated regex audit: **0 emojis and 0 unicode dingbats** across the entire codebase.
     *   Browser Testing: Successfully executed Scenarios B, C, D, and E in browser; verified green success toasts, populated bracket trees in `/explorer`, and medal standings in `/ranking` (CEAT Gold, CS Silver, CBA Bronze).
 
+---
+
+### Prompt 60: Match Center Filter Revamp & Tree-Like Tournament Bracketing
+*   **Timestamp**: 2026-10-12T23:20:00+08:00
+*   **User Directive**: "lets revamp the match center page its abit overwhelming with all the selectable filters we got select tournament but then we got select sport discipline when selecting a tourna like basketball it filters step 2 but it only shows basketball isnt it like a double filter/unesesary step also we need to fix the bracketing its a bit messy with the quarters semis and final and battle for 3d placements it should be a tree like and easy to understand also when a elims if finished it the playoffs should open with that proceed do not push this to remote ill check it first"
+*   **Actions Taken**:
+    1.  **Elimination of Redundant Double Filters ([`src/pages/TournamentExplorer.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/TournamentExplorer.tsx))**:
+        *   Removed the stacked 12-card "Step 1: Select Tournament" grid and the redundant "Step 2: Select Sport Discipline" container that previously pushed matches 800px below the viewport.
+        *   Engineered a top-level **Sport Discipline Bar** featuring authentic Lucide vectors and match counters across all sports disciplines (All Sports, Basketball, Volleyball, Soccer, Futsal, Sepak Takraw, Baseball, Softball, Pickleball, Table Tennis).
+        *   Introduced a unified, compact toolbar (under 70px) combining:
+            - **Tournament Dropdown**: Dynamically scoped to tournaments for the selected sport.
+            - **Live Text Search**: Searches squads and venues with real-time bracket node highlighting.
+            - **Phase Mode Toggle**: Segmented switch between `Phase 1 • Elimination` and `Phase 2 • Playoff Bracket`.
+    2.  **Auto-Opening of Phase 2 Playoff Bracket**:
+        *   Implemented reactive phase derivation (`activePhase = userPhaseOverride ?? (hasPlayoffs && isEliminationComplete ? 'playoffs' : 'elimination')`).
+        *   When elimination matches conclude or when a tournament begins at the playoff stage, the view automatically defaults to the Playoff Bracket without requiring manual user toggling.
+    3.  **Tree-Like Bracket Arena with Orthogonal SVG Connector Forks**:
+        *   Built `PlayoffTreeViewer` and `BracketFork` SVG components rendering crisp tournament bracket lines (`─┐` and `─┘` joined at midpoint and feeding into the next round match node).
+        *   Supports 8-team single elimination trees (4 Quarterfinals -> 2 Semifinals -> 1 Championship Final) and 4-team trees (2 Semifinals -> 1 Final) with mathematical vertical alignment and zero visual drift.
+        *   Added live search highlighting that rings and scales matching squad nodes while dimming unrelated matches.
+    4.  **Dedicated Battle for 3rd Place (Bronze Medal Playoff) Podium Stage**:
+        *   Extracted the 3rd-Place match out of the Finals column.
+        *   Placed it in a dedicated, metallic bronze-themed podium container below the main championship tree (`border-amber-600/40`, `bg-amber-950/20`, Lucide `<Medal />`).
+        *   Clearly distinguishes the Bronze path from the Gold/Silver Championship match.
+    5.  **Strict Anti-Slop & Zero-Emoji Enforcement**:
+        *   Verified 100% vector SVG icons (`Trophy`, `Crown`, `Medal`, `ArrowRight`, `Search`, etc.).
+        *   Tested light and dark theme styling with WCAG AAA contrast.
+*   **Verification**:
+    *   `npm run build`: Compiled cleanly with **Exit Code 0** in 5.92s.
+    *   `npx eslint`: Passed with **0 errors and 0 warnings**.
+    *   Automated regex audit: **0 emojis and 0 unicode dingbats** across the entire file.
+    *   Browser Verification: Executed full flow in headless browser; verified removal of 12-card grid, auto-opening of Phase 2 on Basketball selection, SVG tree connectors, and isolated Bronze Playoff card.
+*   **Remote Push Policy**: Changes kept **strictly local** on branch `main` per user directive (`"do not push this to remote ill check it first"`).
+
+---
+
+### Prompt 61: PSU Binturungan Cluster / Tribe System & Bracket Tree Scoping Fix
+*   **Timestamp**: 2026-10-13T00:30:00+08:00
+*   **User Directive**: "the braketing tree looks great but why did we have 2 matches for the bronze? also to 'sort'/ to have a better team/cluster distinction we need to add to the table of desegnated team (college) or cluster. becuase in real binturungan structure some teams consist of 'tribes' theme and its a cluster system a tribe can have 3 to 4 colleges in the main or even external campus collages you can search more on that (PSU binturungan cluster system) /plan so instead of a team 'name' champion its a college or a cluster system make sure the cluster system is just a toggle and update the coach when creating a team to select a college or cluster to register the new team"
+*   **Actions Taken**:
+    1.  **Duplicate Bronze Matches Resolution & Single Tournament Bracket Scoping ([`src/pages/TournamentExplorer.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/TournamentExplorer.tsx))**:
+        *   **Root Cause**: When `selectedTournamentId === 'all'` and a sport filter was applied, matches across multiple distinct tournaments (e.g., both the Basketball Championship and an earlier mock tournament) were merged into a single bracket, resulting in duplicate bronze matches and multiple finals.
+        *   **Fix**: Introduced `activeBracketTournamentId` to strictly scope playoff trees to a single tournament ladder.
+        *   Added an in-bracket tournament switcher tab bar when multiple tournaments exist for a sport discipline.
+        *   Enhanced Finals Champion banner to crown the designated College or Binturungan Tribe title.
+    2.  **Authentic PSU Binturungan Cluster & Tribe Database Migration ([`supabase/migrations/20261012_add_team_college_cluster_affiliation.sql`](file:///f:/VScodes/SportsTrack/psu-sportstrack/supabase/migrations/20261012_add_team_college_cluster_affiliation.sql))**:
+        *   Added `affiliation_type VARCHAR(20) DEFAULT 'college'`, `college_id UUID REFERENCES colleges(id)`, and `cluster_id UUID REFERENCES clusters(id)` to the `teams` table.
+        *   Seeded 6 authentic Palawan State University Binturungan tribes into `clusters`:
+            - **Tribo Apolaki**: God of Sun & War — CTE, CCJE, Laboratory High School
+            - **Tribo Libulan**: Deity of the Moon & Guidance — CEAT, CNHS, School of Law, School of Medicine
+            - **Tribo Tala**: Goddess of the Morning & Evening Star — CBA, CHMT
+            - **Tribo Haliya**: Goddess of Moonlight & Protection — CS, CAH
+            - **Tribo Mapulon**: God of Seasons & Harvest — CCRD Del Sur (Brooke's Point, Bataraza, Balabac, Española)
+            - **Tribo Dumangan**: God of Bountiful Harvest — CCRD Del Norte (Roxas, Taytay, Coron, San Vicente, El Nido, Cuyo)
+        *   Purged legacy placeholder clusters and backfilled 100% of existing teams with their authentic college and cluster affiliations.
+    3.  **Coach Team Registration Upgrade ([`src/pages/TeamManagement.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/TeamManagement.tsx))**:
+        *   Upgraded the Coach "Form New Team" modal with an **Affiliation Format** toggle: `[ College Squad ] | [ Cluster / Tribe ]`.
+        *   Added unit selection dropdowns for 9 PSU colleges or 6 authentic Binturungan tribes with descriptions of member colleges and campuses.
+        *   Updated team cards, table, and roster views to render designated College or Tribe badges.
+    4.  **Official Leaderboard 3-Way Standings Toggle ([`src/pages/Ranking.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/Ranking.tsx))**:
+        *   Engineered a seamless, responsive 3-way toggle: `[ College Standings ] | [ Cluster / Tribe Standings ] | [ Squad Standings ]`.
+        *   **College Standings**: Aggregates match results, win rates, differentials, and Gold/Silver/Bronze medals across PSU colleges. Crowns the College Champion on the Gold podium.
+        *   **Cluster / Tribe Standings**: Aggregates performances across member colleges for each authentic Binturungan tribe. Crowns the Binturungan Tribe Champion on the Gold podium.
+        *   **Squad Standings**: Retains granular team view with designated College/Tribe affiliation badges.
+        *   Updated table columns to display dynamic headers, member colleges, and Gold/Silver/Bronze medal counters.
+    5.  **Strict Anti-Slop, Zero-Emoji & Local Git Policy**:
+        *   Strictly 100% Lucide vector SVG icons (`GraduationCap`, `Users`, `Trophy`, `Medal`, `Crown`, `Shield`). Zero emojis.
+        *   Changes kept strictly local on branch `main` without pushing to remote per explicit user instruction.
+*   **Verification**:
+---
+
+## Log Entry: 2026-10-13
+
+### Prompt 41: Match Center UI/UX Redesign, Elimination vs Playoff De-Cluttering & Bronze Podium Balancing
+*   **Timestamp**: 2026-10-13T09:30:00+08:00
+*   **User Directive**: "we need to redesign the match center navication and UI/UX experence we need to plan out the user experience from the ground up not just radomly placing filters, cluttering information etc. /plan use skills to better planning optimize the match bracket cards theres a quarter finals tag at the top but why do we need quarterfinals at each of the match cards we need to lessen clutter also no need to place the location at the bottom its cluttering it the users can just tap it to see more details about the match remove lessen the styling in the bronze podium I think it outshines the finals/champion in the bracket tree"
+*   **Actions Taken**:
+    1.  **Modular Component Decomposition**:
+        *   Refactored monolithic [`TournamentExplorer.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/TournamentExplorer.tsx) into dedicated components in `src/components/match-center/`:
+            - [`MatchCenterHeader.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/match-center/MatchCenterHeader.tsx): Clean typography, breadcrumbs, live match indicators, and filter reset action.
+            - [`MatchCenterToolbar.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/match-center/MatchCenterToolbar.tsx): Responsive horizontal sport discipline rail with authentic sport vector glyphs, live fixture counters, college/team filter dropdown, search input, and Phase 1 vs Phase 2 toggle.
+            - [`KnockoutBracketTree.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/match-center/KnockoutBracketTree.tsx): Single-elimination tournament tree with stages for Quarterfinals, Semifinals, and Championship Final.
+            - [`BracketMatchCard.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/match-center/BracketMatchCard.tsx): De-cluttered match cards removing redundant per-card stage headers and bottom venue labels. Features clean team scores, status badges, and win indicators.
+            - [`BronzeMatchCard.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/match-center/BronzeMatchCard.tsx): Restyled 3rd-Place Bronze podium with balanced, subtle amber styling so it complements rather than overpowers the Championship Final.
+            - [`BracketConnectors.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/match-center/BracketConnectors.tsx): Clean orthogonal SVG tree forks.
+            - [`MatchScheduleList.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/match-center/MatchScheduleList.tsx): Phase 1 preliminary group stage pool fixtures and schedule grid.
+    2.  **Dual-Phase Architecture (Eliminations + Playoff Knockout Brackets)**:
+        *   Resolved user inquiry regarding eliminations and bracket transitions:
+            - **Phase 1 • Elimination**: Group stage pool fixtures (Pool A & Pool B) determining seeds.
+            - **Phase 2 • Playoff Bracket**: 8-team single-elimination tournament tree (4 Quarters -> 2 Semis -> Final + Bronze Playoff).
+            - Added dynamic phase status badges (`[DONE]`, `[X LIVE]`, `[SCHEDULED]`).
+*   **Verification**:
+    *   `npm run build`: Compiled with Exit Code 0 in 3.98s.
+    *   Browser visual verification across all sport views.
+
+---
+
+### Prompt 42: Full 9-Sport Dual-Phase Bracketing & Full Team Rosters with Substitutes Simulation
+*   **Timestamp**: 2026-10-13T11:45:00+08:00
+*   **User Directive**: "update the dev side to have all the sport type have brackets with elims and all side have a full team with subs simulating a fully booked and detailed event"
+*   **Actions Taken**:
+    1.  **Multi-Sport Dual-Phase Seeding Engine ([`src/lib/devScenarios.ts`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/lib/devScenarios.ts))**:
+        *   Expanded `ALL_SPORTS_CONFIG` to cover all 9 sports: Basketball, Volleyball, Soccer, Futsal, Sepak Takraw, Baseball, Softball, Pickleball, and Table Tennis.
+        *   Configured 12 matches per sport (4 Phase 1 Elimination pool games + 8 Phase 2 Playoff Knockout games = 108 total matches).
+        *   Wired realistic multi-state lifecycle: 2 completed championships (Basketball, Baseball) with crowned Gold champions, silver finalists, and MVP stars; 4 ongoing matches with live commentary feeds (Soccer, Volleyball, Futsal, Pickleball); and scheduled finals.
+    2.  **Full Authentic Student Athlete Pool Provisioning ([`scripts/seed_athletes.js`](file:///f:/VScodes/SportsTrack/psu-sportstrack/scripts/seed_athletes.js))**:
+        *   Created script using Supabase Admin Auth API to provision 16 student athletes per college (144 athletes total) with authentic college degree programs, year levels, student numbers, and verified profiles in `public.users`.
+    3.  **Complete Starters & Bench Substitutes Roster Allocation**:
+        *   Upgraded `devScenarios.ts` roster seeding so that all 81 participating teams have:
+            - Full starting lineups (`is_starter: true`, `availability_status: 'Active'`) with authentic sport-specific roles.
+            - Full bench substitutes (`is_starter: false`, `availability_status: 'Bench'`) with backup positions.
+            - 1 team captain (`is_captain: true`) with badge `[C]`.
+            - Distinct jersey numbers (`#1`-`#99`) and approved status.
+    4.  **Live Court-Side Box Score Roster Enrichment ([`src/pages/LiveMatch.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/LiveMatch.tsx))**:
+        *   Updated Box Score cards to display `#jersey`, athlete full name, captain indicator, sport position, `[STARTER]` / `[SUB]` badges, and real-time points.
+*   **Verification**:
+    *   `npm run build`: Exit Code 0 in 3.84s.
+    *   Executed live injection via browser subagent in `/dev` DevSandbox and verified all 9 sports, full brackets, and complete team rosters with starters and subs.
+
+
 
 
 

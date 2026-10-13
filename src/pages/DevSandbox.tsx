@@ -589,7 +589,7 @@ export const DevSandbox = () => {
                   The Grand Binturungan Olympiad (Master Multi-Sport Defense Simulation)
                 </CardTitle>
                 <CardDescription className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium leading-relaxed mt-2 max-w-4xl">
-                  Generates the comprehensive university sports festival: all 9 official disciplines (Basketball, Volleyball, Soccer, Futsal, Sepak Takraw, Baseball, Softball, Pickleball, Table Tennis), all 9 PSU colleges, authentic sport-specific player roles (starters &amp; bench subs), jerseys (#1 to #99), and coaches. Simulates a complete 8-team single elimination tournament tree (Quarterfinals, Semifinals, 3rd-Place Bronze, and Finals) crowning <strong>CEAT Red Scorpions</strong> as Gold Champion, <strong>CS Byte Titans</strong> as Silver, and <strong>CBA Golden Wolves</strong> as Bronze with official MVP Stars.
+                  Generates the comprehensive university sports festival: all 9 official disciplines (Basketball, Volleyball, Soccer, Futsal, Sepak Takraw, Baseball, Softball, Pickleball, Table Tennis) with both Phase 1 Elimination fixtures and Phase 2 Playoff Knockout Brackets (Quarterfinals, Semifinals, 3rd-Place Bronze, and Finals). Every team features authentic sport-specific full starting lineups and bench substitutes, jerseys (#1 to #99), and coaches. Simulates live ongoing games, scheduled showdowns, and crowned Gold, Silver, and Bronze medalists with official MVP Stars.
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6 md:p-8 pt-0 space-y-4">
