@@ -151,8 +151,71 @@ export const AdminAuditLogs = () => {
         </div>
       </div>
 
-      {/* Logs Table */}
-      <Card className="relative z-10 rounded-[2rem] border-2 border-slate-100 dark:border-white/5 overflow-hidden shadow-2xl bg-white dark:bg-slate-900">
+      {/* Mobile Card List (md:hidden) to eliminate horizontal table scrolling */}
+      <div className="md:hidden space-y-3">
+        {isLoading ? (
+          <SkeletonCard variant="row" count={4} />
+        ) : filteredLogs.length === 0 ? (
+          <EmptyState
+            icon={ClipboardList}
+            title="No Audit Records Found"
+            description={
+              searchQuery || timeFilter !== 'all'
+                ? 'No administrative actions match your current filter parameters.'
+                : 'No security or administrative activity has been logged in the system ledger yet.'
+            }
+            actionLabel={searchQuery || timeFilter !== 'all' ? 'Clear Filters' : undefined}
+            onAction={() => {
+              setSearchQuery('');
+              setTimeFilter('all');
+            }}
+          />
+        ) : (
+          filteredLogs.map((log) => (
+            <Card
+              key={`mob-log-${log.id}`}
+              className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-2.5 mb-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="size-8 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center shrink-0 border border-orange-500/20">
+                    <User className="size-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-black italic uppercase tracking-tight text-xs text-slate-900 dark:text-white truncate">
+                      {log.admin?.full_name || 'System Admin'}
+                    </p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                      Administrator
+                    </p>
+                  </div>
+                </div>
+
+                <Badge
+                  variant="outline"
+                  className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 border-orange-500/30 text-orange-600 bg-orange-500/10 shrink-0"
+                >
+                  {log.action.replace(/_/g, ' ')}
+                </Badge>
+              </div>
+
+              {log.details && (
+                <p className="text-xs text-slate-600 dark:text-slate-300 font-medium bg-slate-50 dark:bg-white/5 p-2.5 rounded-xl border border-slate-100 dark:border-white/5 mb-2.5">
+                  {log.details}
+                </p>
+              )}
+
+              <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400">
+                <Clock className="size-3" />
+                <span>{new Date(log.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Table (hidden md:block) */}
+      <Card className="hidden md:block relative z-10 rounded-[2rem] border-2 border-slate-100 dark:border-white/5 overflow-hidden shadow-2xl bg-white dark:bg-slate-900">
         <Table>
           <TableHeader className="bg-slate-50 dark:bg-white/5">
             <TableRow className="hover:bg-transparent border-none">

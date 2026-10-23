@@ -578,10 +578,102 @@ export const SystemVerifications = () => {
             })}
           </div>
         ) : (
-          /* Table View with At-a-Glance Details */
-          <Card className="rounded-[2rem] border-2 border-slate-100 dark:border-white/5 overflow-hidden shadow-2xl">
-            <div className="overflow-x-auto scrollbar-thin">
-              <Table className="min-w-[960px] w-full">
+          <div className="space-y-3">
+            {/* Mobile View: Dedicated list cards (md:hidden) to eliminate 960px horizontal table scrolling */}
+            <div className="md:hidden space-y-3">
+              {filteredDocuments.map((doc) => {
+                const collegeName = getCollegeName(doc);
+                const emailCheck = checkEmailStudentIdMatch(doc.users?.email, doc.extracted_student_no);
+
+                return (
+                  <Card
+                    key={`mob-verif-${doc.id}`}
+                    className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-2.5 mb-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="size-9 rounded-xl bg-slate-100 dark:bg-white/10 flex items-center justify-center font-black text-xs text-slate-500 shrink-0">
+                          {doc.users?.full_name?.charAt(0) || '?'}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-black italic uppercase tracking-tight text-sm text-slate-900 dark:text-white truncate">
+                            {doc.users?.full_name || 'Unknown'}
+                          </p>
+                          <p className="text-[10px] text-slate-500 font-bold uppercase truncate">
+                            {collegeName} • {formatRole(doc.users?.role)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0">
+                        {renderConfidenceBadge(doc.confidence_score, doc.status)}
+                      </div>
+                    </div>
+
+                    {/* Micro metadata row */}
+                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-1 mb-3 text-[11px]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 font-bold text-[9px] uppercase">Student ID</span>
+                        <div className="flex items-center gap-1 font-mono font-bold text-slate-700 dark:text-slate-300">
+                          <span>{doc.extracted_student_no || 'Unparsed'}</span>
+                          {emailCheck.isMatch && (
+                            <span className="text-[8px] px-1 py-0.2 rounded bg-emerald-500/15 text-emerald-600 font-black">CORP MATCH</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 font-bold text-[9px] uppercase">Program</span>
+                        <span className="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[180px]">
+                          {doc.extracted_program || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 font-bold text-[9px] uppercase">Submitted</span>
+                        <span className="font-mono text-slate-500 text-[10px]">
+                          {new Date(doc.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 h-9 rounded-xl font-black uppercase italic tracking-wider text-[10px] gap-1 cursor-pointer"
+                        onClick={() => handleOpenPreview(doc)}
+                      >
+                        <Eye className="size-3 text-orange-500" /> Preview
+                      </Button>
+                      {doc.status === 'Pending' && (
+                        <>
+                          <Button
+                            size="sm"
+                            className="h-9 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase text-[10px] tracking-wider gap-1 shrink-0 cursor-pointer"
+                            onClick={() => handleApprove(doc)}
+                          >
+                            <CheckCircle2 className="size-3" /> Approve
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="h-9 px-3 rounded-xl font-black uppercase text-[10px] tracking-wider gap-1 shrink-0 cursor-pointer"
+                            onClick={() => handleOpenRejectModal(doc)}
+                          >
+                            <XCircle className="size-3" /> Reject
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View (hidden md:block) */}
+            <Card className="hidden md:block rounded-[2rem] border-2 border-slate-100 dark:border-white/5 overflow-hidden shadow-2xl">
+              <div className="overflow-x-auto scrollbar-thin">
+                <Table className="min-w-[960px] w-full">
                 <TableHeader className="bg-slate-50 dark:bg-white/5">
                   <TableRow className="hover:bg-transparent border-none">
                     <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 pl-6 min-w-[210px]">Athlete Credentials</TableHead>
@@ -713,7 +805,8 @@ export const SystemVerifications = () => {
               </Table>
             </div>
           </Card>
-        )}
+        </div>
+      )}
       </div>
 
       {/* ========================================================================= */}

@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trophy, Medal, Sparkles, Shield, RotateCcw, Search, CheckCircle2, GraduationCap, Users, Crown, SlidersHorizontal, ChevronDown, ChevronUp } from 'lucide-react';
-import { ExpandableIconTabs, type ExpandableTabItem } from '@/components/ui/expandable-icon-tabs';
+import { Trophy, Medal, Sparkles, Shield, RotateCcw, Search, CheckCircle2, GraduationCap, Users, SlidersHorizontal, ChevronDown, ChevronUp } from 'lucide-react';
+import { type ExpandableTabItem } from '@/components/ui/expandable-icon-tabs';
 
 interface CollegeEntity {
   id: string;
@@ -812,18 +812,21 @@ export const Ranking = () => {
       label: 'College Standings',
       shortLabel: 'Colleges',
       icon: GraduationCap,
+      count: colleges.length > 0 ? colleges.length : undefined,
     },
     {
       id: 'cluster',
       label: 'Cluster / Tribe Standings',
       shortLabel: 'Tribes',
       icon: Users,
+      count: clusters.length > 0 ? clusters.length : undefined,
     },
     {
       id: 'squad',
       label: 'Squad Standings',
       shortLabel: 'Squads',
       icon: Shield,
+      count: teams.length > 0 ? teams.length : undefined,
     },
   ];
 
@@ -858,29 +861,40 @@ export const Ranking = () => {
         <Trophy className="absolute -bottom-10 -right-8 size-52 text-white/5 rotate-12 group-hover:rotate-6 transition-all duration-700 pointer-events-none" />
       </div>
 
-      {/* Standings View Format Selector: Single 44px Row on Mobile */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3 sm:p-4 shadow-sm">
-        <div className="flex items-center gap-2.5">
-          <div className="size-8 sm:size-9 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 shrink-0">
-            <Crown className="size-4" />
-          </div>
-          <div>
-            <h2 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white leading-tight">
-              Standings Format
-            </h2>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium hidden sm:block">
-              Toggle standings by College, Binturungan Tribe, or Squad division.
-            </p>
+      {/* Standings View Format Selector: Balanced Centered Control */}
+      <div className="flex justify-center w-full">
+        <div className="w-full sm:w-auto p-1.5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 rounded-2xl shadow-sm">
+          <div className="grid grid-cols-3 sm:flex items-center gap-1.5 sm:gap-2">
+            {standingTabs.map((tab) => {
+              const isActive = standingView === tab.id;
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setStandingView(tab.id as any)}
+                  className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm uppercase tracking-tight italic transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-orange-500 text-white shadow-md shadow-orange-500/25 scale-[1.01]'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
+                  }`}
+                >
+                  <Icon className={`size-4 sm:size-4.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="truncate">{tab.shortLabel || tab.label}</span>
+                  {tab.count !== undefined && (
+                    <span
+                      className={`text-[9px] sm:text-[10px] font-mono font-black px-1.5 py-0.5 rounded-md shrink-0 ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-white/10 text-slate-500'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
-
-        {/* Expandable Icon-Pills Toggle: Only active shows label on mobile */}
-        <ExpandableIconTabs
-          tabs={standingTabs}
-          activeTab={standingView}
-          onChange={(val) => setStandingView(val as any)}
-          className="self-stretch sm:self-auto"
-        />
       </div>
 
       {/* Filter Control Section: Collapsible Drawer on Mobile */}

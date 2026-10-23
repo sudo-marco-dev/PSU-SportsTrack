@@ -830,7 +830,74 @@ export const TournamentExplorer = () => {
                     : 'Ranked by Wins & Point Differential'}
                 </Badge>
               </div>
-              <div className="overflow-x-auto">
+              {/* Mobile View: Standings Cards (md:hidden) */}
+              <div className="md:hidden space-y-2">
+                {phase1Standings.map((st, idx) => {
+                  const diff = st.pf - st.pa;
+                  return (
+                    <div
+                      key={`mob-stand-${st.teamId}`}
+                      className={`p-3 rounded-xl border transition-all ${
+                        idx === 0
+                          ? 'bg-amber-500/10 border-amber-500/30'
+                          : 'bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className={`size-6 rounded-md font-black text-xs flex items-center justify-center shrink-0 ${
+                              idx === 0
+                                ? 'bg-amber-500 text-white'
+                                : idx === 1
+                                ? 'bg-slate-300 dark:bg-slate-600 text-slate-900 dark:text-white'
+                                : idx === 2
+                                ? 'bg-amber-700 text-white'
+                                : 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400'
+                            }`}
+                          >
+                            #{idx + 1}
+                          </span>
+                          <span className="font-black italic uppercase text-xs text-slate-900 dark:text-white truncate">
+                            {st.teamName}
+                          </span>
+                          {idx === 0 && isRoundRobinOnlyTournament && isEliminationComplete && (
+                            <Badge className="bg-amber-500 text-white text-[8px] font-black uppercase px-1.5 py-0 shrink-0">
+                              Champion
+                            </Badge>
+                          )}
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <span className="font-mono font-black text-xs text-slate-900 dark:text-white">
+                            {st.wins}W - {st.losses}L
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-1.5 text-center text-[10px] bg-white/60 dark:bg-black/20 p-1.5 rounded-lg border border-slate-100 dark:border-white/5">
+                        <div>
+                          <span className="text-[8px] font-bold uppercase text-slate-400">Games</span>
+                          <p className="font-mono font-bold text-slate-700 dark:text-slate-300">{st.gp} GP</p>
+                        </div>
+                        <div>
+                          <span className="text-[8px] font-bold uppercase text-slate-400">PF - PA</span>
+                          <p className="font-mono font-bold text-slate-700 dark:text-slate-300">{st.pf} - {st.pa}</p>
+                        </div>
+                        <div>
+                          <span className="text-[8px] font-bold uppercase text-slate-400">Diff</span>
+                          <p className={`font-mono font-bold ${diff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
+                            {diff > 0 ? `+${diff}` : diff}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop View: Table (hidden md:block) */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-slate-200 dark:border-white/10 text-[10px] font-black uppercase tracking-wider text-slate-400">

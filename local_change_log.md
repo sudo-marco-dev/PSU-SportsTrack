@@ -1615,3 +1615,28 @@ This log tracks every user prompt, database migration, code change, and Git oper
 
 
 
+
+
+### 2026-10-23: Global Mobile-First Design & Anti-Scroll Overhaul (Tables, Switches, Toolbars)
+*   **User Feedback Issues Addressed**:
+    1.  **Image 1 & 2 Number Overflow & Badges**:
+        - In [`src/pages/TeamManagement.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/TeamManagement.tsx), resolved the number overflow on narrow viewports (`PLAYERS 155`). Replaced rigid labels with responsive text (`Teams` / `Players` on mobile, `My Teams` / `Player Directory` on desktop) and added a dedicated pill badge `min-w-[20px] px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs` ensuring zero clipping.
+    2.  **Image 2 DataToolbar Mobile Layout**:
+        - In [`src/components/admin/DataToolbar.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/admin/DataToolbar.tsx), replaced the 3-row vertically stacked controls (~210px height) with a compact 2-row layout on `< md`:
+          * Row 1: Search input (`w-full h-11`).
+          * Row 2: Filter `<Select>` (`flex-1 min-w-0`) and `<ViewToggle>` / action buttons (`shrink-0`) placed side-by-side in a single 44px row.
+    3.  **Image 3 Leaderboard Standings Tabs Visual Balance**:
+        - In [`src/pages/Ranking.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/Ranking.tsx), removed the oversized floating card with the 900px black void. Implemented a centered, balanced segmented control (`[ Colleges (11) ] [ Tribes (4) ] [ Squads (9) ]`) rendered as a 3-column equal grid on mobile and centered pill cluster on desktop.
+    4.  **Global Elimination of Table Horizontal Scrolling on Mobile**:
+        - Implemented dedicated mobile-first card list layouts (`md:hidden`) with desktop tables preserved on `hidden md:block` across the application:
+          * [`src/pages/TeamManagement.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/TeamManagement.tsx): "My Teams" and "Player Directory" list views rendered as mobile cards with athlete avatar, college, eligibility badge, micro-stats grid (Games, PTS, Key Stat), and Scout/Recruit buttons.
+          * [`src/pages/SystemVerifications.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/SystemVerifications.tsx): Clearance records list view rendered as mobile verification cards with confidence badge, parsed credentials, and in-screen preview/approve/reject actions instead of a 960px table.
+          * [`src/pages/AdminAuditLogs.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/AdminAuditLogs.tsx): Security audit logs rendered as mobile action cards with admin badge, timestamp, and details drawer.
+          * [`src/components/tournament-management/TournamentListTab.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/tournament-management/TournamentListTab.tsx): Tournament list view rendered as mobile tournament cards with kickoff date and management controls.
+          * [`src/components/tournament-management/TeamApprovalsTab.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/tournament-management/TeamApprovalsTab.tsx): Coach application queue rendered as mobile cards with one-tap approve/reject actions.
+          * [`src/pages/TournamentExplorer.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/TournamentExplorer.tsx): Round Robin group stage standings rendered as mobile standings cards with rank, wins/losses, and point differential.
+*   **Verification**:
+    *   Full production build: `npm run build` completed with Exit Code 0 in 4.16s (0 TypeScript errors).
+    *   Live browser verification via `chrome-devtools-mcp` across both mobile viewport (`390x844`) and desktop viewport (`1440x900`):
+        - Tested `/coach/teams` (both Teams and Player Directory in Grid and List modes).
+        - Tested `/ranking` (segmented tab balance on mobile and desktop).

@@ -678,19 +678,22 @@ export const TeamManagement = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col min-w-0">
-        <div className="w-full sm:w-fit p-1.5 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-2xl flex items-center gap-1.5 mb-6 shadow-sm">
+        <div className="w-full sm:w-fit p-1.5 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-2xl flex items-center gap-1.5 mb-6 shadow-sm sm:mx-auto">
           <button
             type="button"
             onClick={() => setActiveTab('my-teams')}
-            className={`flex-1 sm:flex-initial min-h-[46px] px-5 sm:px-7 rounded-xl font-black uppercase italic tracking-wider text-xs sm:text-sm transition-all duration-200 cursor-pointer flex items-center justify-center gap-2.5 ${
+            className={`flex-1 sm:flex-initial min-h-[44px] px-3 sm:px-6 rounded-xl font-black uppercase italic tracking-wider text-xs sm:text-sm transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 ${
               activeTab === 'my-teams'
                 ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25 ring-1 ring-orange-400'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5'
             }`}
           >
-            <Users className="size-4.5 shrink-0" />
-            <span>My Teams</span>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold ${
+            <Users className="size-4 shrink-0" />
+            <span className="truncate">
+              <span className="sm:hidden">Teams</span>
+              <span className="hidden sm:inline">My Teams</span>
+            </span>
+            <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-mono font-bold shrink-0 min-w-[20px] text-center ${
               activeTab === 'my-teams' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
             }`}>
               {teams.length}
@@ -700,15 +703,18 @@ export const TeamManagement = () => {
           <button
             type="button"
             onClick={() => setActiveTab('directory')}
-            className={`flex-1 sm:flex-initial min-h-[46px] px-5 sm:px-7 rounded-xl font-black uppercase italic tracking-wider text-xs sm:text-sm transition-all duration-200 cursor-pointer flex items-center justify-center gap-2.5 ${
+            className={`flex-1 sm:flex-initial min-h-[44px] px-3 sm:px-6 rounded-xl font-black uppercase italic tracking-wider text-xs sm:text-sm transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 ${
               activeTab === 'directory'
                 ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25 ring-1 ring-orange-400'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5'
             }`}
           >
-            <ClipboardList className="size-4.5 shrink-0" />
-            <span>Player Directory</span>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold ${
+            <ClipboardList className="size-4 shrink-0" />
+            <span className="truncate">
+              <span className="sm:hidden">Players</span>
+              <span className="hidden sm:inline">Player Directory</span>
+            </span>
+            <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-mono font-bold shrink-0 min-w-[20px] text-center ${
               activeTab === 'directory' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
             }`}>
               {filteredPlayers.length}
@@ -822,71 +828,131 @@ export const TeamManagement = () => {
               })}
             </div>
           ) : (
-            <Card className="rounded-[2rem] border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 overflow-hidden shadow-2xl">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
-                    <tr>
-                      <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Team &amp; Sport</th>
-                      <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Tournament</th>
-                      <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Status</th>
-                      <th className="text-right py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredTeams.map((team) => {
-                      const sport = team.tournaments?.sport || 'PSU Sport';
-                      const SportIcon = getSportIcon(sport);
-                      return (
-                      <tr key={team.id} className="border-b border-slate-50 dark:border-white/5 last:border-none hover:bg-orange-50/30 dark:hover:bg-orange-500/5 transition-colors group">
-                        <td className="py-4 px-8 font-black italic uppercase tracking-tighter text-lg text-slate-900 dark:text-white">
-                          <div className="flex items-center gap-2.5 flex-wrap">
-                            <div className="size-8 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center shrink-0">
-                              <SportIcon className="size-4.5" />
-                            </div>
-                            <span>{team.name}</span>
-                            <Badge className="bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30 text-[9px] font-black uppercase">
-                              {sport}
-                            </Badge>
-                            {team.affiliation_type === 'cluster' && team.clusters?.name ? (
-                              <span className="not-italic px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 font-black text-[9px] uppercase tracking-wider border border-purple-500/20">
-                                {team.clusters.name}
-                              </span>
-                            ) : team.colleges?.college_name ? (
-                              <span className="not-italic px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 dark:text-orange-400 font-black text-[9px] uppercase tracking-wider border border-orange-500/20">
-                                {team.colleges.college_name.match(/\(([^)]+)\)/)?.[1] || team.colleges.college_name.slice(0, 4)}
-                              </span>
-                            ) : null}
+            <div className="space-y-4">
+              {/* Mobile List View (< md): Mobile-First Cards — Zero horizontal scroll */}
+              <div className="md:hidden divide-y divide-slate-100 dark:divide-white/5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-white/10 overflow-hidden shadow-sm">
+                {filteredTeams.map((team) => {
+                  const sport = team.tournaments?.sport || 'PSU Sport';
+                  const SportIcon = getSportIcon(sport);
+                  return (
+                    <div key={team.id} className="p-3.5 space-y-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <div className="size-8 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center shrink-0">
+                            <SportIcon className="size-4" />
                           </div>
-                        </td>
-                        <td className="py-4 px-8 font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest">
-                          {team.tournaments?.name}
-                        </td>
-                        <td className="py-4 px-8">
-                          <Badge variant={team.status === 'Approved' ? 'default' : 'secondary'} className="text-[9px] font-black uppercase tracking-tighter px-2">
-                            {team.status}
-                          </Badge>
-                        </td>
-                        <td className="py-4 px-8 text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="font-black uppercase italic tracking-widest text-[10px] text-orange-500 hover:text-orange-600"
-                            onClick={() => {
-                              setManageRosterTeamId(team.id);
-                              fetchRosterMembers(team.id);
-                            }}
-                          >
-                            Manage Roster
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                    })}
-                  </tbody>
-                </table>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-black italic uppercase tracking-tight text-sm text-slate-900 dark:text-white truncate">
+                              {team.name}
+                            </p>
+                            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                              <Badge className="bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30 text-[9px] font-black uppercase px-1.5 py-0">
+                                {sport}
+                              </Badge>
+                              {team.affiliation_type === 'cluster' && team.clusters?.name ? (
+                                <span className="not-italic px-1.5 py-0.2 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 font-black text-[9px] uppercase tracking-wider border border-purple-500/20">
+                                  {team.clusters.name}
+                                </span>
+                              ) : team.colleges?.college_name ? (
+                                <span className="not-italic px-1.5 py-0.2 rounded-md bg-orange-500/10 text-orange-600 dark:text-orange-400 font-black text-[9px] uppercase tracking-wider border border-orange-500/20">
+                                  {team.colleges.college_name.match(/\(([^)]+)\)/)?.[1] || team.colleges.college_name.slice(0, 4)}
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                        <Badge variant={team.status === 'Approved' ? 'default' : 'secondary'} className="text-[9px] font-black uppercase shrink-0">
+                          {team.status}
+                        </Badge>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100 dark:border-white/5">
+                        <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate max-w-[170px]" title={team.tournaments?.name}>
+                          {team.tournaments?.name || 'Tournament'}
+                        </p>
+                        <Button
+                          size="sm"
+                          className="h-8 px-3 rounded-lg font-black uppercase text-[10px] tracking-wider bg-orange-500 hover:bg-orange-600 text-white shrink-0 shadow-sm"
+                          onClick={() => {
+                            setManageRosterTeamId(team.id);
+                            fetchRosterMembers(team.id);
+                          }}
+                        >
+                          Manage Roster
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </Card>
+
+              {/* Desktop Table View (>= md): Full-Width Table */}
+              <Card className="hidden md:block rounded-[2rem] border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 overflow-hidden shadow-2xl">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
+                      <tr>
+                        <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Team &amp; Sport</th>
+                        <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Tournament</th>
+                        <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Status</th>
+                        <th className="text-right py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredTeams.map((team) => {
+                        const sport = team.tournaments?.sport || 'PSU Sport';
+                        const SportIcon = getSportIcon(sport);
+                        return (
+                        <tr key={team.id} className="border-b border-slate-50 dark:border-white/5 last:border-none hover:bg-orange-50/30 dark:hover:bg-orange-500/5 transition-colors group">
+                          <td className="py-4 px-8 font-black italic uppercase tracking-tighter text-lg text-slate-900 dark:text-white">
+                            <div className="flex items-center gap-2.5 flex-wrap">
+                              <div className="size-8 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center shrink-0">
+                                <SportIcon className="size-4.5" />
+                              </div>
+                              <span>{team.name}</span>
+                              <Badge className="bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30 text-[9px] font-black uppercase">
+                                {sport}
+                              </Badge>
+                              {team.affiliation_type === 'cluster' && team.clusters?.name ? (
+                                <span className="not-italic px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 font-black text-[9px] uppercase tracking-wider border border-purple-500/20">
+                                  {team.clusters.name}
+                                </span>
+                              ) : team.colleges?.college_name ? (
+                                <span className="not-italic px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 dark:text-orange-400 font-black text-[9px] uppercase tracking-wider border border-orange-500/20">
+                                  {team.colleges.college_name.match(/\(([^)]+)\)/)?.[1] || team.colleges.college_name.slice(0, 4)}
+                                </span>
+                              ) : null}
+                            </div>
+                          </td>
+                          <td className="py-4 px-8 font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest">
+                            {team.tournaments?.name}
+                          </td>
+                          <td className="py-4 px-8">
+                            <Badge variant={team.status === 'Approved' ? 'default' : 'secondary'} className="text-[9px] font-black uppercase tracking-tighter px-2">
+                              {team.status}
+                            </Badge>
+                          </td>
+                          <td className="py-4 px-8 text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="font-black uppercase italic tracking-widest text-[10px] text-orange-500 hover:text-orange-600"
+                              onClick={() => {
+                                setManageRosterTeamId(team.id);
+                                fetchRosterMembers(team.id);
+                              }}
+                            >
+                              Manage Roster
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </div>
           )}
         </TabsContent>
 
@@ -1247,135 +1313,273 @@ export const TeamManagement = () => {
               })}
             </div>
           ) : (
-            <Card className="rounded-[2rem] border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 overflow-hidden shadow-2xl">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
-                    <tr>
-                      <th className="text-left py-4 px-6 font-black uppercase tracking-widest text-[10px] text-slate-400">Athlete</th>
-                      <th className="text-left py-4 px-4 font-black uppercase tracking-widest text-[10px] text-slate-400">College &amp; Eligibility</th>
-                      <th className="text-left py-4 px-4 font-black uppercase tracking-widest text-[10px] text-slate-400">Preferred Sports</th>
-                      <th className="text-center py-4 px-3 font-black uppercase tracking-widest text-[10px] text-slate-400">GP</th>
-                      <th className="text-center py-4 px-3 font-black uppercase tracking-widest text-[10px] text-slate-400">PTS (AVG)</th>
-                      <th className="text-center py-4 px-3 font-black uppercase tracking-widest text-[10px] text-slate-400">Key Stat</th>
-                      <th className="text-right py-4 px-6 font-black uppercase tracking-widest text-[10px] text-slate-400">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredPlayers.map((player) => {
-                      const collegeName = Array.isArray(player.colleges)
-                        ? player.colleges[0]?.college_name
-                        : player.colleges?.college_name || 'N/A';
-                      const summary = playerSummaries[player.id];
-                      const elig = evaluateSquadEligibility(
-                        player.college_id,
-                        collegeName,
-                        targetRecruitmentTeam,
-                        clusters
-                      );
-                      const prefSports = Array.isArray(player.preferred_sports) ? player.preferred_sports : [];
-                      const displaySports = Array.from(new Set([...prefSports, ...(summary?.activeSports || [])]));
+            <div className="space-y-3">
+              {/* Mobile View: Dedicated responsive cards (md:hidden) to eliminate horizontal table scrolling */}
+              <div className="md:hidden space-y-3">
+                {filteredPlayers.map((player) => {
+                  const collegeName = Array.isArray(player.colleges)
+                    ? player.colleges[0]?.college_name
+                    : player.colleges?.college_name || 'N/A';
+                  const summary = playerSummaries[player.id];
+                  const elig = evaluateSquadEligibility(
+                    player.college_id,
+                    collegeName,
+                    targetRecruitmentTeam,
+                    clusters
+                  );
+                  const prefSports = Array.isArray(player.preferred_sports) ? player.preferred_sports : [];
+                  const displaySports = Array.from(new Set([...prefSports, ...(summary?.activeSports || [])]));
+                  const keyStatPill = getPrimarySportStatPill(
+                    summary,
+                    sportFilter !== 'all'
+                      ? sportFilter
+                      : targetRecruitmentTeam?.tournaments?.sport || displaySports[0]
+                  );
 
-                      return (
-                        <tr key={player.id} className="border-b border-slate-50 dark:border-white/5 last:border-none hover:bg-orange-50/30 dark:hover:bg-orange-500/5 transition-colors group">
-                          <td className="py-4 px-6">
-                            <div className="flex items-center gap-3">
-                              <div className="size-8 rounded-lg bg-slate-100 dark:bg-white/10 flex items-center justify-center font-black text-xs text-slate-500">
-                                {player.full_name.charAt(0)}
+                  return (
+                    <Card
+                      key={`mob-${player.id}`}
+                      className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="size-10 rounded-xl bg-gradient-to-br from-orange-500/20 to-amber-500/20 text-orange-600 dark:text-orange-400 flex items-center justify-center font-black text-sm shrink-0 border border-orange-500/30">
+                            {player.full_name.charAt(0)}
+                          </div>
+                          <div className="min-w-0">
+                            <button
+                              type="button"
+                              onClick={() => setDossierPlayerId(player.id)}
+                              className="font-black italic uppercase tracking-tight text-sm text-slate-900 dark:text-white hover:text-orange-500 text-left truncate block max-w-[200px]"
+                            >
+                              {player.full_name}
+                            </button>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {player.primary_position && (
+                                <span className="text-[10px] font-black text-orange-500 uppercase">
+                                  {player.primary_position}
+                                </span>
+                              )}
+                              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase truncate">
+                                • {collegeName}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {targetRecruitmentTeam && (
+                          <Badge
+                            className={`shrink-0 text-[8px] font-black uppercase ${
+                              elig.eligible
+                                ? 'bg-emerald-500/15 text-emerald-600 border border-emerald-500/30'
+                                : 'bg-red-500/15 text-red-500 border border-red-500/30'
+                            }`}
+                          >
+                            {elig.badgeLabel}
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* Micro stats grid */}
+                      <div className="grid grid-cols-3 gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 mb-3 text-center">
+                        <div>
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Games</p>
+                          <p className="text-xs font-mono font-black text-slate-800 dark:text-slate-200">
+                            {summary?.gamesPlayed || 0}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">PTS (AVG)</p>
+                          <p className="text-xs font-mono font-black text-orange-500">
+                            {summary?.totalPoints || 0} <span className="text-[10px] opacity-75">({summary?.ppg || 0})</span>
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 truncate">{keyStatPill.label}</p>
+                          <p className="text-xs font-mono font-black text-amber-500 truncate">
+                            {keyStatPill.value}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Sports tags + Action buttons */}
+                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-white/5">
+                        <div className="flex flex-wrap gap-1 min-w-0 max-w-[50%]">
+                          {displaySports.length === 0 ? (
+                            <span className="text-[10px] text-slate-400">Open Sport</span>
+                          ) : (
+                            displaySports.slice(0, 2).map((sp) => (
+                              <Badge key={sp} variant="outline" className="text-[8px] font-bold uppercase px-1.5 py-0">
+                                {sp}
+                              </Badge>
+                            ))
+                          )}
+                          {displaySports.length > 2 && (
+                            <Badge variant="outline" className="text-[8px] font-bold uppercase px-1 py-0 text-slate-400">
+                              +{displaySports.length - 2}
+                            </Badge>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 px-2.5 text-[10px] font-black uppercase rounded-lg"
+                            onClick={() => setDossierPlayerId(player.id)}
+                          >
+                            Scout
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="h-8 px-3 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-[10px] rounded-lg shadow-sm"
+                            onClick={() => {
+                              if (targetRecruitmentTeamId && targetRecruitmentTeamId !== 'all') {
+                                setSelectedTeamToInvite(targetRecruitmentTeamId);
+                              }
+                              setInvitePlayerId(player.id);
+                            }}
+                          >
+                            Recruit
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              {/* Desktop View: Preserved Table (hidden md:block) */}
+              <Card className="hidden md:block rounded-[2rem] border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 overflow-hidden shadow-2xl">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
+                      <tr>
+                        <th className="text-left py-4 px-6 font-black uppercase tracking-widest text-[10px] text-slate-400">Athlete</th>
+                        <th className="text-left py-4 px-4 font-black uppercase tracking-widest text-[10px] text-slate-400">College &amp; Eligibility</th>
+                        <th className="text-left py-4 px-4 font-black uppercase tracking-widest text-[10px] text-slate-400">Preferred Sports</th>
+                        <th className="text-center py-4 px-3 font-black uppercase tracking-widest text-[10px] text-slate-400">GP</th>
+                        <th className="text-center py-4 px-3 font-black uppercase tracking-widest text-[10px] text-slate-400">PTS (AVG)</th>
+                        <th className="text-center py-4 px-3 font-black uppercase tracking-widest text-[10px] text-slate-400">Key Stat</th>
+                        <th className="text-right py-4 px-6 font-black uppercase tracking-widest text-[10px] text-slate-400">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredPlayers.map((player) => {
+                        const collegeName = Array.isArray(player.colleges)
+                          ? player.colleges[0]?.college_name
+                          : player.colleges?.college_name || 'N/A';
+                        const summary = playerSummaries[player.id];
+                        const elig = evaluateSquadEligibility(
+                          player.college_id,
+                          collegeName,
+                          targetRecruitmentTeam,
+                          clusters
+                        );
+                        const prefSports = Array.isArray(player.preferred_sports) ? player.preferred_sports : [];
+                        const displaySports = Array.from(new Set([...prefSports, ...(summary?.activeSports || [])]));
+
+                        return (
+                          <tr key={player.id} className="border-b border-slate-50 dark:border-white/5 last:border-none hover:bg-orange-50/30 dark:hover:bg-orange-500/5 transition-colors group">
+                            <td className="py-4 px-6">
+                              <div className="flex items-center gap-3">
+                                <div className="size-8 rounded-lg bg-slate-100 dark:bg-white/10 flex items-center justify-center font-black text-xs text-slate-500">
+                                  {player.full_name.charAt(0)}
+                                </div>
+                                <div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setDossierPlayerId(player.id)}
+                                    className="font-black italic uppercase tracking-tighter text-base text-slate-900 dark:text-white hover:text-orange-500 text-left cursor-pointer"
+                                  >
+                                    {player.full_name}
+                                  </button>
+                                  {player.primary_position && (
+                                    <p className="text-[10px] font-bold text-orange-500 uppercase">
+                                      {player.primary_position}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
-                              <div>
-                                <button
-                                  type="button"
-                                  onClick={() => setDossierPlayerId(player.id)}
-                                  className="font-black italic uppercase tracking-tighter text-base text-slate-900 dark:text-white hover:text-orange-500 text-left cursor-pointer"
+                            </td>
+                            <td className="py-4 px-4">
+                              <p className="font-bold text-slate-600 dark:text-slate-300 uppercase text-[10px] tracking-wider">
+                                {collegeName}
+                              </p>
+                              {targetRecruitmentTeam && (
+                                <Badge
+                                  className={
+                                    elig.eligible
+                                      ? 'bg-emerald-500/15 text-emerald-600 text-[8px] font-black uppercase mt-1'
+                                      : 'bg-red-500/15 text-red-500 text-[8px] font-black uppercase mt-1'
+                                  }
                                 >
-                                  {player.full_name}
-                                </button>
-                                {player.primary_position && (
-                                  <p className="text-[10px] font-bold text-orange-500 uppercase">
-                                    {player.primary_position}
-                                  </p>
+                                  {elig.badgeLabel}
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="py-4 px-4">
+                              <div className="flex flex-wrap gap-1">
+                                {displaySports.length === 0 ? (
+                                  <span className="text-[10px] text-slate-400">Open</span>
+                                ) : (
+                                  displaySports.map((sp) => (
+                                    <Badge key={sp} variant="outline" className="text-[9px] font-bold uppercase">
+                                      {sp}
+                                    </Badge>
+                                  ))
                                 )}
                               </div>
-                            </div>
-                          </td>
-                          <td className="py-4 px-4">
-                            <p className="font-bold text-slate-600 dark:text-slate-300 uppercase text-[10px] tracking-wider">
-                              {collegeName}
-                            </p>
-                            {targetRecruitmentTeam && (
-                              <Badge
-                                className={
-                                  elig.eligible
-                                    ? 'bg-emerald-500/15 text-emerald-600 text-[8px] font-black uppercase mt-1'
-                                    : 'bg-red-500/15 text-red-500 text-[8px] font-black uppercase mt-1'
-                                }
-                              >
-                                {elig.badgeLabel}
-                              </Badge>
-                            )}
-                          </td>
-                          <td className="py-4 px-4">
-                            <div className="flex flex-wrap gap-1">
-                              {displaySports.length === 0 ? (
-                                <span className="text-[10px] text-slate-400">Open</span>
-                              ) : (
-                                displaySports.map((sp) => (
-                                  <Badge key={sp} variant="outline" className="text-[9px] font-bold uppercase">
-                                    {sp}
-                                  </Badge>
-                                ))
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-4 px-3 text-center font-mono font-bold text-xs">
-                            {summary?.gamesPlayed || 0}
-                          </td>
-                          <td className="py-4 px-3 text-center font-mono font-black text-xs text-orange-500">
-                            {summary?.totalPoints || 0} ({summary?.ppg || 0})
-                          </td>
-                          <td className="py-4 px-3 text-center font-mono font-bold text-xs text-amber-500">
-                            {(() => {
-                              const pill = getPrimarySportStatPill(
-                                summary,
-                                sportFilter !== 'all'
-                                  ? sportFilter
-                                  : targetRecruitmentTeam?.tournaments?.sport || displaySports[0]
-                              );
-                              return `${pill.value} ${pill.label}`;
-                            })()}
-                          </td>
-                          <td className="py-4 px-6 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 px-2.5 text-[10px] font-black uppercase rounded-lg"
-                                onClick={() => setDossierPlayerId(player.id)}
-                              >
-                                Scout
-                              </Button>
-                              <Button
-                                size="sm"
-                                className="h-8 px-3 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-[10px] rounded-lg"
-                                onClick={() => {
-                                  if (targetRecruitmentTeamId && targetRecruitmentTeamId !== 'all') {
-                                    setSelectedTeamToInvite(targetRecruitmentTeamId);
-                                  }
-                                  setInvitePlayerId(player.id);
-                                }}
-                              >
-                                Recruit
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
+                            </td>
+                            <td className="py-4 px-3 text-center font-mono font-bold text-xs">
+                              {summary?.gamesPlayed || 0}
+                            </td>
+                            <td className="py-4 px-3 text-center font-mono font-black text-xs text-orange-500">
+                              {summary?.totalPoints || 0} ({summary?.ppg || 0})
+                            </td>
+                            <td className="py-4 px-3 text-center font-mono font-bold text-xs text-amber-500">
+                              {(() => {
+                                const pill = getPrimarySportStatPill(
+                                  summary,
+                                  sportFilter !== 'all'
+                                    ? sportFilter
+                                    : targetRecruitmentTeam?.tournaments?.sport || displaySports[0]
+                                );
+                                return `${pill.value} ${pill.label}`;
+                              })()}
+                            </td>
+                            <td className="py-4 px-6 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 px-2.5 text-[10px] font-black uppercase rounded-lg"
+                                  onClick={() => setDossierPlayerId(player.id)}
+                                >
+                                  Scout
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="h-8 px-3 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-[10px] rounded-lg"
+                                  onClick={() => {
+                                    if (targetRecruitmentTeamId && targetRecruitmentTeamId !== 'all') {
+                                      setSelectedTeamToInvite(targetRecruitmentTeamId);
+                                    }
+                                    setInvitePlayerId(player.id);
+                                  }}
+                                >
+                                  Recruit
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </div>
           )}
         </TabsContent>
       </Tabs>
