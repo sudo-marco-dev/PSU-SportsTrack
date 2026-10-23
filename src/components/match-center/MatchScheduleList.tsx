@@ -1,7 +1,6 @@
 import React from 'react';
-import { Clock, History, MapPin, ChevronRight, Filter, Crown } from 'lucide-react';
+import { Clock, History, MapPin, ChevronRight, Crown } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { type Match, type Tournament, type TeamAffiliation, getAffiliationBadge } from './types';
 import { getSportIcon, SPORT_ICONS } from '@/lib/sportIcons';
 
@@ -10,9 +9,6 @@ interface MatchScheduleListProps {
   isResultsMode?: boolean;
   tourMap: Map<string, Tournament>;
   teamsMap?: Map<string, TeamAffiliation>;
-  availableRounds: string[];
-  selectedRound: string;
-  onSelectRound: (round: string) => void;
   onNavigateMatch: (id: string) => void;
 }
 
@@ -37,9 +33,6 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
   isResultsMode = false,
   tourMap,
   teamsMap,
-  availableRounds,
-  selectedRound,
-  onSelectRound,
   onNavigateMatch
 }) => {
   // Group matches by date
@@ -86,34 +79,6 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Optional Round / Stage Filter */}
-      {availableRounds.length > 0 && (
-        <div className="flex items-center gap-2 px-1">
-          <Filter className="size-3.5 text-slate-400" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Stage Filter:
-          </span>
-          <div className="w-52">
-            <Select
-              value={selectedRound}
-              onValueChange={(val: string | null) => onSelectRound(val || 'all')}
-            >
-              <SelectTrigger className="h-8 rounded-lg border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 font-bold text-[11px] uppercase tracking-wider text-slate-700 dark:text-slate-200">
-                <SelectValue placeholder="All Stages" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl font-bold uppercase text-xs">
-                <SelectItem value="all">All Stages</SelectItem>
-                {availableRounds.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      )}
-
       {/* Date Timeline Groups */}
       {Object.entries(groupedMatches).map(([date, dateMatches]) => (
         <div

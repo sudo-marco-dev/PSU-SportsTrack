@@ -45,7 +45,11 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
               onValueChange={(val: string | null) => onSelectTournament(val || 'all')}
             >
               <SelectTrigger className="h-10 sm:h-11 rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800/80 font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200">
-                <SelectValue placeholder="All Tournaments" />
+                <SelectValue placeholder="All Tournaments">
+                  {selectedTournamentId === 'all'
+                    ? `All Tournaments (${tournaments.length})`
+                    : tournaments.find((t) => t.id === selectedTournamentId)?.name || 'Tournament'}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent className="rounded-xl font-bold uppercase text-xs">
                 <SelectItem value="all">
@@ -64,7 +68,7 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
           <div className="relative flex-1 w-full min-w-0">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
             <Input
-              placeholder="Search..."
+              placeholder="Search squads, colleges, court venue..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 pr-9 h-10 sm:h-11 rounded-xl bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-white/10 font-medium text-xs text-slate-800 dark:text-white focus:bg-white dark:focus:bg-slate-800 transition-all w-full"

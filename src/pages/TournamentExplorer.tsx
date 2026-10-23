@@ -4,8 +4,9 @@ import { supabase } from '@/lib/supabase';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Clock, Trophy, Crown, ArrowLeft, Lock, ListOrdered } from 'lucide-react';
+import { Clock, Trophy, Crown, ArrowLeft, Lock, ListOrdered, Filter, X, Layers } from 'lucide-react';
 import { SPORT_ICONS, getSportIcon } from '@/lib/sportIcons';
 import { MatchCenterHeader } from '@/components/match-center/MatchCenterHeader';
 import { MatchCenterToolbar, type MatchCenterPhase } from '@/components/match-center/MatchCenterToolbar';
@@ -211,6 +212,7 @@ export const TournamentExplorer = () => {
   // Synchronize sport selection
   const handleSelectSport = (sport: string) => {
     setSelectedSport(sport);
+    setSelectedRound('all');
     setUserPhaseOverride(null);
     setSelectedBracketTournId(null);
     if (sport === 'all') {
@@ -228,6 +230,7 @@ export const TournamentExplorer = () => {
   // Synchronize tournament selection
   const handleSelectTournament = (tourId: string) => {
     setSelectedTournamentId(tourId);
+    setSelectedRound('all');
     setSelectedBracketTournId(tourId === 'all' ? null : tourId);
     setUserPhaseOverride(null);
     if (tourId === 'all') return;
@@ -542,6 +545,13 @@ export const TournamentExplorer = () => {
     });
     return Array.from(roundsSet);
   }, [eliminationMatches]);
+
+  // Auto-reset stage filter if the selected round is no longer present in available rounds
+  useEffect(() => {
+    if (selectedRound !== 'all' && !availableRounds.includes(selectedRound)) {
+      setSelectedRound('all');
+    }
+  }, [availableRounds, selectedRound]);
 
   // Live and total match counts
   const liveMatchesCount = useMemo(() => {
@@ -949,23 +959,27 @@ export const TournamentExplorer = () => {
             </Card>
           )}
 
-          {/* Sub-view switcher for Elimination Stage: Upcoming/Live vs Results */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl w-full sm:w-auto">
+          {/* Unified Elimination Toolbar: Sub-tabs (Upcoming & Live vs Results) + Stage Filter */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl md:rounded-[2rem] p-2.5 sm:p-3 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
+            {/* Left: Elimination Sub-Tabs */}
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200/80 dark:border-white/5 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setElimTab('live')}
-                className={`py-2 px-2.5 sm:px-3 rounded-lg font-black uppercase italic text-[11px] sm:text-xs tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer min-w-0 ${
+                className={`py-2 px-2.5 sm:px-4 rounded-lg font-black uppercase italic text-[11px] sm:text-xs tracking-wider transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer min-w-0 flex-1 sm:flex-initial ${
                   elimTab === 'live'
-                    ? 'flex-1 sm:flex-initial bg-orange-500 text-white shadow-sm'
-                    : 'shrink-0 sm:flex-initial text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-orange-500 text-white shadow-md shadow-orange-500/25'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <Clock className="size-3.5 shrink-0" />
-                <span className={`truncate ${elimTab === 'live' ? 'inline' : 'hidden sm:inline'}`}>Upcoming & Live</span>
+                <span className="sm:hidden">Upcoming</span>
+                <span className="hidden sm:inline">Upcoming &amp; Live</span>
                 <span
-                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 leading-none ${
-                    elimTab === 'live' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800'
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 leading-none ${
+                    elimTab === 'live'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                   }`}
                 >
                   {elimLiveAndUpcoming.length}
@@ -975,23 +989,76 @@ export const TournamentExplorer = () => {
               <button
                 type="button"
                 onClick={() => setElimTab('history')}
-                className={`py-2 px-2.5 sm:px-3 rounded-lg font-black uppercase italic text-[11px] sm:text-xs tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer min-w-0 ${
+                className={`py-2 px-2.5 sm:px-4 rounded-lg font-black uppercase italic text-[11px] sm:text-xs tracking-wider transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer min-w-0 flex-1 sm:flex-initial ${
                   elimTab === 'history'
-                    ? 'flex-1 sm:flex-initial bg-orange-500 text-white shadow-sm'
-                    : 'shrink-0 sm:flex-initial text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-orange-500 text-white shadow-md shadow-orange-500/25'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <Trophy className="size-3.5 shrink-0" />
-                <span className={`truncate ${elimTab === 'history' ? 'inline' : 'hidden sm:inline'}`}>Match Results</span>
+                <span className="sm:hidden">Results</span>
+                <span className="hidden sm:inline">Match Results</span>
                 <span
-                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 leading-none ${
-                    elimTab === 'history' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800'
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 leading-none ${
+                    elimTab === 'history'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                   }`}
                 >
                   {elimHistory.length}
                 </span>
               </button>
             </div>
+
+            {/* Right: Stage Filter Dropdown */}
+            {availableRounds.length > 0 ? (
+              <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto justify-between sm:justify-end px-1 sm:px-0">
+                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 shrink-0">
+                  <Filter className="size-3.5 text-orange-500" />
+                  <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider">
+                    Stage Filter:
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-1 sm:w-56 sm:flex-initial min-w-0">
+                  <Select
+                    value={selectedRound}
+                    onValueChange={(val: string | null) => setSelectedRound(val || 'all')}
+                  >
+                    <SelectTrigger className="w-full h-9 sm:h-10 rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800 font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                      <SelectValue placeholder="All Stages">
+                        {selectedRound === 'all' ? 'All Stages' : selectedRound}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl font-bold uppercase text-xs">
+                      <SelectItem value="all">All Stages</SelectItem>
+                      {availableRounds.map((r) => (
+                        <SelectItem key={r} value={r}>
+                          {r}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedRound !== 'all' && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRound('all')}
+                      className="size-8 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-500 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                      title="Clear stage filter"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="hidden sm:flex items-center gap-1.5 text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-wider px-2">
+                <Layers className="size-3.5 text-orange-500" />
+                <span>
+                  {elimTab === 'live' ? elimLiveAndUpcoming.length : elimHistory.length}{' '}
+                  {elimTab === 'live' ? 'Upcoming & Live Fixtures' : 'Results Recorded'}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Fixtures Timeline */}
@@ -1000,9 +1067,6 @@ export const TournamentExplorer = () => {
             isResultsMode={elimTab === 'history'}
             tourMap={tourMap}
             teamsMap={teamsMap}
-            availableRounds={availableRounds}
-            selectedRound={selectedRound}
-            onSelectRound={setSelectedRound}
             onNavigateMatch={(id) => navigate(`/match/${id}`)}
           />
         </div>

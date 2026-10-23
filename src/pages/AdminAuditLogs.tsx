@@ -10,9 +10,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ClipboardList, Search, Clock, User, Activity, Calendar as CalendarIcon } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ClipboardList, Clock, User, Activity } from 'lucide-react';
+import { DataToolbar } from '@/components/admin/DataToolbar';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
@@ -115,40 +114,26 @@ export const AdminAuditLogs = () => {
       </div>
 
       {/* Controls */}
-      <div className="relative z-10 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
-          <Input 
-            placeholder="Search logs by action or admin..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-11 h-12 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 rounded-xl font-bold"
-          />
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-          <div className="w-full sm:w-48">
-            <Select value={timeFilter} onValueChange={(val) => setTimeFilter(val || 'all')}>
-              <SelectTrigger className="h-12 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 rounded-xl font-bold text-xs">
-                <div className="flex items-center gap-2 text-slate-500">
-                  <CalendarIcon className="size-4" />
-                  <SelectValue placeholder="Filter by Time" />
-                </div>
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border-slate-100 dark:border-white/5">
-                <SelectItem value="all" className="font-bold text-xs">All Time</SelectItem>
-                <SelectItem value="today" className="font-bold text-xs">Today</SelectItem>
-                <SelectItem value="week" className="font-bold text-xs">Past 7 Days</SelectItem>
-                <SelectItem value="month" className="font-bold text-xs">Past 30 Days</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center gap-3 bg-slate-100 dark:bg-white/5 px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
-            <Activity className="size-4 text-orange-500" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Live Monitoring</span>
-          </div>
-        </div>
+      <div className="relative z-10">
+        <DataToolbar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          filterValue={timeFilter}
+          onFilterChange={setTimeFilter}
+          searchPlaceholder="Search logs by action or admin..."
+          filterOptions={[
+            { value: 'all', label: 'All Time' },
+            { value: 'today', label: 'Today' },
+            { value: 'week', label: 'Past 7 Days' },
+            { value: 'month', label: 'Past 30 Days' },
+          ]}
+          actions={
+            <div className="flex items-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 shrink-0">
+              <Activity className="size-3.5 text-orange-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Live Monitoring</span>
+            </div>
+          }
+        />
       </div>
 
       {/* Mobile Card List (md:hidden) to eliminate horizontal table scrolling */}

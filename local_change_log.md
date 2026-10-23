@@ -4,6 +4,48 @@ This log tracks every user prompt, database migration, code change, and Git oper
 
 ---
 
+## 📅 Log Entry: 2026-10-24
+
+### 💬 Prompt: Unified Elimination Toolbar & Anti-Corner Tucking System Sweep (Review & Hardening)
+*   **Timestamp**: 2026-10-24T00:40:00+08:00
+*   **User Directive**: 
+    - "fix the upcoming & live / match results being tucked in the corner. find details like that and fix it thought the system /goal  /boost  /teamwork-preview"
+*   **Actions Taken**:
+    *   **Root Cause Analysis & Prior Attempt Defects**:
+        - In Phase 1 Match Center (`src/pages/TournamentExplorer.tsx`), the sub-view switcher (`UPCOMING & LIVE` / `MATCH RESULTS`) was placed inside an isolated flex row with no opposing elements, causing it to sit awkwardly in the far top-left corner on desktop with a massive blank void on the right.
+        - Directly underneath it, inside `MatchScheduleList.tsx`, `STAGE FILTER: ALL` sat stranded on its own single-item row, also floating alone on the far left.
+        - If a user filtered by stage and switched sport/tournament, `selectedRound` remained stuck at the previous stage, causing 0 matches to display and the filter dropdown to permanently vanish without any way to clear it.
+        - The prior worker changed the search placeholder in `MatchCenterToolbar.tsx` to `"Search..."`, breaking the existing Playwright E2E suite (`tests/match-center.spec.ts`).
+        - The prior worker only addressed `TournamentExplorer.tsx` and neglected system-wide pages like `AdminAuditLogs.tsx` where search inputs and filters were floating uncontained without standard toolbar cards.
+    *   **Unified Elimination Toolbar (`src/pages/TournamentExplorer.tsx`)**:
+        - Integrated the sub-view switcher (`Upcoming & Live` vs `Match Results`) and the `Stage Filter` dropdown into a unified, balanced toolbar card (`bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl md:rounded-[2rem] p-2.5 sm:p-3 shadow-sm`).
+        - Desktop (`1440x900`):
+            - **Left**: Styled sub-tabs with Clock and Trophy icons and active orange glow badge.
+            - **Right**: Stage Filter dropdown with Filter icon and a 1-tap quick reset button (`X`) when a specific stage is filtered; or an informative fixture counter indicator when no stages exist.
+            - Symmetrically spans the full desktop width, eliminating the corner void and saving vertical space.
+        - Mobile (`390x844`):
+            - Stacks smoothly: Top sub-tabs expand to 50/50 width with concise text (`Upcoming` / `Results`), eliminating truncation ellipsis.
+            - Bottom row features the full-width stage filter with left-aligned label and flexible responsive dropdown (`flex-1 sm:w-56 sm:flex-initial min-w-0`), preventing layout shifts or overflow on narrow screens.
+        - Fixed stage filter reactivity: Added `setSelectedRound('all')` on sport/tournament changes, plus a reactive `useEffect` that auto-resets `selectedRound` if the active round is not present in `availableRounds`.
+        - Fixed `@base-ui/react/select` label rendering so `SelectValue` renders `"All Stages"` and `"All Tournaments ({N})"` rather than ambiguous raw value `"all"`.
+    *   **E2E Test Suite Regression Fix (`src/components/match-center/MatchCenterToolbar.tsx`)**:
+        - Restored search placeholder to `"Search squads, colleges, court venue..."` ensuring full compatibility with existing Playwright E2E tests (`tests/match-center.spec.ts`).
+    *   **System-Wide Toolbar Modernization (`src/components/admin/DataToolbar.tsx` & `src/pages/AdminAuditLogs.tsx`)**:
+        - Modernized `AdminAuditLogs.tsx` to adopt the shared glassmorphic `DataToolbar` component, replacing isolated, floating `w-full md:w-96` inputs with a cohesive toolbar card containing search, time filter, and "Live Monitoring" status badge.
+        - Enhanced `DataToolbar.tsx`:
+            - Added 1-tap `X` clear search button inside the search input.
+            - Added 1-tap `X` reset button beside the filter dropdown when active.
+            - Enhanced `SelectValue` with explicit label mapping.
+            - Made filter wrapper responsive with `min-w-0 flex-1 md:w-auto md:flex-initial`.
+    *   **Match Schedule List Interface Cleanup (`src/components/match-center/MatchScheduleList.tsx`)**:
+        - Cleaned up obsolete round filter props from `MatchScheduleListProps` (`availableRounds`, `selectedRound`, `onSelectRound`).
+    *   **Verification**:
+        - Clean compilation: `npm run build` (`tsc -b && vite build`) passed with 0 errors.
+        - Full automated test suite: All 9 Playwright tests passed (`tests/match-center.spec.ts`, `tests/navigation.spec.ts`, `tests/visual-inspection.spec.ts`).
+        - Headless Chromium visual rendering: Inspected desktop (`1440x900`) and mobile (`390x844`) screenshots confirming balanced symmetry, zero corner-tucking, and clean responsiveness.
+
+---
+
 ## 📅 Log Entry: 2026-10-23
 
 ### 💬 Prompt: Phase 1 Match Center Mobile Top-Down VS Layout (Anti-Truncation)
