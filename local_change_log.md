@@ -6,6 +6,27 @@ This log tracks every user prompt, database migration, code change, and Git oper
 
 ## 📅 Log Entry: 2026-10-23
 
+### 💬 Prompt: Phase 1 Match Center Mobile Top-Down VS Layout (Anti-Truncation)
+*   **Timestamp**: 2026-10-23T23:55:00+08:00
+*   **User Directive**: 
+    - "fix the vs matches being truncated because the team vs is in a horizontal format on mobile view copy the bracketing with its top down vs teams keep the neseasary data for the phase 1 maches just prevent truncaion in mobile view"
+*   **Actions Taken**:
+    *   **Phase 1 Match Card Responsive Layout (`src/components/match-center/MatchScheduleList.tsx`)**:
+        - Replaced the horizontal `[Team A] [Score] [Team B]` flex row on mobile (`sm:hidden`) with a stacked top-down bracketing slot layout copied directly from `BracketMatchCard.tsx`.
+        - Created two dedicated, full-width team slots:
+            - **Team A Slot**: Features the college affiliation badge (e.g., `CAH`, `CCRD`, `CEAT`, `CS`, `CBA`), full uppercase bold italic team name without aggressive clipping, winner Crown indicator (`👑`), and right-aligned tabular score.
+            - **Team B Slot**: Identical full-width slot for Team B with badge, full team name, winner crown, and tabular score.
+        - Preserved all essential match metadata: Sport icon, sport discipline, round/pool subtitle, live pulse / final status / scheduled time, venue with map pin, and matchroom link.
+        - Winner styling matches tournament bracketing (`bg-amber-500/15 border-amber-500/30 text-amber-500` / bold amber text and crown).
+        - Desktop view (`hidden sm:flex`) cleanly retains the wide horizontal layout with centered score pill.
+    *   **Verification**:
+        - Verified build cleanly compiles with `tsc -b && vite build` (0 TypeScript errors).
+        - Verified on mobile viewport (`390x844`) in Chrome DevTools: Full team names like `CCRD FORESTERS`, `CAH ARTISTICS`, `CEAT RED SCORPIONS`, `CS BYTE TITANS`, `CBA GOLDEN WOLVES`, `CHMT NAVIGATORS`, and `CCJE LAW ENFORCERS` render completely without truncation dots in both Live/Upcoming and Results modes.
+
+---
+
+## 📅 Log Entry: 2026-10-23
+
 ### 💬 Prompt: Multi-Role Web UI Survey & Centered Tabs Polish in PC View
 *   **Timestamp**: 2026-10-23T20:15:00+08:00
 *   **User Directive**: 

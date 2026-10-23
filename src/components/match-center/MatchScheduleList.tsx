@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, History, MapPin, ChevronRight, Filter } from 'lucide-react';
+import { Clock, History, MapPin, ChevronRight, Filter, Crown } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { type Match, type Tournament, type TeamAffiliation, getAffiliationBadge } from './types';
@@ -136,6 +136,8 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
               const SportIcon = getSportIcon(sportName);
               const affA = getAffiliationBadge(match.team_a_id, match.team_a?.name, teamsMap);
               const affB = getAffiliationBadge(match.team_b_id, match.team_b?.name, teamsMap);
+              const isTeamAWinner = match.status === 'Completed' && (match.team_a_score ?? 0) > (match.team_b_score ?? 0);
+              const isTeamBWinner = match.status === 'Completed' && (match.team_b_score ?? 0) > (match.team_a_score ?? 0);
 
               return (
                 <div
@@ -181,8 +183,81 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
                     )}
                   </div>
 
-                  {/* Teams & Score */}
-                  <div className="flex items-center justify-between gap-3">
+                  {/* MOBILE: Top-Down Bracketing Matchup (sm:hidden) to prevent team name truncation */}
+                  <div className="sm:hidden space-y-1.5 py-0.5">
+                    {/* Team A Slot */}
+                    <div
+                      className={`flex items-center justify-between py-1.5 px-2.5 rounded-lg transition-colors ${
+                        isTeamAWinner
+                          ? 'bg-amber-500/15 dark:bg-amber-500/20 text-slate-900 dark:text-white font-black border border-amber-500/30'
+                          : 'bg-slate-50 dark:bg-white/5 text-slate-800 dark:text-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
+                        {affA && (
+                          <span
+                            className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-orange-500/15 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/30 shrink-0 leading-none"
+                            title={affA.fullName}
+                          >
+                            {affA.badge}
+                          </span>
+                        )}
+                        <span className="font-black italic uppercase text-xs truncate">
+                          {match.team_a?.name || 'TBD'}
+                        </span>
+                        {isTeamAWinner && <Crown className="size-3 text-amber-500 shrink-0" />}
+                      </div>
+                      <span
+                        className={`text-sm font-black tabular-nums shrink-0 ${
+                          isTeamAWinner
+                            ? 'text-orange-600 dark:text-orange-400'
+                            : match.status === 'Ongoing'
+                            ? 'text-rose-500 font-black'
+                            : 'text-slate-600 dark:text-slate-400'
+                        }`}
+                      >
+                        {match.status === 'Scheduled' ? '-' : (match.team_a_score ?? 0)}
+                      </span>
+                    </div>
+
+                    {/* Team B Slot */}
+                    <div
+                      className={`flex items-center justify-between py-1.5 px-2.5 rounded-lg transition-colors ${
+                        isTeamBWinner
+                          ? 'bg-amber-500/15 dark:bg-amber-500/20 text-slate-900 dark:text-white font-black border border-amber-500/30'
+                          : 'bg-slate-50 dark:bg-white/5 text-slate-800 dark:text-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
+                        {affB && (
+                          <span
+                            className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-orange-500/15 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/30 shrink-0 leading-none"
+                            title={affB.fullName}
+                          >
+                            {affB.badge}
+                          </span>
+                        )}
+                        <span className="font-black italic uppercase text-xs truncate">
+                          {match.team_b?.name || 'TBD'}
+                        </span>
+                        {isTeamBWinner && <Crown className="size-3 text-amber-500 shrink-0" />}
+                      </div>
+                      <span
+                        className={`text-sm font-black tabular-nums shrink-0 ${
+                          isTeamBWinner
+                            ? 'text-orange-600 dark:text-orange-400'
+                            : match.status === 'Ongoing'
+                            ? 'text-rose-500 font-black'
+                            : 'text-slate-600 dark:text-slate-400'
+                        }`}
+                      >
+                        {match.status === 'Scheduled' ? '-' : (match.team_b_score ?? 0)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* DESKTOP: Horizontal Matchup (hidden sm:flex) */}
+                  <div className="hidden sm:flex items-center justify-between gap-3">
                     <div className="flex items-center gap-1.5 flex-1 min-w-0">
                       <span className="font-black italic uppercase text-xs sm:text-sm text-slate-900 dark:text-white truncate">
                         {match.team_a?.name || 'TBD'}
@@ -192,6 +267,7 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
                           {affA.badge}
                         </span>
                       )}
+                      {isTeamAWinner && <Crown className="size-3 text-amber-500 shrink-0" />}
                     </div>
 
                     <div className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 font-black tabular-nums text-xs shrink-0">
@@ -199,6 +275,7 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
                     </div>
 
                     <div className="flex items-center justify-end gap-1.5 flex-1 min-w-0">
+                      {isTeamBWinner && <Crown className="size-3 text-amber-500 shrink-0" />}
                       {affB && (
                         <span className="text-[8px] font-black uppercase px-1 rounded bg-orange-500/20 text-orange-400 border border-orange-500/30 shrink-0">
                           {affB.badge}
