@@ -951,20 +951,20 @@ export const TournamentExplorer = () => {
 
           {/* Sub-view switcher for Elimination Stage: Upcoming/Live vs Results */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="grid grid-cols-2 sm:inline-flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl w-full sm:w-auto">
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setElimTab('live')}
                 className={`py-2 px-2.5 sm:px-3 rounded-lg font-black uppercase italic text-[11px] sm:text-xs tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer min-w-0 ${
                   elimTab === 'live'
-                    ? 'bg-orange-500 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'flex-1 sm:flex-initial bg-orange-500 text-white shadow-sm'
+                    : 'shrink-0 sm:flex-initial text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <Clock className="size-3.5 shrink-0" />
-                <span className="truncate">Upcoming & Live</span>
+                <span className={`truncate ${elimTab === 'live' ? 'inline' : 'hidden sm:inline'}`}>Upcoming & Live</span>
                 <span
-                  className={`px-1.5 py-0.2 rounded text-[9px] font-bold shrink-0 ${
+                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 leading-none ${
                     elimTab === 'live' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800'
                   }`}
                 >
@@ -977,14 +977,14 @@ export const TournamentExplorer = () => {
                 onClick={() => setElimTab('history')}
                 className={`py-2 px-2.5 sm:px-3 rounded-lg font-black uppercase italic text-[11px] sm:text-xs tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer min-w-0 ${
                   elimTab === 'history'
-                    ? 'bg-orange-500 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'flex-1 sm:flex-initial bg-orange-500 text-white shadow-sm'
+                    : 'shrink-0 sm:flex-initial text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <Trophy className="size-3.5 shrink-0" />
-                <span className="truncate">Match Results</span>
+                <span className={`truncate ${elimTab === 'history' ? 'inline' : 'hidden sm:inline'}`}>Match Results</span>
                 <span
-                  className={`px-1.5 py-0.2 rounded text-[9px] font-bold shrink-0 ${
+                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 leading-none ${
                     elimTab === 'history' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800'
                   }`}
                 >

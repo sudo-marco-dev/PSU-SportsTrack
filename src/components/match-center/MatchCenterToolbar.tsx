@@ -37,9 +37,9 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl md:rounded-[2rem] p-3 sm:p-4 shadow-sm space-y-3 w-full min-w-0 max-w-full overflow-hidden">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-w-0">
         {/* Left: Tournament Dropdown + Search Input */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1 min-w-0">
-          {/* Tournament Selector */}
-          <div className="w-full sm:w-64 md:w-72 shrink-0">
+        <div className="flex flex-row-reverse sm:flex-row items-center gap-2 sm:gap-2.5 flex-1 min-w-0">
+          {/* Tournament Selector (beside search on mobile) */}
+          <div className="w-[38%] sm:w-64 md:w-72 shrink-0 min-w-0">
             <Select
               value={selectedTournamentId}
               onValueChange={(val: string | null) => onSelectTournament(val || 'all')}
@@ -64,7 +64,7 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
           <div className="relative flex-1 w-full min-w-0">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
             <Input
-              placeholder="Search squads, colleges, court venue..."
+              placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 pr-9 h-10 sm:h-11 rounded-xl bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-white/10 font-medium text-xs text-slate-800 dark:text-white focus:bg-white dark:focus:bg-slate-800 transition-all w-full"
@@ -98,14 +98,14 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
             <span className="truncate sm:hidden">Phase 1</span>
             <span className="truncate hidden sm:inline">Phase 1 • Elimination</span>
             <span
-              className={`px-1.5 py-0.2 rounded text-[9px] font-bold shrink-0 ${
+              className={`px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 leading-none ${
                 activePhase === 'elimination' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-300'
               }`}
             >
               {elimMatchesCount}
             </span>
             {isEliminationComplete && (
-              <span className="hidden sm:inline px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[8px] font-black uppercase border border-emerald-500/30 shrink-0">
+              <span className="hidden sm:inline px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[8px] font-black uppercase border border-emerald-500/30 shrink-0 leading-none">
                 Done
               </span>
             )}
@@ -130,14 +130,14 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
             <span className="truncate hidden sm:inline">Phase 2 • Playoff Bracket</span>
             {hasPlayoffs ? (
               <span
-                className={`px-1.5 py-0.2 rounded text-[9px] font-bold shrink-0 ${
+                className={`px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 leading-none ${
                   activePhase === 'playoffs' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-300'
                 }`}
               >
                 {playoffMatchesCount}
               </span>
             ) : (
-              <span className="px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 text-[8px] font-black uppercase border border-slate-700 shrink-0">
+              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[8px] font-black uppercase border border-slate-700 shrink-0 leading-none">
                 Locked
               </span>
             )}

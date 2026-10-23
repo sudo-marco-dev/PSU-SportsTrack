@@ -1652,3 +1652,22 @@ This log tracks every user prompt, database migration, code change, and Git oper
 *   **Verification**:
     - Live browser check via `chrome-devtools-mcp` on `/scouting` at mobile (`390x844`) and desktop (`1440x900`). Confirmed all tabs (Players, Coaches, Teams, Matches) render smoothly without edge clipping.
     - Production build: `npm run build` completed with Exit Code 0 in 4.04s.
+
+
+### 2026-10-23: Global Mobile-First Refinements (Expandable Tabs, Filter Placement, No Truncation)
+*   **Issues Addressed**:
+    1.  **Leaderboard Tabs Dot Truncation & Reactive State ([`src/pages/Ranking.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/Ranking.tsx))**:
+        - Replaced rigid 3-column grid that truncated text (`COL...`, `TRI...`, `SQ...`) with reactive expandable icon tabs:
+          * Inactive tabs on mobile render as compact icon buttons with count badges (`hidden sm:inline` on labels).
+          * Active tab expands (`flex-1 sm:flex-initial`) to showcase full unclipped label (`COLLEGES 9`, `TRIBES 6`, `SQUADS 82`).
+    2.  **Filter Button Placement & Active Clutter Removal ([`src/pages/Ranking.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/Ranking.tsx))**:
+        - Unified search input and filter toggle button into a single horizontal row (`flex-row items-center gap-2`). On mobile, the filter button displays icon-only (`hidden sm:inline` on "Filters" text), completely eliminating awkward multi-row stacking.
+        - Eliminated the default passive `ACTIVE: [ Colleges ] [ All Competitions ] ...` strip; now chips only render when the user actually applies non-default filters or searches.
+    3.  **Match Center Sub-View Switcher & Toolbar Layout ([`src/pages/TournamentExplorer.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/TournamentExplorer.tsx), [`src/components/match-center/MatchCenterToolbar.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/match-center/MatchCenterToolbar.tsx))**:
+        - Converted "Upcoming & Live" vs "Match Results" switcher into expandable tab buttons so inactive sub-view shrinks to an icon and never truncates text on mobile.
+        - Placed tournament filter dropdown and search bar side-by-side in a single row on mobile.
+    4.  **Coach Profile Card Grid Boundary Constraints ([`src/pages/Profile.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/pages/Profile.tsx))**:
+        - Added `min-w-0 [&>*]:min-w-0` to coach management hub grid containers to eliminate horizontal page bleeding on mobile viewports.
+*   **Verification**:
+    *   Automated script audit across all application routes (`/`, `/explorer`, `/ranking`, `/scouting`, `/profile`, `/coach`, `/coach/teams`, `/about`): 0 overflow elements and 0 truncated tabs.
+    *   `npm run build` passed with Exit Code 0 in 4.21s.

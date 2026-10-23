@@ -736,7 +736,7 @@ export const Profile = () => {
               </div>
             </div>
           </div>          {/* Coach Management Hub */}
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 min-w-0 [&>*]:min-w-0">
             <Card 
               className="border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 hover:border-orange-500/40 transition-all duration-200 rounded-2xl shadow-sm cursor-pointer group p-5 sm:p-6"
               onClick={() => navigate('/coach/teams')}
@@ -834,7 +834,7 @@ export const Profile = () => {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 min-w-0 [&>*]:min-w-0">
             <Card
               className="border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 hover:border-orange-500/40 transition-all duration-200 rounded-2xl shadow-sm cursor-pointer group p-5 sm:p-6"
               onClick={() => navigate('/explorer')}

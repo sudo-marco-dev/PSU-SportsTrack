@@ -864,7 +864,7 @@ export const Ranking = () => {
       {/* Standings View Format Selector: Balanced Centered Control */}
       <div className="flex justify-center w-full">
         <div className="w-full sm:w-auto p-1.5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 rounded-2xl shadow-sm">
-          <div className="grid grid-cols-3 sm:flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {standingTabs.map((tab) => {
               const isActive = standingView === tab.id;
               const Icon = tab.icon;
@@ -873,14 +873,14 @@ export const Ranking = () => {
                   key={tab.id}
                   type="button"
                   onClick={() => setStandingView(tab.id as any)}
-                  className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm uppercase tracking-tight italic transition-all cursor-pointer ${
+                  className={`flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm uppercase tracking-tight italic transition-all cursor-pointer min-w-0 ${
                     isActive
-                      ? 'bg-orange-500 text-white shadow-md shadow-orange-500/25 scale-[1.01]'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
+                      ? 'flex-1 sm:flex-initial bg-orange-500 text-white shadow-md shadow-orange-500/25'
+                      : 'shrink-0 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
                   }`}
                 >
                   <Icon className={`size-4 sm:size-4.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span className="truncate">{tab.shortLabel || tab.label}</span>
+                  <span className={`truncate ${isActive ? 'inline' : 'hidden sm:inline'}`}>{tab.shortLabel || tab.label}</span>
                   {tab.count !== undefined && (
                     <span
                       className={`text-[9px] sm:text-[10px] font-mono font-black px-1.5 py-0.5 rounded-md shrink-0 ${
@@ -900,7 +900,7 @@ export const Ranking = () => {
       {/* Filter Control Section: Collapsible Drawer on Mobile */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden transition-all">
         {/* Main Filter Action Bar */}
-        <div className="p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between gap-2 bg-slate-50/50 dark:bg-slate-900/50">
           {/* Quick Search */}
           <div className="relative flex-1 min-w-0">
             <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -924,13 +924,13 @@ export const Ranking = () => {
               }`}
             >
               <SlidersHorizontal className="size-3.5 text-orange-500" />
-              <span>Filters</span>
+              <span className="hidden sm:inline">Filters</span>
               {activeFiltersCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-md bg-orange-500 text-white text-[9px] font-black">
+                <span className="px-1.5 py-0.5 rounded-md bg-orange-500 text-white text-[9px] font-black leading-none">
                   {activeFiltersCount}
                 </span>
               )}
-              {isFiltersExpanded ? <ChevronUp className="size-3 text-slate-400 ml-0.5" /> : <ChevronDown className="size-3 text-slate-400 ml-0.5" />}
+              {isFiltersExpanded ? <ChevronUp className="size-3 text-slate-400 ml-0.5 hidden sm:block" /> : <ChevronDown className="size-3 text-slate-400 ml-0.5 hidden sm:block" />}
             </Button>
 
             {(activeFiltersCount > 0 || searchQuery || standingView !== 'college') && (
@@ -948,25 +948,37 @@ export const Ranking = () => {
           </div>
         </div>
 
-        {/* Active Criteria Chips Preview (Always visible in a single compact horizontal strip) */}
-        <div className="px-3 sm:px-4 py-2 border-b border-slate-100 dark:border-slate-800/60 bg-white dark:bg-slate-900 flex items-center gap-1.5 overflow-x-auto scrollbar-hide text-[10px]">
-          <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px] shrink-0">Active:</span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md font-bold bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border border-orange-200/60 dark:border-orange-500/30 shrink-0">
-            {standingView === 'college' ? 'Colleges' : standingView === 'cluster' ? 'Tribes' : 'Squads'}
-          </span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">
-            {tournamentType === 'all' ? 'All Competitions' : tournamentType}
-          </span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">
-            {sportCategory === 'all' ? 'All Sports' : sportCategory}
-          </span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">
-            {winMetric === 'overall_wins' ? 'Championships' : winMetric === 'most_wins' ? 'Wins' : winMetric === 'win_rate' ? 'Win %' : 'Stars'}
-          </span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">
-            {academicYear === 'current' ? '2026' : academicYear === 'all_time' ? 'All-Time' : `AY ${academicYear}`}
-          </span>
-        </div>
+        {/* Active Criteria Chips Preview (Shown only when non-default filters or search are active) */}
+        {(activeFiltersCount > 0 || searchQuery) && (
+          <div className="px-3 sm:px-4 py-2 border-b border-slate-100 dark:border-slate-800/60 bg-white dark:bg-slate-900 flex items-center gap-1.5 overflow-x-auto scrollbar-hide text-[10px]">
+            <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px] shrink-0">Filtered By:</span>
+            {tournamentType !== 'all' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md font-bold bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border border-orange-200/60 dark:border-orange-500/30 shrink-0">
+                {tournamentType}
+              </span>
+            )}
+            {sportCategory !== 'all' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md font-bold bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border border-orange-200/60 dark:border-orange-500/30 shrink-0">
+                {sportCategory}
+              </span>
+            )}
+            {winMetric !== 'overall_wins' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md font-bold bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border border-orange-200/60 dark:border-orange-500/30 shrink-0">
+                {winMetric === 'most_wins' ? 'Wins' : winMetric === 'win_rate' ? 'Win %' : 'Stars'}
+              </span>
+            )}
+            {academicYear !== 'current' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md font-bold bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border border-orange-200/60 dark:border-orange-500/30 shrink-0">
+                {academicYear === 'all_time' ? 'All-Time' : `AY ${academicYear}`}
+              </span>
+            )}
+            {searchQuery && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">
+                "{searchQuery}"
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Collapsible Filter Dropdowns (Visible when expanded or on lg: screens) */}
         <div className={`p-3.5 sm:p-5 ${isFiltersExpanded ? 'block' : 'hidden lg:block'} transition-all duration-300 border-t border-slate-100 dark:border-slate-800`}>
