@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Users, UserPlus, ClipboardList, Star, AlertTriangle, Zap, Circle, GraduationCap, Eye, Target, Filter, CheckCircle2 } from 'lucide-react';
+import { Users, UserPlus, ClipboardList, Star, AlertTriangle, Zap, Circle, GraduationCap, Eye, Target, Filter, CheckCircle2, Trophy } from 'lucide-react';
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -21,9 +21,9 @@ import {
   AVAILABLE_SPORTS,
   type PlayerDirectorySummary,
 } from '@/lib/playerStatsEngine';
+import { getSportIcon } from '@/lib/sportIcons';
 import { PlayerDossierModal } from '@/components/scouting/PlayerDossierModal';
 import { MatchBoxScoreModal } from '@/components/scouting/MatchBoxScoreModal';
-import { ExpandableIconTabs } from '@/components/ui/expandable-icon-tabs';
 
 type Team = {
   id: string;
@@ -678,16 +678,43 @@ export const TeamManagement = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col min-w-0">
-        <ExpandableIconTabs
-          tabs={[
-            { id: 'my-teams', label: 'My Teams', icon: Users, count: teams.length },
-            { id: 'directory', label: 'Player Directory', icon: ClipboardList, count: filteredPlayers.length },
-          ]}
-          activeTab={activeTab}
-          onChange={setActiveTab}
-          className="w-full sm:w-auto mb-6"
-          ariaLabel="Coach Team Management Navigation"
-        />
+        <div className="w-full sm:w-fit p-1.5 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-2xl flex items-center gap-1.5 mb-6 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setActiveTab('my-teams')}
+            className={`flex-1 sm:flex-initial min-h-[46px] px-5 sm:px-7 rounded-xl font-black uppercase italic tracking-wider text-xs sm:text-sm transition-all duration-200 cursor-pointer flex items-center justify-center gap-2.5 ${
+              activeTab === 'my-teams'
+                ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25 ring-1 ring-orange-400'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5'
+            }`}
+          >
+            <Users className="size-4.5 shrink-0" />
+            <span>My Teams</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold ${
+              activeTab === 'my-teams' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+            }`}>
+              {teams.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('directory')}
+            className={`flex-1 sm:flex-initial min-h-[46px] px-5 sm:px-7 rounded-xl font-black uppercase italic tracking-wider text-xs sm:text-sm transition-all duration-200 cursor-pointer flex items-center justify-center gap-2.5 ${
+              activeTab === 'directory'
+                ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25 ring-1 ring-orange-400'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5'
+            }`}
+          >
+            <ClipboardList className="size-4.5 shrink-0" />
+            <span>Player Directory</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold ${
+              activeTab === 'directory' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+            }`}>
+              {filteredPlayers.length}
+            </span>
+          </button>
+        </div>
 
         <div className="mb-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
           <DataToolbar
@@ -731,21 +758,34 @@ export const TeamManagement = () => {
             />
           ) : viewMode === 'grid' ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {filteredTeams.map((team, idx) => (
+              {filteredTeams.map((team, idx) => {
+                const sport = team.tournaments?.sport || 'PSU Sport';
+                const SportIcon = getSportIcon(sport);
+
+                return (
                 <Card key={team.id} className="group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl rounded-3xl overflow-hidden border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 animate-in fade-in slide-in-from-bottom-4 flex flex-col justify-between min-w-0" style={{ animationDelay: `${idx * 50}ms` }}>
                   <div className="min-w-0">
                     <div className={`h-2 w-full ${team.status === 'Approved' ? 'bg-emerald-500' : 'bg-orange-500'}`} />
                     <CardHeader className="p-5 sm:p-6 pb-2 min-w-0">
-                      <div className="flex justify-between items-start mb-3 gap-2">
-                        <div className="p-2 bg-slate-50 dark:bg-white/5 rounded-xl group-hover:bg-orange-500 transition-colors duration-500 shrink-0">
-                          <Users className="size-5 text-slate-400 group-hover:text-white transition-colors duration-500" />
+                      {/* Top Sport & Status Row */}
+                      <div className="flex justify-between items-center mb-3 gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="size-10 bg-orange-500/10 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 rounded-xl flex items-center justify-center shrink-0 border border-orange-500/30 group-hover:bg-orange-500 group-hover:text-white transition-colors duration-300">
+                            <SportIcon className="size-5" />
+                          </div>
+                          <Badge className="bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30 font-black text-[10px] uppercase tracking-wider py-1 px-2.5 rounded-lg flex items-center gap-1.5 shadow-sm">
+                            <SportIcon className="size-3.5 shrink-0" />
+                            <span className="truncate">{sport}</span>
+                          </Badge>
                         </div>
-                        <Badge className={`${team.status === 'Approved' ? 'bg-emerald-500' : 'bg-orange-500'} text-[10px] font-black uppercase tracking-widest py-1 px-3 rounded-full shadow-lg shrink-0`}>
+                        <Badge className={`${team.status === 'Approved' ? 'bg-emerald-500' : 'bg-orange-500'} text-[10px] font-black uppercase tracking-widest py-1 px-3 rounded-full shadow-sm shrink-0`}>
                           {team.status}
                         </Badge>
                       </div>
+
                       <CardTitle className="text-xl sm:text-2xl font-black italic uppercase tracking-tighter text-slate-900 dark:text-white group-hover:text-orange-500 transition-colors truncate" title={team.name}>{team.name}</CardTitle>
-                      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                      
+                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                         {team.affiliation_type === 'cluster' && team.clusters?.name ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 font-black text-[9px] uppercase tracking-wider border border-purple-500/20">
                             <Users className="size-3" />
@@ -757,16 +797,12 @@ export const TeamManagement = () => {
                             {team.colleges.college_name.match(/\(([^)]+)\)/)?.[1] || team.colleges.college_name.slice(0, 4)}
                           </span>
                         ) : null}
+
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 font-bold text-[9px] uppercase tracking-wider border border-slate-200/80 dark:border-white/5 truncate max-w-[200px]" title={team.tournaments?.name}>
+                          <Trophy className="size-2.5 text-orange-500 shrink-0" />
+                          <span className="truncate">{team.tournaments?.name || 'Tournament'}</span>
+                        </span>
                       </div>
-                      <CardDescription className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest mt-1 flex items-center gap-2 truncate">
-                        <span className="truncate">{team.tournaments?.name}</span>
-                        {team.tournaments?.sport && (
-                          <>
-                            <span className="text-slate-300 dark:text-slate-600">•</span>
-                            <span className="text-orange-500 shrink-0">{team.tournaments.sport}</span>
-                          </>
-                        )}
-                      </CardDescription>
                     </CardHeader>
                   </div>
                   <CardContent className="p-5 sm:p-6 pt-3 mt-auto min-w-0">
@@ -782,7 +818,8 @@ export const TeamManagement = () => {
                     </Button>
                   </CardContent>
                 </Card>
-              ))}
+              );
+              })}
             </div>
           ) : (
             <Card className="rounded-[2rem] border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 overflow-hidden shadow-2xl">
@@ -790,18 +827,27 @@ export const TeamManagement = () => {
                 <table className="w-full">
                   <thead className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
                     <tr>
-                      <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Team Name</th>
+                      <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Team &amp; Sport</th>
                       <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Tournament</th>
                       <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Status</th>
                       <th className="text-right py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTeams.map((team) => (
+                    {filteredTeams.map((team) => {
+                      const sport = team.tournaments?.sport || 'PSU Sport';
+                      const SportIcon = getSportIcon(sport);
+                      return (
                       <tr key={team.id} className="border-b border-slate-50 dark:border-white/5 last:border-none hover:bg-orange-50/30 dark:hover:bg-orange-500/5 transition-colors group">
                         <td className="py-4 px-8 font-black italic uppercase tracking-tighter text-lg text-slate-900 dark:text-white">
-                          <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <div className="size-8 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center shrink-0">
+                              <SportIcon className="size-4.5" />
+                            </div>
                             <span>{team.name}</span>
+                            <Badge className="bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30 text-[9px] font-black uppercase">
+                              {sport}
+                            </Badge>
                             {team.affiliation_type === 'cluster' && team.clusters?.name ? (
                               <span className="not-italic px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 font-black text-[9px] uppercase tracking-wider border border-purple-500/20">
                                 {team.clusters.name}
@@ -815,7 +861,6 @@ export const TeamManagement = () => {
                         </td>
                         <td className="py-4 px-8 font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest">
                           {team.tournaments?.name}
-                          {team.tournaments?.sport && <span className="text-orange-500 ml-2">({team.tournaments.sport})</span>}
                         </td>
                         <td className="py-4 px-8">
                           <Badge variant={team.status === 'Approved' ? 'default' : 'secondary'} className="text-[9px] font-black uppercase tracking-tighter px-2">
@@ -832,11 +877,12 @@ export const TeamManagement = () => {
                               fetchRosterMembers(team.id);
                             }}
                           >
-                            Manage
+                            Manage Roster
                           </Button>
                         </td>
                       </tr>
-                    ))}
+                    );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1142,30 +1188,30 @@ export const TeamManagement = () => {
                           const primaryPill = getPrimarySportStatPill(summary, sportCtx);
                           return (
                             <div className="grid grid-cols-4 gap-1.5 pt-1">
-                              <div className="p-2 rounded-xl bg-slate-950 text-white text-center">
-                                <p className="text-[8px] font-black uppercase text-slate-400">GP</p>
-                                <p className="text-xs font-black tabular-nums">{summary?.gamesPlayed || 0}</p>
+                              <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-center">
+                                <p className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400">GP</p>
+                                <p className="text-xs font-black tabular-nums text-slate-900 dark:text-white">{summary?.gamesPlayed || 0}</p>
                               </div>
-                              <div className="p-2 rounded-xl bg-slate-950 text-white text-center">
-                                <p className="text-[8px] font-black uppercase text-slate-400">PTS</p>
-                                <p className="text-xs font-black tabular-nums text-orange-400">
+                              <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-center">
+                                <p className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400">PTS</p>
+                                <p className="text-xs font-black tabular-nums text-orange-600 dark:text-orange-400">
                                   {summary?.totalPoints || 0}
                                 </p>
                               </div>
-                              <div className="p-2 rounded-xl bg-slate-950 text-white text-center">
-                                <p className="text-[8px] font-black uppercase text-slate-400">AVG</p>
-                                <p className="text-xs font-black tabular-nums text-cyan-400">
+                              <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-center">
+                                <p className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400">AVG</p>
+                                <p className="text-xs font-black tabular-nums text-cyan-600 dark:text-cyan-400">
                                   {summary?.ppg || 0}
                                 </p>
                               </div>
                               <div
-                                className="p-2 rounded-xl bg-slate-950 text-white text-center"
+                                className="p-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-center"
                                 title={primaryPill.unitLabel}
                               >
-                                <p className="text-[8px] font-black uppercase text-slate-400">
+                                <p className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400">
                                   {primaryPill.label}
                                 </p>
-                                <p className="text-xs font-black tabular-nums text-amber-400">
+                                <p className="text-xs font-black tabular-nums text-amber-600 dark:text-amber-400">
                                   {primaryPill.value}
                                 </p>
                               </div>

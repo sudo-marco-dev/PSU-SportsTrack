@@ -27,11 +27,13 @@ import {
   MapPin,
   Eye,
   UserCheck,
+  UserPlus,
   Loader2,
   Lock,
   SlidersHorizontal,
   X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { ExpandableIconTabs } from '@/components/ui/expandable-icon-tabs';
 import {
   fetchBatchPlayerSummaries,
@@ -108,7 +110,7 @@ type ClusterOption = {
 };
 
 export const ScoutingHub = () => {
-  const { isVerified, isSuperAdmin, isFacilitator, isCoach, isDev } = useAuth();
+  const { user, isVerified, isSuperAdmin, isFacilitator, isCoach, isDev } = useAuth();
   const navigate = useNavigate();
 
   const hasScoutingAccess = Boolean(isVerified || isSuperAdmin || isFacilitator || isCoach || isDev);
@@ -121,6 +123,12 @@ export const ScoutingHub = () => {
   const [playerSortBy, setPlayerSortBy] = useState<'points' | 'ppg' | 'threes' | 'mvp' | 'name'>('points');
   const [matchStatusFilter, setMatchStatusFilter] = useState<'Completed' | 'Ongoing' | 'all'>('Completed');
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
+
+  // Coach Recruitment State
+  const [coachTeams, setCoachTeams] = useState<{ id: string; name: string; sport: string; tournament_id: string }[]>([]);
+  const [coachRecruitPlayerId, setCoachRecruitPlayerId] = useState<string | null>(null);
+  const [selectedCoachTeamId, setSelectedCoachTeamId] = useState<string>('');
+  const [isSubmittingRecruit, setIsSubmittingRecruit] = useState(false);
 
   const activeFilterCount =
     (sportFilter !== 'all' ? 1 : 0) +
@@ -162,6 +170,130 @@ export const ScoutingHub = () => {
     }
     void fetchArchiveData();
   }, [hasScoutingAccess]);
+
+  // Fetch coach squads for direct recruitment
+  useEffect(() => {
+    if (!isCoach || !user?.id) return;
+    const loadCoachTeams = async () => {
+      const { data } = await supabase
+        .from('teams')
+        .select(`
+          id,
+          name,
+          status,
+          tournament_id,
+          tournaments (
+            id,
+            name,
+            sport,
+            status,
+            is_deleted
+          )
+        `)
+        .eq('coach_id', user.id)
+        .neq('status', 'Rejected')
+        .or('is_deleted.is.null,is_deleted.eq.false');
+
+      if (data) {
+        const mapped = data.map((t: any) => {
+          const tourney = Array.isArray(t.tournaments) ? t.tournaments[0] : t.tournaments;
+          return {
+            id: t.id,
+            name: t.name,
+            sport: tourney?.sport || 'Sport',
+            tournament_id: t.tournament_id,
+          };
+        });
+        setCoachTeams(mapped);
+        if (mapped.length > 0) {
+          setSelectedCoachTeamId(mapped[0].id);
+        }
+      }
+    };
+    void loadCoachTeams();
+  }, [isCoach, user?.id]);
+
+  const handleSendDirectRecruit = async () => {
+    if (!coachRecruitPlayerId || !selectedCoachTeamId) {
+      toast.error('Please select a team to recruit the athlete to.');
+      return;
+    }
+
+    const targetTeam = coachTeams.find((t) => t.id === selectedCoachTeamId);
+    const targetSport = targetTeam?.sport;
+
+    setIsSubmittingRecruit(true);
+    try {
+      if (targetSport) {
+        const { data: existingRosters, error: checkError } = await supabase
+          .from('team_roster')
+          .select(`
+            id,
+            team_id,
+            status,
+            teams (
+              id,
+              name,
+              status,
+              is_deleted,
+              tournaments (
+                id,
+                sport,
+                status,
+                is_deleted
+              )
+            )
+          `)
+          .eq('player_id', coachRecruitPlayerId)
+          .neq('status', 'Rejected');
+
+        if (checkError) {
+          toast.error('Error verifying athlete eligibility: ' + checkError.message);
+          setIsSubmittingRecruit(false);
+          return;
+        }
+
+        const alreadyInvited = existingRosters?.some((r: any) => r.team_id === selectedCoachTeamId);
+        if (alreadyInvited) {
+          toast.error('This athlete already has an invitation or is on this squad.');
+          setIsSubmittingRecruit(false);
+          return;
+        }
+
+        const isDuplicate = existingRosters?.some((roster: any) => {
+          if (roster.status !== 'Approved') return false;
+          const teamData = Array.isArray(roster.teams) ? roster.teams[0] : roster.teams;
+          if (!teamData || teamData.is_deleted || teamData.status === 'Rejected') return false;
+          const tourneyData = Array.isArray(teamData?.tournaments) ? teamData.tournaments[0] : teamData?.tournaments;
+          if (!tourneyData || tourneyData.is_deleted || tourneyData.status === 'Completed') return false;
+          return tourneyData.sport === targetSport;
+        });
+
+        if (isDuplicate) {
+          toast.error(`Cannot recruit: Athlete is already approved on an active ${targetSport} team.`);
+          setIsSubmittingRecruit(false);
+          return;
+        }
+      }
+
+      const { error: insertError } = await supabase.from('team_roster').insert({
+        team_id: selectedCoachTeamId,
+        player_id: coachRecruitPlayerId,
+        status: 'Pending',
+      });
+
+      if (insertError) {
+        toast.error('Failed to recruit athlete: ' + insertError.message);
+      } else {
+        toast.success('Recruitment invitation dispatched successfully!');
+        setCoachRecruitPlayerId(null);
+      }
+    } catch (err: any) {
+      toast.error('Recruitment failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsSubmittingRecruit(false);
+    }
+  };
 
   const fetchArchiveData = async () => {
     setIsLoading(true);
@@ -827,30 +959,30 @@ export const ScoutingHub = () => {
                             );
                             return (
                               <div className="grid grid-cols-4 gap-1.5 pt-1">
-                                <div className="p-2 rounded-xl bg-slate-950 text-white text-center">
-                                  <p className="text-[8px] font-black uppercase text-slate-400">GP</p>
-                                  <p className="text-xs font-black tabular-nums">{sum?.gamesPlayed || 0}</p>
+                                <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-center">
+                                  <p className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400">GP</p>
+                                  <p className="text-xs font-black tabular-nums text-slate-900 dark:text-white">{sum?.gamesPlayed || 0}</p>
                                 </div>
-                                <div className="p-2 rounded-xl bg-slate-950 text-white text-center">
-                                  <p className="text-[8px] font-black uppercase text-slate-400">PTS</p>
-                                  <p className="text-xs font-black tabular-nums text-orange-400">
+                                <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-center">
+                                  <p className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400">PTS</p>
+                                  <p className="text-xs font-black tabular-nums text-orange-600 dark:text-orange-400">
                                     {sum?.totalPoints || 0}
                                   </p>
                                 </div>
-                                <div className="p-2 rounded-xl bg-slate-950 text-white text-center">
-                                  <p className="text-[8px] font-black uppercase text-slate-400">AVG</p>
-                                  <p className="text-xs font-black tabular-nums text-cyan-400">
+                                <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-center">
+                                  <p className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400">AVG</p>
+                                  <p className="text-xs font-black tabular-nums text-cyan-600 dark:text-cyan-400">
                                     {sum?.ppg || 0}
                                   </p>
                                 </div>
                                 <div
-                                  className="p-2 rounded-xl bg-slate-950 text-white text-center"
+                                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-center"
                                   title={primaryPill.unitLabel}
                                 >
-                                  <p className="text-[8px] font-black uppercase text-slate-400">
+                                  <p className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400 truncate">
                                     {primaryPill.label}
                                   </p>
-                                  <p className="text-xs font-black tabular-nums text-amber-400">
+                                  <p className="text-xs font-black tabular-nums text-amber-600 dark:text-amber-400">
                                     {primaryPill.value}
                                   </p>
                                 </div>
@@ -860,14 +992,39 @@ export const ScoutingHub = () => {
                         </CardHeader>
 
                         <CardContent className="p-5 pt-2">
-                          <Button
-                            variant="outline"
-                            onClick={() => setSelectedPlayerId(p.id)}
-                            className="w-full h-10 rounded-xl font-black uppercase text-xs tracking-wider gap-1.5 border-slate-200 dark:border-white/10 hover:border-orange-500/50"
-                          >
-                            <Eye className="size-3.5 text-orange-500" />
-                            <span>View Scouting Dossier &amp; Games</span>
-                          </Button>
+                          {isCoach ? (
+                            <div className="grid grid-cols-2 gap-2">
+                              <Button
+                                variant="outline"
+                                onClick={() => setSelectedPlayerId(p.id)}
+                                className="w-full h-10 rounded-xl font-black uppercase text-xs tracking-wider gap-1.5 border-slate-200 dark:border-white/10 hover:border-orange-500/50"
+                              >
+                                <Eye className="size-3.5 text-orange-500" />
+                                <span>Dossier</span>
+                              </Button>
+                              <Button
+                                onClick={() => {
+                                  setCoachRecruitPlayerId(p.id);
+                                  if (coachTeams.length > 0 && !selectedCoachTeamId) {
+                                    setSelectedCoachTeamId(coachTeams[0].id);
+                                  }
+                                }}
+                                className="w-full h-10 rounded-xl font-black uppercase text-xs tracking-wider gap-1.5 bg-orange-500 hover:bg-orange-600 text-white shadow-md shadow-orange-500/20"
+                              >
+                                <UserPlus className="size-3.5" />
+                                <span>Recruit</span>
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              onClick={() => setSelectedPlayerId(p.id)}
+                              className="w-full h-10 rounded-xl font-black uppercase text-xs tracking-wider gap-1.5 border-slate-200 dark:border-white/10 hover:border-orange-500/50"
+                            >
+                              <Eye className="size-3.5 text-orange-500" />
+                              <span>View Scouting Dossier &amp; Games</span>
+                            </Button>
+                          )}
                         </CardContent>
                       </Card>
                     );
@@ -924,19 +1081,19 @@ export const ScoutingHub = () => {
                           </div>
 
                           <div className="grid grid-cols-3 gap-2">
-                            <div className="p-2.5 rounded-xl bg-slate-950 text-white text-center">
-                              <p className="text-[8px] font-black uppercase text-slate-400">Squads</p>
+                            <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white text-center">
+                              <p className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400">Squads</p>
                               <p className="text-sm font-black tabular-nums">{coachTeams.length}</p>
                             </div>
-                            <div className="p-2.5 rounded-xl bg-slate-950 text-white text-center">
-                              <p className="text-[8px] font-black uppercase text-slate-400">Record</p>
-                              <p className="text-sm font-black tabular-nums text-emerald-400">
+                            <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white text-center">
+                              <p className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400">Record</p>
+                              <p className="text-sm font-black tabular-nums text-emerald-600 dark:text-emerald-400">
                                 {totalWins}W - {totalLosses}L
                               </p>
                             </div>
-                            <div className="p-2.5 rounded-xl bg-slate-950 text-white text-center">
-                              <p className="text-[8px] font-black uppercase text-slate-400">Athletes</p>
-                              <p className="text-sm font-black tabular-nums text-orange-400">{totalAthletes}</p>
+                            <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white text-center">
+                              <p className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400">Athletes</p>
+                              <p className="text-sm font-black tabular-nums text-orange-600 dark:text-orange-400">{totalAthletes}</p>
                             </div>
                           </div>
 
@@ -1018,19 +1175,19 @@ export const ScoutingHub = () => {
                           </div>
 
                           <div className="grid grid-cols-3 gap-2">
-                            <div className="p-2.5 rounded-xl bg-slate-950 text-white text-center">
-                              <p className="text-[8px] font-black uppercase text-slate-400">Record</p>
-                              <p className="text-sm font-black tabular-nums text-emerald-400">
+                            <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white text-center">
+                              <p className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400">Record</p>
+                              <p className="text-sm font-black tabular-nums text-emerald-600 dark:text-emerald-400">
                                 {rec.wins}W - {rec.losses}L
                               </p>
                             </div>
-                            <div className="p-2.5 rounded-xl bg-slate-950 text-white text-center">
-                              <p className="text-[8px] font-black uppercase text-slate-400">PTS Scored</p>
-                              <p className="text-sm font-black tabular-nums text-orange-400">{rec.pointsFor}</p>
+                            <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white text-center">
+                              <p className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400">PTS Scored</p>
+                              <p className="text-sm font-black tabular-nums text-orange-600 dark:text-orange-400">{rec.pointsFor}</p>
                             </div>
-                            <div className="p-2.5 rounded-xl bg-slate-950 text-white text-center">
-                              <p className="text-[8px] font-black uppercase text-slate-400">Roster</p>
-                              <p className="text-sm font-black tabular-nums text-cyan-400">{roster.length}</p>
+                            <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white text-center">
+                              <p className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400">Roster</p>
+                              <p className="text-sm font-black tabular-nums text-cyan-600 dark:text-cyan-400">{roster.length}</p>
                             </div>
                           </div>
                         </div>
@@ -1098,38 +1255,38 @@ export const ScoutingHub = () => {
                           {m.tournaments?.name || 'Official Tournament'}
                         </p>
 
-                        <div className="p-3.5 rounded-2xl bg-slate-950 text-white grid grid-cols-3 items-center gap-2 text-center">
+                        <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white grid grid-cols-3 items-center gap-2 text-center">
                           <div className="min-w-0">
                             <p
                               className={`text-xs sm:text-sm font-black uppercase italic truncate ${
-                                teamAWin ? 'text-emerald-400' : 'text-white'
+                                teamAWin ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'
                               }`}
                             >
                               {m.team_a?.name || 'TBD'}
                             </p>
                             {teamAWin && (
-                              <span className="text-[8px] font-black uppercase text-emerald-400">Winner</span>
+                              <span className="text-[8px] font-black uppercase text-emerald-600 dark:text-emerald-400">Winner</span>
                             )}
                           </div>
                           <div className="flex items-center justify-center gap-2.5">
-                            <span className="text-2xl font-black tabular-nums text-orange-400">
+                            <span className="text-2xl font-black tabular-nums text-orange-600 dark:text-orange-400">
                               {m.team_a_score}
                             </span>
-                            <span className="text-[10px] font-black uppercase text-slate-500">VS</span>
-                            <span className="text-2xl font-black tabular-nums text-cyan-400">
+                            <span className="text-[10px] font-black uppercase text-slate-400">VS</span>
+                            <span className="text-2xl font-black tabular-nums text-cyan-600 dark:text-cyan-400">
                               {m.team_b_score}
                             </span>
                           </div>
                           <div className="min-w-0">
                             <p
                               className={`text-xs sm:text-sm font-black uppercase italic truncate ${
-                                teamBWin ? 'text-emerald-400' : 'text-white'
+                                teamBWin ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'
                               }`}
                             >
                               {m.team_b?.name || 'TBD'}
                             </p>
                             {teamBWin && (
-                              <span className="text-[8px] font-black uppercase text-emerald-400">Winner</span>
+                              <span className="text-[8px] font-black uppercase text-emerald-600 dark:text-emerald-400">Winner</span>
                             )}
                           </div>
                         </div>
@@ -1245,15 +1402,15 @@ export const ScoutingHub = () => {
                               setSelectedTeamModal(null);
                               setSelectedMatchId(m.id);
                             }}
-                            className="p-3 rounded-xl bg-slate-950 text-white flex items-center justify-between text-xs cursor-pointer hover:border-orange-500 border border-white/10"
+                            className="p-3 rounded-xl bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white flex items-center justify-between text-xs cursor-pointer hover:border-orange-500 border border-slate-200/80 dark:border-white/10"
                           >
                             <div>
                               <span className="font-black uppercase">
                                 {m.team_a?.name || 'TBD'} vs {m.team_b?.name || 'TBD'}
                               </span>
-                              <p className="text-[10px] text-slate-400">{m.round} • {m.status}</p>
+                              <p className="text-[10px] text-slate-500 dark:text-slate-400">{m.round} • {m.status}</p>
                             </div>
-                            <span className="font-black text-sm text-orange-400 tabular-nums">
+                            <span className="font-black text-sm text-orange-600 dark:text-orange-400 tabular-nums">
                               {m.team_a_score} - {m.team_b_score}
                             </span>
                           </div>
@@ -1275,6 +1432,16 @@ export const ScoutingHub = () => {
           setSelectedPlayerId(null);
           setSelectedMatchId(mId);
         }}
+        onRecruitPlayer={
+          isCoach
+            ? (pId) => {
+                setCoachRecruitPlayerId(pId);
+                if (coachTeams.length > 0 && !selectedCoachTeamId) {
+                  setSelectedCoachTeamId(coachTeams[0].id);
+                }
+              }
+            : undefined
+        }
       />
 
       {/* Match Box Score Modal */}
@@ -1286,6 +1453,86 @@ export const ScoutingHub = () => {
           setSelectedPlayerId(pId);
         }}
       />
+
+      {/* Coach Direct Recruitment Dialog */}
+      <Dialog
+        open={!!coachRecruitPlayerId}
+        onOpenChange={(open) => !open && setCoachRecruitPlayerId(null)}
+      >
+        <DialogContent className="w-full sm:max-w-md max-w-[95vw] rounded-3xl p-6 sm:p-7 bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
+          <DialogHeader>
+            <DialogTitle className="text-xl sm:text-2xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white">
+              Direct Roster <span className="text-orange-500">Recruitment</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1">
+              {players.find((p) => p.id === coachRecruitPlayerId)?.full_name
+                ? `Invite ${players.find((p) => p.id === coachRecruitPlayerId)?.full_name} to join your squad`
+                : 'Select target squad for recruitment invitation'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {coachTeams.length === 0 ? (
+            <div className="py-6 text-center space-y-4">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                You don't have any active squads yet. Create a squad in Team Management first before recruiting athletes.
+              </p>
+              <Button
+                onClick={() => {
+                  setCoachRecruitPlayerId(null);
+                  navigate('/coach/teams');
+                }}
+                className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase text-xs h-10 px-5 rounded-xl"
+              >
+                Go to My Teams
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Select Target Squad
+                </label>
+                <Select value={selectedCoachTeamId} onValueChange={(val) => setSelectedCoachTeamId(val || '')}>
+                  <SelectTrigger className="w-full h-11 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 font-bold text-xs">
+                    <SelectValue placeholder="Choose one of your teams" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900">
+                    {coachTeams.map((ct) => (
+                      <SelectItem key={ct.id} value={ct.id} className="font-bold text-xs py-2.5">
+                        <span className="font-black uppercase">{ct.name}</span>
+                        <span className="ml-2 text-[10px] text-orange-500 uppercase font-black">({ct.sport})</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCoachRecruitPlayerId(null)}
+                  className="flex-1 h-11 rounded-xl font-black uppercase text-xs border-slate-200 dark:border-white/10"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  disabled={!selectedCoachTeamId || isSubmittingRecruit}
+                  onClick={handleSendDirectRecruit}
+                  className="flex-1 h-11 rounded-xl font-black uppercase text-xs bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20"
+                >
+                  {isSubmittingRecruit ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    'Send Invite'
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

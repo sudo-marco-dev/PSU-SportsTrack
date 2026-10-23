@@ -348,32 +348,32 @@ export const PlayerDossierModal = ({
                 </div>
 
                 {/* Mobile Telemetry Ribbon (< sm) */}
-                <div className="sm:hidden grid grid-cols-5 divide-x divide-white/10 bg-slate-950 text-white rounded-2xl p-2 border border-white/10">
+                <div className="sm:hidden grid grid-cols-5 divide-x divide-slate-200 dark:divide-white/10 bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white rounded-2xl p-2 border border-slate-200/80 dark:border-white/10">
                   <div className="text-center px-1">
-                    <p className="text-[8px] font-black uppercase tracking-wider text-slate-400">GP</p>
+                    <p className="text-[8px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">GP</p>
                     <p className="text-base font-black tabular-nums mt-0.5">{displayGamesPlayed}</p>
-                    <p className="text-[8px] font-bold text-emerald-400 truncate mt-0.5">{displayWins}W-{displayLosses}L</p>
+                    <p className="text-[8px] font-bold text-emerald-600 dark:text-emerald-400 truncate mt-0.5">{displayWins}W-{displayLosses}L</p>
                   </div>
                   <div className="text-center px-1">
-                    <p className="text-[8px] font-black uppercase tracking-wider text-slate-400">{pointUnitLabel}</p>
-                    <p className="text-base font-black tabular-nums text-orange-400 mt-0.5">{displayTotalPoints}</p>
+                    <p className="text-[8px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">{pointUnitLabel}</p>
+                    <p className="text-base font-black tabular-nums text-orange-600 dark:text-orange-400 mt-0.5">{displayTotalPoints}</p>
                     <p className="text-[8px] font-bold text-slate-400 truncate mt-0.5">Total</p>
                   </div>
                   <div className="text-center px-1">
-                    <p className="text-[8px] font-black uppercase tracking-wider text-slate-400">AVG</p>
-                    <p className="text-base font-black tabular-nums text-cyan-400 mt-0.5">{displayPpg}</p>
+                    <p className="text-[8px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">AVG</p>
+                    <p className="text-base font-black tabular-nums text-cyan-600 dark:text-cyan-400 mt-0.5">{displayPpg}</p>
                     <p className="text-[8px] font-bold text-slate-400 truncate mt-0.5">/ Game</p>
                   </div>
                   <div className="text-center px-1">
-                    <p className="text-[8px] font-black uppercase tracking-wider text-slate-400 truncate" title={topHighlightAction.label}>
+                    <p className="text-[8px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate" title={topHighlightAction.label}>
                       {topHighlightAction.label.split(' ')[0]}
                     </p>
-                    <p className="text-base font-black tabular-nums text-amber-400 mt-0.5">{topHighlightAction.count}</p>
+                    <p className="text-base font-black tabular-nums text-amber-600 dark:text-amber-400 mt-0.5">{topHighlightAction.count}</p>
                     <p className="text-[8px] font-bold text-slate-400 truncate mt-0.5">+{topHighlightAction.totalPoints}</p>
                   </div>
                   <div className="text-center px-1">
-                    <p className="text-[8px] font-black uppercase tracking-wider text-slate-400">MVP</p>
-                    <p className="text-base font-black tabular-nums text-yellow-400 mt-0.5">
+                    <p className="text-[8px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">MVP</p>
+                    <p className="text-base font-black tabular-nums text-amber-500 mt-0.5">
                       {telemetry.redStars + telemetry.goldStars}
                     </p>
                     <p className="text-[8px] font-bold text-slate-400 truncate mt-0.5">Honors</p>
@@ -382,44 +382,44 @@ export const PlayerDossierModal = ({
 
                 {/* Desktop Top-Level Career Stat Cards (>= sm) */}
                 <div className="hidden sm:grid sm:grid-cols-5 gap-2.5 sm:gap-3">
-                  <div className="p-3.5 rounded-2xl bg-slate-950 text-white border border-white/10 min-w-0">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 truncate">
+                  <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 truncate">
                       {selectedSport === 'All' ? 'Games Played' : `${selectedSport} GP`}
                     </p>
                     <p className="text-2xl font-black tabular-nums mt-0.5">{displayGamesPlayed}</p>
-                    <p className="text-[10px] font-bold text-emerald-400 mt-0.5 truncate">
+                    <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">
                       {displayWins}W - {displayLosses}L ({displayWinRate}%)
                     </p>
                   </div>
-                  <div className="p-3.5 rounded-2xl bg-slate-950 text-white border border-white/10 min-w-0">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 truncate">
+                  <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 truncate">
                       Total {pointUnitLabel}
                     </p>
-                    <p className="text-2xl font-black tabular-nums text-orange-400 mt-0.5">{displayTotalPoints}</p>
+                    <p className="text-2xl font-black tabular-nums text-orange-600 dark:text-orange-400 mt-0.5">{displayTotalPoints}</p>
                     <p className="text-[10px] font-bold text-slate-400 mt-0.5 truncate">
                       {selectedSport === 'All' ? 'Career Total' : selectedSport}
                     </p>
                   </div>
-                  <div className="p-3.5 rounded-2xl bg-slate-950 text-white border border-white/10 min-w-0">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 truncate">
+                  <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 truncate">
                       Scoring Avg
                     </p>
-                    <p className="text-2xl font-black tabular-nums text-cyan-400 mt-0.5">{displayPpg}</p>
+                    <p className="text-2xl font-black tabular-nums text-cyan-600 dark:text-cyan-400 mt-0.5">{displayPpg}</p>
                     <p className="text-[10px] font-bold text-slate-400 mt-0.5 truncate">{pointUnitLabel} Per Game</p>
                   </div>
-                  <div className="p-3.5 rounded-2xl bg-slate-950 text-white border border-white/10 min-w-0">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 truncate">
+                  <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 truncate">
                       {topHighlightAction.label}
                     </p>
-                    <p className="text-2xl font-black tabular-nums text-amber-400 mt-0.5">
+                    <p className="text-2xl font-black tabular-nums text-amber-600 dark:text-amber-400 mt-0.5">
                       {topHighlightAction.count}
                     </p>
                     <p className="text-[10px] font-bold text-slate-400 mt-0.5 truncate">
                       +{topHighlightAction.totalPoints} {pointUnitLabel}
                     </p>
                   </div>
-                  <div className="p-3.5 rounded-2xl bg-slate-950 text-white border border-white/10 min-w-0">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 truncate">MVP Honors</p>
+                  <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 truncate">MVP Honors</p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <Star className="size-5 text-orange-500 fill-orange-500 shrink-0" />
                       <span className="text-2xl font-black tabular-nums">

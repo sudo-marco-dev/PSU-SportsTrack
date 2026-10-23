@@ -6,6 +6,38 @@ This log tracks every user prompt, database migration, code change, and Git oper
 
 ## 📅 Log Entry: 2026-10-23
 
+### 💬 Prompt: Sport Card Identification, Toolbar Cleanup, Light-Mode Harmony, Segmented Switch & 1-Click Coach Recruitment
+*   **Timestamp**: 2026-10-23T19:35:00+08:00
+*   **User Directive**: 
+    - "image 1 fix the cards being hard to distinguish what type of sport"
+    - "image 2 fix the fake filter with the 'all/filter hub' text beside search being non functional"
+    - "fix the stats cards being in dark mode cards when in light mode looking like an out of place color theming"
+    - "find a better way to show the my teams and player directory buttons its kinda small and not fit to the layout"
+    - "in souting for the coach user add a direct one click recruit to roaster button so after scouting looking at the stats they can directly invite them to the team instead of search back the player in the player directory"
+*   **Actions Taken**:
+    *   **Sport-Type Card Distinction (`src/pages/TeamManagement.tsx`)**:
+        - Integrated official sport icons (`getSportIcon(sport)`) and high-contrast sport badges (`[🏓 Table Tennis]`, `[🥒 Pickleball]`, `[⚽ Futsal]`, etc.) onto every squad card and table row in "My Teams". Coaches can instantly identify squad sport disciplines at a glance.
+    *   **DataToolbar Fake Filter Fix (`src/components/admin/DataToolbar.tsx`)**:
+        - Updated `<Select>` rendering to be conditional on `filterOptions && filterOptions.length > 0`.
+        - When `filterOptions` is empty (`[]`), such as in the Player Directory tab, the broken "Filter Hub" dropdown is omitted and the search bar smoothly spans the full width (`sm:max-w-xl flex-1`).
+    *   **Light-Mode Harmony for Telemetry & Scoreboards (`src/pages/TeamManagement.tsx`, `src/pages/ScoutingHub.tsx`, `src/components/scouting/PlayerDossierModal.tsx`)**:
+        - Replaced static dark mode blocks (`bg-slate-950 text-white`) across athlete telemetry tiles (GP, PTS, AVG, 3PM/Action), coach directory record cards, team directory cards, and match scoreboards with theme-aware classes (`bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white`).
+        - Updated `PlayerDossierModal.tsx` mobile ribbon and desktop 5-card grid to theme-aware styling, resolving out-of-place black boxes in light mode.
+    *   **Prominent Dual-Segmented Switch (`src/pages/TeamManagement.tsx`)**:
+        - Replaced the squished expandable icon tabs on the 2-option track with a balanced, full-width / hug-content Segmented Control (`w-full sm:w-fit min-h-[46px] px-5 sm:px-7 text-xs sm:text-sm`).
+        - 50/50 equal-width split on mobile with active orange glow, clear typography, and live squad/athlete count badges.
+    *   **1-Click Coach Roster Recruitment in Scouting Hub (`src/pages/ScoutingHub.tsx`, `src/components/scouting/PlayerDossierModal.tsx`)**:
+        - Automatically loads active squads managed by the logged-in coach (`supabase.from('teams').select(...).eq('coach_id', user.id)`).
+        - Added direct "Recruit" action button on athlete cards for coaches alongside "Dossier".
+        - Wired `onRecruitPlayer` directly in `<PlayerDossierModal />` so coaches can recruit athletes immediately while reviewing their dossier and game telemetry.
+        - Created `Direct Roster Recruitment Dialog` with target squad dropdown, duplicate sport conflict validation, and instant dispatch of `'Pending'` roster invitations.
+    *   **Verification**:
+        - Validated with `tsc -b && vite build` (clean production build with 0 TypeScript errors).
+
+---
+
+## 📅 Log Entry: 2026-10-23
+
 ### 💬 Prompt: Mobile-First Anti-Vertical-Scroll Sweep & Density Overhaul
 *   **Timestamp**: 2026-10-23T18:50:00+08:00
 *   **User Directive**: "create a plan to sweep the system from going vertical scrolling frenzy these stacked buttons are tacking way to much space having users to scroll up and down why not have it in icons and only show/expand when clicked like .eg collage icon cluster icon and sqaud standing only show the label when its geing selected other than that be in icon form. lessening visual clutter and UX having to scroll back in fort cards being stack in their orginal size taking way to much space its not a mobile first type a design its kinda a PC first then stack or rearange them later type design. search skill, mobile first design and mobile UX" -> Executed `mobile_first_anti_scroll_plan.md`
