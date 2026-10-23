@@ -57,6 +57,8 @@ export const AdminDashboard = () => {
         { count: playerCount },
         { data: draftData },
         { count: deletedTournCount },
+        { count: deletedTeamCount },
+        { count: deletedUserCount },
         { count: faciCount }
       ] = await Promise.all([
         supabase.from('tournaments').select('*', { count: 'exact', head: true }).in('status', ['Active', 'Ongoing']).or('is_deleted.is.null,is_deleted.eq.false'),
@@ -67,6 +69,8 @@ export const AdminDashboard = () => {
         supabase.from('users').select('*', { count: 'exact', head: true }).in('role', ['player_student', 'player_faculty', 'Player']),
         supabase.from('tournaments').select('*').eq('status', 'Draft').or('is_deleted.is.null,is_deleted.eq.false').order('created_at', { ascending: false }),
         supabase.from('tournaments').select('*', { count: 'exact', head: true }).eq('is_deleted', true),
+        supabase.from('teams').select('*', { count: 'exact', head: true }).eq('is_deleted', true),
+        supabase.from('users').select('*', { count: 'exact', head: true }).eq('account_status', 'soft_deleted'),
         supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'facilitator').neq('account_status', 'soft_deleted')
       ]);
 
@@ -79,7 +83,7 @@ export const AdminDashboard = () => {
         totalPlayers: playerCount || 0
       });
 
-      setRecoverableCount(deletedTournCount || 0);
+      setRecoverableCount((deletedTournCount || 0) + (deletedTeamCount || 0) + (deletedUserCount || 0));
       setFacilitatorsCount(faciCount || 0);
       setDraftTournaments((draftData || []) as typeof draftTournaments);
 
@@ -491,7 +495,11 @@ export const AdminDashboard = () => {
               );
               })
             )}
-            <Button variant="ghost" className="w-full h-12 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-orange-500 hover:bg-orange-500/5 transition-all cursor-pointer">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/admin/audit-logs')}
+              className="w-full h-12 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-orange-500 hover:bg-orange-500/5 transition-all cursor-pointer"
+            >
               Full Activity Log
             </Button>
           </div>

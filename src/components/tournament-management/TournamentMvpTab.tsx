@@ -17,20 +17,40 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>('');
   const [selectedPlayerForGoldId, setSelectedPlayerForGoldId] = useState<string>('');
   const [tournamentPlayers, setTournamentPlayers] = useState<any[]>([]);
+  const [existingGoldWinner, setExistingGoldWinner] = useState<string | null>(null);
   const [isAwardingGold, setIsAwardingGold] = useState<boolean>(false);
 
   useEffect(() => {
     if (!selectedTournamentId) {
       setTournamentPlayers([]);
       setSelectedPlayerForGoldId('');
+      setExistingGoldWinner(null);
       return;
     }
 
     const fetchPlayers = async () => {
-      const { data: teamsData } = await supabase
-        .from('teams')
-        .select('id')
-        .eq('tournament_id', selectedTournamentId);
+      const [{ data: teamsData }, { data: existingStar }] = await Promise.all([
+        supabase
+          .from('teams')
+          .select('id')
+          .eq('tournament_id', selectedTournamentId)
+          .eq('status', 'Approved')
+          .or('is_deleted.is.null,is_deleted.eq.false'),
+        supabase
+          .from('player_stars')
+          .select('id, player_id, users:player_id(full_name)')
+          .eq('tournament_id', selectedTournamentId)
+          .eq('star_type', 'Gold')
+          .maybeSingle(),
+      ]);
+
+      if (existingStar) {
+        const uObj: any = (existingStar as any).users;
+        const name = Array.isArray(uObj) ? uObj[0]?.full_name : uObj?.full_name;
+        setExistingGoldWinner(name || 'Awarded Athlete');
+      } else {
+        setExistingGoldWinner(null);
+      }
 
       if (teamsData && teamsData.length > 0) {
         const teamIds = teamsData.map(t => t.id);
@@ -75,6 +95,9 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
         toast.error('Failed to award Tournament MVP: ' + error.message);
       }
     } else {
+      const awardedObj = (tournamentPlayers || []).find(p => p.player_id === selectedPlayerForGoldId);
+      const awardedName = Array.isArray(awardedObj?.users) ? awardedObj?.users[0]?.full_name : awardedObj?.users?.full_name;
+      setExistingGoldWinner(awardedName || 'Awarded Athlete');
       toast.success('Gold Star awarded to Tournament MVP!');
 
       logAudit({
@@ -151,10 +174,18 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
               <Label className="text-[10px] uppercase font-black text-slate-400 tracking-[0.3em] ml-1">
                 2. Nominate Top Performer
               </Label>
+              {existingGoldWinner && (
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3 text-amber-600 dark:text-amber-400">
+                  <Trophy className="size-5 shrink-0" />
+                  <div className="text-xs font-bold">
+                    Official Tournament MVP Already Crowned: <strong className="font-black uppercase underline">{existingGoldWinner}</strong>
+                  </div>
+                </div>
+              )}
               <Select 
                 value={selectedPlayerForGoldId} 
                 onValueChange={(val) => setSelectedPlayerForGoldId(val ?? '')}
-                disabled={!selectedTournamentId}
+                disabled={!selectedTournamentId || !!existingGoldWinner}
               >
                 <SelectTrigger className="border-2 h-16 rounded-2xl bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-white/5 font-black uppercase italic tracking-tight text-lg focus:ring-orange-500 transition-all disabled:opacity-30 cursor-pointer">
                   <SelectValue placeholder={selectedTournamentId ? 'Select MVP Candidate...' : 'Select tournament first'}>

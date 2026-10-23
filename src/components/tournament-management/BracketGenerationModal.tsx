@@ -1340,7 +1340,23 @@ export const BracketGenerationModal: React.FC<BracketGenerationModalProps> = ({
     try {
       // 1. Advance Winner
       if (match.next_match_id) {
-        const nextMatchField = match.next_match_slot === 'team_a' ? 'team_a_id' : 'team_b_id';
+        let nextMatchField: 'team_a_id' | 'team_b_id' = 'team_a_id';
+        if (match.next_match_slot === 'team_a' || match.next_match_slot === 'team_b') {
+          nextMatchField = match.next_match_slot === 'team_a' ? 'team_a_id' : 'team_b_id';
+        } else {
+          const targetNext = existingMatches.find((m) => m.id === match.next_match_id);
+          const feeders = existingMatches.filter((m) => m.next_match_id === match.next_match_id);
+          if (targetNext && (targetNext.team_a_id === match.team_a_id || targetNext.team_a_id === match.team_b_id)) {
+            nextMatchField = 'team_a_id';
+          } else if (targetNext && (targetNext.team_b_id === match.team_a_id || targetNext.team_b_id === match.team_b_id)) {
+            nextMatchField = 'team_b_id';
+          } else if (feeders.length >= 2) {
+            const idx = feeders.findIndex((f) => f.id === match.id);
+            nextMatchField = idx === 1 ? 'team_b_id' : 'team_a_id';
+          } else if (targetNext) {
+            nextMatchField = !targetNext.team_a_id ? 'team_a_id' : 'team_b_id';
+          }
+        }
         const { error } = await supabase
           .from('matches')
           .update({ [nextMatchField]: winnerId })
@@ -1351,7 +1367,23 @@ export const BracketGenerationModal: React.FC<BracketGenerationModalProps> = ({
 
       // 2. Advance Loser to Lower Bracket or 3rd Place Playoff if linked
       if (match.loser_next_match_id && loserId && loserName !== 'BYE' && loserName !== 'TBD') {
-        const loserField = match.loser_next_match_slot === 'team_a' ? 'team_a_id' : 'team_b_id';
+        let loserField: 'team_a_id' | 'team_b_id' = 'team_a_id';
+        if (match.loser_next_match_slot === 'team_a' || match.loser_next_match_slot === 'team_b') {
+          loserField = match.loser_next_match_slot === 'team_a' ? 'team_a_id' : 'team_b_id';
+        } else {
+          const targetLoserNext = existingMatches.find((m) => m.id === match.loser_next_match_id);
+          const loserFeeders = existingMatches.filter((m) => m.loser_next_match_id === match.loser_next_match_id);
+          if (targetLoserNext && (targetLoserNext.team_a_id === match.team_a_id || targetLoserNext.team_a_id === match.team_b_id)) {
+            loserField = 'team_a_id';
+          } else if (targetLoserNext && (targetLoserNext.team_b_id === match.team_a_id || targetLoserNext.team_b_id === match.team_b_id)) {
+            loserField = 'team_b_id';
+          } else if (loserFeeders.length >= 2) {
+            const idx = loserFeeders.findIndex((f) => f.id === match.id);
+            loserField = idx === 1 ? 'team_b_id' : 'team_a_id';
+          } else if (targetLoserNext) {
+            loserField = !targetLoserNext.team_a_id ? 'team_a_id' : 'team_b_id';
+          }
+        }
         const { error: loserErr } = await supabase
           .from('matches')
           .update({ [loserField]: loserId })

@@ -154,7 +154,10 @@ export const SystemVerifications = () => {
       if (docError) throw docError;
 
       // 2. Update user verification status and synchronize profile details
-      const userUpdates: Record<string, any> = { is_verified: true };
+      const userUpdates: Record<string, any> = {
+        is_verified: true,
+        account_status: 'active',
+      };
       if (doc.extracted_student_no) userUpdates.student_number = doc.extracted_student_no;
       if (doc.extracted_program) userUpdates.program = doc.extracted_program;
       if (doc.extracted_year_level) userUpdates.year_level = doc.extracted_year_level;

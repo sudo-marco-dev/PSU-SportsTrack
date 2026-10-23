@@ -347,9 +347,11 @@ export const AdminRecovery = () => {
   const handleRestoreTeam = async (tm: SoftDeletedTeam) => {
     setRestoringId(tm.id);
     try {
+      const restoredStatus = tm.status === 'Rejected' ? 'Pending' : tm.status;
       const { error } = await supabase
         .from('teams')
         .update({
+          status: restoredStatus,
           is_deleted: false,
           deleted_at: null,
           deleted_by: null

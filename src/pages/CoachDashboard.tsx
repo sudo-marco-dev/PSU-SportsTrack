@@ -35,14 +35,20 @@ export const CoachDashboard = () => {
   const fetchAnalytics = async () => {
     setIsLoading(true);
     try {
-      // 1. Fetch Coach's Teams
+      // 1. Fetch Coach's Active / Non-Deleted Teams
       const { data: teams, error: teamsError } = await supabase
         .from('teams')
-        .select('id')
-        .eq('coach_id', user?.id);
+        .select('id, status, is_deleted, tournaments(status, is_deleted)')
+        .eq('coach_id', user?.id)
+        .neq('status', 'Rejected')
+        .or('is_deleted.is.null,is_deleted.eq.false');
 
       if (teamsError) throw teamsError;
-      const teamIds = teams?.map(t => t.id) || [];
+      const validTeams = (teams || []).filter((t: any) => {
+        const tourney = Array.isArray(t.tournaments) ? t.tournaments[0] : t.tournaments;
+        return !tourney?.is_deleted && tourney?.status !== 'Completed';
+      });
+      const teamIds = validTeams.map(t => t.id);
 
       // 2. Fetch Roster Stats
       let totalRoster = 0;
@@ -185,99 +191,99 @@ export const CoachDashboard = () => {
         </div>
       )}
 
-      {/* Analytics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Analytics Grid - Mobile-First 2x2 Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-2 gap-3 md:gap-6">
         {/* Active Teams */}
         <Card className="bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 rounded-2xl md:rounded-[2rem] overflow-hidden group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-5 md:p-8">
-            <div className="space-y-1 min-w-0">
-              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Current Reach</p>
-              <CardTitle className="text-base md:text-lg font-black uppercase italic tracking-tight">Active Teams</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 p-3.5 sm:p-5 md:p-8">
+            <div className="space-y-0.5 sm:space-y-1 min-w-0">
+              <p className="text-[8px] sm:text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] truncate">Current Reach</p>
+              <CardTitle className="text-xs sm:text-base md:text-lg font-black uppercase italic tracking-tight truncate">Active Teams</CardTitle>
             </div>
-            <div className="p-2.5 md:p-3 bg-orange-50 dark:bg-orange-500/10 rounded-xl md:rounded-2xl shrink-0">
-              <Users className="size-5 md:size-6 text-orange-500" />
+            <div className="p-2 sm:p-2.5 md:p-3 bg-orange-50 dark:bg-orange-500/10 rounded-xl md:rounded-2xl shrink-0">
+              <Users className="size-4 sm:size-5 md:size-6 text-orange-500" />
             </div>
           </CardHeader>
-          <CardContent className="p-5 md:p-8 pt-0">
-            <div className="flex items-baseline gap-2 md:gap-3">
-              <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
-                {isLoading ? <span className="inline-block h-10 w-16 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" /> : stats.activeTeams}
+          <CardContent className="p-3.5 sm:p-5 md:p-8 pt-0">
+            <div className="flex items-baseline gap-1.5 sm:gap-2 md:gap-3 flex-wrap">
+              <span className="text-2xl sm:text-4xl md:text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
+                {isLoading ? <span className="inline-block h-8 w-12 sm:h-10 sm:w-16 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" /> : stats.activeTeams}
               </span>
-              <div className="flex items-center gap-1 text-emerald-500 font-bold text-xs uppercase tracking-widest bg-emerald-500/10 px-2 py-1 rounded-lg">
-                <ArrowUpRight className="size-3" />
+              <div className="flex items-center gap-1 text-emerald-500 font-bold text-[9px] sm:text-xs uppercase tracking-widest bg-emerald-500/10 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg">
+                <ArrowUpRight className="size-2.5 sm:size-3" />
                 Live
               </div>
             </div>
-            <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-4 uppercase tracking-widest opacity-60">Squads currently enrolled in active tournaments</p>
+            <p className="text-slate-500 dark:text-slate-400 text-[10px] md:text-xs font-bold mt-2 md:mt-4 uppercase tracking-widest opacity-60 hidden sm:block">Squads currently enrolled in active tournaments</p>
           </CardContent>
         </Card>
 
         {/* Total Roster */}
         <Card className="bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 rounded-2xl md:rounded-[2rem] overflow-hidden group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-5 md:p-8">
-            <div className="space-y-1 min-w-0">
-              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Personnel</p>
-              <CardTitle className="text-base md:text-lg font-black uppercase italic tracking-tight">Roster Size</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 p-3.5 sm:p-5 md:p-8">
+            <div className="space-y-0.5 sm:space-y-1 min-w-0">
+              <p className="text-[8px] sm:text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] truncate">Personnel</p>
+              <CardTitle className="text-xs sm:text-base md:text-lg font-black uppercase italic tracking-tight truncate">Roster Size</CardTitle>
             </div>
-            <div className="p-2.5 md:p-3 bg-blue-50 dark:bg-blue-500/10 rounded-xl md:rounded-2xl shrink-0">
-              <UserPlus className="size-5 md:size-6 text-blue-500" />
+            <div className="p-2 sm:p-2.5 md:p-3 bg-blue-50 dark:bg-blue-500/10 rounded-xl md:rounded-2xl shrink-0">
+              <UserPlus className="size-4 sm:size-5 md:size-6 text-blue-500" />
             </div>
           </CardHeader>
-          <CardContent className="p-5 md:p-8 pt-0">
-            <div className="flex items-baseline gap-2 md:gap-3">
-              <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
-                {isLoading ? <span className="inline-block h-10 w-16 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" /> : stats.totalRoster}
+          <CardContent className="p-3.5 sm:p-5 md:p-8 pt-0">
+            <div className="flex items-baseline gap-1.5 sm:gap-2 md:gap-3 flex-wrap">
+              <span className="text-2xl sm:text-4xl md:text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
+                {isLoading ? <span className="inline-block h-8 w-12 sm:h-10 sm:w-16 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" /> : stats.totalRoster}
               </span>
-              <div className="text-slate-400 font-bold text-xs uppercase tracking-widest">Approved</div>
+              <div className="text-slate-400 font-bold text-[9px] sm:text-xs uppercase tracking-widest">Approved</div>
             </div>
-            <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-4 uppercase tracking-widest opacity-60">Verified athletes actively assigned to your teams</p>
+            <p className="text-slate-500 dark:text-slate-400 text-[10px] md:text-xs font-bold mt-2 md:mt-4 uppercase tracking-widest opacity-60 hidden sm:block">Verified athletes actively assigned to your teams</p>
           </CardContent>
         </Card>
 
         {/* Pending Invitations */}
         <Card className="bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 rounded-2xl md:rounded-[2rem] overflow-hidden group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-5 md:p-8">
-            <div className="space-y-1 min-w-0">
-              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Recruitment</p>
-              <CardTitle className="text-base md:text-lg font-black uppercase italic tracking-tight">Pending Invites</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 p-3.5 sm:p-5 md:p-8">
+            <div className="space-y-0.5 sm:space-y-1 min-w-0">
+              <p className="text-[8px] sm:text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] truncate">Recruitment</p>
+              <CardTitle className="text-xs sm:text-base md:text-lg font-black uppercase italic tracking-tight truncate">Pending Invites</CardTitle>
             </div>
-            <div className="p-2.5 md:p-3 bg-amber-50 dark:bg-amber-500/10 rounded-xl md:rounded-2xl shrink-0">
-              <Clock className="size-5 md:size-6 text-amber-500" />
+            <div className="p-2 sm:p-2.5 md:p-3 bg-amber-50 dark:bg-amber-500/10 rounded-xl md:rounded-2xl shrink-0">
+              <Clock className="size-4 sm:size-5 md:size-6 text-amber-500" />
             </div>
           </CardHeader>
-          <CardContent className="p-5 md:p-8 pt-0">
-            <div className="flex items-baseline gap-2 md:gap-3">
-              <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
-                {isLoading ? <span className="inline-block h-10 w-16 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" /> : stats.pendingInvites}
+          <CardContent className="p-3.5 sm:p-5 md:p-8 pt-0">
+            <div className="flex items-baseline gap-1.5 sm:gap-2 md:gap-3 flex-wrap">
+              <span className="text-2xl sm:text-4xl md:text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
+                {isLoading ? <span className="inline-block h-8 w-12 sm:h-10 sm:w-16 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" /> : stats.pendingInvites}
               </span>
-              <div className="text-amber-500 font-bold text-xs uppercase tracking-widest bg-amber-500/10 px-2 py-1 rounded-lg">Action Req.</div>
+              <div className="text-amber-500 font-bold text-[9px] sm:text-xs uppercase tracking-widest bg-amber-500/10 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg">Action Req.</div>
             </div>
-            <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-4 uppercase tracking-widest opacity-60">Athletes awaiting roster verification or acceptance</p>
+            <p className="text-slate-500 dark:text-slate-400 text-[10px] md:text-xs font-bold mt-2 md:mt-4 uppercase tracking-widest opacity-60 hidden sm:block">Athletes awaiting roster verification or acceptance</p>
           </CardContent>
         </Card>
 
         {/* Upcoming Matches */}
         <Card className="bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 rounded-2xl md:rounded-[2rem] overflow-hidden group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-5 md:p-8">
-            <div className="space-y-1 min-w-0">
-              <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Execution</p>
-              <CardTitle className="text-base md:text-lg font-black uppercase italic tracking-tight">Upcoming Matches</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 p-3.5 sm:p-5 md:p-8">
+            <div className="space-y-0.5 sm:space-y-1 min-w-0">
+              <p className="text-[8px] sm:text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] truncate">Execution</p>
+              <CardTitle className="text-xs sm:text-base md:text-lg font-black uppercase italic tracking-tight truncate">Upcoming Matches</CardTitle>
             </div>
-            <div className="p-2.5 md:p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl md:rounded-2xl shrink-0">
-              <Activity className="size-5 md:size-6 text-emerald-500" />
+            <div className="p-2 sm:p-2.5 md:p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl md:rounded-2xl shrink-0">
+              <Activity className="size-4 sm:size-5 md:size-6 text-emerald-500" />
             </div>
           </CardHeader>
-          <CardContent className="p-5 md:p-8 pt-0">
-            <div className="flex items-baseline gap-2 md:gap-3">
-              <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
-                {isLoading ? <span className="inline-block h-10 w-16 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" /> : stats.upcomingMatches}
+          <CardContent className="p-3.5 sm:p-5 md:p-8 pt-0">
+            <div className="flex items-baseline gap-1.5 sm:gap-2 md:gap-3 flex-wrap">
+              <span className="text-2xl sm:text-4xl md:text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
+                {isLoading ? <span className="inline-block h-8 w-12 sm:h-10 sm:w-16 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" /> : stats.upcomingMatches}
               </span>
-              <div className="flex items-center gap-1 text-emerald-500 font-bold text-xs uppercase tracking-widest bg-emerald-500/10 px-2 py-1 rounded-lg">
-                <ArrowUpRight className="size-3" />
+              <div className="flex items-center gap-1 text-emerald-500 font-bold text-[9px] sm:text-xs uppercase tracking-widest bg-emerald-500/10 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg">
+                <ArrowUpRight className="size-2.5 sm:size-3" />
                 Tracked
               </div>
             </div>
-            <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-4 uppercase tracking-widest opacity-60">Matches involving your teams scheduled for today</p>
+            <p className="text-slate-500 dark:text-slate-400 text-[10px] md:text-xs font-bold mt-2 md:mt-4 uppercase tracking-widest opacity-60 hidden sm:block">Matches involving your teams scheduled for today</p>
           </CardContent>
         </Card>
       </div>

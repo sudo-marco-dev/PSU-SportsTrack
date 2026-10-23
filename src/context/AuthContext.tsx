@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 export type UserRole =
   | 'super_admin'
@@ -38,6 +39,8 @@ interface AuthContextType {
     program?: string | null;
     year_level?: string | null;
     age?: number | null;
+    preferred_sports?: string[] | null;
+    primary_position?: string | null;
   } | null;
   isLoginModalOpen: boolean;
   openLoginModal: () => void;
@@ -94,6 +97,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const userRole = data.role as UserRole;
         const status = (data.account_status as AccountStatus) || 'active';
 
+        if (status === 'soft_deleted') {
+          toast.error('This account has been archived by an administrator.');
+          await supabase.auth.signOut();
+          setRole(null);
+          setIsVerified(false);
+          setAccountStatus('active');
+          setProfile(null);
+          return;
+        }
+
         setRole(userRole);
         setIsVerified(!!data.is_verified);
         setAccountStatus(status);
@@ -121,6 +134,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           program: data.program || null,
           year_level: data.year_level || null,
           age: data.age ?? null,
+          preferred_sports: Array.isArray(data.preferred_sports) ? data.preferred_sports : [],
+          primary_position: data.primary_position || null,
         });
       }
     } catch (err) {

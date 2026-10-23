@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trophy, Medal, Filter, Sparkles, Shield, RotateCcw, Search, CheckCircle2, GraduationCap, Users, Crown } from 'lucide-react';
+import { Trophy, Medal, Sparkles, Shield, RotateCcw, Search, CheckCircle2, GraduationCap, Users, Crown, SlidersHorizontal, ChevronDown, ChevronUp } from 'lucide-react';
+import { ExpandableIconTabs, type ExpandableTabItem } from '@/components/ui/expandable-icon-tabs';
 
 interface CollegeEntity {
   id: string;
@@ -50,6 +51,10 @@ interface RankedEntity {
 export const Ranking = () => {
   // Standing View Mode: College vs Cluster vs Squad
   const [standingView, setStandingView] = useState<'college' | 'cluster' | 'squad'>('college');
+
+  // Mobile UX States: Collapsible Filter & Expanded Table Row
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState<boolean>(false);
+  const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null);
 
   // Filter States
   const [tournamentType, setTournamentType] = useState<string>('all');
@@ -801,8 +806,38 @@ export const Ranking = () => {
   const silverEntity = rankedEntities[1];
   const bronzeEntity = rankedEntities[2];
 
+  const standingTabs: ExpandableTabItem[] = [
+    {
+      id: 'college',
+      label: 'College Standings',
+      shortLabel: 'Colleges',
+      icon: GraduationCap,
+    },
+    {
+      id: 'cluster',
+      label: 'Cluster / Tribe Standings',
+      shortLabel: 'Tribes',
+      icon: Users,
+    },
+    {
+      id: 'squad',
+      label: 'Squad Standings',
+      shortLabel: 'Squads',
+      icon: Shield,
+    },
+  ];
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (tournamentType !== 'all') count++;
+    if (sportCategory !== 'all') count++;
+    if (winMetric !== 'overall_wins') count++;
+    if (academicYear !== 'current') count++;
+    return count;
+  }, [tournamentType, sportCategory, winMetric, academicYear]);
+
   return (
-    <div className="space-y-8 pb-10 animate-in fade-in duration-500">
+    <div className="space-y-6 sm:space-y-8 pb-10 w-full min-w-0 max-w-full overflow-x-hidden animate-in fade-in duration-500">
       {/* Header Banner */}
       <div className="bg-slate-950 text-white py-5 md:py-8 px-5 md:px-10 rounded-2xl md:rounded-[2.5rem] shadow-2xl border border-white/5 relative overflow-hidden group">
         <div className="relative z-10 max-w-3xl">
@@ -823,103 +858,112 @@ export const Ranking = () => {
         <Trophy className="absolute -bottom-10 -right-8 size-52 text-white/5 rotate-12 group-hover:rotate-6 transition-all duration-700 pointer-events-none" />
       </div>
 
-      {/* Standings View Format Selector: College Standings vs Binturungan Tribe Standings vs Squad Standings */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 md:p-5 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="size-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 shrink-0">
-            <Crown className="size-5" />
+      {/* Standings View Format Selector: Single 44px Row on Mobile */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3 sm:p-4 shadow-sm">
+        <div className="flex items-center gap-2.5">
+          <div className="size-8 sm:size-9 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 shrink-0">
+            <Crown className="size-4" />
           </div>
           <div>
-            <h2 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
-              Standings Aggregation Format
+            <h2 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white leading-tight">
+              Standings Format
             </h2>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-              Toggle institutional standings by College, authentic Binturungan Tribe, or individual squad division.
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium hidden sm:block">
+              Toggle standings by College, Binturungan Tribe, or Squad division.
             </p>
           </div>
         </div>
 
-        {/* 3-Way Segmented Toggle */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/80 self-start sm:self-auto">
-          <button
-            type="button"
-            onClick={() => setStandingView('college')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
-              standingView === 'college'
-                ? 'bg-white dark:bg-slate-900 text-orange-600 dark:text-orange-400 shadow-sm border border-slate-200/50 dark:border-slate-700/50'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <GraduationCap className="size-3.5" />
-            College Standings
-          </button>
-          <button
-            type="button"
-            onClick={() => setStandingView('cluster')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
-              standingView === 'cluster'
-                ? 'bg-white dark:bg-slate-900 text-orange-600 dark:text-orange-400 shadow-sm border border-slate-200/50 dark:border-slate-700/50'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Users className="size-3.5" />
-            Cluster / Tribe Standings
-          </button>
-          <button
-            type="button"
-            onClick={() => setStandingView('squad')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
-              standingView === 'squad'
-                ? 'bg-white dark:bg-slate-900 text-orange-600 dark:text-orange-400 shadow-sm border border-slate-200/50 dark:border-slate-700/50'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Shield className="size-3.5" />
-            Squad Standings
-          </button>
-        </div>
+        {/* Expandable Icon-Pills Toggle: Only active shows label on mobile */}
+        <ExpandableIconTabs
+          tabs={standingTabs}
+          activeTab={standingView}
+          onChange={(val) => setStandingView(val as any)}
+          className="self-stretch sm:self-auto"
+        />
       </div>
 
-      {/* Filter Control Section */}
+      {/* Filter Control Section: Collapsible Drawer on Mobile */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden transition-all">
-        {/* Filter Toolbar Header */}
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
-          <div className="flex items-center gap-2.5">
-            <Filter className="size-4 text-slate-500" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
-              Standing Filters
-            </h3>
-            <span className="text-slate-300 dark:text-slate-700">|</span>
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
-              Select parameters to refine leaderboard view
-            </span>
+        {/* Main Filter Action Bar */}
+        <div className="p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-slate-50/50 dark:bg-slate-900/50">
+          {/* Quick Search */}
+          <div className="relative flex-1 min-w-0">
+            <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Input
+              placeholder={standingView === 'college' ? 'Search college or code...' : standingView === 'cluster' ? 'Search tribe or campus...' : 'Search squad name...'}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-9 pl-8 text-xs rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus-visible:ring-1 focus-visible:ring-orange-500 w-full font-medium"
+            />
           </div>
 
-          <div className="flex items-center gap-3">
-            {(tournamentType !== 'all' || sportCategory !== 'all' || winMetric !== 'overall_wins' || academicYear !== 'current' || searchQuery || standingView !== 'college') && (
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+              className={`h-9 px-3 rounded-xl text-xs font-bold gap-1.5 cursor-pointer transition-all ${
+                isFiltersExpanded || activeFiltersCount > 0
+                  ? 'border-orange-500 text-orange-600 dark:text-orange-400 bg-orange-500/10'
+                  : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+              }`}
+            >
+              <SlidersHorizontal className="size-3.5 text-orange-500" />
+              <span>Filters</span>
+              {activeFiltersCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-md bg-orange-500 text-white text-[9px] font-black">
+                  {activeFiltersCount}
+                </span>
+              )}
+              {isFiltersExpanded ? <ChevronUp className="size-3 text-slate-400 ml-0.5" /> : <ChevronDown className="size-3 text-slate-400 ml-0.5" />}
+            </Button>
+
+            {(activeFiltersCount > 0 || searchQuery || standingView !== 'college') && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleResetFilters}
-                className="h-8 px-3 text-xs font-semibold text-slate-500 hover:text-orange-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg gap-1.5 transition-colors"
+                className="h-9 px-2.5 text-xs font-semibold text-slate-500 hover:text-orange-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl gap-1 transition-colors cursor-pointer"
+                title="Reset Defaults"
               >
                 <RotateCcw className="size-3" />
-                Reset Defaults
+                <span className="hidden sm:inline">Reset</span>
               </Button>
             )}
           </div>
         </div>
 
-        {/* Filter Input Grid */}
-        <div className="p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {/* Active Criteria Chips Preview (Always visible in a single compact horizontal strip) */}
+        <div className="px-3 sm:px-4 py-2 border-b border-slate-100 dark:border-slate-800/60 bg-white dark:bg-slate-900 flex items-center gap-1.5 overflow-x-auto scrollbar-hide text-[10px]">
+          <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px] shrink-0">Active:</span>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md font-bold bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border border-orange-200/60 dark:border-orange-500/30 shrink-0">
+            {standingView === 'college' ? 'Colleges' : standingView === 'cluster' ? 'Tribes' : 'Squads'}
+          </span>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">
+            {tournamentType === 'all' ? 'All Competitions' : tournamentType}
+          </span>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">
+            {sportCategory === 'all' ? 'All Sports' : sportCategory}
+          </span>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">
+            {winMetric === 'overall_wins' ? 'Championships' : winMetric === 'most_wins' ? 'Wins' : winMetric === 'win_rate' ? 'Win %' : 'Stars'}
+          </span>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">
+            {academicYear === 'current' ? '2026' : academicYear === 'all_time' ? 'All-Time' : `AY ${academicYear}`}
+          </span>
+        </div>
+
+        {/* Collapsible Filter Dropdowns (Visible when expanded or on lg: screens) */}
+        <div className={`p-3.5 sm:p-5 ${isFiltersExpanded ? 'block' : 'hidden lg:block'} transition-all duration-300 border-t border-slate-100 dark:border-slate-800`}>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* 1. Tournament Type */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
                 Tournament Category
               </label>
               <Select value={tournamentType} onValueChange={(v) => v && setTournamentType(v)}>
-                <SelectTrigger className="h-10 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-none hover:border-slate-300 dark:hover:border-slate-700 focus:ring-1 focus:ring-slate-400 transition-colors">
+                <SelectTrigger className="h-9 sm:h-10 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-none hover:border-slate-300 dark:hover:border-slate-700 focus:ring-1 focus:ring-slate-400 transition-colors">
                   <SelectValue placeholder="All Tournaments" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
@@ -932,12 +976,12 @@ export const Ranking = () => {
             </div>
 
             {/* 2. Sport Category */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
                 Sport Discipline
               </label>
               <Select value={sportCategory} onValueChange={(v) => v && setSportCategory(v)}>
-                <SelectTrigger className="h-10 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-none hover:border-slate-300 dark:hover:border-slate-700 focus:ring-1 focus:ring-slate-400 transition-colors">
+                <SelectTrigger className="h-9 sm:h-10 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-none hover:border-slate-300 dark:hover:border-slate-700 focus:ring-1 focus:ring-slate-400 transition-colors">
                   <SelectValue placeholder="All Sports" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
@@ -951,18 +995,17 @@ export const Ranking = () => {
                   <SelectItem value="Pickleball" className="text-xs font-medium">Pickleball</SelectItem>
                   <SelectItem value="Table Tennis" className="text-xs font-medium">Table Tennis</SelectItem>
                   <SelectItem value="Futsal" className="text-xs font-medium">Futsal</SelectItem>
-                  <SelectItem value="Chess" className="text-xs font-medium">Chess</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* 3. Win Metric */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
                 Ranking Criterion
               </label>
               <Select value={winMetric} onValueChange={(v) => v && setWinMetric(v)}>
-                <SelectTrigger className="h-10 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-none hover:border-slate-300 dark:hover:border-slate-700 focus:ring-1 focus:ring-slate-400 transition-colors">
+                <SelectTrigger className="h-9 sm:h-10 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-none hover:border-slate-300 dark:hover:border-slate-700 focus:ring-1 focus:ring-slate-400 transition-colors">
                   <SelectValue placeholder="Championships" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
@@ -975,12 +1018,12 @@ export const Ranking = () => {
             </div>
 
             {/* 4. Competition Year */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
                 Academic Period
               </label>
               <Select value={academicYear} onValueChange={(v) => v && setAcademicYear(v)}>
-                <SelectTrigger className="h-10 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-none hover:border-slate-300 dark:hover:border-slate-700 focus:ring-1 focus:ring-slate-400 transition-colors">
+                <SelectTrigger className="h-9 sm:h-10 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-none hover:border-slate-300 dark:hover:border-slate-700 focus:ring-1 focus:ring-slate-400 transition-colors">
                   <SelectValue placeholder="Current Season" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
@@ -992,43 +1035,104 @@ export const Ranking = () => {
               </Select>
             </div>
           </div>
-
-          {/* Active Filter Chips & Search Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-5 mt-5 border-t border-slate-100 dark:border-slate-800">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-medium text-slate-400">Active Criteria:</span>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border border-orange-200/60 dark:border-orange-500/30">
-                {standingView === 'college' ? 'College Standings' : standingView === 'cluster' ? 'Cluster / Tribe Standings' : 'Squad Standings'}
-              </span>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700">
-                {tournamentType === 'all' ? 'All Competitions' : tournamentType}
-              </span>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700">
-                {sportCategory === 'all' ? 'All Sports' : sportCategory}
-              </span>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700">
-                {winMetric === 'overall_wins' ? 'Overall Championships' : winMetric === 'most_wins' ? 'Most Match Wins' : winMetric === 'win_rate' ? 'Win Ratio (%)' : 'MVP Gold Stars'}
-              </span>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700">
-                {academicYear === 'current' ? 'Current Season (2026)' : academicYear === 'all_time' ? 'All-Time' : `AY ${academicYear}`}
-              </span>
-            </div>
-
-            <div className="relative w-full sm:w-64">
-              <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <Input
-                placeholder={standingView === 'college' ? 'Search college or code...' : standingView === 'cluster' ? 'Search tribe or campus...' : 'Search squad name...'}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 pl-8 text-xs rounded-lg border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus-visible:ring-1 focus-visible:ring-orange-500"
-              />
-            </div>
-          </div>
         </div>
       </div>
 
       {/* Podium Showcase Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+      {/* MOBILE PODIUM (< md): Compact #1 Spotlight + #2 & #3 Side-by-Side (Fits in ~190px total!) */}
+      <div className="md:hidden space-y-2.5">
+        {/* #1 Champion Spotlight Banner */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/10 border-2 border-orange-500 p-3.5 shadow-lg">
+          <div className="flex items-start gap-3">
+            <div className="size-11 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/30">
+              <Trophy className="size-6 text-white" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="px-2 py-0.5 rounded-md bg-orange-500 text-white text-[8px] font-black uppercase tracking-wider">
+                  #1 Champion
+                </span>
+                {championEntity?.code && (
+                  <span className="px-1.5 py-0.5 rounded-md bg-black/10 dark:bg-white/10 text-slate-700 dark:text-slate-300 text-[9px] font-black">
+                    {championEntity.code}
+                  </span>
+                )}
+              </div>
+              <h4 className="font-black italic uppercase tracking-tight text-base sm:text-lg text-slate-900 dark:text-white leading-snug break-words mt-0.5">
+                {championEntity?.name || 'Champion Tier'}
+              </h4>
+              <p className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider truncate">
+                {championEntity
+                  ? (standingView === 'college' ? `Tribe: ${championEntity.clusterName || 'PSU Binturungan'}` : standingView === 'cluster' ? (championEntity.subtitle || 'Binturungan Tribe') : `${championEntity.sport} • ${championEntity.category}`)
+                  : 'Leaderboard Leader'}
+              </p>
+            </div>
+          </div>
+          {championEntity && (
+            <div className="mt-2.5 pt-2 border-t border-orange-500/20 flex items-center justify-between text-[10px] font-bold text-slate-700 dark:text-slate-300 flex-wrap gap-1">
+              <span className="text-orange-600 dark:text-orange-400 font-black">
+                {championEntity.championships > 0 ? `${championEntity.championships} Gold Title${championEntity.championships > 1 ? 's' : ''}` : `${championEntity.wins}W - ${championEntity.losses}L`}
+              </span>
+              <span>{championEntity.winRate.toFixed(0)}% Win</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-black">
+                {championEntity.pointDiff >= 0 ? `+${championEntity.pointDiff}` : championEntity.pointDiff} Diff
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* #2 Silver and #3 Bronze: Side-by-Side in 2-Columns */}
+        <div className="grid grid-cols-2 gap-2.5">
+          {/* #2 Silver Card */}
+          <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 p-2.5 text-center flex flex-col justify-between">
+            <div>
+              <span className="px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[8px] font-black uppercase">
+                #2 Silver
+              </span>
+              <h5 className="font-black italic uppercase text-xs text-slate-900 dark:text-white truncate mt-1 leading-tight" title={silverEntity?.name}>
+                {silverEntity?.code || silverEntity?.name || 'Silver'}
+              </h5>
+              <p className="text-[9px] text-slate-400 truncate mt-0.5">
+                {silverEntity?.name}
+              </p>
+            </div>
+            {silverEntity && (
+              <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-white/5 text-[9px] font-bold text-slate-600 dark:text-slate-300 flex items-center justify-around">
+                <span>{silverEntity.wins}W - {silverEntity.losses}L</span>
+                <span className={silverEntity.pointDiff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}>
+                  {silverEntity.pointDiff >= 0 ? `+${silverEntity.pointDiff}` : silverEntity.pointDiff}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* #3 Bronze Card */}
+          <div className="rounded-xl border border-amber-700/30 dark:border-amber-500/30 bg-white dark:bg-slate-900 p-2.5 text-center flex flex-col justify-between">
+            <div>
+              <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-500 text-[8px] font-black uppercase">
+                #3 Bronze
+              </span>
+              <h5 className="font-black italic uppercase text-xs text-slate-900 dark:text-white truncate mt-1 leading-tight" title={bronzeEntity?.name}>
+                {bronzeEntity?.code || bronzeEntity?.name || 'Bronze'}
+              </h5>
+              <p className="text-[9px] text-slate-400 truncate mt-0.5">
+                {bronzeEntity?.name}
+              </p>
+            </div>
+            {bronzeEntity && (
+              <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-white/5 text-[9px] font-bold text-slate-600 dark:text-slate-300 flex items-center justify-around">
+                <span>{bronzeEntity.wins}W - {bronzeEntity.losses}L</span>
+                <span className={bronzeEntity.pointDiff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}>
+                  {bronzeEntity.pointDiff >= 0 ? `+${bronzeEntity.pointDiff}` : bronzeEntity.pointDiff}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* DESKTOP PODIUM (md:grid): Standard 3-column classic podium */}
+      <div className="hidden md:grid md:grid-cols-3 gap-6 items-end">
         {/* Rank 2 - Silver Tier */}
         <Card className="rounded-[2.5rem] border-2 border-slate-200/80 dark:border-white/10 bg-white dark:bg-slate-900/90 backdrop-blur-sm p-6 text-center relative overflow-hidden order-2 md:order-1 shadow-md hover:border-slate-400 transition-all">
           <div className="size-16 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center mx-auto mb-4 text-slate-400 font-black tabular-nums text-2xl shadow-inner">
@@ -1165,11 +1269,11 @@ export const Ranking = () => {
         </Card>
       </div>
 
-      {/* Official PSU Standings & Leaderboard Table */}
+      {/* Official PSU Standings & Leaderboard Section */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
-          <div className="flex items-center gap-2.5">
-            <Trophy className="size-4 text-orange-500" />
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            <Trophy className="size-4 text-orange-500 shrink-0" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
               {standingView === 'college'
                 ? 'Official Palawan State University College Standings'
@@ -1177,13 +1281,13 @@ export const Ranking = () => {
                 ? 'Official PSU Binturungan Tribe Standings'
                 : 'Official Athletic Squad Leaderboard'}
             </h3>
-            <span className="text-slate-300 dark:text-slate-700">|</span>
+            <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">|</span>
             <span className="text-xs text-slate-500 font-normal">
               {rankedEntities.length} {standingView === 'college' ? (rankedEntities.length === 1 ? 'College Ranked' : 'Colleges Ranked') : standingView === 'cluster' ? (rankedEntities.length === 1 ? 'Tribe Ranked' : 'Tribes Ranked') : (rankedEntities.length === 1 ? 'Squad Ranked' : 'Squads Ranked')}
             </span>
           </div>
 
-          <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider border-orange-500 text-orange-600 bg-orange-50 dark:bg-orange-500/10">
+          <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider border-orange-500 text-orange-600 bg-orange-50 dark:bg-orange-500/10 self-start sm:self-auto">
             {winMetric === 'overall_wins' ? 'Sorted by Gold Championships' : winMetric === 'most_wins' ? 'Sorted by Total Wins' : winMetric === 'win_rate' ? 'Sorted by Win Ratio' : 'Sorted by MVP Gold Stars'}
           </Badge>
         </div>
@@ -1215,252 +1319,362 @@ export const Ranking = () => {
             </Button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50/80 dark:bg-slate-900/80 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800">
-                <tr>
-                  <th className="py-3.5 px-6">Rank</th>
-                  {standingView === 'college' ? (
-                    <>
-                      <th className="py-3.5 px-4">College / Academic Unit</th>
-                      <th className="py-3.5 px-4">Binturungan Tribe</th>
-                    </>
-                  ) : standingView === 'cluster' ? (
-                    <>
-                      <th className="py-3.5 px-4">Binturungan Cluster / Tribe</th>
-                      <th className="py-3.5 px-4">Represented Units / Campuses</th>
-                      <th className="py-3.5 px-3 text-center">Squads</th>
-                    </>
-                  ) : (
-                    <>
-                      <th className="py-3.5 px-4">Squad / Program</th>
-                      <th className="py-3.5 px-4">Affiliation</th>
-                      <th className="py-3.5 px-4">Discipline</th>
-                    </>
-                  )}
-                  <th className="py-3.5 px-3 text-center">MP</th>
-                  <th className="py-3.5 px-3 text-center">W</th>
-                  <th className="py-3.5 px-3 text-center">L</th>
-                  <th className="py-3.5 px-4 text-center">Win %</th>
-                  <th className="py-3.5 px-4 text-center">PF - PA</th>
-                  <th className="py-3.5 px-4 text-center">Diff</th>
-                  <th className="py-3.5 px-4 text-center">Medals</th>
-                  <th className="py-3.5 px-6 text-right">Standing Tier</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {rankedEntities.map((item, idx) => {
-                  const rank = idx + 1;
-                  return (
-                    <tr
-                      key={item.key}
-                      className={`transition-colors ${
-                        rank === 1
-                          ? 'bg-orange-50/40 dark:bg-orange-500/5 font-semibold'
-                          : rank === 2
-                          ? 'bg-slate-50/40 dark:bg-slate-800/20'
-                          : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/30'
-                      }`}
-                    >
-                      <td className="py-4 px-6 font-black">
-                        <div className="flex items-center gap-2">
-                          {rank === 1 ? (
-                            <Badge className="bg-amber-500 hover:bg-amber-500 text-white font-black text-[10px] px-2.5 py-0.5 rounded-lg gap-1 shadow-sm">
-                              <Trophy className="size-3" /> #1 Gold
-                            </Badge>
-                          ) : rank === 2 ? (
-                            <Badge className="bg-slate-400 hover:bg-slate-400 text-white font-black text-[10px] px-2.5 py-0.5 rounded-lg gap-1">
-                              <Medal className="size-3" /> #2 Silver
-                            </Badge>
-                          ) : rank === 3 ? (
-                            <Badge className="bg-amber-700 hover:bg-amber-700 text-white font-black text-[10px] px-2.5 py-0.5 rounded-lg gap-1">
-                              <Medal className="size-3" /> #3 Bronze
-                            </Badge>
-                          ) : (
-                            <span className="px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold text-[11px]">
-                              #{rank}
-                            </span>
-                          )}
-                        </div>
-                      </td>
+          <>
+            {/* MOBILE STANDINGS LIST (< md): 100% responsive, zero horizontal scroll, tap to expand details */}
+            <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+              {rankedEntities.map((item, idx) => {
+                const rank = idx + 1;
+                const isExpanded = expandedRowKey === item.key;
 
-                      {/* Dynamic Columns based on Standing View */}
-                      {standingView === 'college' ? (
-                        <>
-                          <td className="py-4 px-4">
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2">
+                return (
+                  <div
+                    key={item.key}
+                    onClick={() => setExpandedRowKey(isExpanded ? null : item.key)}
+                    className={`p-3 transition-colors cursor-pointer select-none ${
+                      rank === 1
+                        ? 'bg-orange-50/40 dark:bg-orange-500/5'
+                        : rank === 2
+                        ? 'bg-slate-50/40 dark:bg-slate-800/20'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        {/* Rank Badge */}
+                        <span
+                          className={`size-6 rounded-lg font-black text-xs flex items-center justify-center shrink-0 ${
+                            rank === 1
+                              ? 'bg-amber-500 text-white'
+                              : rank === 2
+                              ? 'bg-slate-400 text-white'
+                              : rank === 3
+                              ? 'bg-amber-700 text-white'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[11px]'
+                          }`}
+                        >
+                          {rank}
+                        </span>
+
+                        {/* Name + Code + Affiliation */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-black italic uppercase text-xs text-slate-900 dark:text-white truncate">
+                              {item.name}
+                            </span>
+                            {item.code && (
+                              <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[9px] font-black shrink-0">
+                                {item.code}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                            {item.clusterName && (
+                              <span className="text-orange-600 dark:text-orange-400 font-bold truncate">
+                                {item.clusterName}
+                              </span>
+                            )}
+                            {item.clusterName && item.sport && <span>•</span>}
+                            {item.sport && <span className="truncate">{item.sport}</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Primary Stats on Right */}
+                      <div className="flex items-center gap-2 shrink-0 text-right">
+                        <div className="text-right">
+                          <p className="font-black text-xs text-slate-900 dark:text-white tabular-nums">
+                            {item.wins}W - {item.losses}L
+                          </p>
+                          <p className="text-[10px] font-bold text-slate-400 tabular-nums">
+                            {item.winRate.toFixed(0)}% • <span className={item.pointDiff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}>{item.pointDiff >= 0 ? `+${item.pointDiff}` : item.pointDiff}</span>
+                          </p>
+                        </div>
+                        {isExpanded ? <ChevronUp className="size-3.5 text-slate-400 shrink-0" /> : <ChevronDown className="size-3.5 text-slate-400 shrink-0" />}
+                      </div>
+                    </div>
+
+                    {/* Inline Drawer of Details (When Tapped) */}
+                    {isExpanded && (
+                      <div className="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-white/5 space-y-2 text-[11px] animate-in fade-in duration-200">
+                        <div className="grid grid-cols-3 gap-1.5 text-center">
+                          <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/60">
+                            <p className="text-[9px] font-bold text-slate-400 uppercase">Played</p>
+                            <p className="font-black text-slate-900 dark:text-white">{item.matchesPlayed} GP</p>
+                          </div>
+                          <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/60">
+                            <p className="text-[9px] font-bold text-slate-400 uppercase">Points (PF-PA)</p>
+                            <p className="font-black text-slate-900 dark:text-white font-mono text-[10px]">{item.pointsFor} - {item.pointsAgainst}</p>
+                          </div>
+                          <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/60">
+                            <p className="text-[9px] font-bold text-slate-400 uppercase">Medals</p>
+                            <p className="font-black text-amber-600 dark:text-amber-400">
+                              {item.championships > 0 ? `${item.championships}G ` : ''}
+                              {item.runnerUps > 0 ? `${item.runnerUps}S ` : ''}
+                              {item.bronzeFinishes > 0 ? `${item.bronzeFinishes}B` : ''}
+                              {item.championships === 0 && item.runnerUps === 0 && item.bronzeFinishes === 0 && '-'}
+                            </p>
+                          </div>
+                        </div>
+                        {item.tournaments.length > 0 && (
+                          <p className="text-[10px] text-slate-400 truncate">
+                            <strong className="text-slate-600 dark:text-slate-300">Tournaments:</strong> {item.tournaments.join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* DESKTOP STANDINGS TABLE (hidden md:block) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50/80 dark:bg-slate-900/80 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800">
+                  <tr>
+                    <th className="py-3.5 px-6">Rank</th>
+                    {standingView === 'college' ? (
+                      <>
+                        <th className="py-3.5 px-4">College / Academic Unit</th>
+                        <th className="py-3.5 px-4">Binturungan Tribe</th>
+                      </>
+                    ) : standingView === 'cluster' ? (
+                      <>
+                        <th className="py-3.5 px-4">Binturungan Cluster / Tribe</th>
+                        <th className="py-3.5 px-4">Represented Units / Campuses</th>
+                        <th className="py-3.5 px-3 text-center">Squads</th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="py-3.5 px-4">Squad / Program</th>
+                        <th className="py-3.5 px-4">Affiliation</th>
+                        <th className="py-3.5 px-4">Discipline</th>
+                      </>
+                    )}
+                    <th className="py-3.5 px-3 text-center">MP</th>
+                    <th className="py-3.5 px-3 text-center">W</th>
+                    <th className="py-3.5 px-3 text-center">L</th>
+                    <th className="py-3.5 px-4 text-center">Win %</th>
+                    <th className="py-3.5 px-4 text-center">PF - PA</th>
+                    <th className="py-3.5 px-4 text-center">Diff</th>
+                    <th className="py-3.5 px-4 text-center">Medals</th>
+                    <th className="py-3.5 px-6 text-right">Standing Tier</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {rankedEntities.map((item, idx) => {
+                    const rank = idx + 1;
+                    return (
+                      <tr
+                        key={item.key}
+                        className={`transition-colors ${
+                          rank === 1
+                            ? 'bg-orange-50/40 dark:bg-orange-500/5 font-semibold'
+                            : rank === 2
+                            ? 'bg-slate-50/40 dark:bg-slate-800/20'
+                            : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/30'
+                        }`}
+                      >
+                        <td className="py-4 px-6 font-black">
+                          <div className="flex items-center gap-2">
+                            {rank === 1 ? (
+                              <Badge className="bg-amber-500 hover:bg-amber-500 text-white font-black text-[10px] px-2.5 py-0.5 rounded-lg gap-1 shadow-sm">
+                                <Trophy className="size-3" /> #1 Gold
+                              </Badge>
+                            ) : rank === 2 ? (
+                              <Badge className="bg-slate-400 hover:bg-slate-400 text-white font-black text-[10px] px-2.5 py-0.5 rounded-lg gap-1">
+                                <Medal className="size-3" /> #2 Silver
+                              </Badge>
+                            ) : rank === 3 ? (
+                              <Badge className="bg-amber-700 hover:bg-amber-700 text-white font-black text-[10px] px-2.5 py-0.5 rounded-lg gap-1">
+                                <Medal className="size-3" /> #3 Bronze
+                              </Badge>
+                            ) : (
+                              <span className="px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold text-[11px]">
+                                #{rank}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Dynamic Columns based on Standing View */}
+                        {standingView === 'college' ? (
+                          <>
+                            <td className="py-4 px-4">
+                              <div className="flex flex-col">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-black italic uppercase tracking-tight text-slate-900 dark:text-white text-sm">
+                                    {item.name}
+                                  </span>
+                                  {item.code && (
+                                    <Badge variant="outline" className="text-[10px] font-black border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
+                                      {item.code}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <span className="text-[10px] font-medium text-slate-400 truncate max-w-sm">
+                                  {item.tournaments.join(', ') || 'Palawan State University Sports League'}
+                                </span>
+                              </div>
+                            </td>
+
+                            <td className="py-4 px-4">
+                              {item.clusterName ? (
+                                <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider border-orange-500/20 text-orange-600 dark:text-orange-400 bg-orange-50/50 dark:bg-orange-950/20 gap-1 inline-flex items-center">
+                                  <Users className="size-2.5" />
+                                  {item.clusterName}
+                                </Badge>
+                              ) : (
+                                <span className="text-slate-400 text-xs font-semibold">-</span>
+                              )}
+                            </td>
+                          </>
+                        ) : standingView === 'cluster' ? (
+                          <>
+                            <td className="py-4 px-4">
+                              <div className="flex flex-col">
                                 <span className="font-black italic uppercase tracking-tight text-slate-900 dark:text-white text-sm">
                                   {item.name}
                                 </span>
+                                <span className="text-[10px] font-medium text-slate-400 truncate max-w-md">
+                                  {item.subtitle || 'Palawan State University Binturungan Tribe'}
+                                </span>
+                              </div>
+                            </td>
+
+                            <td className="py-4 px-4">
+                              <div className="flex items-center gap-1.5 flex-wrap max-w-xs">
+                                {item.memberColleges && item.memberColleges.length > 0 ? (
+                                  item.memberColleges.map((code) => (
+                                    <Badge key={code} variant="secondary" className="text-[9px] font-black uppercase px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50">
+                                      {code}
+                                    </Badge>
+                                  ))
+                                ) : (
+                                  <span className="text-[10px] text-slate-400">All Campuses</span>
+                                )}
+                              </div>
+                            </td>
+
+                            <td className="py-4 px-3 text-center font-bold text-slate-600 dark:text-slate-300">
+                              {item.squadCount || 0}
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="py-4 px-4">
+                              <div className="flex flex-col">
+                                <span className="font-black italic uppercase tracking-tight text-slate-900 dark:text-white text-sm">
+                                  {item.name}
+                                </span>
+                                <span className="text-[10px] font-medium text-slate-400 truncate max-w-[220px]">
+                                  {item.tournaments.join(', ') || 'PSU Athletic League'}
+                                </span>
+                              </div>
+                            </td>
+
+                            <td className="py-4 px-4">
+                              <div className="flex items-center gap-1.5">
                                 {item.code && (
-                                  <Badge variant="outline" className="text-[10px] font-black border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
+                                  <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
                                     {item.code}
                                   </Badge>
                                 )}
-                              </div>
-                              <span className="text-[10px] font-medium text-slate-400 truncate max-w-sm">
-                                {item.tournaments.join(', ') || 'Palawan State University Sports League'}
-                              </span>
-                            </div>
-                          </td>
-
-                          <td className="py-4 px-4">
-                            {item.clusterName ? (
-                              <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider border-orange-500/20 text-orange-600 dark:text-orange-400 bg-orange-50/50 dark:bg-orange-950/20 gap-1 inline-flex items-center">
-                                <Users className="size-2.5" />
-                                {item.clusterName}
-                              </Badge>
-                            ) : (
-                              <span className="text-slate-400 text-xs font-semibold">-</span>
-                            )}
-                          </td>
-                        </>
-                      ) : standingView === 'cluster' ? (
-                        <>
-                          <td className="py-4 px-4">
-                            <div className="flex flex-col">
-                              <span className="font-black italic uppercase tracking-tight text-slate-900 dark:text-white text-sm">
-                                {item.name}
-                              </span>
-                              <span className="text-[10px] font-medium text-slate-400 truncate max-w-md">
-                                {item.subtitle || 'Palawan State University Binturungan Tribe'}
-                              </span>
-                            </div>
-                          </td>
-
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-1.5 flex-wrap max-w-xs">
-                              {item.memberColleges && item.memberColleges.length > 0 ? (
-                                item.memberColleges.map((code) => (
-                                  <Badge key={code} variant="secondary" className="text-[9px] font-black uppercase px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50">
-                                    {code}
+                                {item.clusterName && (
+                                  <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider border-orange-500/20 text-orange-600 dark:text-orange-400 bg-orange-50/50 dark:bg-orange-950/20">
+                                    {item.clusterName}
                                   </Badge>
-                                ))
-                              ) : (
-                                <span className="text-[10px] text-slate-400">All Campuses</span>
-                              )}
-                            </div>
-                          </td>
+                                )}
+                              </div>
+                            </td>
 
-                          <td className="py-4 px-3 text-center font-bold text-slate-600 dark:text-slate-300">
-                            {item.squadCount || 0}
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="py-4 px-4">
-                            <div className="flex flex-col">
-                              <span className="font-black italic uppercase tracking-tight text-slate-900 dark:text-white text-sm">
-                                {item.name}
-                              </span>
-                              <span className="text-[10px] font-medium text-slate-400 truncate max-w-[220px]">
-                                {item.tournaments.join(', ') || 'PSU Athletic League'}
-                              </span>
-                            </div>
-                          </td>
-
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-1.5">
-                              {item.code && (
-                                <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
-                                  {item.code}
-                                </Badge>
-                              )}
-                              {item.clusterName && (
-                                <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider border-orange-500/20 text-orange-600 dark:text-orange-400 bg-orange-50/50 dark:bg-orange-950/20">
-                                  {item.clusterName}
-                                </Badge>
-                              )}
-                            </div>
-                          </td>
-
-                          <td className="py-4 px-4">
-                            <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
-                              {item.sport}
-                            </Badge>
-                          </td>
-                        </>
-                      )}
-
-                      <td className="py-4 px-3 text-center font-bold text-slate-600 dark:text-slate-300">
-                        {item.matchesPlayed}
-                      </td>
-
-                      <td className="py-4 px-3 text-center font-black text-emerald-600 dark:text-emerald-400">
-                        {item.wins}
-                      </td>
-
-                      <td className="py-4 px-3 text-center font-black text-slate-400">
-                        {item.losses}
-                      </td>
-
-                      <td className="py-4 px-4 text-center font-bold text-slate-700 dark:text-slate-200">
-                        {item.winRate.toFixed(1)}%
-                      </td>
-
-                      <td className="py-4 px-4 text-center font-mono text-[11px] font-bold text-slate-600 dark:text-slate-300">
-                        {item.pointsFor} - {item.pointsAgainst}
-                      </td>
-
-                      <td className="py-4 px-4 text-center font-black">
-                        <span className={item.pointDiff > 0 ? 'text-emerald-600 dark:text-emerald-400' : item.pointDiff < 0 ? 'text-rose-500' : 'text-slate-400'}>
-                          {item.pointDiff > 0 ? `+${item.pointDiff}` : item.pointDiff}
-                        </span>
-                      </td>
-
-                      {/* Medals Column */}
-                      <td className="py-4 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                          {item.championships > 0 && (
-                            <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-black text-[10px] px-1.5 py-0.5 gap-0.5">
-                              <Trophy className="size-2.5" />
-                              {item.championships}G
-                            </Badge>
-                          )}
-                          {item.runnerUps > 0 && (
-                            <Badge variant="outline" className="border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold text-[10px] px-1.5 py-0.5 gap-0.5">
-                              <Medal className="size-2.5 text-slate-400" />
-                              {item.runnerUps}S
-                            </Badge>
-                          )}
-                          {item.bronzeFinishes > 0 && (
-                            <Badge variant="outline" className="border-amber-700/30 text-amber-700 dark:text-amber-500 font-bold text-[10px] px-1.5 py-0.5 gap-0.5">
-                              <Medal className="size-2.5 text-amber-700" />
-                              {item.bronzeFinishes}B
-                            </Badge>
-                          )}
-                          {item.championships === 0 && item.runnerUps === 0 && item.bronzeFinishes === 0 && (
-                            <span className="text-slate-400 font-bold text-xs">-</span>
-                          )}
-                        </div>
-                      </td>
-
-                      <td className="py-4 px-6 text-right">
-                        {rank === 1 ? (
-                          <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-black text-[9px] uppercase tracking-wider">
-                            Champion Tier
-                          </Badge>
-                        ) : rank === 2 ? (
-                          <Badge className="bg-slate-500/10 text-slate-600 dark:text-slate-300 border border-slate-500/20 font-black text-[9px] uppercase tracking-wider">
-                            Silver Tier
-                          </Badge>
-                        ) : rank === 3 ? (
-                          <Badge className="bg-amber-700/10 text-amber-700 dark:text-amber-500 border border-amber-700/20 font-black text-[9px] uppercase tracking-wider">
-                            Bronze Tier
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-slate-400 font-bold text-[9px] uppercase">
-                            Contender
-                          </Badge>
+                            <td className="py-4 px-4">
+                              <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+                                {item.sport}
+                              </Badge>
+                            </td>
+                          </>
                         )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+
+                        <td className="py-4 px-3 text-center font-bold text-slate-600 dark:text-slate-300">
+                          {item.matchesPlayed}
+                        </td>
+
+                        <td className="py-4 px-3 text-center font-black text-emerald-600 dark:text-emerald-400">
+                          {item.wins}
+                        </td>
+
+                        <td className="py-4 px-3 text-center font-black text-slate-400">
+                          {item.losses}
+                        </td>
+
+                        <td className="py-4 px-4 text-center font-bold text-slate-700 dark:text-slate-200">
+                          {item.winRate.toFixed(1)}%
+                        </td>
+
+                        <td className="py-4 px-4 text-center font-mono text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                          {item.pointsFor} - {item.pointsAgainst}
+                        </td>
+
+                        <td className="py-4 px-4 text-center font-black">
+                          <span className={item.pointDiff > 0 ? 'text-emerald-600 dark:text-emerald-400' : item.pointDiff < 0 ? 'text-rose-500' : 'text-slate-400'}>
+                            {item.pointDiff > 0 ? `+${item.pointDiff}` : item.pointDiff}
+                          </span>
+                        </td>
+
+                        {/* Medals Column */}
+                        <td className="py-4 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                            {item.championships > 0 && (
+                              <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-black text-[10px] px-1.5 py-0.5 gap-0.5">
+                                <Trophy className="size-2.5" />
+                                {item.championships}G
+                              </Badge>
+                            )}
+                            {item.runnerUps > 0 && (
+                              <Badge variant="outline" className="border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold text-[10px] px-1.5 py-0.5 gap-0.5">
+                                <Medal className="size-2.5 text-slate-400" />
+                                {item.runnerUps}S
+                              </Badge>
+                            )}
+                            {item.bronzeFinishes > 0 && (
+                              <Badge variant="outline" className="border-amber-700/30 text-amber-700 dark:text-amber-500 font-bold text-[10px] px-1.5 py-0.5 gap-0.5">
+                                <Medal className="size-2.5 text-amber-700" />
+                                {item.bronzeFinishes}B
+                              </Badge>
+                            )}
+                            {item.championships === 0 && item.runnerUps === 0 && item.bronzeFinishes === 0 && (
+                              <span className="text-slate-400 font-bold text-xs">-</span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="py-4 px-6 text-right">
+                          {rank === 1 ? (
+                            <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-black text-[9px] uppercase tracking-wider">
+                              Champion Tier
+                            </Badge>
+                          ) : rank === 2 ? (
+                            <Badge className="bg-slate-500/10 text-slate-600 dark:text-slate-300 border border-slate-500/20 font-black text-[9px] uppercase tracking-wider">
+                              Silver Tier
+                            </Badge>
+                          ) : rank === 3 ? (
+                            <Badge className="bg-amber-700/10 text-amber-700 dark:text-amber-500 border border-amber-700/20 font-black text-[9px] uppercase tracking-wider">
+                              Bronze Tier
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-slate-400 font-bold text-[9px] uppercase">
+                              Contender
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

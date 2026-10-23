@@ -6,6 +6,91 @@ This log tracks every user prompt, database migration, code change, and Git oper
 
 ## 📅 Log Entry: 2026-10-23
 
+### 💬 Prompt: Mobile-First Anti-Vertical-Scroll Sweep & Density Overhaul
+*   **Timestamp**: 2026-10-23T18:50:00+08:00
+*   **User Directive**: "create a plan to sweep the system from going vertical scrolling frenzy these stacked buttons are tacking way to much space having users to scroll up and down why not have it in icons and only show/expand when clicked like .eg collage icon cluster icon and sqaud standing only show the label when its geing selected other than that be in icon form. lessening visual clutter and UX having to scroll back in fort cards being stack in their orginal size taking way to much space its not a mobile first type a design its kinda a PC first then stack or rearange them later type design. search skill, mobile first design and mobile UX" -> Executed `mobile_first_anti_scroll_plan.md`
+*   **Actions Taken**:
+    *   **Reusable Component (`src/components/ui/expandable-icon-tabs.tsx`)**:
+        - Engineered `<ExpandableIconTabs />` component providing icon-only collapsed state for unselected options with label expansion for the active tab, count badge indicators, customizable sizes (`sm`/`md`/`lg`), and ARIA tablist accessibility attributes.
+    *   **Standings & Rankings Overhaul (`src/pages/Ranking.tsx`)**:
+        - Replaced 260px vertically stacked 3-way toggle with a single-row ~44px `<ExpandableIconTabs />` (`Colleges` / `Tribes` / `Squads`).
+        - Added collapsible filter drawer (`isFiltersExpanded` state) with search input + `Filters (N)` toggle button + active criteria chips, eliminating 400px+ vertical dropdown walls on mobile viewports.
+        - Replaced oversized 1,100px desktop stacked podium cards on mobile `< md` with a **Mobile-Native Podium** (~190px height): `#1 Gold` horizontal spotlight banner card + `#2 Silver` and `#3 Bronze` side-by-side in `grid-cols-2 gap-2.5` directly underneath.
+        - Replaced table clipping with responsive **Mobile-First Standings List (`< md`)**: zero horizontal scroll/clipping, showing rank, college name/code, tribe, record, and Diff with tap-to-expand drawer for extra match telemetry, retaining the full 9-column desktop table on `md:`.
+    *   **Athlete Profile & Dossier Telemetry (`src/pages/Profile.tsx`, `src/components/scouting/PlayerDossierModal.tsx`)**:
+        - Replaced 4-button 2x2 stacked tab grid in `Profile.tsx` with `<ExpandableIconTabs />` (`Career & Games`, `Achievements`, `Invites`, `Account & Prefs`) on a single 44px row.
+        - Converted multi-row sport filter buttons into an **Expandable Sport Icon Rail**: selected sport expands (`[🏀 Basketball • 4 GP]`), unselected sports render as compact icon buttons with mini count badges in a smooth single horizontal scroller.
+        - Replaced 5 oversized Career Stat Cards (450px tall stack on mobile `< md`) with a **single-row 5-column Telemetry Ribbon** (`GP | PTS | AVG | Highlight Action | Squads` ~76px tall).
+        - Converted Multi-Sport Scoring Breakdown into a compact 2-column micro-grid (`grid-cols-2 gap-2 sm:grid-cols-2 lg:grid-cols-3`) with collapsible toggle for zero-count actions to prevent viewport flooding.
+    *   **Match Center Precision (`src/components/match-center/MatchCenterHeader.tsx`, `src/components/match-center/MatchCenterToolbar.tsx`)**:
+        - In `MatchCenterHeader.tsx`, converted sport filter rail so active sport expands while unselected sports render as compact icon pills (`[SportIcon + Mini Count]`), fitting 5-6 sports on screen at once on mobile.
+        - In `MatchCenterToolbar.tsx`, placed Phase 1 Elimination and Phase 2 Playoff Bracket buttons side-by-side in a 2-column layout (`grid grid-cols-2 sm:flex gap-1.5`), eliminating 2 stacked chunky black blocks on mobile.
+    *   **Universal Scouting Hub (`src/pages/ScoutingHub.tsx`)**:
+        - Replaced 4-tab 2x2 grid with `<ExpandableIconTabs />` (`Players`, `Coaches`, `Teams`, `Matches`).
+        - Replaced 4-dropdown vertical filter wall on mobile with a compact search bar + collapsible `Filters (N)` toggle button + active filter chips row.
+    *   **Roster & Tournament Management (`src/pages/TeamManagement.tsx`, `src/pages/TournamentManagement.tsx`)**:
+        - Replaced stacked tab switchers in `TeamManagement.tsx` (`My Teams`, `Player Directory`) and `TournamentManagement.tsx` (`Tournaments`, `Approvals`, `MVP Hall of Fame`) with `<ExpandableIconTabs />`.
+    *   **Coach & Admin Dashboards (`src/pages/CoachDashboard.tsx`, `src/pages/AdminDashboard.tsx`)**:
+        - Updated CoachDashboard 4 KPI cards from full-width stacked column (`grid-cols-1 md:grid-cols-2 gap-6`) into a dense 2x2 grid on mobile (`grid grid-cols-2 gap-3 md:gap-6` with `p-3.5 md:p-8`), reducing vertical height from 640px to ~180px.
+    *   **Verification**:
+        - Passed `tsc -b && vite build` with zero TypeScript errors.
+
+---
+
+## 📅 Log Entry: 2026-10-23
+
+### 💬 Prompt: Athlete Telemetry, Universal Scouting & Historical Archive Hub, Smart Coach Recruitment & Kiosk Attribution
+*   **Timestamp**: 2026-10-23T17:06:00+08:00
+*   **User Directive**: "create a plan where we improve the player profile with it tracking the scores of its recorded games the type of scores like in basketball the numbers of 3 pointers etc. also add a seachable players, coaches, old matches, teams to the verified users so they can look around/filter old games and current/existing player stats. and improve the coach roster requitment where they can see player stats, player prefered sports. and other filters like filter out if the player is the right collage/tribe or group for that tournament. you can expand the improvements if you want really roast whats lacking and what can we add or improve to the whole flow and system" -> Approved `player_stats_scouting_and_recruitment_plan.md`
+*   **Actions Taken**:
+    *   **Database Schema Migration (`supabase/migrations/20261023_athlete_preferences_and_stats.sql`)**:
+        - Added `preferred_sports text[] DEFAULT '{}'` and `primary_position text` to `public.users` and updated `AuthContext.tsx` to expose them on `profile`.
+    *   **Telemetry & Eligibility Engine (`src/lib/playerStatsEngine.ts`)**:
+        - Created `fetchPlayerTelemetry(playerId)` to aggregate career `gamesPlayed`, `wins`, `losses`, `winRate`, `totalPoints`, `ppg`, `redStars`, `goldStars`, sport-specific action breakdowns (Basketball `threePointers` / `'Triple'`, `twoPointers` / `'Field'`, `freeThrows` / `'FT'`; Volleyball/Takraw `kills`, `aces`, `blocks`; Soccer `goals`, `penalties`; Baseball `homeRuns`, `runs`; Racket `rallyPoints`), and a chronological `recordedGames` log.
+        - Created `fetchBatchPlayerSummaries()` for single-roundtrip directory telemetry aggregation (`GP`, `PTS`, `PPG`, `3PM`, `MVP` stars, active sports, active teams, and positions).
+        - Created `fetchMatchBoxScore(matchId)` for full Team A vs. Team B box scores with per-player shot/action splits and play-by-play timeline.
+        - Created `evaluateSquadEligibility()` to verify whether an athlete's college matches a target squad's PSU College (`affiliation_type = 'college'`) or Binturungan Cluster/Tribe (`affiliation_type = 'cluster'` via `clusters.college_codes`).
+    *   **Reusable Scouting Modals (`src/components/scouting/PlayerDossierModal.tsx`, `src/components/scouting/MatchBoxScoreModal.tsx`)**:
+        - Built `PlayerDossierModal` displaying any athlete's career summary, 3PT/2PT/FT/Kill/Ace breakdown, active squads, and clickable recorded games log.
+        - Built `MatchBoxScoreModal` displaying final scores, Team A & Team B player box score tables (`3PM`, `2PM`, `FTM`, `Kills`, `Aces`, `BLK`, `Goals`, `PTS`), and play-by-play events.
+    *   **Upgraded Athlete Profile (`src/pages/Profile.tsx`)**:
+        - Added **Career Stats & Games** tab with career stat cards, Basketball 3-Pointers / 2-PT Field Goals / Free Throws & multi-sport breakdown cards, and an interactive Recorded Games table that opens `MatchBoxScoreModal`.
+        - Added **Athletic Scouting & Recruitment Preferences** card allowing athletes to toggle their `preferred_sports` and `primary_position`.
+    *   **Smart Coach Roster Recruitment Workstation (`src/pages/TeamManagement.tsx`)**:
+        - Added **Target Squad Context Selector** (`targetRecruitmentTeamId`), **College / Binturungan Tribe Eligibility Filter**, **Preferred Sport Filter**, **Position Filter**, and **Telemetry Sort** (`Career Points`, `PPG`, `3-Pointers Made`, `MVP Trophies`, `Name`).
+        - Upgraded Athlete Directory cards and list rows with College/Tribe eligibility badges, preferred sport pills, career stat strips (`GP`, `PTS`, `PPG`, `3PM`), and a **Scout** button opening `PlayerDossierModal`.
+    *   **Universal Scouting & Historical Archive Hub (`src/pages/ScoutingHub.tsx`, `src/App.tsx`, `src/components/AppLayout.tsx`)**:
+        - Built `/scouting` for verified university users with 4 searchable, filterable tabs: **Players**, **Coaches** (with managed squads & coaching W-L records), **Teams & Squads** (with W-L record, points scored, and roster/match modal), and **Old Matches Archive** (with full box score inspection).
+    *   **Facilitator Kiosk 1-Tap Player Attribution (`src/components/kiosk/KioskScoreColumn.tsx`, `src/pages/FacilitatorKiosk.tsx`)**:
+        - Enabled tapping any active on-court player pill in Kiosk mode to credit `player_id` in `match_score_events` and `match_player_stats` in real time.
+
+---
+
+### 💬 Prompt: Full-Project Bug & User-Flow Audit & Remediation (12 Fixes)
+*   **Timestamp**: 2026-10-23T16:22:00+08:00
+*   **User Directive**: "scan the whole project for bugs and flow errors just like we discovered with the bracketings and seeding" -> Approved `project_bug_and_flow_audit.md`
+*   **Actions Taken**:
+    *   **Team & Roster Recruitment Flows (`TournamentManagement.tsx`, `AdminRecovery.tsx`, `TeamManagement.tsx`, `CoachDashboard.tsx`, `PlayerDashboard.tsx`, `Profile.tsx`)**:
+        - Fixed team rejection to set `status: 'Rejected'` alongside `is_deleted: true` (and restore `status: 'Pending'` upon recovery in `AdminRecovery.tsx`).
+        - Filtered out soft-deleted teams and teams from soft-deleted/completed tournaments in `TeamManagement.tsx` and `CoachDashboard.tsx`.
+        - Fixed player recruitment conflict check in `TeamManagement.tsx` (`handleInvitePlayer`) so players who participated in `Completed` or `is_deleted` tournaments—or who only have unaccepted `Pending` invites—are no longer permanently blocked from future recruitment in that sport.
+        - Added sport-exclusivity validation and automatic decline of competing pending invites when a player accepts a team invite in `PlayerDashboard.tsx` and `Profile.tsx`, plus filtered out invites from soft-deleted teams/tournaments.
+        - Persisted athlete `isAcceptingInvites` preference to `localStorage` in `Profile.tsx`.
+    *   **Role Routing & Profile Views (`Profile.tsx`, `PlayerDashboard.tsx`, `FacilitatorManagementModal.tsx`)**:
+        - Added dedicated Profile views for `isFacilitator` (Match Facilitator Hub) and `isDev` (Developer Profile) in `Profile.tsx` instead of falling through to the Student Athlete profile.
+        - Distinguished `FACULTY ATHLETE` vs `STUDENT ATHLETE` badge in `Profile.tsx`.
+        - Added `isFacilitator` redirect to `/explorer` on `/` (`PlayerDashboard.tsx`) and fixed `'Coach'` -> `'coach'` role casing in `FacilitatorManagementModal.tsx`.
+    *   **Knockout Advancement, Live Match & Facilitator Kiosk (`LiveMatch.tsx`, `BracketGenerationModal.tsx`, `FacilitatorKiosk.tsx`, `TournamentMvpTab.tsx`)**:
+        - Implemented deterministic feeder slot resolution (`next_match_slot` / `loser_next_match_slot` + feeder index fallback + existing team overwrite) in `LiveMatch.tsx` (`handleUpdateStatus`) and `BracketGenerationModal.tsx` (`handleConfirmMatchWinner`), automatically advancing winners and losers upon match completion.
+        - Updated `FacilitatorKiosk.tsx` so scoring on a `Scheduled` match automatically transitions it to `Ongoing`, guarded against scoring on `Completed` matches, and added `score_update` Realtime broadcasts + `match_events` logging to Kiosk `Undo` and `Deduct (-1)`.
+        - Filtered `TournamentMvpTab.tsx` candidates to approved, non-deleted teams and added an inline banner displaying the existing Gold Star MVP when already awarded.
+    *   **COR Verification, Recovery & Auth Security (`SystemVerifications.tsx`, `AdminDashboard.tsx`, `AuthContext.tsx`)**:
+        - Fixed `handleApprove` in `SystemVerifications.tsx` to restore `account_status: 'active'` alongside `is_verified: true` so athletes re-verified after Annual Revalidation are reactivated.
+        - Updated `recoverableCount` badge in `AdminDashboard.tsx` to sum soft-deleted tournaments, teams, and user accounts, and wired the `Full Activity Log` button to `/admin/audit-logs`.
+        - Added a session guard in `AuthContext.tsx` to immediately sign out and block users with `account_status === 'soft_deleted'`.
+
+---
+
 ### 💬 Prompt: Multi-Format Bracketing, Seeding & Schedule Engine Overhaul
 *   **Timestamp**: 2026-10-23T14:42:10+08:00
 *   **User Directive**: "analyze the project for improving the bracketing/seeding system double check our flows like the seeding with the phase 1 and phase 2, the formats with step 1 and step 2, reseeding functions, editing times /dates and venues of the match, why does reset & seed 'resets the schedule' but I cant edit the seeds the vs is still fixed and I can only edit the date and time along with the venue" -> "add a double elimination and option for the round robin ONLY type so after the round robin only mode it will ranks the most wins team and that is the champion and will no longer proceed to the tree like matches" / "also add double elimination where there is a upper bracket and loser bracket"

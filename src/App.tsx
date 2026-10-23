@@ -27,6 +27,7 @@ const AdminRecovery = React.lazy(() => import('@/pages/AdminRecovery').then(m =>
 const StadiumDisplay = React.lazy(() => import('@/pages/StadiumDisplay').then(m => ({ default: m.StadiumDisplay })));
 const FacilitatorKiosk = React.lazy(() => import('@/pages/FacilitatorKiosk').then(m => ({ default: m.FacilitatorKiosk })));
 const DevSandbox = React.lazy(() => import('@/pages/DevSandbox').then(m => ({ default: m.DevSandbox })));
+const ScoutingHub = React.lazy(() => import('@/pages/ScoutingHub').then(m => ({ default: m.ScoutingHub })));
 
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 
@@ -70,6 +71,7 @@ function AppRoutes() {
           {/* Protected Routes Requiring Authentication */}
           <Route element={<ProtectedRoute />}>
             <Route path="/profile" element={<Profile />} />
+            <Route path="/scouting" element={<ScoutingHub />} />
             <Route path="/achievements" element={<Navigate to="/profile" replace />} />
 
             {/* Super Admin Protected Routes */}

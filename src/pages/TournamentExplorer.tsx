@@ -587,7 +587,7 @@ export const TournamentExplorer = () => {
   }
 
   return (
-    <div className="space-y-5 sm:space-y-6 pb-10 max-w-full animate-in fade-in duration-300">
+    <div className="space-y-5 sm:space-y-6 pb-10 w-full min-w-0 max-w-full overflow-x-hidden animate-in fade-in duration-300">
       {/* 1. UNIFIED MATCH CENTER COMMAND HEADER */}
       <MatchCenterHeader
         selectedSport={selectedSport}
@@ -728,21 +728,21 @@ export const TournamentExplorer = () => {
 
               {/* Champion Banner (Grand Visual Highlight of the Bracket) */}
               {championDetails && (
-                <div className="relative overflow-hidden rounded-2xl sm:rounded-[2rem] bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white p-5 sm:p-7 shadow-2xl border border-amber-300/30 text-center animate-in zoom-in-95 duration-500">
-                  <div className="relative z-10 flex flex-col items-center gap-2">
-                    <div className="size-12 sm:size-14 rounded-2xl bg-white/20 backdrop-blur-md text-yellow-300 flex items-center justify-center border border-white/30 shadow-lg">
+                <div className="relative overflow-hidden rounded-2xl sm:rounded-[2rem] bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white p-4 sm:p-7 shadow-2xl border border-amber-300/30 text-center animate-in zoom-in-95 duration-500">
+                  <div className="relative z-10 flex flex-col items-center gap-2 min-w-0">
+                    <div className="size-12 sm:size-14 rounded-2xl bg-white/20 backdrop-blur-md text-yellow-300 flex items-center justify-center border border-white/30 shadow-lg shrink-0">
                       <Crown className="size-7 sm:size-8 animate-bounce" />
                     </div>
-                    <span className="px-3 py-1 rounded-full bg-black/20 text-white text-[9px] sm:text-[10px] font-black uppercase tracking-widest">
+                    <span className="px-3 py-1 rounded-full bg-black/20 text-white text-[9px] sm:text-[10px] font-black uppercase tracking-widest max-w-full whitespace-normal leading-snug">
                       {championDetails.type === 'cluster'
                         ? 'Official Binturungan Tribe Champion'
                         : 'Official Collegiate Champion • Gold Medalist'}
                     </span>
-                    <h2 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none drop-shadow-md">
+                    <h2 className="text-xl sm:text-3xl md:text-5xl font-black italic tracking-tight uppercase leading-tight drop-shadow-md break-words max-w-full">
                       {championDetails.title}
                     </h2>
-                    <p className="text-white/90 font-bold uppercase tracking-widest text-[10px] sm:text-xs mt-0.5 inline-flex items-center gap-1.5">
-                      <Trophy className="size-3.5 text-yellow-200" />
+                    <p className="text-white/90 font-bold uppercase tracking-widest text-[10px] sm:text-xs mt-0.5 inline-flex flex-wrap items-center justify-center gap-1.5">
+                      <Trophy className="size-3.5 text-yellow-200 shrink-0" />
                       <span>{championDetails.teamName} • Palawan State University</span>
                     </p>
                   </div>
@@ -767,19 +767,19 @@ export const TournamentExplorer = () => {
         <div className="space-y-5 animate-in fade-in duration-200">
           {/* Champion Banner for Round Robin Only Mode */}
           {isRoundRobinOnlyTournament && championDetails && (
-            <div className="relative overflow-hidden rounded-2xl sm:rounded-[2rem] bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white p-5 sm:p-7 shadow-2xl border border-amber-300/30 text-center animate-in zoom-in-95 duration-500">
-              <div className="relative z-10 flex flex-col items-center gap-2">
-                <div className="size-12 sm:size-14 rounded-2xl bg-white/20 backdrop-blur-md text-yellow-300 flex items-center justify-center border border-white/30 shadow-lg">
+            <div className="relative overflow-hidden rounded-2xl sm:rounded-[2rem] bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white p-4 sm:p-7 shadow-2xl border border-amber-300/30 text-center animate-in zoom-in-95 duration-500">
+              <div className="relative z-10 flex flex-col items-center gap-2 min-w-0">
+                <div className="size-12 sm:size-14 rounded-2xl bg-white/20 backdrop-blur-md text-yellow-300 flex items-center justify-center border border-white/30 shadow-lg shrink-0">
                   <Crown className="size-7 sm:size-8 animate-bounce" />
                 </div>
-                <span className="px-3 py-1 rounded-full bg-black/20 text-white text-[9px] sm:text-[10px] font-black uppercase tracking-widest">
+                <span className="px-3 py-1 rounded-full bg-black/20 text-white text-[9px] sm:text-[10px] font-black uppercase tracking-widest max-w-full whitespace-normal leading-snug">
                   Round Robin Official Champion • Ranked #1 by Most Wins ({championDetails.record})
                 </span>
-                <h2 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none drop-shadow-md">
+                <h2 className="text-xl sm:text-3xl md:text-5xl font-black italic tracking-tight uppercase leading-tight drop-shadow-md break-words max-w-full">
                   {championDetails.title}
                 </h2>
-                <p className="text-white/90 font-bold uppercase tracking-widest text-[10px] sm:text-xs mt-0.5 inline-flex items-center gap-1.5">
-                  <Trophy className="size-3.5 text-yellow-200" />
+                <p className="text-white/90 font-bold uppercase tracking-widest text-[10px] sm:text-xs mt-0.5 inline-flex flex-wrap items-center justify-center gap-1.5">
+                  <Trophy className="size-3.5 text-yellow-200 shrink-0" />
                   <span>{championDetails.teamName} • Palawan State University</span>
                 </p>
               </div>
@@ -884,20 +884,20 @@ export const TournamentExplorer = () => {
 
           {/* Sub-view switcher for Elimination Stage: Upcoming/Live vs Results */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl">
+            <div className="grid grid-cols-2 sm:inline-flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setElimTab('live')}
-                className={`py-1.5 px-3 rounded-lg font-black uppercase italic text-xs tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`py-2 px-2.5 sm:px-3 rounded-lg font-black uppercase italic text-[11px] sm:text-xs tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer min-w-0 ${
                   elimTab === 'live'
                     ? 'bg-orange-500 text-white shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                <Clock className="size-3.5" />
-                <span>Upcoming & Live</span>
+                <Clock className="size-3.5 shrink-0" />
+                <span className="truncate">Upcoming & Live</span>
                 <span
-                  className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                  className={`px-1.5 py-0.2 rounded text-[9px] font-bold shrink-0 ${
                     elimTab === 'live' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800'
                   }`}
                 >
@@ -908,16 +908,16 @@ export const TournamentExplorer = () => {
               <button
                 type="button"
                 onClick={() => setElimTab('history')}
-                className={`py-1.5 px-3 rounded-lg font-black uppercase italic text-xs tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`py-2 px-2.5 sm:px-3 rounded-lg font-black uppercase italic text-[11px] sm:text-xs tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer min-w-0 ${
                   elimTab === 'history'
                     ? 'bg-orange-500 text-white shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                <Trophy className="size-3.5" />
-                <span>Match Results</span>
+                <Trophy className="size-3.5 shrink-0" />
+                <span className="truncate">Match Results</span>
                 <span
-                  className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                  className={`px-1.5 py-0.2 rounded text-[9px] font-bold shrink-0 ${
                     elimTab === 'history' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800'
                   }`}
                 >

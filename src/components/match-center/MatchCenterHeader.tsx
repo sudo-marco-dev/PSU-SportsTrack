@@ -30,7 +30,7 @@ export const MatchCenterHeader: React.FC<MatchCenterHeaderProps> = ({
   onResetFilters
 }) => {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full min-w-0 max-w-full overflow-hidden">
       {/* Sleek Hero Banner */}
       <div className="relative overflow-hidden rounded-2xl md:rounded-[2.5rem] bg-slate-950 text-white py-5 sm:py-6 md:py-7 px-4 sm:px-6 md:px-8 shadow-2xl border border-white/5">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 size-64 sm:size-80 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -95,14 +95,14 @@ export const MatchCenterHeader: React.FC<MatchCenterHeaderProps> = ({
       </div>
 
       {/* PRIMARY NAVIGATION: SPORT DISCIPLINE RAIL */}
-      <div className="bg-slate-900/5 dark:bg-slate-950/40 border border-slate-200/70 dark:border-slate-800 p-2.5 sm:p-3.5 rounded-2xl md:rounded-[2rem] shadow-sm">
-        <div className="flex items-center justify-between mb-2 px-1">
-          <div className="flex items-center gap-2">
-            <Trophy className="size-3.5 text-orange-500" />
-            <span className="text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">
+      <div className="bg-slate-900/5 dark:bg-slate-950/40 border border-slate-200/70 dark:border-slate-800 p-2.5 sm:p-3.5 rounded-2xl md:rounded-[2rem] shadow-sm w-full min-w-0 overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 mb-2.5 px-1">
+          <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 min-w-0">
+            <Trophy className="size-3.5 text-orange-500 shrink-0" />
+            <span className="text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 whitespace-nowrap">
               Sport Disciplines
             </span>
-            <span className="text-[10px] font-bold text-slate-400">
+            <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap">
               ({allSports.length} Available)
             </span>
           </div>
@@ -110,27 +110,30 @@ export const MatchCenterHeader: React.FC<MatchCenterHeaderProps> = ({
             <button
               type="button"
               onClick={() => onSelectSport('all')}
-              className="text-[10px] font-bold text-orange-500 hover:text-orange-600 uppercase tracking-widest cursor-pointer transition-colors"
+              className="text-[10px] font-bold text-orange-500 hover:text-orange-600 uppercase tracking-widest cursor-pointer transition-colors whitespace-nowrap shrink-0"
             >
               Show All Sports
             </button>
           )}
         </div>
 
-        {/* Scrollable Sport Discipline Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+        {/* Scrollable Sport Discipline Pills - Mobile-First Expandable Rail */}
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1.5 pt-0.5 px-0.5 scrollbar-hide w-full min-w-0">
           {/* All Sports Pill */}
           <button
             type="button"
             onClick={() => onSelectSport('all')}
-            className={`px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-black uppercase italic tracking-tight transition-all duration-150 cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 border ${
+            title={`All Sports (${totalMatchesCount} matches)`}
+            aria-label="All Sports"
+            className={`px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-black uppercase italic tracking-tight transition-all duration-150 cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 border ${
               selectedSport === 'all'
                 ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20 ring-1 ring-orange-400 relative z-10'
                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-orange-500/40'
             }`}
           >
             <Globe className="size-3.5 shrink-0" />
-            <span>All Sports</span>
+            <span className={selectedSport === 'all' ? 'inline' : 'hidden sm:inline'}>All Sports</span>
+            <span className={selectedSport === 'all' ? 'hidden' : 'sm:hidden'}>All</span>
             <span
               className={`ml-0.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold ${
                 selectedSport === 'all'
@@ -151,14 +154,16 @@ export const MatchCenterHeader: React.FC<MatchCenterHeaderProps> = ({
                 key={sport.name}
                 type="button"
                 onClick={() => onSelectSport(sport.name)}
-                className={`px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-black uppercase italic tracking-tight transition-all duration-150 cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 border ${
+                title={`${sport.name} (${sport.count} matches)`}
+                aria-label={sport.name}
+                className={`px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-black uppercase italic tracking-tight transition-all duration-150 cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 border ${
                   isSelected
                     ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20 ring-1 ring-orange-400 relative z-10'
                     : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-orange-500/40'
                 }`}
               >
                 <SportIcon className="size-3.5 shrink-0" />
-                <span>{sport.name}</span>
+                <span className={isSelected ? 'inline' : 'hidden sm:inline'}>{sport.name}</span>
                 <span
                   className={`ml-0.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold ${
                     isSelected

@@ -34,8 +34,8 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
   playoffMatchesCount
 }) => {
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl md:rounded-[2rem] p-3 sm:p-4 shadow-sm space-y-3">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl md:rounded-[2rem] p-3 sm:p-4 shadow-sm space-y-3 w-full min-w-0 max-w-full overflow-hidden">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-w-0">
         {/* Left: Tournament Dropdown + Search Input */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1 min-w-0">
           {/* Tournament Selector */}
@@ -83,28 +83,29 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
         </div>
 
         {/* Right: Explicit Phase Switcher (Phase 1 Elimination vs Phase 2 Playoff Bracket) */}
-        <div className="flex items-center gap-1 p-1 bg-slate-950 text-white rounded-xl border border-white/10 shadow-md shrink-0 self-stretch sm:self-auto overflow-x-auto scrollbar-hide">
+        <div className="grid grid-cols-2 lg:flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 bg-slate-950 text-white rounded-xl border border-white/10 shadow-md w-full lg:w-auto min-w-0">
           {/* Phase 1: Elimination Stage */}
           <button
             type="button"
             onClick={() => setActivePhase('elimination')}
-            className={`py-2 px-3 sm:px-3.5 rounded-lg font-black uppercase italic tracking-tight text-xs transition-all duration-150 cursor-pointer active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap flex-1 sm:flex-initial ${
+            className={`py-2 sm:py-2.5 px-2 sm:px-3.5 rounded-lg font-black uppercase italic tracking-tight text-[11px] sm:text-xs transition-all duration-150 cursor-pointer active:scale-95 flex items-center justify-center gap-1 sm:gap-1.5 min-w-0 w-full lg:w-auto ${
               activePhase === 'elimination'
                 ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
                 : 'text-slate-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            <Layers className="size-3.5" />
-            <span>Phase 1 • Elimination</span>
+            <Layers className="size-3.5 shrink-0" />
+            <span className="truncate sm:hidden">Phase 1</span>
+            <span className="truncate hidden sm:inline">Phase 1 • Elimination</span>
             <span
-              className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+              className={`px-1.5 py-0.2 rounded text-[9px] font-bold shrink-0 ${
                 activePhase === 'elimination' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-300'
               }`}
             >
               {elimMatchesCount}
             </span>
             {isEliminationComplete && (
-              <span className="px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[8px] font-black uppercase border border-emerald-500/30">
+              <span className="hidden sm:inline px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[8px] font-black uppercase border border-emerald-500/30 shrink-0">
                 Done
               </span>
             )}
@@ -114,28 +115,29 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
           <button
             type="button"
             onClick={() => setActivePhase('playoffs')}
-            className={`py-2 px-3 sm:px-3.5 rounded-lg font-black uppercase italic tracking-tight text-xs transition-all duration-150 cursor-pointer active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap flex-1 sm:flex-initial ${
+            className={`py-2 sm:py-2.5 px-2 sm:px-3.5 rounded-lg font-black uppercase italic tracking-tight text-[11px] sm:text-xs transition-all duration-150 cursor-pointer active:scale-95 flex items-center justify-center gap-1 sm:gap-1.5 min-w-0 w-full lg:w-auto ${
               activePhase === 'playoffs'
                 ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
                 : 'text-slate-400 hover:text-white hover:bg-white/5'
             }`}
           >
             {hasPlayoffs ? (
-              <Trophy className="size-3.5 text-yellow-400" />
+              <Trophy className="size-3.5 text-yellow-400 shrink-0" />
             ) : (
-              <Lock className="size-3.5 text-slate-500" />
+              <Lock className="size-3.5 text-slate-500 shrink-0" />
             )}
-            <span>Phase 2 • Playoff Bracket</span>
+            <span className="truncate sm:hidden">Playoffs</span>
+            <span className="truncate hidden sm:inline">Phase 2 • Playoff Bracket</span>
             {hasPlayoffs ? (
               <span
-                className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                className={`px-1.5 py-0.2 rounded text-[9px] font-bold shrink-0 ${
                   activePhase === 'playoffs' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-300'
                 }`}
               >
                 {playoffMatchesCount}
               </span>
             ) : (
-              <span className="px-1 py-0.2 rounded bg-slate-800 text-slate-400 text-[8px] font-black uppercase border border-slate-700">
+              <span className="px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 text-[8px] font-black uppercase border border-slate-700 shrink-0">
                 Locked
               </span>
             )}

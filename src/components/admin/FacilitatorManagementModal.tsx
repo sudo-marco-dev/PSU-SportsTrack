@@ -173,7 +173,7 @@ export const FacilitatorManagementModal = ({
   // Open Revoke Role Modal with Smart Pre-Selection
   const handleInitiateRevoke = (targetUser: UserProfile) => {
     setRevokingUser(targetUser);
-    const restored = targetUser.previous_role || (targetUser.role.toLowerCase().includes('coach') ? 'Coach' : 'player_student');
+    const restored = targetUser.previous_role || (targetUser.role.toLowerCase().includes('coach') ? 'coach' : 'player_student');
     setSelectedRestoreRole(restored);
   };
 

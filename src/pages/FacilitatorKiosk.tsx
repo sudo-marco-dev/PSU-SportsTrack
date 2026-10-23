@@ -164,6 +164,10 @@ export const FacilitatorKiosk = () => {
   const [activePlayerIdsA, setActivePlayerIdsA] = useState<Set<string>>(new Set());
   const [activePlayerIdsB, setActivePlayerIdsB] = useState<Set<string>>(new Set());
 
+  // 1-Tap Selected Scorer On-Court (Player ID) for Telemetry Attribution
+  const [selectedScorerA, setSelectedScorerA] = useState<string | null>(null);
+  const [selectedScorerB, setSelectedScorerB] = useState<string | null>(null);
+
   // Substitution Modal State
   const [subModalTeam, setSubModalTeam] = useState<'a' | 'b' | null>(null);
 
@@ -642,6 +646,10 @@ export const FacilitatorKiosk = () => {
       toast.error('You must claim the scoring console lease before updating points.');
       return;
     }
+    if (match.status === 'Completed') {
+      toast.error('Match is already Completed. Reopen the match in Match Control before modifying scores.');
+      return;
+    }
 
     const teamId = team === 'a' ? match.team_a_id : match.team_b_id;
     const teamName = team === 'a' ? match.team_a?.name || 'Team A' : match.team_b?.name || 'Team B';
@@ -649,8 +657,20 @@ export const FacilitatorKiosk = () => {
 
     const newScoreA = team === 'a' ? match.team_a_score + points : match.team_a_score;
     const newScoreB = team === 'b' ? match.team_b_score + points : match.team_b_score;
+    const nextStatus = match.status === 'Scheduled' ? 'Ongoing' : match.status;
 
-    const desc = `${teamName} scored ${points} ${sportProfile.pointUnit} (${actionDesc || actionType})!`;
+    const selectedPlayerId = team === 'a' ? selectedScorerA : selectedScorerB;
+    const scorerObj = selectedPlayerId
+      ? rosterPlayers.find((r) => r.team_id === teamId && r.player_id === selectedPlayerId)
+      : undefined;
+    const scorerName = scorerObj
+      ? (Array.isArray(scorerObj.users) ? scorerObj.users[0]?.full_name : scorerObj.users?.full_name) || ''
+      : '';
+    const scorerPrefix = scorerObj
+      ? ` — #${scorerObj.jersey_number ?? '--'} ${scorerName}`
+      : '';
+
+    const desc = `${teamName}${scorerPrefix} scored ${points} ${sportProfile.pointUnit} (${actionDesc || actionType})!`;
 
     // Save for undo
     lastScoreActionRef.current = {
@@ -663,7 +683,7 @@ export const FacilitatorKiosk = () => {
     if (!navigator.onLine) {
       offlineQueue.bufferScore(match.id, newScoreA, newScoreB);
       const offlineEvt = offlineQueue.bufferEvent(match.id, desc);
-      setMatch((prev) => (prev ? { ...prev, team_a_score: newScoreA, team_b_score: newScoreB } : prev));
+      setMatch((prev) => (prev ? { ...prev, status: nextStatus, team_a_score: newScoreA, team_b_score: newScoreB } : prev));
       setEvents((prev) => [offlineEvt, ...prev]);
       setPendingOfflineCount(offlineQueue.getPendingCount(match.id));
       toast.warning('Offline Mode: Score buffered locally.');
@@ -672,7 +692,7 @@ export const FacilitatorKiosk = () => {
 
     const { data: updatedMatches, error } = await supabase
       .from('matches')
-      .update({ team_a_score: newScoreA, team_b_score: newScoreB })
+      .update({ status: nextStatus, team_a_score: newScoreA, team_b_score: newScoreB })
       .eq('id', match.id)
       .select('id');
 
@@ -686,7 +706,7 @@ export const FacilitatorKiosk = () => {
       return;
     }
 
-    setMatch((prev) => (prev ? { ...prev, team_a_score: newScoreA, team_b_score: newScoreB } : prev));
+    setMatch((prev) => (prev ? { ...prev, status: nextStatus, team_a_score: newScoreA, team_b_score: newScoreB } : prev));
 
     if (broadcastChannelRef.current) {
       await broadcastChannelRef.current.send({
@@ -700,15 +720,44 @@ export const FacilitatorKiosk = () => {
       });
     }
 
-    // Insert score audit event
+    // Insert score audit event (with player_id when an on-court player is selected)
     await supabase.from('match_score_events').insert({
       match_id: match.id,
       team_id: teamId,
+      player_id: scorerObj?.player_id || null,
       points: points,
       action_type: actionType,
       stat_type: `PTS_${points}`,
       delta: points,
     });
+
+    // Credit match_player_stats when an on-court player is selected
+    if (scorerObj?.player_id) {
+      const { data: existingStat } = await supabase
+        .from('match_player_stats')
+        .select('id, points')
+        .eq('match_id', match.id)
+        .eq('player_id', scorerObj.player_id)
+        .maybeSingle();
+
+      if (existingStat) {
+        await supabase
+          .from('match_player_stats')
+          .update({
+            points: Math.max(0, Number(existingStat.points || 0) + points),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingStat.id);
+      } else {
+        await supabase.from('match_player_stats').insert({
+          match_id: match.id,
+          team_id: teamId,
+          player_id: scorerObj.player_id,
+          jersey_number: scorerObj.jersey_number !== null && scorerObj.jersey_number !== undefined ? String(scorerObj.jersey_number) : null,
+          points: Math.max(0, points),
+        });
+      }
+    }
 
     const { data: eventData } = await supabase
       .from('match_events')
@@ -749,6 +798,26 @@ export const FacilitatorKiosk = () => {
     }
 
     setMatch((prev) => (prev ? { ...prev, team_a_score: prevScoreA, team_b_score: prevScoreB } : prev));
+    if (broadcastChannelRef.current) {
+      await broadcastChannelRef.current.send({
+        type: 'broadcast',
+        event: 'score_update',
+        payload: {
+          match_id: match.id,
+          team_a_score: prevScoreA,
+          team_b_score: prevScoreB,
+        },
+      });
+    }
+    const undoDesc = `[Undo]: Reverted last score action (${prevScoreA} - ${prevScoreB}).`;
+    const { data: undoEvt } = await supabase
+      .from('match_events')
+      .insert({ match_id: match.id, description: undoDesc })
+      .select()
+      .single();
+    if (undoEvt) {
+      setEvents((prev) => [undoEvt as MatchEvent, ...prev.slice(0, 9)]);
+    }
     lastScoreActionRef.current = null;
     setCanUndo(false);
     toast.success('Undid last score action successfully.');
@@ -765,6 +834,10 @@ export const FacilitatorKiosk = () => {
     }
     if (!isAuthorized) {
       toast.error('You must claim the scoring console lease before updating points.');
+      return;
+    }
+    if (match.status === 'Completed') {
+      toast.error('Match is already Completed. Reopen the match in Match Control before modifying scores.');
       return;
     }
     const current = team === 'a' ? match.team_a_score : match.team_b_score;
@@ -792,6 +865,26 @@ export const FacilitatorKiosk = () => {
     }
 
     setMatch((prev) => (prev ? { ...prev, team_a_score: newScoreA, team_b_score: newScoreB } : prev));
+    if (broadcastChannelRef.current) {
+      await broadcastChannelRef.current.send({
+        type: 'broadcast',
+        event: 'score_update',
+        payload: {
+          match_id: match.id,
+          team_a_score: newScoreA,
+          team_b_score: newScoreB,
+        },
+      });
+    }
+    const deductDesc = `[Score Correction]: -${points} ${sportProfile.pointUnit} from ${teamName}.`;
+    const { data: deductEvt } = await supabase
+      .from('match_events')
+      .insert({ match_id: match.id, description: deductDesc })
+      .select()
+      .single();
+    if (deductEvt) {
+      setEvents((prev) => [deductEvt as MatchEvent, ...prev.slice(0, 9)]);
+    }
     toast.warning(`Deducted -${points} ${sportProfile.pointUnit} from ${teamName}`);
     playWhistleSound();
   };
@@ -1065,6 +1158,8 @@ export const FacilitatorKiosk = () => {
       totalTimeouts={sportProfile.defaultTimeouts || 3}
       onCallTimeout={handleCallTimeout}
       activePlayers={activePlayersA}
+      selectedPlayerId={selectedScorerA}
+      onSelectPlayer={setSelectedScorerA}
       onOpenSubModal={() => setSubModalTeam('a')}
       isLeading={isTeamALeading}
       isAuthorized={isAuthorized}
@@ -1092,6 +1187,8 @@ export const FacilitatorKiosk = () => {
       totalTimeouts={sportProfile.defaultTimeouts || 3}
       onCallTimeout={handleCallTimeout}
       activePlayers={activePlayersB}
+      selectedPlayerId={selectedScorerB}
+      onSelectPlayer={setSelectedScorerB}
       onOpenSubModal={() => setSubModalTeam('b')}
       isLeading={isTeamBLeading}
       isAuthorized={isAuthorized}

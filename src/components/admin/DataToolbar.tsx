@@ -54,10 +54,10 @@ export const DataToolbar = ({
         </Select>
       </div>
 
-      <div className="flex items-center gap-4 w-full md:w-auto justify-end px-2">
+      <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-between sm:justify-end px-1 sm:px-2">
         {children}
         {actions && (
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             {actions}
           </div>
         )}

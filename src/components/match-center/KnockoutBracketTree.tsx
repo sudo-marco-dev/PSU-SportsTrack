@@ -227,15 +227,15 @@ export const KnockoutBracketTree: React.FC<KnockoutBracketTreeProps> = ({
 
       {/* Mobile Round Filter Pills */}
       <div className="md:hidden space-y-2 mb-4">
-        <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-500 px-1">
+        <div className="flex flex-wrap items-center justify-between gap-1 text-[10px] font-black uppercase tracking-widest text-slate-500 px-1">
           <span>Round Filter</span>
           <span className="text-orange-500">Tap round or swipe bracket below</span>
         </div>
-        <div className="flex items-center gap-1.5 p-1 bg-slate-900 rounded-xl border border-white/10 overflow-x-auto scrollbar-hide">
+        <div className="grid grid-cols-2 sm:flex items-center gap-1.5 p-1.5 bg-slate-900 rounded-xl border border-white/10">
           <button
             type="button"
             onClick={() => setMobileStage('all')}
-            className={`flex-1 py-1.5 px-2.5 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+            className={`py-2 px-2.5 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
               mobileStage === 'all' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -245,7 +245,7 @@ export const KnockoutBracketTree: React.FC<KnockoutBracketTreeProps> = ({
             <button
               type="button"
               onClick={() => setMobileStage('quarters')}
-              className={`flex-1 py-1.5 px-2.5 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+              className={`py-2 px-2.5 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
                 mobileStage === 'quarters' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -256,7 +256,7 @@ export const KnockoutBracketTree: React.FC<KnockoutBracketTreeProps> = ({
             <button
               type="button"
               onClick={() => setMobileStage('semis')}
-              className={`flex-1 py-1.5 px-2.5 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+              className={`py-2 px-2.5 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
                 mobileStage === 'semis' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -267,7 +267,7 @@ export const KnockoutBracketTree: React.FC<KnockoutBracketTreeProps> = ({
             <button
               type="button"
               onClick={() => setMobileStage('finals')}
-              className={`flex-1 py-1.5 px-2.5 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer inline-flex items-center justify-center gap-1 ${
+              className={`py-2 px-2.5 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer inline-flex items-center justify-center gap-1 ${
                 mobileStage === 'finals' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -279,16 +279,18 @@ export const KnockoutBracketTree: React.FC<KnockoutBracketTreeProps> = ({
       </div>
 
       {/* Mobile horizontal swipe indicator */}
-      <div className="md:hidden flex items-center justify-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-4">
-        <ArrowRight className="size-3 text-orange-500 animate-pulse" />
-        <span>Swipe horizontally to view entire bracket tree</span>
-      </div>
+      {mobileStage === 'all' && (
+        <div className="md:hidden flex items-center justify-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-4">
+          <ArrowRight className="size-3 text-orange-500 animate-pulse" />
+          <span>Swipe horizontally to view entire bracket tree</span>
+        </div>
+      )}
 
       {/* TREE BRACKET RENDERER */}
       <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-white/10">
         {/* Case 1: Full 8-Team Bracket (Quarters, Semis, Finals) */}
         {quarters.length >= 4 ? (
-          <div className="flex items-start justify-between min-w-[840px] py-2 select-none">
+          <div className={`flex items-start ${mobileStage === 'all' ? 'justify-between min-w-[840px]' : 'justify-center w-full'} py-2 select-none`}>
             {/* Column 1: Quarterfinals */}
             {(mobileStage === 'all' || mobileStage === 'quarters') && (
               <div className="w-[270px] shrink-0">
@@ -412,7 +414,7 @@ export const KnockoutBracketTree: React.FC<KnockoutBracketTreeProps> = ({
           </div>
         ) : semis.length >= 2 || (semis.length > 0 && finals.length > 0) ? (
           /* Case 2: 4-Team Bracket (Semis and Finals only) */
-          <div className="flex items-start justify-center gap-4 sm:gap-8 min-w-[580px] py-2 select-none">
+          <div className={`flex items-start ${mobileStage === 'all' ? 'justify-start md:justify-center gap-4 sm:gap-8 min-w-[580px]' : 'justify-center w-full'} py-2 select-none`}>
             {/* Column 1: Semifinals */}
             {(mobileStage === 'all' || mobileStage === 'semis') && (
               <div className="w-[270px] shrink-0">

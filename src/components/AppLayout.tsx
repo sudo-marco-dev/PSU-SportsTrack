@@ -16,7 +16,8 @@ import {
   Activity,
   Info,
   RotateCcw,
-  Terminal
+  Terminal,
+  Search
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { ThemeToggle } from './ui/ThemeToggle';
@@ -67,6 +68,9 @@ export const AppLayout = () => {
       href: '/ranking',
       icon: Medal
     },
+    ...(user ? [
+      { name: 'Scouting Hub', href: '/scouting', icon: Search },
+    ] : []),
     ...(isDev ? [
       { name: 'Dev Sandbox', href: '/dev', icon: Terminal },
     ] : []),
@@ -107,7 +111,7 @@ export const AppLayout = () => {
   };
 
   return (
-    <div className="min-h-dvh w-full bg-slate-50 dark:bg-background transition-colors duration-200">
+    <div className="min-h-dvh w-full max-w-[100vw] overflow-x-hidden bg-slate-50 dark:bg-background transition-colors duration-200">
       {/* Desktop Sidebar — Permanently anchored to viewport left, eliminating floating detachment on scroll */}
       <aside className="hidden md:flex flex-col w-64 bg-slate-900 text-white fixed top-0 bottom-0 left-0 h-dvh shadow-xl border-r border-white/5 z-30">
         <div className="p-6">
@@ -180,7 +184,7 @@ export const AppLayout = () => {
       </aside>
 
       {/* Layout Content Wrapper — md:pl-64 accommodates the fixed desktop sidebar */}
-      <div className="flex-1 min-w-0 flex flex-col relative md:pl-64">
+      <div className="flex-1 min-w-0 w-full max-w-full flex flex-col relative md:pl-64">
         {/* Mobile Topbar */}
         <header className="md:hidden sticky top-0 flex h-16 items-center justify-between bg-slate-900 text-white px-4 shadow-lg z-30 border-b border-white/5">
           <Link to={getDashboardHref()} className="flex items-center gap-2 font-black text-xl">
@@ -280,7 +284,7 @@ export const AppLayout = () => {
         )}
 
         {/* Main Routed Content Area */}
-        <main className="flex-1 px-4 py-6 md:px-10 md:py-10 pb-24 md:pb-10 max-w-7xl mx-auto w-full">
+        <main className="flex-1 min-w-0 px-3.5 sm:px-6 py-5 md:px-10 md:py-10 pb-24 md:pb-10 max-w-7xl mx-auto w-full overflow-x-hidden">
           <Outlet />
         </main>
 

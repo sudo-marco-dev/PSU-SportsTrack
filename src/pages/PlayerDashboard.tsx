@@ -51,7 +51,7 @@ type PlayerStar = {
 };
 
 export const PlayerDashboard = () => {
-  const { isVerified, user, isDev, isSuperAdmin, isCoach, isPlayer } = useAuth();
+  const { isVerified, user, isDev, isSuperAdmin, isFacilitator, isCoach, isPlayer } = useAuth();
   const navigate = useNavigate();
   const [hasPendingDocuments, setHasPendingDocuments] = useState(false);
   const [latestDoc, setLatestDoc] = useState<{
@@ -76,8 +76,10 @@ export const PlayerDashboard = () => {
       navigate('/admin', { replace: true });
     } else if (isCoach) {
       navigate('/coach', { replace: true });
+    } else if (isFacilitator) {
+      navigate('/explorer', { replace: true });
     }
-  }, [isDev, isSuperAdmin, isCoach, navigate]);
+  }, [isDev, isSuperAdmin, isFacilitator, isCoach, navigate]);
 
   useEffect(() => {
     if (user && isPlayer && !isVerified) {
@@ -172,11 +174,17 @@ export const PlayerDashboard = () => {
     if (user?.id) {
       const { data: rosterData } = await supabase
         .from('team_roster')
-        .select('id, status, jersey_number, position, is_captain, is_starter, availability_status, teams(id, name, tournaments(id, name, sport))')
+        .select('id, status, jersey_number, position, is_captain, is_starter, availability_status, teams(id, name, status, is_deleted, tournaments(id, name, sport, status, is_deleted))')
         .eq('player_id', user.id);
 
       if (rosterData) {
-        const formattedRoster = (rosterData as unknown) as RosterInvite[];
+        const formattedRoster = ((rosterData as unknown) as RosterInvite[]).filter((i: any) => {
+          const teamObj = Array.isArray(i.teams) ? i.teams[0] : i.teams;
+          if (!teamObj || teamObj.is_deleted || teamObj.status === 'Rejected') return false;
+          const tourneyObj = Array.isArray(teamObj.tournaments) ? teamObj.tournaments[0] : teamObj.tournaments;
+          if (tourneyObj?.is_deleted) return false;
+          return true;
+        });
         setInvites(formattedRoster.filter((i) => i.status === 'Pending'));
         setMyTeams(formattedRoster.filter((i) => i.status === 'Approved'));
       }
@@ -223,6 +231,26 @@ export const PlayerDashboard = () => {
   };
 
   const handleRosterAction = async (inviteId: string, newStatus: 'Approved' | 'Rejected') => {
+    if (newStatus === 'Approved' && user?.id) {
+      const targetInvite = invites.find((i) => i.id === inviteId);
+      const targetTeam = Array.isArray(targetInvite?.teams) ? targetInvite?.teams[0] : targetInvite?.teams;
+      const targetTourney = Array.isArray(targetTeam?.tournaments) ? targetTeam?.tournaments[0] : targetTeam?.tournaments;
+      const targetSport = targetTourney?.sport;
+
+      if (targetSport) {
+        const alreadyApprovedInSport = myTeams.some((m) => {
+          const tObj: any = Array.isArray(m.teams) ? m.teams[0] : m.teams;
+          const trObj: any = Array.isArray(tObj?.tournaments) ? tObj?.tournaments[0] : tObj?.tournaments;
+          return trObj?.sport === targetSport && trObj?.status !== 'Completed' && !trObj?.is_deleted;
+        });
+
+        if (alreadyApprovedInSport) {
+          toast.error(`You are already an approved player on an active ${targetSport} squad.`);
+          return;
+        }
+      }
+    }
+
     const { error } = await supabase
       .from('team_roster')
       .update({ status: newStatus })
@@ -231,12 +259,31 @@ export const PlayerDashboard = () => {
     if (error) {
       toast.error(`Error: ${error.message}`);
     } else {
+      if (newStatus === 'Approved') {
+        const targetInvite = invites.find((i) => i.id === inviteId);
+        const targetTeam = Array.isArray(targetInvite?.teams) ? targetInvite?.teams[0] : targetInvite?.teams;
+        const targetTourney = Array.isArray(targetTeam?.tournaments) ? targetTeam?.tournaments[0] : targetTeam?.tournaments;
+        const targetSport = targetTourney?.sport;
+        if (targetSport) {
+          const competingInviteIds = invites
+            .filter((i) => {
+              if (i.id === inviteId) return false;
+              const tObj = Array.isArray(i.teams) ? i.teams[0] : i.teams;
+              const trObj = Array.isArray(tObj?.tournaments) ? tObj?.tournaments[0] : tObj?.tournaments;
+              return trObj?.sport === targetSport;
+            })
+            .map((i) => i.id);
+          if (competingInviteIds.length > 0) {
+            await supabase.from('team_roster').update({ status: 'Rejected' }).in('id', competingInviteIds);
+          }
+        }
+      }
       toast.success(`Invite ${newStatus === 'Approved' ? 'accepted' : 'declined'}.`);
       fetchDashboardData();
     }
   };
 
-  if (isSuperAdmin || isCoach) {
+  if (isSuperAdmin || isCoach || isFacilitator || isDev) {
     return null;
   }
 

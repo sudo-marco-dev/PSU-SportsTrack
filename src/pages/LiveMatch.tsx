@@ -1331,11 +1331,82 @@ export const LiveMatch = () => {
     if (error) {
       toast.error('Failed to update status: ' + error.message);
     } else {
-      toast.success(`Match status updated to ${newStatus}`);
+      setMatch(prev => prev ? { ...prev, status: newStatus as Match['status'] } : prev);
 
-      // Require Admin confirmation in Tournament Arena before bracket progression
+      // Automatically advance Winner (and Loser for Double Elim / 3rd Place) into downstream bracket slots
       if (newStatus === 'Completed') {
-        toast.info(`Match completed! Result recorded. Awaiting Admin confirmation in Tournament Arena to advance winner.`);
+        const isTeamAWinner = (match.team_a_score || 0) > (match.team_b_score || 0);
+        const winnerId = isTeamAWinner ? match.team_a_id : match.team_b_id;
+        const winnerName = isTeamAWinner ? (match.team_a?.name || 'Team A') : (match.team_b?.name || 'Team B');
+        const loserId = isTeamAWinner ? match.team_b_id : match.team_a_id;
+        const loserName = isTeamAWinner ? (match.team_b?.name || 'Team B') : (match.team_a?.name || 'Team A');
+
+        try {
+          if (match.next_match_id && winnerId) {
+            let targetField: 'team_a_id' | 'team_b_id' = 'team_a_id';
+            if (match.next_match_slot === 'team_a' || match.next_match_slot === 'team_b') {
+              targetField = match.next_match_slot === 'team_a' ? 'team_a_id' : 'team_b_id';
+            } else {
+              const [{ data: nextMatchRow }, { data: feeders }] = await Promise.all([
+                supabase.from('matches').select('id, team_a_id, team_b_id').eq('id', match.next_match_id).maybeSingle(),
+                supabase.from('matches').select('id').eq('next_match_id', match.next_match_id).order('id', { ascending: true }),
+              ]);
+              if (nextMatchRow) {
+                if (nextMatchRow.team_a_id && (nextMatchRow.team_a_id === match.team_a_id || nextMatchRow.team_a_id === match.team_b_id)) {
+                  targetField = 'team_a_id';
+                } else if (nextMatchRow.team_b_id && (nextMatchRow.team_b_id === match.team_a_id || nextMatchRow.team_b_id === match.team_b_id)) {
+                  targetField = 'team_b_id';
+                } else if (feeders && feeders.length >= 2) {
+                  const idx = feeders.findIndex((f) => f.id === match.id);
+                  targetField = idx === 1 ? 'team_b_id' : 'team_a_id';
+                } else {
+                  targetField = !nextMatchRow.team_a_id ? 'team_a_id' : 'team_b_id';
+                }
+              }
+            }
+            await supabase.from('matches').update({ [targetField]: winnerId }).eq('id', match.next_match_id);
+          }
+
+          if (match.loser_next_match_id && loserId) {
+            let loserField: 'team_a_id' | 'team_b_id' = 'team_a_id';
+            if (match.loser_next_match_slot === 'team_a' || match.loser_next_match_slot === 'team_b') {
+              loserField = match.loser_next_match_slot === 'team_a' ? 'team_a_id' : 'team_b_id';
+            } else {
+              const [{ data: loserMatchRow }, { data: loserFeeders }] = await Promise.all([
+                supabase.from('matches').select('id, team_a_id, team_b_id').eq('id', match.loser_next_match_id).maybeSingle(),
+                supabase.from('matches').select('id').eq('loser_next_match_id', match.loser_next_match_id).order('id', { ascending: true }),
+              ]);
+              if (loserMatchRow) {
+                if (loserMatchRow.team_a_id && (loserMatchRow.team_a_id === match.team_a_id || loserMatchRow.team_a_id === match.team_b_id)) {
+                  loserField = 'team_a_id';
+                } else if (loserMatchRow.team_b_id && (loserMatchRow.team_b_id === match.team_a_id || loserMatchRow.team_b_id === match.team_b_id)) {
+                  loserField = 'team_b_id';
+                } else if (loserFeeders && loserFeeders.length >= 2) {
+                  const idx = loserFeeders.findIndex((f) => f.id === match.id);
+                  loserField = idx === 1 ? 'team_b_id' : 'team_a_id';
+                } else {
+                  loserField = !loserMatchRow.team_a_id ? 'team_a_id' : 'team_b_id';
+                }
+              }
+            }
+            await supabase.from('matches').update({ [loserField]: loserId }).eq('id', match.loser_next_match_id);
+          }
+
+          if (match.next_match_id || match.loser_next_match_id) {
+            toast.success(
+              match.loser_next_match_id && loserId
+                ? `Match completed! ${winnerName} advances to the next round and ${loserName} moves to the Lower/3rd Place bracket.`
+                : `Match completed! ${winnerName} automatically advances to the next bracket round.`
+            );
+          } else {
+            toast.success(`Match completed! Official winner: ${winnerName}.`);
+          }
+        } catch (advErr) {
+          console.warn('Bracket progression warning:', advErr);
+          toast.success(`Match status updated to ${newStatus}`);
+        }
+      } else {
+        toast.success(`Match status updated to ${newStatus}`);
       }
 
       const { data: eventData, error: eventError } = await supabase.from('match_events').insert({
@@ -1573,21 +1644,21 @@ export const LiveMatch = () => {
                 <MomentumRunBadge run={momentumRun} />
               )}
             </div>
-            <div className="flex items-center justify-between p-6 md:p-8">
-              <div className="flex-1 text-center relative">
+            <div className="flex items-center justify-between p-4 sm:p-6 md:p-8 gap-2">
+              <div className="flex-1 min-w-0 text-center relative">
                 <FloatingDeltaBadge deltas={deltasA} />
-                <h2 className="text-lg md:text-xl font-bold mb-1 uppercase">{match.team_a?.name || 'Team A'}</h2>
-                <div className={`text-5xl md:text-7xl font-black tabular-nums transition-transform ${isPoppingA ? 'animate-score-pop' : ''}`}>
+                <h2 className="text-sm sm:text-lg md:text-xl font-bold mb-1 uppercase break-words leading-tight">{match.team_a?.name || 'Team A'}</h2>
+                <div className={`text-4xl sm:text-5xl md:text-7xl font-black tabular-nums transition-transform ${isPoppingA ? 'animate-score-pop' : ''}`}>
                   {match.team_a_score}
                 </div>
               </div>
 
-              <div className="px-6 text-3xl font-black italic opacity-40">VS</div>
+              <div className="px-2 sm:px-6 text-xl sm:text-3xl font-black italic opacity-40 shrink-0">VS</div>
 
-              <div className="flex-1 text-center relative">
+              <div className="flex-1 min-w-0 text-center relative">
                 <FloatingDeltaBadge deltas={deltasB} />
-                <h2 className="text-lg md:text-xl font-bold mb-1 uppercase">{match.team_b?.name || 'BYE'}</h2>
-                <div className={`text-5xl md:text-7xl font-black tabular-nums transition-transform ${isPoppingB ? 'animate-score-pop' : ''}`}>
+                <h2 className="text-sm sm:text-lg md:text-xl font-bold mb-1 uppercase break-words leading-tight">{match.team_b?.name || 'BYE'}</h2>
+                <div className={`text-4xl sm:text-5xl md:text-7xl font-black tabular-nums transition-transform ${isPoppingB ? 'animate-score-pop' : ''}`}>
                   {match.team_b_score}
                 </div>
               </div>
@@ -1614,11 +1685,11 @@ export const LiveMatch = () => {
               </div>
             )}
             {!isAuthorizedScorekeeper && (
-              <div className="bg-black/10 p-3 flex items-center justify-center gap-2 text-xs font-semibold text-white/80">
-                <Activity className="size-3.5 text-orange-400 animate-pulse" />
+              <div className="bg-black/10 p-3 flex flex-wrap items-center justify-center gap-1.5 text-center text-[11px] sm:text-xs font-semibold text-white/80">
+                <Activity className="size-3.5 text-orange-400 animate-pulse shrink-0" />
                 <span>Spectator Mode • Official Match Scoring Managed Exclusively by PSU Facilitators</span>
                 {match.status === 'Completed' && (
-                  <span className="font-bold text-yellow-300 ml-2">
+                  <span className="font-bold text-yellow-300">
                     (Final Winner: {match.team_a_score > match.team_b_score ? match.team_a?.name : match.team_b?.name})
                   </span>
                 )}

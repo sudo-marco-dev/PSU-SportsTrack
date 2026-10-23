@@ -4,21 +4,32 @@ import { supabase } from '@/lib/supabase';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Users, UserPlus, ClipboardList, Star, AlertTriangle, Zap, Circle, GraduationCap } from 'lucide-react';
+import { Users, UserPlus, ClipboardList, Star, AlertTriangle, Zap, Circle, GraduationCap, Eye, Target, Filter, CheckCircle2 } from 'lucide-react';
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import {
+  fetchBatchPlayerSummaries,
+  evaluateSquadEligibility,
+  getPrimarySportStatPill,
+  AVAILABLE_SPORTS,
+  type PlayerDirectorySummary,
+} from '@/lib/playerStatsEngine';
+import { PlayerDossierModal } from '@/components/scouting/PlayerDossierModal';
+import { MatchBoxScoreModal } from '@/components/scouting/MatchBoxScoreModal';
+import { ExpandableIconTabs } from '@/components/ui/expandable-icon-tabs';
 
 type Team = {
   id: string;
   name: string;
   status: string;
+  is_deleted?: boolean | null;
   tournament_id: string;
   affiliation_type?: 'college' | 'cluster';
   college_id?: string | null;
@@ -27,6 +38,8 @@ type Team = {
   tournaments: {
     name: string;
     sport?: string;
+    status?: string;
+    is_deleted?: boolean | null;
   };
   colleges?: {
     college_name: string;
@@ -52,6 +65,11 @@ type Player = {
   id: string;
   full_name: string;
   is_verified: boolean;
+  college_id?: string | null;
+  preferred_sports?: string[] | null;
+  primary_position?: string | null;
+  program?: string | null;
+  year_level?: string | null;
   colleges: {
     college_name: string;
   } | null;
@@ -107,6 +125,16 @@ export const TeamManagement = () => {
   const [invitePlayerId, setInvitePlayerId] = useState<string | null>(null);
   const [selectedTeamToInvite, setSelectedTeamToInvite] = useState('');
 
+  // Smart Recruitment Scouting Filters & Modals State
+  const [playerSummaries, setPlayerSummaries] = useState<Record<string, PlayerDirectorySummary>>({});
+  const [targetRecruitmentTeamId, setTargetRecruitmentTeamId] = useState<string>('all');
+  const [eligibilityFilter, setEligibilityFilter] = useState<'all' | 'eligible'>('all');
+  const [sportFilter, setSportFilter] = useState<string>('all');
+  const [positionFilter, setPositionFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'points' | 'ppg' | 'threes' | 'mvp' | 'name'>('points');
+  const [dossierPlayerId, setDossierPlayerId] = useState<string | null>(null);
+  const [boxScoreMatchId, setBoxScoreMatchId] = useState<string | null>(null);
+
   // Manage Roster & Lineup State
   const [manageRosterTeamId, setManageRosterTeamId] = useState<string | null>(null);
   const [rosterMembers, setRosterMembers] = useState<RosterMember[]>([]);
@@ -134,34 +162,43 @@ export const TeamManagement = () => {
     setIsLoadingTeams(true);
     const { data, error } = await supabase
       .from('teams')
-      .select('*, tournaments(name, sport), colleges(college_name), clusters(name)')
+      .select('*, tournaments(name, sport, status, is_deleted), colleges(college_name), clusters(name)')
       .eq('coach_id', user?.id)
+      .or('is_deleted.is.null,is_deleted.eq.false')
       .order('created_at', { ascending: false });
 
     if (error) {
       toast.error('Failed to load teams: ' + error.message);
     } else {
-      setTeams((data as unknown) as Team[]);
+      const activeTeams = ((data as unknown) as Team[]).filter((t) => {
+        const tourney = Array.isArray(t.tournaments) ? t.tournaments[0] : t.tournaments;
+        return !tourney?.is_deleted;
+      });
+      setTeams(activeTeams);
     }
     setIsLoadingTeams(false);
   };
 
   const fetchPlayers = async () => {
     setIsLoadingPlayers(true);
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, full_name, is_verified, role, account_status, colleges(college_name)')
-      .in('role', ['player_student', 'player_faculty', 'Player'])
-      .eq('is_verified', true)
-      .neq('account_status', 'inactive')
-      .neq('account_status', 'soft_deleted')
-      .order('full_name', { ascending: true });
+    const [usersRes, summaries] = await Promise.all([
+      supabase
+        .from('users')
+        .select('id, full_name, is_verified, role, account_status, college_id, preferred_sports, primary_position, program, year_level, colleges(college_name)')
+        .in('role', ['player_student', 'player_faculty', 'Player'])
+        .eq('is_verified', true)
+        .neq('account_status', 'inactive')
+        .neq('account_status', 'soft_deleted')
+        .order('full_name', { ascending: true }),
+      fetchBatchPlayerSummaries(),
+    ]);
 
-    if (error) {
-      toast.error('Failed to load players: ' + error.message);
+    if (usersRes.error) {
+      toast.error('Failed to load players: ' + usersRes.error.message);
     } else {
-      setPlayers((data as unknown) as Player[]);
+      setPlayers((usersRes.data as unknown) as Player[]);
     }
+    setPlayerSummaries(summaries);
     setIsLoadingPlayers(false);
   };
 
@@ -228,14 +265,23 @@ export const TeamManagement = () => {
     const targetSport = tournamentData?.sport;
 
     if (targetSport) {
-      // Check if player is already in a team for this sport
+      // Check if player is already invited to this exact team or approved in another active team for this sport
       const { data: existingRosters, error: checkError } = await supabase
         .from('team_roster')
         .select(`
           id,
+          team_id,
+          status,
           teams (
+            id,
+            name,
+            status,
+            is_deleted,
             tournaments (
-              sport
+              id,
+              sport,
+              status,
+              is_deleted
             )
           )
         `)
@@ -247,14 +293,25 @@ export const TeamManagement = () => {
         return;
       }
 
+      const alreadyOnSameTeam = existingRosters?.some(
+        (roster: any) => roster.team_id === selectedTeamToInvite
+      );
+      if (alreadyOnSameTeam) {
+        toast.error('This player has already been invited to or is already on this squad.');
+        return;
+      }
+
       const isDuplicate = existingRosters?.some((roster: any) => {
+        if (roster.status !== 'Approved') return false;
         const teamData = Array.isArray(roster.teams) ? roster.teams[0] : roster.teams;
+        if (!teamData || teamData.is_deleted || teamData.status === 'Rejected') return false;
         const tourneyData = Array.isArray(teamData?.tournaments) ? teamData.tournaments[0] : teamData?.tournaments;
-        return tourneyData?.sport === targetSport;
+        if (!tourneyData || tourneyData.is_deleted || tourneyData.status === 'Completed') return false;
+        return tourneyData.sport === targetSport;
       });
 
       if (isDuplicate) {
-        toast.error(`Cannot recruit: Player is already in a team for ${targetSport}.`);
+        toast.error(`Cannot recruit: Player is already an approved roster member on an active ${targetSport} squad.`);
         return;
       }
     }
@@ -356,6 +413,11 @@ export const TeamManagement = () => {
     }
   };
 
+  const targetRecruitmentTeam = useMemo(() => {
+    if (!targetRecruitmentTeamId || targetRecruitmentTeamId === 'all') return null;
+    return teams.find((t) => t.id === targetRecruitmentTeamId) || null;
+  }, [teams, targetRecruitmentTeamId]);
+
   const filteredTeams = useMemo(() => {
     return teams.filter(t => {
       const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -366,13 +428,53 @@ export const TeamManagement = () => {
   }, [teams, searchQuery, statusFilter]);
 
   const filteredPlayers = useMemo(() => {
-    return players.filter(p => {
+    const result = players.filter(p => {
       const collegeName = Array.isArray(p.colleges) ? p.colleges[0]?.college_name : p.colleges?.college_name || '';
-      const matchesSearch = p.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        collegeName.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesSearch;
+      const summary = playerSummaries[p.id];
+      const prefSports = Array.isArray(p.preferred_sports) ? p.preferred_sports : [];
+      const activeSports = summary?.activeSports || [];
+      const allPlayerSports = Array.from(new Set([...prefSports, ...activeSports]));
+      const allPositions = Array.from(new Set([
+        ...(p.primary_position ? [p.primary_position] : []),
+        ...(summary?.positions || []),
+      ]));
+
+      const matchesSearch =
+        p.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        collegeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.program || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        allPlayerSports.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      if (!matchesSearch) return false;
+
+      if (eligibilityFilter === 'eligible' && targetRecruitmentTeam) {
+        const elig = evaluateSquadEligibility(p.college_id, collegeName, targetRecruitmentTeam, clusters);
+        if (!elig.eligible) return false;
+      }
+
+      if (sportFilter !== 'all') {
+        const hasSport = allPlayerSports.some((s) => s.toLowerCase() === sportFilter.toLowerCase());
+        if (!hasSport) return false;
+      }
+
+      if (positionFilter !== 'all') {
+        const hasPos = allPositions.some((pos) => pos.toLowerCase().includes(positionFilter.toLowerCase()));
+        if (!hasPos) return false;
+      }
+
+      return true;
     });
-  }, [players, searchQuery]);
+
+    return result.sort((a, b) => {
+      const sumA = playerSummaries[a.id];
+      const sumB = playerSummaries[b.id];
+      if (sortBy === 'points') return (sumB?.totalPoints || 0) - (sumA?.totalPoints || 0);
+      if (sortBy === 'ppg') return (sumB?.ppg || 0) - (sumA?.ppg || 0);
+      if (sortBy === 'threes') return (sumB?.threePointers || 0) - (sumA?.threePointers || 0);
+      if (sortBy === 'mvp') return (sumB?.mvpCount || 0) - (sumA?.mvpCount || 0);
+      return a.full_name.localeCompare(b.full_name);
+    });
+  }, [players, searchQuery, playerSummaries, eligibilityFilter, targetRecruitmentTeam, clusters, sportFilter, positionFilter, sortBy]);
 
   return (
     <div className="space-y-6 relative pb-6">
@@ -575,21 +677,17 @@ export const TeamManagement = () => {
         <div className="absolute -right-20 -top-20 size-96 bg-orange-500/10 rounded-full blur-[100px]" />
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col">
-        <TabsList className="w-full flex justify-start overflow-x-auto whitespace-nowrap bg-transparent border-b-2 border-slate-200 dark:border-white/10 rounded-none h-auto p-0 gap-8 scrollbar-hide mb-8">
-          <TabsTrigger
-            value="my-teams"
-            className="shrink-0 rounded-none pb-5 text-sm font-black uppercase tracking-[0.2em] shadow-none transition-all border-b-4 data-[state=active]:border-orange-500 data-[state=active]:text-orange-600 border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-white bg-transparent"
-          >
-            My Teams
-          </TabsTrigger>
-          <TabsTrigger
-            value="directory"
-            className="shrink-0 rounded-none pb-5 text-sm font-black uppercase tracking-[0.2em] shadow-none transition-all border-b-4 data-[state=active]:border-orange-500 data-[state=active]:text-orange-600 border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-white bg-transparent"
-          >
-            Player Directory
-          </TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col min-w-0">
+        <ExpandableIconTabs
+          tabs={[
+            { id: 'my-teams', label: 'My Teams', icon: Users, count: teams.length },
+            { id: 'directory', label: 'Player Directory', icon: ClipboardList, count: filteredPlayers.length },
+          ]}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          className="w-full sm:w-auto mb-6"
+          ariaLabel="Coach Team Management Navigation"
+        />
 
         <div className="mb-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
           <DataToolbar
@@ -747,50 +845,360 @@ export const TeamManagement = () => {
         </TabsContent>
 
         <TabsContent value="directory" className="space-y-6 outline-none">
+          {/* Smart Coach Recruitment Filter & Eligibility Workbench */}
+          <Card className="p-4 sm:p-5 rounded-3xl border-2 border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900 shadow-sm space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-orange-500/10 text-orange-500">
+                  <Filter className="size-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-tight text-slate-900 dark:text-white">
+                    Smart Scouting &amp; Eligibility Filters
+                  </h3>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Filter athletes by Target Squad College / Binturungan Tribe, Preferred Sport, Position &amp; Career Stats
+                  </p>
+                </div>
+              </div>
+              <Badge variant="outline" className="text-[10px] font-black uppercase border-orange-500/30 text-orange-500 w-fit">
+                {filteredPlayers.length} Matching Athletes
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {/* 1. Target Squad Context Selector */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                  Target Squad Context
+                </label>
+                <Select
+                  value={targetRecruitmentTeamId}
+                  onValueChange={(val) => {
+                    const nextVal = val || 'all';
+                    setTargetRecruitmentTeamId(nextVal);
+                    if (nextVal !== 'all') {
+                      setEligibilityFilter('eligible');
+                      const t = teams.find((tm) => tm.id === nextVal);
+                      const tr = Array.isArray(t?.tournaments) ? t?.tournaments[0] : t?.tournaments;
+                      if (tr?.sport) setSportFilter('all');
+                    } else {
+                      setEligibilityFilter('all');
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-10 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold">
+                    <SelectValue placeholder="All Squads (Open)" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="all" className="text-xs font-bold">
+                      All Squads (Open Browse)
+                    </SelectItem>
+                    {teams
+                      .filter((t) => t.status !== 'Rejected')
+                      .map((t) => (
+                        <SelectItem key={t.id} value={t.id} className="text-xs font-bold">
+                          {t.name} ({t.tournaments?.sport || 'Sport'})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 2. College / Tribe Eligibility Toggle */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                  College / Tribe Eligibility
+                </label>
+                <Select
+                  value={eligibilityFilter}
+                  onValueChange={(val) => setEligibilityFilter((val as 'all' | 'eligible') || 'all')}
+                >
+                  <SelectTrigger className="h-10 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="all" className="text-xs font-bold">
+                      Show All Colleges / Tribes
+                    </SelectItem>
+                    <SelectItem value="eligible" className="text-xs font-bold">
+                      Only Eligible for Target Squad
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 3. Preferred Sport Filter */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                  Preferred / Active Sport
+                </label>
+                <Select value={sportFilter} onValueChange={(val) => setSportFilter(val || 'all')}>
+                  <SelectTrigger className="h-10 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl max-h-60">
+                    <SelectItem value="all" className="text-xs font-bold">
+                      All Sports
+                    </SelectItem>
+                    {AVAILABLE_SPORTS.map((sp) => (
+                      <SelectItem key={sp} value={sp} className="text-xs font-bold">
+                        {sp}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 4. Position Filter */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                  Position / Role
+                </label>
+                <Select value={positionFilter} onValueChange={(val) => setPositionFilter(val || 'all')}>
+                  <SelectTrigger className="h-10 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl max-h-60">
+                    <SelectItem value="all" className="text-xs font-bold">
+                      All Positions
+                    </SelectItem>
+                    <SelectItem value="PG" className="text-xs font-bold">Point Guard (PG)</SelectItem>
+                    <SelectItem value="SG" className="text-xs font-bold">Shooting Guard (SG)</SelectItem>
+                    <SelectItem value="SF" className="text-xs font-bold">Small Forward (SF)</SelectItem>
+                    <SelectItem value="PF" className="text-xs font-bold">Power Forward (PF)</SelectItem>
+                    <SelectItem value="C" className="text-xs font-bold">Center (C)</SelectItem>
+                    <SelectItem value="Setter" className="text-xs font-bold">Setter</SelectItem>
+                    <SelectItem value="Spiker" className="text-xs font-bold">Spiker / Hitter</SelectItem>
+                    <SelectItem value="Libero" className="text-xs font-bold">Libero</SelectItem>
+                    <SelectItem value="Striker" className="text-xs font-bold">Striker / Forward</SelectItem>
+                    <SelectItem value="Midfield" className="text-xs font-bold">Midfielder</SelectItem>
+                    <SelectItem value="Defender" className="text-xs font-bold">Defender</SelectItem>
+                    <SelectItem value="Goal" className="text-xs font-bold">Goalkeeper</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 5. Sort By Telemetry */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                  Rank / Sort By
+                </label>
+                <Select value={sortBy} onValueChange={(val: any) => setSortBy(val || 'points')}>
+                  <SelectTrigger className="h-10 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="points" className="text-xs font-bold">Career Points (High → Low)</SelectItem>
+                    <SelectItem value="ppg" className="text-xs font-bold">Scoring Average / PPG</SelectItem>
+                    <SelectItem value="threes" className="text-xs font-bold">3-Pointers Made (3PM)</SelectItem>
+                    <SelectItem value="mvp" className="text-xs font-bold">MVP Trophies</SelectItem>
+                    <SelectItem value="name" className="text-xs font-bold">Athlete Name (A → Z)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {targetRecruitmentTeam && (
+              <div className="p-3 rounded-2xl bg-orange-500/5 border border-orange-500/20 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <Target className="size-4 text-orange-500 shrink-0" />
+                  <span className="font-bold text-slate-700 dark:text-slate-200">
+                    Active Recruitment Context:{' '}
+                    <strong className="text-orange-500 uppercase">{targetRecruitmentTeam.name}</strong>
+                    {targetRecruitmentTeam.affiliation_type === 'cluster' && targetRecruitmentTeam.clusters?.name
+                      ? ` • Binturungan Tribe: ${targetRecruitmentTeam.clusters.name}`
+                      : targetRecruitmentTeam.colleges?.college_name
+                      ? ` • College: ${targetRecruitmentTeam.colleges.college_name}`
+                      : ''}
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setTargetRecruitmentTeamId('all');
+                    setEligibilityFilter('all');
+                    setSportFilter('all');
+                    setPositionFilter('all');
+                  }}
+                  className="h-7 text-[10px] font-black uppercase text-slate-500 hover:text-orange-500"
+                >
+                  Reset Context
+                </Button>
+              </div>
+            )}
+          </Card>
+
           {isLoadingPlayers ? (
             <SkeletonCard count={3} variant="card" />
           ) : filteredPlayers.length === 0 ? (
             <EmptyState
               icon={Users}
-              title="No Players Found"
-              description="No eligible student athletes match your current query."
-              actionLabel={searchQuery ? 'Clear Search' : undefined}
-              onAction={() => setSearchQuery('')}
+              title="No Players Match Filters"
+              description="No verified athletes match your current college/tribe eligibility, preferred sport, or search filters."
+              actionLabel="Reset Scouting Filters"
+              onAction={() => {
+                setSearchQuery('');
+                setEligibilityFilter('all');
+                setSportFilter('all');
+                setPositionFilter('all');
+              }}
             />
           ) : viewMode === 'grid' ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {filteredPlayers.map((player, idx) => (
-                <Card key={player.id} className="group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl rounded-3xl overflow-hidden border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 animate-in fade-in slide-in-from-bottom-4 flex flex-col justify-between min-w-0" style={{ animationDelay: `${idx * 50}ms` }}>
-                  <div className="min-w-0">
-                    <CardHeader className="p-5 sm:p-6 pb-2 min-w-0">
-                      <div className="flex items-center gap-3.5 mb-3.5 min-w-0">
-                        <div className="size-11 sm:size-12 bg-slate-50 dark:bg-white/5 rounded-2xl flex items-center justify-center font-black text-slate-400 group-hover:bg-orange-500 group-hover:text-white transition-all duration-500 shrink-0 shadow-sm">
-                          {player.full_name.charAt(0)}
+              {filteredPlayers.map((player, idx) => {
+                const collegeName = Array.isArray(player.colleges)
+                  ? player.colleges[0]?.college_name
+                  : player.colleges?.college_name || 'Unassigned College';
+                const summary = playerSummaries[player.id];
+                const elig = evaluateSquadEligibility(
+                  player.college_id,
+                  collegeName,
+                  targetRecruitmentTeam,
+                  clusters
+                );
+                const prefSports = Array.isArray(player.preferred_sports) ? player.preferred_sports : [];
+                const displaySports = Array.from(new Set([...prefSports, ...(summary?.activeSports || [])]));
+
+                return (
+                  <Card
+                    key={player.id}
+                    className="group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl rounded-3xl overflow-hidden border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 animate-in fade-in slide-in-from-bottom-4 flex flex-col justify-between min-w-0"
+                    style={{ animationDelay: `${Math.min(idx * 35, 300)}ms` }}
+                  >
+                    <div className="min-w-0">
+                      <CardHeader className="p-5 sm:p-6 pb-3 min-w-0 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="size-11 sm:size-12 bg-slate-50 dark:bg-white/5 rounded-2xl flex items-center justify-center font-black text-slate-400 group-hover:bg-orange-500 group-hover:text-white transition-all duration-500 shrink-0 shadow-sm">
+                              {player.full_name.charAt(0)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <CardTitle
+                                className="text-lg sm:text-xl font-black italic uppercase tracking-tighter truncate text-slate-900 dark:text-white group-hover:text-orange-500 transition-colors cursor-pointer"
+                                title={player.full_name}
+                                onClick={() => setDossierPlayerId(player.id)}
+                              >
+                                {player.full_name}
+                              </CardTitle>
+                              <CardDescription className="font-bold text-orange-500 uppercase text-[9px] tracking-[0.15em] mt-0.5 truncate flex items-center gap-1.5">
+                                <span>{player.primary_position || summary?.positions[0] || 'Verified Athlete'}</span>
+                                {player.year_level && (
+                                  <span className="text-slate-400">• {player.year_level}</span>
+                                )}
+                              </CardDescription>
+                            </div>
+                          </div>
+
+                          {targetRecruitmentTeam && (
+                            <Badge
+                              className={
+                                elig.eligible
+                                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[9px] font-black uppercase shrink-0'
+                                  : 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30 text-[9px] font-black uppercase shrink-0'
+                              }
+                              title={elig.reason}
+                            >
+                              {elig.badgeLabel}
+                            </Badge>
+                          )}
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <CardTitle className="text-lg sm:text-xl font-black italic uppercase tracking-tighter truncate text-slate-900 dark:text-white group-hover:text-orange-500 transition-colors" title={player.full_name}>{player.full_name}</CardTitle>
-                          <CardDescription className="font-bold text-orange-500 uppercase text-[9px] tracking-[0.2em] mt-0.5 truncate">Verified Athlete</CardDescription>
+
+                        {/* College Affiliation */}
+                        <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-3 border border-slate-100 dark:border-white/5 min-w-0">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 italic">
+                            College Affiliation
+                          </p>
+                          <p
+                            className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate"
+                            title={collegeName}
+                          >
+                            {collegeName}
+                          </p>
                         </div>
-                      </div>
-                      <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-3 sm:p-3.5 border border-slate-100 dark:border-white/5 min-w-0">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 italic">University</p>
-                        <p className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 truncate" title={Array.isArray(player.colleges) ? player.colleges[0]?.college_name : player.colleges?.college_name || 'N/A'}>
-                          {Array.isArray(player.colleges) ? player.colleges[0]?.college_name : player.colleges?.college_name || 'N/A'}
-                        </p>
-                      </div>
-                    </CardHeader>
-                  </div>
-                  <CardContent className="p-5 sm:p-6 pt-3 mt-auto min-w-0">
-                    <Button
-                      className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider rounded-xl shadow-md shadow-orange-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                      onClick={() => setInvitePlayerId(player.id)}
-                    >
-                      <UserPlus className="size-4" />
-                      <span>Recruit Athlete</span>
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+
+                        {/* Preferred / Played Sports Pills */}
+                        {displaySports.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {displaySports.slice(0, 4).map((sp) => (
+                              <Badge
+                                key={sp}
+                                variant="outline"
+                                className="text-[9px] font-black uppercase border-orange-500/30 text-orange-600 dark:text-orange-400 bg-orange-500/5"
+                              >
+                                {sp}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Career Telemetry Strip */}
+                        {(() => {
+                          const sportCtx =
+                            sportFilter !== 'all'
+                              ? sportFilter
+                              : targetRecruitmentTeam?.tournaments?.sport || displaySports[0];
+                          const primaryPill = getPrimarySportStatPill(summary, sportCtx);
+                          return (
+                            <div className="grid grid-cols-4 gap-1.5 pt-1">
+                              <div className="p-2 rounded-xl bg-slate-950 text-white text-center">
+                                <p className="text-[8px] font-black uppercase text-slate-400">GP</p>
+                                <p className="text-xs font-black tabular-nums">{summary?.gamesPlayed || 0}</p>
+                              </div>
+                              <div className="p-2 rounded-xl bg-slate-950 text-white text-center">
+                                <p className="text-[8px] font-black uppercase text-slate-400">PTS</p>
+                                <p className="text-xs font-black tabular-nums text-orange-400">
+                                  {summary?.totalPoints || 0}
+                                </p>
+                              </div>
+                              <div className="p-2 rounded-xl bg-slate-950 text-white text-center">
+                                <p className="text-[8px] font-black uppercase text-slate-400">AVG</p>
+                                <p className="text-xs font-black tabular-nums text-cyan-400">
+                                  {summary?.ppg || 0}
+                                </p>
+                              </div>
+                              <div
+                                className="p-2 rounded-xl bg-slate-950 text-white text-center"
+                                title={primaryPill.unitLabel}
+                              >
+                                <p className="text-[8px] font-black uppercase text-slate-400">
+                                  {primaryPill.label}
+                                </p>
+                                <p className="text-xs font-black tabular-nums text-amber-400">
+                                  {primaryPill.value}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </CardHeader>
+                    </div>
+                    <CardContent className="p-5 sm:p-6 pt-2 mt-auto min-w-0 flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="h-11 px-3.5 rounded-xl font-black uppercase text-[10px] tracking-wider border-slate-200 dark:border-white/10 hover:border-orange-500/50 gap-1.5 shrink-0"
+                        onClick={() => setDossierPlayerId(player.id)}
+                      >
+                        <Eye className="size-3.5 text-orange-500" />
+                        <span>Scout</span>
+                      </Button>
+                      <Button
+                        className="flex-1 h-11 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-xs rounded-xl shadow-md shadow-orange-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                        onClick={() => {
+                          if (targetRecruitmentTeamId && targetRecruitmentTeamId !== 'all') {
+                            setSelectedTeamToInvite(targetRecruitmentTeamId);
+                          }
+                          setInvitePlayerId(player.id);
+                        }}
+                      >
+                        <UserPlus className="size-3.5" />
+                        <span>Recruit</span>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           ) : (
             <Card className="rounded-[2rem] border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 overflow-hidden shadow-2xl">
@@ -798,37 +1206,126 @@ export const TeamManagement = () => {
                 <table className="w-full">
                   <thead className="bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
                     <tr>
-                      <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Athlete Name</th>
-                      <th className="text-left py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">College</th>
-                      <th className="text-right py-4 px-8 font-black uppercase tracking-widest text-[10px] text-slate-400 dark:text-slate-400">Actions</th>
+                      <th className="text-left py-4 px-6 font-black uppercase tracking-widest text-[10px] text-slate-400">Athlete</th>
+                      <th className="text-left py-4 px-4 font-black uppercase tracking-widest text-[10px] text-slate-400">College &amp; Eligibility</th>
+                      <th className="text-left py-4 px-4 font-black uppercase tracking-widest text-[10px] text-slate-400">Preferred Sports</th>
+                      <th className="text-center py-4 px-3 font-black uppercase tracking-widest text-[10px] text-slate-400">GP</th>
+                      <th className="text-center py-4 px-3 font-black uppercase tracking-widest text-[10px] text-slate-400">PTS (AVG)</th>
+                      <th className="text-center py-4 px-3 font-black uppercase tracking-widest text-[10px] text-slate-400">Key Stat</th>
+                      <th className="text-right py-4 px-6 font-black uppercase tracking-widest text-[10px] text-slate-400">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredPlayers.map((player) => (
-                      <tr key={player.id} className="border-b border-slate-50 dark:border-white/5 last:border-none hover:bg-orange-50/30 dark:hover:bg-orange-500/5 transition-colors group">
-                        <td className="py-4 px-8">
-                          <div className="flex items-center gap-3">
-                            <div className="size-8 rounded-lg bg-slate-100 dark:bg-white/10 flex items-center justify-center font-black text-xs text-slate-500">
-                              {player.full_name.charAt(0)}
+                    {filteredPlayers.map((player) => {
+                      const collegeName = Array.isArray(player.colleges)
+                        ? player.colleges[0]?.college_name
+                        : player.colleges?.college_name || 'N/A';
+                      const summary = playerSummaries[player.id];
+                      const elig = evaluateSquadEligibility(
+                        player.college_id,
+                        collegeName,
+                        targetRecruitmentTeam,
+                        clusters
+                      );
+                      const prefSports = Array.isArray(player.preferred_sports) ? player.preferred_sports : [];
+                      const displaySports = Array.from(new Set([...prefSports, ...(summary?.activeSports || [])]));
+
+                      return (
+                        <tr key={player.id} className="border-b border-slate-50 dark:border-white/5 last:border-none hover:bg-orange-50/30 dark:hover:bg-orange-500/5 transition-colors group">
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-3">
+                              <div className="size-8 rounded-lg bg-slate-100 dark:bg-white/10 flex items-center justify-center font-black text-xs text-slate-500">
+                                {player.full_name.charAt(0)}
+                              </div>
+                              <div>
+                                <button
+                                  type="button"
+                                  onClick={() => setDossierPlayerId(player.id)}
+                                  className="font-black italic uppercase tracking-tighter text-base text-slate-900 dark:text-white hover:text-orange-500 text-left cursor-pointer"
+                                >
+                                  {player.full_name}
+                                </button>
+                                {player.primary_position && (
+                                  <p className="text-[10px] font-bold text-orange-500 uppercase">
+                                    {player.primary_position}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                            <span className="font-black italic uppercase tracking-tighter text-lg text-slate-900 dark:text-white">{player.full_name}</span>
-                          </div>
-                        </td>
-                        <td className="py-4 px-8 font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest">
-                          {Array.isArray(player.colleges) ? player.colleges[0]?.college_name : player.colleges?.college_name || 'N/A'}
-                        </td>
-                        <td className="py-4 px-8 text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="font-black uppercase italic tracking-widest text-[10px] text-orange-500 hover:text-orange-600"
-                            onClick={() => setInvitePlayerId(player.id)}
-                          >
-                            Recruit
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="py-4 px-4">
+                            <p className="font-bold text-slate-600 dark:text-slate-300 uppercase text-[10px] tracking-wider">
+                              {collegeName}
+                            </p>
+                            {targetRecruitmentTeam && (
+                              <Badge
+                                className={
+                                  elig.eligible
+                                    ? 'bg-emerald-500/15 text-emerald-600 text-[8px] font-black uppercase mt-1'
+                                    : 'bg-red-500/15 text-red-500 text-[8px] font-black uppercase mt-1'
+                                }
+                              >
+                                {elig.badgeLabel}
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="flex flex-wrap gap-1">
+                              {displaySports.length === 0 ? (
+                                <span className="text-[10px] text-slate-400">Open</span>
+                              ) : (
+                                displaySports.map((sp) => (
+                                  <Badge key={sp} variant="outline" className="text-[9px] font-bold uppercase">
+                                    {sp}
+                                  </Badge>
+                                ))
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-4 px-3 text-center font-mono font-bold text-xs">
+                            {summary?.gamesPlayed || 0}
+                          </td>
+                          <td className="py-4 px-3 text-center font-mono font-black text-xs text-orange-500">
+                            {summary?.totalPoints || 0} ({summary?.ppg || 0})
+                          </td>
+                          <td className="py-4 px-3 text-center font-mono font-bold text-xs text-amber-500">
+                            {(() => {
+                              const pill = getPrimarySportStatPill(
+                                summary,
+                                sportFilter !== 'all'
+                                  ? sportFilter
+                                  : targetRecruitmentTeam?.tournaments?.sport || displaySports[0]
+                              );
+                              return `${pill.value} ${pill.label}`;
+                            })()}
+                          </td>
+                          <td className="py-4 px-6 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 px-2.5 text-[10px] font-black uppercase rounded-lg"
+                                onClick={() => setDossierPlayerId(player.id)}
+                              >
+                                Scout
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="h-8 px-3 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-[10px] rounded-lg"
+                                onClick={() => {
+                                  if (targetRecruitmentTeamId && targetRecruitmentTeamId !== 'all') {
+                                    setSelectedTeamToInvite(targetRecruitmentTeamId);
+                                  }
+                                  setInvitePlayerId(player.id);
+                                }}
+                              >
+                                Recruit
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1053,17 +1550,54 @@ export const TeamManagement = () => {
                 </SelectValue>
               </SelectTrigger>
               <SelectContent className="rounded-xl max-w-[calc(100vw-3rem)] sm:max-w-md">
-                {teams.length === 0 ? (
-                  <div className="p-4 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest">No teams created yet</div>
+                {teams.filter((t) => {
+                  const tourney = Array.isArray(t.tournaments) ? t.tournaments[0] : t.tournaments;
+                  return t.status !== 'Rejected' && tourney?.status !== 'Completed';
+                }).length === 0 ? (
+                  <div className="p-4 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest">No active teams available for recruitment</div>
                 ) : (
-                  teams.map((team) => (
-                    <SelectItem key={team.id} value={team.id} className="rounded-lg">
-                      <span className="truncate">{team.name} ({team.tournaments?.name || 'Tournament'}{team.tournaments?.sport ? ` - ${team.tournaments.sport}` : ''})</span>
-                    </SelectItem>
-                  ))
+                  teams
+                    .filter((t) => {
+                      const tourney = Array.isArray(t.tournaments) ? t.tournaments[0] : t.tournaments;
+                      return t.status !== 'Rejected' && tourney?.status !== 'Completed';
+                    })
+                    .map((team) => (
+                      <SelectItem key={team.id} value={team.id} className="rounded-lg">
+                        <span className="truncate">{team.name} ({team.tournaments?.name || 'Tournament'}{team.tournaments?.sport ? ` - ${team.tournaments.sport}` : ''})</span>
+                      </SelectItem>
+                    ))
                 )}
               </SelectContent>
             </Select>
+
+            {invitePlayerId && selectedTeamToInvite && (() => {
+              const targetPl = players.find((p) => p.id === invitePlayerId);
+              const targetTm = teams.find((t) => t.id === selectedTeamToInvite) || null;
+              if (!targetPl || !targetTm) return null;
+              const colName = Array.isArray(targetPl.colleges)
+                ? targetPl.colleges[0]?.college_name
+                : targetPl.colleges?.college_name || '';
+              const check = evaluateSquadEligibility(targetPl.college_id, colName, targetTm, clusters);
+              return (
+                <div
+                  className={`p-3 rounded-2xl border text-xs flex items-start gap-2.5 mt-2 ${
+                    check.eligible
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300'
+                  }`}
+                >
+                  {check.eligible ? (
+                    <CheckCircle2 className="size-4 text-emerald-500 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle className="size-4 text-amber-500 shrink-0 mt-0.5" />
+                  )}
+                  <div>
+                    <p className="font-black uppercase text-[10px] tracking-wider">{check.badgeLabel}</p>
+                    <p className="text-[11px] font-medium mt-0.5">{check.reason}</p>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
           <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 pt-2">
             <Button variant="ghost" onClick={() => { setInvitePlayerId(null); setSelectedTeamToInvite(''); }} className="h-11 sm:h-12 rounded-xl font-black uppercase tracking-wider text-xs">Cancel</Button>
@@ -1071,6 +1605,36 @@ export const TeamManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Athlete Scouting Dossier Modal */}
+      <PlayerDossierModal
+        playerId={dossierPlayerId}
+        onClose={() => setDossierPlayerId(null)}
+        onOpenMatchBoxScore={(mId) => setBoxScoreMatchId(mId)}
+        onRecruitPlayer={(pId) => {
+          if (targetRecruitmentTeamId && targetRecruitmentTeamId !== 'all') {
+            setSelectedTeamToInvite(targetRecruitmentTeamId);
+          }
+          setInvitePlayerId(pId);
+        }}
+        eligibilityBadge={(() => {
+          if (!dossierPlayerId || !targetRecruitmentTeam) return null;
+          const p = players.find((pl) => pl.id === dossierPlayerId);
+          if (!p) return null;
+          const cName = Array.isArray(p.colleges) ? p.colleges[0]?.college_name : p.colleges?.college_name || '';
+          return evaluateSquadEligibility(p.college_id, cName, targetRecruitmentTeam, clusters);
+        })()}
+      />
+
+      {/* Match Box Score Modal */}
+      <MatchBoxScoreModal
+        matchId={boxScoreMatchId}
+        onClose={() => setBoxScoreMatchId(null)}
+        onSelectPlayer={(pId) => {
+          setBoxScoreMatchId(null);
+          setDossierPlayerId(pId);
+        }}
+      />
     </div>
   );
 };

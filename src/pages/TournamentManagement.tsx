@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { 
   Trophy, 
   Users, 
@@ -23,6 +23,7 @@ import { TournamentListTab } from '@/components/tournament-management/Tournament
 import { TeamApprovalsTab } from '@/components/tournament-management/TeamApprovalsTab';
 import { TournamentMvpTab } from '@/components/tournament-management/TournamentMvpTab';
 import { BracketGenerationModal } from '@/components/tournament-management/BracketGenerationModal';
+import { ExpandableIconTabs } from '@/components/ui/expandable-icon-tabs';
 
 export const TournamentManagement: React.FC = () => {
   const { user } = useAuth();
@@ -150,6 +151,7 @@ export const TournamentManagement: React.FC = () => {
     const { error } = await supabase
       .from('teams')
       .update({
+        status: 'Rejected',
         is_deleted: true,
         deleted_at: new Date().toISOString(),
         deleted_by: adminId
@@ -226,34 +228,25 @@ export const TournamentManagement: React.FC = () => {
         <div className="absolute -right-20 -top-20 size-96 bg-orange-500/10 rounded-full blur-[100px] group-hover:bg-orange-500/20 transition-all duration-1000" />
       </div>
 
-      {/* Management Navigation Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full relative z-10 flex flex-col">
-        <TabsList className="w-full flex justify-start overflow-x-auto whitespace-nowrap bg-transparent border-b-2 border-slate-200 dark:border-white/10 rounded-none h-auto p-0 gap-8 scrollbar-hide mb-8">
-          <TabsTrigger 
-            value="tournaments" 
-            className="shrink-0 rounded-none pb-5 text-sm font-black uppercase tracking-[0.2em] shadow-none transition-all border-b-4 data-[state=active]:border-orange-500 data-[state=active]:text-orange-600 border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-white bg-transparent cursor-pointer"
-          >
-            <Trophy className="size-4 mr-2 inline-block mb-0.5" /> Institutional Tournaments
-          </TabsTrigger>
-          <TabsTrigger 
-            value="approvals" 
-            className="shrink-0 rounded-none pb-5 text-sm font-black uppercase tracking-[0.2em] shadow-none transition-all border-b-4 data-[state=active]:border-orange-500 data-[state=active]:text-orange-600 border-transparent text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-white bg-transparent cursor-pointer"
-          >
-            <Users className="size-4 mr-2 inline-block mb-0.5" /> 
-            Approvals
-            {pendingTeams.length > 0 && (
-              <span className="ml-3 px-2 py-0.5 bg-orange-500 text-white text-[10px] rounded-full">
-                {pendingTeams.length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger 
-            value="mvp" 
-            className="shrink-0 rounded-none pb-5 text-sm font-black uppercase tracking-[0.2em] shadow-none transition-all border-b-4 data-[state=active]:border-orange-500 data-[state=active]:text-orange-600 border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-white bg-transparent cursor-pointer"
-          >
-            <Star className="size-4 mr-2 inline-block mb-0.5" /> MVP Hall of Fame
-          </TabsTrigger>
-        </TabsList>
+      {/* Management Navigation Tabs — Expandable Icon Tabs (Single sleek 44px row) */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full relative z-10 flex flex-col min-w-0">
+        <ExpandableIconTabs
+          tabs={[
+            { id: 'tournaments', label: 'Tournaments', icon: Trophy, count: tournaments.length },
+            {
+              id: 'approvals',
+              label: 'Approvals',
+              icon: Users,
+              count: pendingTeams.length,
+              badgeTone: pendingTeams.length > 0 ? 'warning' : 'muted',
+            },
+            { id: 'mvp', label: 'MVP Hall of Fame', icon: Star },
+          ]}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          className="w-full sm:w-auto mb-6"
+          ariaLabel="Tournament Operations Navigation"
+        />
 
         {activeTab !== 'mvp' && (
           <div className="mb-8 animate-in fade-in slide-in-from-bottom-2 duration-500">

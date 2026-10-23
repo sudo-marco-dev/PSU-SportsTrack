@@ -27,6 +27,8 @@ type KioskScoreColumnProps = {
   totalTimeouts: number;
   onCallTimeout: (team: 'a' | 'b') => void;
   activePlayers: RosterPlayerItem[];
+  selectedPlayerId?: string | null;
+  onSelectPlayer?: (playerId: string | null) => void;
   onOpenSubModal: (team: 'a' | 'b') => void;
   isLeading?: boolean;
   isAuthorized?: boolean;
@@ -51,6 +53,8 @@ export const KioskScoreColumn = ({
   totalTimeouts,
   onCallTimeout,
   activePlayers,
+  selectedPlayerId = null,
+  onSelectPlayer,
   onOpenSubModal,
   isLeading = false,
   isAuthorized = true,
@@ -295,27 +299,55 @@ export const KioskScoreColumn = ({
 
       {/* Active On-Court Roster & Substitution Bar */}
       {compact ? (
-        <div className="mt-1.5 p-1.5 rounded-xl bg-slate-950/80 border border-white/10 flex items-center justify-between shrink-0">
-          <span className="text-[10px] font-black uppercase tracking-wider text-slate-300">
-            On-Court ({activePlayers.length})
-          </span>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => onOpenSubModal(team)}
-            className="h-5 px-2 text-[10px] font-bold text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 gap-1 rounded"
-          >
-            <ArrowLeftRight className="size-2.5" />
-            <span>Sub</span>
-          </Button>
+        <div className="mt-1.5 p-1.5 rounded-xl bg-slate-950/80 border border-white/10 space-y-1 shrink-0">
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-300">
+              Tap Player to Credit ({activePlayers.length})
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => onOpenSubModal(team)}
+              className="h-5 px-1.5 text-[9px] font-bold text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 gap-1 rounded"
+            >
+              <ArrowLeftRight className="size-2.5" />
+              <span>Sub</span>
+            </Button>
+          </div>
+          {activePlayers.length > 0 && (
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+              {activePlayers.slice(0, 7).map((p) => {
+                const isSelected = selectedPlayerId === p.player_id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() =>
+                      onSelectPlayer && onSelectPlayer(isSelected ? null : p.player_id)
+                    }
+                    className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border text-[9px] font-bold shrink-0 cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-orange-500 text-slate-950 border-orange-400 font-black shadow-sm'
+                        : 'bg-white/5 border-white/10 text-slate-200 hover:bg-white/10'
+                    }`}
+                  >
+                    <span className="font-mono">{getJersey(p)}</span>
+                    <span className="truncate max-w-[55px]">{getPlayerName(p).split(' ')[0]}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       ) : (
         <div className="mt-3 p-3 rounded-2xl bg-slate-950/80 border border-white/10">
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/5">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-300">
-                Active On-Court ({activePlayers.length})
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-300 truncate">
+                {selectedPlayerId
+                  ? 'Scoring Credited To Selected Athlete'
+                  : `Tap On-Court Player to Credit (${activePlayers.length})`}
               </span>
             </div>
             <Button
@@ -323,28 +355,45 @@ export const KioskScoreColumn = ({
               size="sm"
               variant="ghost"
               onClick={() => onOpenSubModal(team)}
-              className="h-6 px-2 text-[10px] font-bold text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 gap-1 rounded-md"
+              className="h-6 px-2 text-[10px] font-bold text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 gap-1 rounded-md shrink-0"
             >
               <ArrowLeftRight className="size-3" />
               <span>Sub Player</span>
             </Button>
           </div>
 
-          {/* Horizontal Scrollable Active Player Badges */}
+          {/* Horizontal Scrollable Active Player Badges (1-Tap Attribution) */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
             {activePlayers.length === 0 ? (
               <span className="text-[11px] text-slate-500 italic py-1">No active players assigned</span>
             ) : (
-              activePlayers.slice(0, 7).map((p) => (
-                <span
-                  key={p.id}
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] font-bold text-slate-200 shrink-0"
-                  title={getPlayerName(p)}
-                >
-                  <span className="font-mono text-orange-400 text-[10px]">{getJersey(p)}</span>
-                  <span className="truncate max-w-[80px]">{getPlayerName(p)}</span>
-                </span>
-              ))
+              activePlayers.slice(0, 7).map((p) => {
+                const isSelected = selectedPlayerId === p.player_id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() =>
+                      onSelectPlayer && onSelectPlayer(isSelected ? null : p.player_id)
+                    }
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-bold shrink-0 cursor-pointer transition-all active:scale-95 ${
+                      isSelected
+                        ? 'bg-orange-500 text-slate-950 border-orange-400 font-black ring-2 ring-orange-400/50 shadow-md'
+                        : 'bg-white/5 border-white/10 text-slate-200 hover:bg-white/10'
+                    }`}
+                    title={`Tap to credit points to ${getPlayerName(p)}`}
+                  >
+                    <span
+                      className={`font-mono text-[10px] ${
+                        isSelected ? 'text-slate-950 font-black' : 'text-orange-400'
+                      }`}
+                    >
+                      {getJersey(p)}
+                    </span>
+                    <span className="truncate max-w-[85px]">{getPlayerName(p)}</span>
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
