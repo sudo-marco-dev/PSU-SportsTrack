@@ -1640,3 +1640,15 @@ This log tracks every user prompt, database migration, code change, and Git oper
     *   Live browser verification via `chrome-devtools-mcp` across both mobile viewport (`390x844`) and desktop viewport (`1440x900`):
         - Tested `/coach/teams` (both Teams and Player Directory in Grid and List modes).
         - Tested `/ranking` (segmented tab balance on mobile and desktop).
+
+
+### 2026-10-23: Fix ExpandableIconTabs Clipping on Active Segment
+*   **Root Cause**: Both the parent container (`div[role="tablist"]`) and child `<button>` had fixed `heightClass` (`h-10 sm:h-11`). With parent padding `p-1`, the 40px/44px button was 8px taller than the available inner height (32px/36px). Combined with `overflow-x-auto`, the top and bottom borders and rounded corners of the active button were clipped flat against the container border.
+*   **Resolution** ([`src/components/ui/expandable-icon-tabs.tsx`](file:///f:/VScodes/SportsTrack/psu-sportstrack/src/components/ui/expandable-icon-tabs.tsx)):
+    - Adjusted container height to `h-11 sm:h-12` (44px on mobile, 48px on desktop).
+    - Removed `heightClass` from the child `<button>` and set `h-full`, ensuring the active tab button sits precisely within the container with concentric 4px margin and full `rounded-xl` corner radii.
+    - Added `pr-0.5` to tab labels to eliminate right-side bounding-box italic font slant clipping.
+    - Replaced invalid `py-0.2` on count badges with `py-0.5 inline-flex items-center justify-center leading-none`.
+*   **Verification**:
+    - Live browser check via `chrome-devtools-mcp` on `/scouting` at mobile (`390x844`) and desktop (`1440x900`). Confirmed all tabs (Players, Coaches, Teams, Matches) render smoothly without edge clipping.
+    - Production build: `npm run build` completed with Exit Code 0 in 4.04s.

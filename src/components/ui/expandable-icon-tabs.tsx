@@ -33,7 +33,7 @@ export const ExpandableIconTabs: React.FC<ExpandableIconTabsProps> = ({
   centered = true,
   ariaLabel,
 }) => {
-  const heightClass = size === 'sm' ? 'h-9' : size === 'lg' ? 'h-12' : 'h-10 sm:h-11';
+  const containerHeightClass = size === 'sm' ? 'h-9' : size === 'lg' ? 'h-13' : 'h-11 sm:h-12';
   const iconSizeClass = size === 'sm' ? 'size-3.5' : size === 'lg' ? 'size-5' : 'size-4';
   const textSizeClass = size === 'sm' ? 'text-[10px]' : size === 'lg' ? 'text-xs sm:text-sm' : 'text-[11px] sm:text-xs';
 
@@ -45,7 +45,7 @@ export const ExpandableIconTabs: React.FC<ExpandableIconTabsProps> = ({
         'inline-flex items-center gap-1 p-1 bg-slate-950/5 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-2xl max-w-full overflow-x-auto scrollbar-hide',
         fullWidthOnMobile ? 'w-full sm:w-fit' : 'w-auto',
         centered && 'sm:mx-auto sm:self-center',
-        heightClass,
+        containerHeightClass,
         className
       )}
     >
@@ -62,14 +62,13 @@ export const ExpandableIconTabs: React.FC<ExpandableIconTabsProps> = ({
             onClick={() => onChange(tab.id)}
             title={tab.label}
             className={cn(
-              'relative rounded-xl font-black uppercase italic tracking-tight transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0 select-none outline-none focus-visible:ring-2 focus-visible:ring-orange-500',
+              'relative rounded-xl font-black uppercase italic tracking-tight transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0 select-none outline-none focus-visible:ring-2 focus-visible:ring-orange-500 h-full',
               isActive
                 ? cn(
-                    'bg-orange-500 text-white shadow-md shadow-orange-500/25 px-3 sm:px-4 py-1.5 gap-1.5',
+                    'bg-orange-500 text-white shadow-sm shadow-orange-500/25 px-3 sm:px-4 gap-1.5',
                     fullWidthOnMobile ? 'flex-1 sm:flex-initial' : 'flex-initial'
                   )
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5 px-2.5 sm:px-3 py-1.5',
-              heightClass
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5 px-2.5 sm:px-3 gap-1'
             )}
           >
             <Icon className={cn(iconSizeClass, 'shrink-0', isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400')} />
@@ -78,7 +77,7 @@ export const ExpandableIconTabs: React.FC<ExpandableIconTabsProps> = ({
             <span
               className={cn(
                 textSizeClass,
-                'truncate font-black whitespace-nowrap transition-all duration-200',
+                'truncate font-black whitespace-nowrap transition-all duration-200 pr-0.5',
                 isActive ? 'inline-block' : 'hidden md:inline-block'
               )}
             >
@@ -92,7 +91,7 @@ export const ExpandableIconTabs: React.FC<ExpandableIconTabsProps> = ({
               return (
                 <span
                   className={cn(
-                    'text-[9px] font-mono font-black px-1.5 py-0.2 rounded-md shrink-0 transition-colors',
+                    'text-[9px] font-mono font-black px-1.5 py-0.5 rounded-md shrink-0 inline-flex items-center justify-center leading-none transition-colors',
                     isActive
                       ? 'bg-white/20 text-white'
                       : tab.badgeTone === 'warning' || tab.badgeVariant === 'amber'
