@@ -244,7 +244,7 @@ export const TournamentManagement: React.FC = () => {
           ]}
           activeTab={activeTab}
           onChange={setActiveTab}
-          className="w-full sm:w-auto mb-6"
+          className="w-full sm:w-fit sm:mx-auto sm:self-center mb-6"
           ariaLabel="Tournament Operations Navigation"
         />
 

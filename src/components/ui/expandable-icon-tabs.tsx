@@ -19,6 +19,7 @@ interface ExpandableIconTabsProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
   fullWidthOnMobile?: boolean;
+  centered?: boolean;
   ariaLabel?: string;
 }
 
@@ -29,6 +30,7 @@ export const ExpandableIconTabs: React.FC<ExpandableIconTabsProps> = ({
   className,
   size = 'md',
   fullWidthOnMobile = true,
+  centered = true,
   ariaLabel,
 }) => {
   const heightClass = size === 'sm' ? 'h-9' : size === 'lg' ? 'h-12' : 'h-10 sm:h-11';
@@ -41,7 +43,8 @@ export const ExpandableIconTabs: React.FC<ExpandableIconTabsProps> = ({
       aria-label={ariaLabel}
       className={cn(
         'inline-flex items-center gap-1 p-1 bg-slate-950/5 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-2xl max-w-full overflow-x-auto scrollbar-hide',
-        fullWidthOnMobile ? 'w-full sm:w-auto' : 'w-auto',
+        fullWidthOnMobile ? 'w-full sm:w-fit' : 'w-auto',
+        centered && 'sm:mx-auto sm:self-center',
         heightClass,
         className
       )}

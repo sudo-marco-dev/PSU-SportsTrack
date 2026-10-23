@@ -1046,7 +1046,7 @@ export const Profile = () => {
               ]}
               activeTab={activeProfileTab}
               onChange={setActiveProfileTab}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-fit sm:mx-auto sm:self-center"
               ariaLabel="Athlete Profile Navigation"
             />
 

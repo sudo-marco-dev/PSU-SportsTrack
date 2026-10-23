@@ -6,6 +6,28 @@ This log tracks every user prompt, database migration, code change, and Git oper
 
 ## 📅 Log Entry: 2026-10-23
 
+### 💬 Prompt: Multi-Role Web UI Survey & Centered Tabs Polish in PC View
+*   **Timestamp**: 2026-10-23T20:15:00+08:00
+*   **User Directive**: 
+    - "fix the off center tabs when in pc view also can you do a full web UI survey where you open the local host in a browser and screenshot of the screens and ui and see what to improve on the layouts, buttons, cards the whole UI. taking into account white spaces, typography, emphasis, patters, etc. you can use these accounts credentials"
+    - Accounts: Player Athlete (`marcorye255@gmail.com`), Coach (`CScoachbasketball@gmail.com`), Admin (`adminmarco@gmail.com`)
+*   **Actions Taken**:
+    *   **Live Browser Navigation & Multi-Role Survey**:
+        - Conducted interactive survey using Chrome DevTools across all 3 credentialed accounts.
+        - Captured full-resolution screenshots on PC (`1440x900`) and mobile (`390x844`) across Landing (`/`), Athlete Profile (`/profile`), Standings & Rankings (`/ranking`), Scouting & Archive Hub (`/scouting`), Match Center (`/explorer`), Live Matchroom (`/match/:id`), Coach Dashboard (`/coach`), Team Management (`/coach/teams`), Admin Dashboard (`/admin`), Tournaments (`/admin/tournaments`), Verifications (`/admin/verifications`), Audit Logs (`/admin/audit-logs`), and Recovery (`/admin/recovery`).
+    *   **Off-Center Tabs Root Cause Fixed (`src/components/ui/expandable-icon-tabs.tsx`)**:
+        - Identified Flexbox cross-axis `align-self: stretch` default in parent `<Tabs className="w-full flex flex-col">` containers that forced the tab bar to span 100% width while child buttons clustered on the far left with a 65% empty void.
+        - Updated `ExpandableIconTabs` with default `centered = true`, adding `sm:mx-auto sm:self-center sm:w-fit` to tightly hug buttons as a centered pill on desktop while retaining responsive full-width distribution on mobile.
+    *   **Consuming Pages Updated**:
+        - Updated `Profile.tsx`, `ScoutingHub.tsx`, and `TournamentManagement.tsx` to center their tab bars on PC view (`sm:w-fit sm:mx-auto sm:self-center`).
+    *   **Verification**:
+        - Built with `tsc -b && vite build` (passed with 0 errors).
+        - Verified live in browser with Chrome DevTools on `1440x900` desktop and `390x844` mobile.
+
+---
+
+## 📅 Log Entry: 2026-10-23
+
 ### 💬 Prompt: Sport Card Identification, Toolbar Cleanup, Light-Mode Harmony, Segmented Switch & 1-Click Coach Recruitment
 *   **Timestamp**: 2026-10-23T19:35:00+08:00
 *   **User Directive**: 

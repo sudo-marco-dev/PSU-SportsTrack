@@ -873,7 +873,7 @@ export const ScoutingHub = () => {
           ]}
           activeTab={activeTab}
           onChange={setActiveTab}
-          className="w-full sm:w-auto"
+          className="w-full sm:w-fit sm:mx-auto sm:self-center"
           ariaLabel="Scouting Hub Navigation"
         />
 
