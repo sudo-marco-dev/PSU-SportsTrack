@@ -18,6 +18,46 @@
       "sourceType": "github",
       "skillPath": "skills/repomix-explorer/SKILL.md",
       "computedHash": "9598912263c1471a2a95a45737a92ffde00de54934dfa04c7c161f813499ff16"
+    },
+    "supabase-postgres-best-practices": {
+      "source": "antigravity-skills",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/supabase-postgres-best-practices/SKILL.md"
+    },
+    "ui-ux-pro-max": {
+      "source": "antigravity-skills",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/ui-ux-pro-max/SKILL.md"
+    },
+    "react-best-practices": {
+      "source": "antigravity-skills",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/react-best-practices/SKILL.md"
+    },
+    "webapp-testing": {
+      "source": "antigravity-skills",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/webapp-testing/SKILL.md"
+    },
+    "systematic-debugging": {
+      "source": "antigravity-skills",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/systematic-debugging/SKILL.md"
+    },
+    "antislop-layoutmobile": {
+      "source": "antigravity-skills/anti-slop",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/antislop-layoutmobile/SKILL.md"
+    },
+    "antislop-ui": {
+      "source": "antigravity-skills/anti-slop",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/antislop-ui/SKILL.md"
+    },
+    "antislop-code": {
+      "source": "antigravity-skills/anti-slop",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/antislop-code/SKILL.md"
     }
   }
 }
