@@ -77,6 +77,11 @@
 - [x] Phase 8.4 UI/UX Polish: Reusable Skeleton Loaders & Rich Empty States (`SkeletonCard.tsx`, `EmptyState.tsx` integrated across AdminAuditLogs, TeamManagement, and TournamentManagement)
 - [x] Phase 8.5 Automated Test Suite with Playwright Verification (Comprehensive navigation, spectator, and match center test coverage passing in 9.0s)
 - [x] Phase 8.6 Multi-Format Bracketing, Seeding & Schedule Engine Overhaul (4 complete formats: Single Elimination, Double Elimination with Upper & Lower Brackets + Grand Finals, Round Robin Only crowning Champion by Most Wins, and Round Robin + Playoffs Phase 1 -> Phase 2; interactive VS seed dropdowns & swap in Step 2; non-destructive Reset & Reseed flow; and in-place editing of published match dates, times, venues, and teams)
+- [x] Phase 8.7 Universal Mobile-First Elimination Layouts & Bracketing Alignment (Zero Team Name Truncation)
+- [x] Phase 8.8 Reactive Expandable Icon Tabs & Desktop Centered Pill Architecture (`ExpandableIconTabs.tsx`)
+- [x] Phase 8.9 Unified Glassmorphic Toolbars & Anti-Corner Tucking Architecture (`DataToolbar.tsx`, `TournamentExplorer.tsx`, `AdminAuditLogs.tsx`)
+- [x] Phase 8.10 Responsive Dual-Segmented Switch, 1-Click Roster Recruitment & Light Mode Harmony (`TeamManagement.tsx`, `ScoutingHub.tsx`)
+- [x] Phase 8.11 Automated Visual Regression & Multi-Viewport Verification Suite (`tests/visual-inspection.spec.ts`)
 
 ## 🛠️ Recent Modifications & Change Log
 
@@ -180,7 +185,32 @@
   - `PROJECT_STATE.md`
   - `local_change_log.md`
 
+### Mobile-First Design System, Responsive Ergonomics & Unified Toolbar Architecture (Phase 8.7 - 8.11)
+- **Description**: Comprehensive system-wide ergonomic overhaul eliminating vertical scroll frenzy, team truncation, corner-tucking, and non-responsive desktop/mobile table layouts:
+  1. **Phase 1 Match Center Mobile Top-Down VS Layout (`MatchScheduleList.tsx`)**: Replaced horizontal `[Team A] [Score] [Team B]` row on mobile with stacked 2-slot cards mirroring tournament brackets. Displays full college affiliation badge, full uppercase team name without truncation dots, winner crown indicator (`👑`), and right-aligned tabular score. Desktop maintains wide horizontal layout.
+  2. **Reactive Expandable Icon Tabs (`ExpandableIconTabs.tsx`)**: Upgraded standings and sub-view switchers across `Ranking.tsx`, `TournamentExplorer.tsx`, `Profile.tsx`, `ScoutingHub.tsx`, and `TournamentManagement.tsx`. Inactive tabs render as sleek icon buttons with counts, active tab expands smoothly with label. Auto-centers as a unified pill on desktop (`sm:mx-auto sm:self-center sm:w-fit`) and distributes full-width on mobile.
+  3. **Unified Elimination Toolbar & Anti-Corner Tucking (`TournamentExplorer.tsx`)**: Eliminated fragmented, corner-stranded controls. Combined sub-tabs and stage filter dropdown into a single glassmorphic toolbar card with left/right desktop balance, mobile-first stacking, 1-tap `X` reset, and reactive auto-reset on sport/tournament switch.
+  4. **Universal DataToolbar Integration (`DataToolbar.tsx`, `AdminAuditLogs.tsx`)**: Deployed system-standard glassmorphic toolbar to Audit Logs with responsive search, time filters, live monitoring badge, and 1-tap `X` clear affordances.
+  5. **1-Click Coach Recruitment & Sport Card Identification (`TeamManagement.tsx`, `ScoutingHub.tsx`)**: Added 1-click roster recruitment from scouting dossier, distinct sport discipline icons and badges on team cards, and balanced dual-segmented controls.
+  6. **Automated Visual Regression Test Suite (`tests/visual-inspection.spec.ts`)**: Comprehensive Playwright test suite validating desktop (1440x900) and mobile (390x844) layouts, filter auto-resets, and tab reactivity (9 of 9 tests passing).
+- **Files Modified / Created**:
+  - `src/components/match-center/MatchScheduleList.tsx`
+  - `src/components/match-center/MatchCenterToolbar.tsx`
+  - `src/components/admin/DataToolbar.tsx`
+  - `src/components/ui/expandable-icon-tabs.tsx`
+  - `src/pages/TournamentExplorer.tsx`
+  - `src/pages/AdminAuditLogs.tsx`
+  - `src/pages/Ranking.tsx`
+  - `src/pages/TeamManagement.tsx`
+  - `src/pages/ScoutingHub.tsx`
+  - `src/pages/Profile.tsx`
+  - `tests/visual-inspection.spec.ts`
+  - `PROJECT_STATE.md`
+  - `local_change_log.md`
+
 ## 🎯 Deployment & Capstone Readiness
+- [x] Phase 8: Mobile-First Ergonomics, Anti-Truncation, Reactive Tabs & Unified Toolbars
+- [x] Automated E2E Visual & Functional Suite: 100% pass rate (9 tests passing across desktop & mobile)
 - [x] Phase 4: MVP Star System (Red & Gold Stars)
 - [x] Phase 4.1: Binturungan Multi-Sport Creation & Tournament Lifecycle
 - [x] Phase 5: Facilitator Governance, Offline Resilience & Bronze Brackets
