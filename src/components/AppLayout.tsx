@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { ErrorBoundary } from './ui/ErrorBoundary';
+const LoginModal = lazy(() =>
+  import('@/components/auth/LoginModal').then((m) => ({ default: m.LoginModal }))
+);
 import {
   LayoutDashboard,
   Trophy,
@@ -22,7 +26,6 @@ import {
 import { Button } from './ui/button';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
-import { LoginModal } from '@/components/auth/LoginModal';
 import { toast } from 'sonner';
 
 export const AppLayout = () => {
@@ -285,15 +288,25 @@ export const AppLayout = () => {
 
         {/* Main Routed Content Area */}
         <main className="flex-1 min-w-0 px-3.5 sm:px-6 py-5 md:px-10 md:py-10 pb-24 md:pb-10 max-w-7xl mx-auto w-full overflow-x-hidden">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
 
         {/* Mobile Bottom Navigation Rail — Always Fixed & Visible Across All Views */}
-        <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-slate-900/95 backdrop-blur-md border-t border-white/10 pb-safe w-full max-w-[100vw] overflow-hidden shadow-2xl [isolation:isolate]">
+        <nav
+          aria-label="Mobile Navigation"
+          className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-slate-900/95 backdrop-blur-md border-t border-white/10 pb-safe w-full max-w-[100vw] overflow-hidden shadow-2xl [isolation:isolate]"
+        >
           <div className="flex items-center justify-around h-16 w-full px-0.5">
             {/* 1. Home / Mission Command */}
             <Link
               to={getDashboardHref()}
+              aria-current={
+                isActive(getDashboardHref()) || (getDashboardHref() === '/admin' && location.pathname === '/')
+                  ? 'page'
+                  : undefined
+              }
               className={`flex-1 min-w-0 w-0 h-full flex flex-col items-center justify-center py-1 text-center transition-all duration-150 active:scale-90 relative ${
                 isActive(getDashboardHref()) || (getDashboardHref() === '/admin' && location.pathname === '/')
                   ? 'text-orange-400 font-bold'
@@ -314,6 +327,7 @@ export const AppLayout = () => {
             {/* 2. Matches / Live Courtside */}
             <Link
               to="/explorer"
+              aria-current={isActive('/explorer') || location.pathname.startsWith('/match/') ? 'page' : undefined}
               className={`flex-1 min-w-0 w-0 h-full flex flex-col items-center justify-center py-1 text-center transition-all duration-150 active:scale-90 relative ${
                 isActive('/explorer') || location.pathname.startsWith('/match/')
                   ? 'text-orange-400 font-bold'
@@ -334,6 +348,7 @@ export const AppLayout = () => {
             {/* 3. Rankings / Standings */}
             <Link
               to="/ranking"
+              aria-current={isActive('/ranking') ? 'page' : undefined}
               className={`flex-1 min-w-0 w-0 h-full flex flex-col items-center justify-center py-1 text-center transition-all duration-150 active:scale-90 relative ${
                 isActive('/ranking')
                   ? 'text-orange-400 font-bold'
@@ -355,6 +370,7 @@ export const AppLayout = () => {
             {user ? (
               <Link
                 to="/profile"
+                aria-current={isActive('/profile') ? 'page' : undefined}
                 className={`flex-1 min-w-0 w-0 h-full flex flex-col items-center justify-center py-1 text-center transition-all duration-150 active:scale-90 relative ${
                   isActive('/profile') ? 'text-orange-400 font-bold' : 'text-slate-400 hover:text-slate-200 font-medium'
                 }`}
@@ -379,6 +395,7 @@ export const AppLayout = () => {
               <button
                 type="button"
                 onClick={openLoginModal}
+                aria-label="Log in to your account"
                 className="flex-1 min-w-0 w-0 h-full flex flex-col items-center justify-center py-1 text-center transition-all duration-150 active:scale-90 text-slate-400 hover:text-orange-400 cursor-pointer"
               >
                 <LogIn className="size-5" />
@@ -392,6 +409,8 @@ export const AppLayout = () => {
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
+              aria-label="Open navigation menu"
+              aria-expanded={isMobileMenuOpen}
               className={`flex-1 min-w-0 w-0 h-full flex flex-col items-center justify-center py-1 text-center transition-all duration-150 active:scale-90 cursor-pointer relative ${
                 isMoreRouteActive || isMobileMenuOpen ? 'text-orange-400 font-bold' : 'text-slate-400 hover:text-slate-200 font-medium'
               }`}
@@ -443,7 +462,9 @@ export const AppLayout = () => {
       </Dialog>
 
       {/* Global Login Dialog Component */}
-      <LoginModal />
+      <Suspense fallback={null}>
+        <LoginModal />
+      </Suspense>
     </div>
   );
 };

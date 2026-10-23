@@ -120,6 +120,25 @@ export const LoginModal = () => {
   }, []);
 
   async function onLoginSubmit(values: z.infer<typeof loginSchema>) {
+    // 1. Check server-side rate limits first
+    try {
+      const { data: limitCheck } = await (supabase.rpc as any)('check_login_rate_limit', {
+        p_email: values.email,
+      });
+      if (limitCheck && limitCheck.allowed === false) {
+        const remainingSeconds = limitCheck.remaining_seconds || 300;
+        const minutes = Math.floor(remainingSeconds / 60);
+        const seconds = remainingSeconds % 60;
+        setCooldownRemaining(remainingSeconds);
+        setFailedAttempts(limitCheck.failed_attempts || 3);
+        toast.error(`Account temporarily locked due to failed attempts. Please try again in ${minutes}m ${seconds}s.`);
+        return;
+      }
+    } catch (rpcErr) {
+      console.warn('Server-side rate limit check fallback:', rpcErr);
+    }
+
+    // 2. Client local storage check fallback
     const lockUntilStr = localStorage.getItem('login_lockout_until');
     if (lockUntilStr) {
       const lockUntil = parseInt(lockUntilStr, 10);
@@ -146,6 +165,18 @@ export const LoginModal = () => {
       });
 
       if (error) {
+        // Record failed attempt on server
+        try {
+          const { data: failRecord } = await (supabase.rpc as any)('record_failed_login', {
+            p_email: values.email,
+          });
+          if (failRecord && failRecord.allowed === false) {
+            setCooldownRemaining(failRecord.remaining_seconds || 300);
+          }
+        } catch (rpcErr) {
+          console.warn('Server failed login recording fallback:', rpcErr);
+        }
+
         const currentAttempts = parseInt(localStorage.getItem('login_attempts') || '0', 10) + 1;
         const maxAttempts = 3;
         setFailedAttempts(currentAttempts);
@@ -163,6 +194,15 @@ export const LoginModal = () => {
           toast.error(`${error.message} (${remainingAttempts} attempt${remainingAttempts > 1 ? 's' : ''} remaining)`);
         }
       } else {
+        // Reset rate limits on server upon successful auth
+        try {
+          await (supabase.rpc as any)('record_successful_login', {
+            p_email: values.email,
+          });
+        } catch (rpcErr) {
+          console.warn('Server successful login recording fallback:', rpcErr);
+        }
+
         localStorage.removeItem('login_attempts');
         localStorage.removeItem('login_lockout_until');
         setFailedAttempts(0);

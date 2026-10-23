@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { VerificationUpload } from '@/components/auth/VerificationUpload';
+const VerificationUpload = lazy(() =>
+  import('@/components/auth/VerificationUpload').then((m) => ({ default: m.VerificationUpload }))
+);
 import { supabase } from '@/lib/supabase';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -359,24 +361,28 @@ export const PlayerDashboard = () => {
           </div>
 
           {/* Re-Upload Form */}
-          <VerificationUpload
-            onUploadSuccess={() => {
-              setHasPendingDocuments(true);
-              setLatestDoc((prev) => prev ? { ...prev, status: 'Pending' } : null);
-            }}
-          />
+          <Suspense fallback={<div className="h-44 rounded-2xl bg-slate-100 dark:bg-slate-900 animate-pulse flex items-center justify-center text-xs font-bold text-slate-400">Loading document verification module...</div>}>
+            <VerificationUpload
+              onUploadSuccess={() => {
+                setHasPendingDocuments(true);
+                setLatestDoc((prev) => prev ? { ...prev, status: 'Pending' } : null);
+              }}
+            />
+          </Suspense>
         </div>
       );
     }
 
     return (
       <div className="p-4">
-        <VerificationUpload
-          onUploadSuccess={() => {
-            setHasPendingDocuments(true);
-            setLatestDoc({ id: 'new', status: 'Pending' });
-          }}
-        />
+        <Suspense fallback={<div className="h-44 rounded-2xl bg-slate-100 dark:bg-slate-900 animate-pulse flex items-center justify-center text-xs font-bold text-slate-400">Loading document verification module...</div>}>
+          <VerificationUpload
+            onUploadSuccess={() => {
+              setHasPendingDocuments(true);
+              setLatestDoc({ id: 'new', status: 'Pending' });
+            }}
+          />
+        </Suspense>
       </div>
     );
   }

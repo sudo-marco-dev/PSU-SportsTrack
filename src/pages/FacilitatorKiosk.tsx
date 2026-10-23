@@ -86,18 +86,6 @@ export const FacilitatorKiosk = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [pendingOfflineCount, setPendingOfflineCount] = useState(0);
 
-  // Network online listener
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
   // Facilitator Console Lease
   const [isHoldingLease, setIsHoldingLease] = useState(false);
   const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -189,7 +177,8 @@ export const FacilitatorKiosk = () => {
     points: number;
     prevScoreA: number;
     prevScoreB: number;
-    eventId?: string;
+    scoreEventId?: string;
+    playerId?: string;
   } | null>(null);
   const [canUndo, setCanUndo] = useState(false);
 
@@ -461,6 +450,9 @@ export const FacilitatorKiosk = () => {
           const startersB = bPlayers.filter((p) => p.is_starter).map((p) => p.player_id);
           const initialB = startersB.length >= count ? startersB.slice(0, count) : bPlayers.slice(0, count).map((p) => p.player_id);
           setActivePlayerIdsB(new Set(initialB));
+
+          // Cache match context locally for offline reload resilience
+          offlineQueue.cacheMatchContext(matchId, m, items);
         }
       }
 
@@ -468,7 +460,13 @@ export const FacilitatorKiosk = () => {
         setEvents(eventsRes.data as MatchEvent[]);
       }
     } catch (err) {
-      if (import.meta.env.DEV) console.error('Error fetching kiosk data:', err);
+      if (import.meta.env.DEV) console.error('Error fetching kiosk data, checking offline cache:', err);
+      const cached = offlineQueue.getCachedMatchContext(matchId);
+      if (cached) {
+        setMatch(cached.match);
+        setRosterPlayers(cached.rosters);
+        toast.info('Loaded match data from local offline cache.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -478,6 +476,35 @@ export const FacilitatorKiosk = () => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchMatchData();
   }, [fetchMatchData]);
+
+  // Network online listener with automatic offline queue flush on reconnect
+  useEffect(() => {
+    const handleOnline = async () => {
+      setIsOnline(true);
+      if (matchId) {
+        try {
+          const synced = await offlineQueue.flush(matchId, supabase);
+          if (synced && synced.syncedEvents > 0) {
+            toast.success(`Connection restored: ${synced.syncedEvents} offline score event(s) synchronized.`);
+            setPendingOfflineCount(offlineQueue.getPendingCount(matchId));
+            await fetchMatchData();
+          }
+        } catch (err) {
+          console.error('Failed to flush offline queue on reconnection:', err);
+        }
+      }
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      toast.warning('Network connection lost. Scores will be buffered locally.');
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [matchId, fetchMatchData]);
 
   // Facilitator Lease 15-second Heartbeat
   useEffect(() => {
@@ -721,15 +748,27 @@ export const FacilitatorKiosk = () => {
     }
 
     // Insert score audit event (with player_id when an on-court player is selected)
-    await supabase.from('match_score_events').insert({
-      match_id: match.id,
-      team_id: teamId,
-      player_id: scorerObj?.player_id || null,
-      points: points,
-      action_type: actionType,
-      stat_type: `PTS_${points}`,
-      delta: points,
-    });
+    const { data: scoreEvt } = await supabase
+      .from('match_score_events')
+      .insert({
+        match_id: match.id,
+        team_id: teamId,
+        player_id: scorerObj?.player_id || null,
+        points: points,
+        action_type: actionType,
+        stat_type: `PTS_${points}`,
+        delta: points,
+      })
+      .select('id')
+      .maybeSingle();
+
+    if (scoreEvt) {
+      lastScoreActionRef.current = {
+        ...lastScoreActionRef.current,
+        scoreEventId: scoreEvt.id,
+        playerId: scorerObj?.player_id || undefined,
+      };
+    }
 
     // Credit match_player_stats when an on-court player is selected
     if (scorerObj?.player_id) {
@@ -779,7 +818,7 @@ export const FacilitatorKiosk = () => {
       openLoginModal();
       return;
     }
-    const { prevScoreA, prevScoreB } = lastScoreActionRef.current;
+    const { prevScoreA, prevScoreB, scoreEventId, playerId, points: undonePoints } = lastScoreActionRef.current;
 
     const { data: updatedMatches, error } = await supabase
       .from('matches')
@@ -795,6 +834,34 @@ export const FacilitatorKiosk = () => {
     if (!updatedMatches || updatedMatches.length === 0) {
       toast.error('Permission Denied: Database write rejected.');
       return;
+    }
+
+    // Mark score audit event as undone
+    if (scoreEventId) {
+      await supabase
+        .from('match_score_events')
+        .update({ undone: true })
+        .eq('id', scoreEventId);
+    }
+
+    // Deduct points from player stats if scored by an individual player
+    if (playerId) {
+      const { data: currentStat } = await supabase
+        .from('match_player_stats')
+        .select('id, points')
+        .eq('match_id', match.id)
+        .eq('player_id', playerId)
+        .maybeSingle();
+
+      if (currentStat && (currentStat.points ?? 0) > 0) {
+        await supabase
+          .from('match_player_stats')
+          .update({
+            points: Math.max(0, Number(currentStat.points || 0) - undonePoints),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', currentStat.id);
+      }
     }
 
     setMatch((prev) => (prev ? { ...prev, team_a_score: prevScoreA, team_b_score: prevScoreB } : prev));

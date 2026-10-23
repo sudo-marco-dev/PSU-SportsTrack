@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { VerificationUpload } from '@/components/auth/VerificationUpload';
+const VerificationUpload = lazy(() =>
+  import('@/components/auth/VerificationUpload').then((m) => ({ default: m.VerificationUpload }))
+);
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -1950,7 +1952,9 @@ export const Profile = () => {
                             </div>
                           </div>
                         </div>
-                        <VerificationUpload onUploadSuccess={() => checkVerificationStatus()} />
+                        <Suspense fallback={<div className="h-44 rounded-2xl bg-slate-100 dark:bg-slate-900 animate-pulse flex items-center justify-center text-xs font-bold text-slate-400">Loading document verification module...</div>}>
+                          <VerificationUpload onUploadSuccess={() => checkVerificationStatus()} />
+                        </Suspense>
                       </div>
                     ) : (
                       <div className="space-y-4">
@@ -1959,7 +1963,9 @@ export const Profile = () => {
                             Official Certificate of Registration is required for all student players to join team rosters and enter university tournament brackets.
                           </p>
                         </div>
-                        <VerificationUpload onUploadSuccess={() => checkVerificationStatus()} />
+                        <Suspense fallback={<div className="h-44 rounded-2xl bg-slate-100 dark:bg-slate-900 animate-pulse flex items-center justify-center text-xs font-bold text-slate-400">Loading document verification module...</div>}>
+                          <VerificationUpload onUploadSuccess={() => checkVerificationStatus()} />
+                        </Suspense>
                       </div>
                     )}
                   </CardContent>

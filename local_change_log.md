@@ -6,6 +6,42 @@ This log tracks every user prompt, database migration, code change, and Git oper
 
 ## 📅 Log Entry: 2026-10-24
 
+### 💬 Prompt: Comprehensive System Improvements Sweep — Backend Security Engine, Courtside Offline Resilience, Bundle Optimization & UI Accessibility
+*   **Timestamp**: 2026-10-24T02:00:00+08:00
+*   **User Directive**:
+    - "do a full scan and sweep of system improvement and present me what possible changes you suggest /goal /plan /learn /boost /teamwork-preview in categories like backend, UI/UX PC and mobile, cybersecurity, etc. use skills to expand and you can even install new ones using the /browser and going through github installing usefull and updated ones"
+    - User approvals on plan: Server-side rate limiting (RPC/table), keep `'dev'` role scope intact, IndexedDB/offline match context pre-fetching courtside.
+*   **Actions Taken**:
+    *   **PostgreSQL Security, RLS & Tournament Bracket Progression Engine (`20261024_comprehensive_security_and_engine.sql`)**:
+        - Applied migration to Supabase production project `kxnkdhznnpwvnljjmfwl` with status `success: true`.
+        - `trg_protect_user_roles`: `BEFORE UPDATE` trigger on `public.users` restricting modifications of `role`, `is_verified`, and `account_status` exclusively to `super_admin` / service role, sealing client self-privilege escalation.
+        - Folder-Scoped Storage RLS: Secured `verification_documents` bucket so authenticated users can only upload/read within their own `auth.uid()` directory prefix, while `super_admin` / `facilitator` retain review access.
+        - Revoked unauthorized coach write permissions: Removed `has_role('coach')` from `matches` UPDATE and `match_events` write policies, enforcing facilitator/admin scoring authority while allowing coaches read access.
+        - Referential Integrity & Cascades: Fixed `audit_logs` foreign keys to `ON DELETE SET NULL`; fixed `match_player_stats` and `match_score_events` foreign keys to `teams` with `ON DELETE CASCADE`.
+        - Server-Side Rate Limiter: Created `auth_rate_limits` table and RPCs (`check_login_rate_limit`, `record_failed_login`, `record_successful_login`) with 5 failed attempts limit, 15-minute lockouts, and IP/identifier logging.
+        - Trigger-Based Automated Bracket Progression: Implemented `trg_advance_bracket_on_match_completed` to automatically advance winners to `next_match_id` (`team_a_id` or `team_b_id`) and double-elimination losers to `loser_next_match_id` directly in PostgreSQL on `status = 'Completed'`.
+    *   **Courtside Kiosk Offline Resilience & Score Undo Correction (`FacilitatorKiosk.tsx` & `offlineQueue.ts`)**:
+        - Integrated `cacheMatchContext` and `getCachedMatchContext` in `offlineQueue.ts`, caching match details, sport profiles, and team rosters into local storage.
+        - In `FacilitatorKiosk.tsx`, added network reconnect listener that automatically flushes queued offline score events when internet is restored and syncs match state.
+        - Added fallback match loader from local cache when courtside kiosk is refreshed offline or experiencing intermittent connectivity.
+        - Fixed `handleUndoLastScore`: Automatically flags `match_score_events.undone = true` via new UPDATE RLS policy and applies compensating score/point deductions to `match_player_stats`.
+    *   **Client Security & Server-Side Rate Limiting Integration (`LoginModal.tsx`)**:
+        - Connected Supabase RPCs `check_login_rate_limit`, `record_failed_login`, and `record_successful_login` before and after authentication attempts, with seamless local storage fallback if offline.
+    *   **React Error Boundary (`src/components/ui/ErrorBoundary.tsx` & `AppLayout.tsx`)**:
+        - Created robust class-based error boundary featuring alert visuals, technical error diagnostics toggle, page reload, and return to home navigation.
+        - Integrated error boundary around `<Outlet />` in `AppLayout.tsx` to prevent any runtime component crash from blank-screening the app.
+    *   **Performance & Bundle Optimization (`vite.config.ts`, `PlayerDashboard.tsx`, `Profile.tsx`, `AppLayout.tsx`)**:
+        - Code-split `VerificationUpload` via `React.lazy` and `Suspense`, dropping the ~1.7MB PDF.js rendering worker from the public application entry point.
+        - Lazy-loaded `LoginModal` with `Suspense` inside `AppLayout.tsx`.
+        - Configured custom manual chunk splitting in `vite.config.ts` separating `vendor-react` (458 kB), `vendor-supabase` (196 kB), and `vendor-ui` (32 kB), slashing main entry bundle `index.js` to 67 kB (gzip: 20 kB).
+    *   **WCAG 2.1 AA Mobile Navigation Accessibility (`AppLayout.tsx`)**:
+        - Added semantic `aria-label="Mobile Navigation"`, dynamic `aria-current="page"`, `aria-label="Log In"`, and `aria-expanded` attributes to mobile bottom navigation.
+    *   **Verification**:
+        - Clean compilation: `npm run build` (`tsc -b && vite build`) passed with 0 errors.
+        - Playwright Test Suite: All 9 tests passed cleanly in 10.1s (`tests/match-center.spec.ts`, `tests/navigation.spec.ts`, `tests/visual-inspection.spec.ts`).
+
+---
+
 ### 💬 Prompt: Unified Elimination Toolbar & Anti-Corner Tucking System Sweep (Review & Hardening)
 *   **Timestamp**: 2026-10-24T00:40:00+08:00
 *   **User Directive**: 

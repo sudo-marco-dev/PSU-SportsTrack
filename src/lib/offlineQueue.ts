@@ -25,8 +25,36 @@ export interface OfflineMatchState {
 }
 
 const STORAGE_PREFIX = 'psu_offline_match_';
+const CONTEXT_PREFIX = 'psu_cached_context_';
 
 export const offlineQueue = {
+  /**
+   * Cache full match metadata and rosters locally for offline resilience
+   */
+  cacheMatchContext(matchId: string, match: any, rosters: any[]) {
+    try {
+      localStorage.setItem(
+        CONTEXT_PREFIX + matchId,
+        JSON.stringify({ match, rosters, cached_at: new Date().toISOString() })
+      );
+    } catch (err) {
+      console.warn('Failed to cache match context locally:', err);
+    }
+  },
+
+  /**
+   * Retrieve cached match metadata and rosters when network is unavailable
+   */
+  getCachedMatchContext(matchId: string): { match: any; rosters: any[] } | null {
+    try {
+      const data = localStorage.getItem(CONTEXT_PREFIX + matchId);
+      return data ? JSON.parse(data) : null;
+    } catch (err) {
+      console.error('Error reading cached match context:', err);
+      return null;
+    }
+  },
+
   /**
    * Get current offline buffered state for a match
    */
