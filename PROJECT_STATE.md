@@ -71,8 +71,59 @@
 - [x] Phase 7.16 Dual-Phase Tournament Ecosystem (Phase 1 Elimination group stage pools + Phase 2 Playoff Knockout Brackets across all 9 sports, totaling 108 matches)
 - [x] Phase 7.17 Full Team Roster Provisioning & Authentic Roster Simulation (144+ student athlete accounts provisioned across 9 colleges with starters, subs, captaincy, and authentic sport positions)
 - [x] Phase 7.18 Live Court-side Box Score Roster Enrichment (Player cards displaying `#jersey`, athlete name, captain indicator, sport position, and `[STARTER]` / `[SUB]` badges)
+- [x] Phase 8.1 Database Security Hardening, RLS InitPlan Optimization & Foreign Key Indexing (PostgreSQL migration `20261014_harden_security_and_indexes.sql`: revoked anonymous RPC executions, hardened search_path, added covering B-tree indexes for all 25 unindexed foreign keys dropping advisor findings to 0, optimized RLS policies with auth.uid() subqueries, persisted clock state columns)
+- [x] Phase 8.2 Realtime Match Telemetry & Spectator Synchronization (Decoupled public spectator match listeners from auth gate, corrected match status query discrepancies in AdminDashboard, replaced full database refetches in TournamentExplorer with optimistic patching)
+- [x] Phase 8.3 Tournament Management Monolith Decomposition (Refactored 2,953-line `TournamentManagement.tsx` into modular sub-components: `TournamentListTab.tsx`, `TeamApprovalsTab.tsx`, `TournamentMvpTab.tsx`, `CreateTournamentModal.tsx`, `DeleteTournamentModal.tsx`, `ConcludeTournamentModal.tsx`, and `BracketGenerationModal.tsx`)
+- [x] Phase 8.4 UI/UX Polish: Reusable Skeleton Loaders & Rich Empty States (`SkeletonCard.tsx`, `EmptyState.tsx` integrated across AdminAuditLogs, TeamManagement, and TournamentManagement)
+- [x] Phase 8.5 Automated Test Suite with Playwright Verification (Comprehensive navigation, spectator, and match center test coverage passing in 9.0s)
+- [x] Phase 8.6 Multi-Format Bracketing, Seeding & Schedule Engine Overhaul (4 complete formats: Single Elimination, Double Elimination with Upper & Lower Brackets + Grand Finals, Round Robin Only crowning Champion by Most Wins, and Round Robin + Playoffs Phase 1 -> Phase 2; interactive VS seed dropdowns & swap in Step 2; non-destructive Reset & Reseed flow; and in-place editing of published match dates, times, venues, and teams)
 
 ## 🛠️ Recent Modifications & Change Log
+
+### Multi-Format Bracketing, Seeding & Schedule Engine Overhaul (Phase 8.6)
+- **Description**: Upgraded the tournament bracketing, seeding, and scheduling architecture across `BracketGenerationModal.tsx`, `KnockoutBracketTree.tsx`, `TournamentExplorer.tsx`, and `Ranking.tsx`:
+  1. **Four Complete Tournament Formats (Step 1)**:
+     - **Single Elimination (`single`)**: Direct knockout bracket tree (`Quarterfinals` -> `Semifinals` -> `3rd Place Playoff` & `Finals`) with balanced power-of-2 `BYE` distribution.
+     - **Double Elimination (`double`)**: Full **Upper Bracket (Winners)**, **Lower Bracket (Losers Redemption Tree)**, and **Grand Finals**, linking winners via `next_match_id` and losers via `loser_next_match_id`, and crowning Lower Finals loser as Bronze (3rd Place).
+     - **Round Robin Only (`round_robin_only`)**: Generates all-vs-all Round Robin league fixtures without proceeding to a bracket tree; automatically ranks teams by **Most Wins** (tiebreakers: Point Differential, Points For) to crown the #1 team as Official Champion across the Podium, Match Center, and University Leaderboard (`/ranking`).
+     - **Round Robin + Playoffs (`round_robin_playoffs`)**: Runs Phase 1 Elimination pools and unlocks a **Generate Phase 2 Playoffs** action that seeds Top 4 teams (`#1 vs #4`, `#2 vs #3`) into the Phase 2 Knockout Tree while preserving Phase 1 match history.
+  2. **Interactive `VS` Seed Editing & Fixed "Reset & Reseed" Flow (Step 2)**:
+     - Replaced static read-only `VS` labels in Step 2 with interactive `<Select>` team dropdowns and a 1-click **Swap (`⇄ VS`)** button, automatically swapping duplicate seeds and recalculating `BYE` auto-advancements in real time.
+     - Added **Shuffle Seeds** in Step 2 to re-randomize team pairings while preserving custom edited venues and dates/times.
+     - Fixed **Reset & Reseed** to enter Step 1 format selection (`isReseedingMode`) and safely clear self-referencing foreign keys before re-publishing.
+  3. **In-Place Match Schedule, Venue & Team Editing After Publishing**:
+     - Added scheduled **Date & Time** display and an inline **Edit** mode on published match cards in `BracketGenerationModal.tsx`, allowing admins to update `venue`, `match_time`, and (for `Scheduled` matches) `team_a_id` / `team_b_id` directly in Supabase without resetting the bracket.
+- **Files Modified**:
+  - `src/components/tournament-management/types.ts`
+  - `src/components/tournament-management/BracketGenerationModal.tsx`
+  - `src/components/match-center/KnockoutBracketTree.tsx`
+  - `src/pages/TournamentExplorer.tsx`
+  - `src/pages/Ranking.tsx`
+  - `PROJECT_STATE.md`
+  - `local_change_log.md`
+  - `CONTEXT.md`
+
+### Full System Audit, Security Hardening & Architecture Decomposition (Phase 8)
+- **Description**: Conducted an exhaustive audit of database performance, application telemetry, frontend code health, and component modularity, followed by targeted improvements:
+  1. **Database Security & Indexing (PostgreSQL Migration)**:
+     - Applied `20261014_harden_security_and_indexes.sql` to production Supabase project `kxnkdhznnpwvnljjmfwl`.
+     - Revoked `EXECUTE` privileges from `anon` and `PUBLIC` on sensitive RPC functions (`sync_offline_match_events`, `has_role`, `get_user_role`, `handle_profiles_update`, `handle_user_email_sync`).
+     - Added covering B-tree indexes for all 25 unindexed foreign keys identified by Supabase Advisor (Advisor unindexed foreign keys dropped from 25 to 0).
+     - Hardened functions with `SET search_path = 'public'`.
+     - Optimized RLS subqueries with `(SELECT auth.uid())` initPlans to avoid per-row function evaluation.
+     - Added `game_time_seconds`, `current_period`, `is_clock_running` persistence to `matches`.
+  2. **Critical Telemetry & Realtime Sync Fixes**:
+     - Fixed `AdminDashboard.tsx` live match counter query to check `.in('status', ['Ongoing', 'Live'])` matching database statuses.
+     - Decoupled `PlayerDashboard.tsx` realtime broadcast listeners from `if (!user) return;` so public spectators receive live scoring events without being logged in.
+     - Optimized `TournamentExplorer.tsx` live payload handlers to apply in-memory optimistic updates instead of firing 3 redundant database round-trips per score event.
+  3. **Monolith Decomposition**:
+     - Decomposed 2,953-line `TournamentManagement.tsx` into clean, testable sub-components in `src/components/tournament-management/` (`TournamentListTab.tsx`, `TeamApprovalsTab.tsx`, `TournamentMvpTab.tsx`, `CreateTournamentModal.tsx`, `DeleteTournamentModal.tsx`, `ConcludeTournamentModal.tsx`, `BracketGenerationModal.tsx`).
+     - Pruned obsolete dead code `Login.tsx`.
+     - Fixed AudioContext memory leaks in `LiveMatch.tsx` by using singleton synthesizer.
+  4. **Automated Testing & UI/UX State Polish**:
+     - Built `EmptyState.tsx` and `SkeletonCard.tsx` for zero-content and loading states.
+     - Implemented Playwright test suite (`tests/navigation.spec.ts`, `tests/match-center.spec.ts`) running green in 9.0s.
+     - Verified zero TypeScript errors (`tsc -b`), zero build errors (`vite build`), and zero ESLint errors (`eslint . --quiet`).
 
 ### Match Center UI/UX Redesign, Dual-Phase Bracketing & Full Roster Simulation
 - **Description**: Rebuilt the Match Center from the ground up to reduce clutter, established modular bracket architecture, and upgraded dev seeding to simulate fully booked events across all 9 sports:

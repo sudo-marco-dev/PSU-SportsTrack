@@ -148,7 +148,15 @@ graph TD
 * **Binturungan One-Click Setup**: Automatically scaffolds all standard university sports in batch (Basketball, Volleyball, Soccer, Badminton, Baseball, Futsal, Table Tennis).
 * **Single Tournament Setup**: Allows ad-hoc custom competitions and formats.
 
-### 5.4. Single-Elimination Binary Tree Bracket Engine & Bronze Medal Playoff
+### 5.4. Multi-Format Bracketing, Seeding & Progression Engine
+* **Four Supported Tournament Formats (`BracketGenerationModal.tsx`)**:
+  1. **Single Elimination (`single`)**: Direct knockout bracket (`Quarterfinals` -> `Semifinals` -> `3rd Place Playoff` & `Finals`) with balanced power-of-2 `BYE` distribution.
+  2. **Double Elimination (`double`)**: Generates an **Upper Bracket (Winners)**, **Lower Bracket (Losers Redemption Tree)**, and **Grand Finals**, advancing winners via `next_match_id` and dropping Upper Bracket losers into the Lower Bracket via `loser_next_match_id`.
+  3. **Round Robin Only (`round_robin_only`)**: Generates all-vs-all circle rotation fixtures (`Round Robin - Round X`) and does **not** proceed to a knockout tree; ranks teams by **Most Wins** (tiebreakers: Point Differential, Points For) to crown Rank #1 as Official Champion directly.
+  4. **Round Robin + Playoffs (`round_robin_playoffs`)**: Two-phase hybrid generating Phase 1 `Elimination - Round X` pool fixtures followed by a non-destructive **Generate Phase 2 Playoffs** action that seeds Top 4 teams (`#1 vs #4`, `#2 vs #3`) into a Single Elimination Playoff Tree while preserving Phase 1 match history.
+* **Interactive Seeding & In-Place Schedule Editing**:
+  * Step 2 supports interactive `<Select>` team dropdowns, 1-click team swap (`⇄ VS`), live `BYE` recalculation, and schedule-preserving **Shuffle Seeds**.
+  * Published matches support non-destructive inline editing of `venue`, `match_time`, and (when `Scheduled`) `team_a_id` / `team_b_id` without resetting the bracket.
 * **Formula**: For $N$ teams, the engine calculates required rounds $R = \lceil \log_2(N) \rceil$ and total matches $2^R - 1$.
 * **BYE Match Handling**: Unpaired seeds are recorded as `'Completed'` ($1 - 0$) and immediately pre-advanced into Round 2.
 * **Two-Pass Batch Publisher**:

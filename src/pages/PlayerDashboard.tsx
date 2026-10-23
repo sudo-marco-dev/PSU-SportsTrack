@@ -105,8 +105,6 @@ export const PlayerDashboard = () => {
   }, [user, isPlayer, isVerified, isSuperAdmin, isCoach]);
 
   useEffect(() => {
-    if (!user) return;
-
     const matchSubscription = supabase
       .channel('dashboard-live-matches')
       .on(

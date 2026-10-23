@@ -228,11 +228,58 @@ export const Ranking = () => {
       const tourMatches = relevantMatches.filter(m => m.tournament_id === tourn.id);
       if (tourMatches.length === 0) return;
 
-      // Detect Finals match
+      const isRoundRobinOnly = tourMatches.every(
+        m => (m.round || '').toLowerCase().includes('round robin') && !m.next_match_id
+      );
+
+      if (isRoundRobinOnly) {
+        if (tourMatches.every(m => m.status === 'Completed')) {
+          const rrStats = new Map<string, { wins: number; pf: number; pa: number }>();
+          tourMatches.forEach(m => {
+            if (m.team_a_id && !rrStats.has(m.team_a_id)) rrStats.set(m.team_a_id, { wins: 0, pf: 0, pa: 0 });
+            if (m.team_b_id && !rrStats.has(m.team_b_id)) rrStats.set(m.team_b_id, { wins: 0, pf: 0, pa: 0 });
+            const sA = m.team_a_score || 0;
+            const sB = m.team_b_score || 0;
+            const tA = m.team_a_id ? rrStats.get(m.team_a_id) : undefined;
+            const tB = m.team_b_id ? rrStats.get(m.team_b_id) : undefined;
+            if (tA) {
+              tA.pf += sA;
+              tA.pa += sB;
+              if (sA > sB) tA.wins += 1;
+            }
+            if (tB) {
+              tB.pf += sB;
+              tB.pa += sA;
+              if (sB > sA) tB.wins += 1;
+            }
+          });
+          const sortedRR = Array.from(rrStats.entries()).sort((a, b) => {
+            if (b[1].wins !== a[1].wins) return b[1].wins - a[1].wins;
+            const diffA = a[1].pf - a[1].pa;
+            const diffB = b[1].pf - b[1].pa;
+            if (diffB !== diffA) return diffB - diffA;
+            return b[1].pf - a[1].pf;
+          });
+          if (sortedRR[0]?.[0]) tournChampions.set(tourn.id, sortedRR[0][0]);
+          if (sortedRR[1]?.[0]) tournRunnerUps.set(tourn.id, sortedRR[1][0]);
+          if (sortedRR[2]?.[0]) tournBronze.set(tourn.id, sortedRR[2][0]);
+        }
+        return;
+      }
+
+      // Detect Finals match (Grand Finals for Double Elim, or Finals for Single Elim)
       const finalsMatch = tourMatches.find(m => {
         const r = (m.round || '').toLowerCase();
-        return (r.includes('final') && !r.includes('semi') && !r.includes('quarter') && !r.includes('bronze') && !r.includes('3rd'))
-          || (!m.next_match_id && tourMatches.length > 0 && tourMatches.every(tm => tm.status === 'Completed'));
+        return (
+          r.includes('grand final') ||
+          (r.includes('final') &&
+            !r.includes('semi') &&
+            !r.includes('quarter') &&
+            !r.includes('bronze') &&
+            !r.includes('3rd') &&
+            !r.includes('upper') &&
+            !r.includes('lower'))
+        );
       });
 
       if (finalsMatch && (finalsMatch.status === 'Completed' || (finalsMatch.team_a_score || 0) > 0 || (finalsMatch.team_b_score || 0) > 0)) {
@@ -244,17 +291,20 @@ export const Ranking = () => {
         if (loserId) tournRunnerUps.set(tourn.id, loserId);
       }
 
-      // Detect Bronze match
+      // Detect Bronze match (3rd Place Playoff winner OR Lower Finals loser in Double Elim)
       const bronzeMatch = tourMatches.find(m => {
         const r = (m.round || '').toLowerCase();
-        return r.includes('bronze') || r.includes('3rd');
+        return r.includes('bronze') || r.includes('3rd') || r.includes('lower final');
       });
 
       if (bronzeMatch && (bronzeMatch.status === 'Completed' || (bronzeMatch.team_a_score || 0) > 0 || (bronzeMatch.team_b_score || 0) > 0)) {
         const scoreA = bronzeMatch.team_a_score || 0;
         const scoreB = bronzeMatch.team_b_score || 0;
-        const winnerId = scoreA >= scoreB ? bronzeMatch.team_a_id : bronzeMatch.team_b_id;
-        if (winnerId) tournBronze.set(tourn.id, winnerId);
+        const isLowerFinal = (bronzeMatch.round || '').toLowerCase().includes('lower final');
+        const bronzeTeamId = isLowerFinal
+          ? (scoreA >= scoreB ? bronzeMatch.team_b_id : bronzeMatch.team_a_id)
+          : (scoreA >= scoreB ? bronzeMatch.team_a_id : bronzeMatch.team_b_id);
+        if (bronzeTeamId) tournBronze.set(tourn.id, bronzeTeamId);
       }
     });
 
@@ -538,7 +588,7 @@ export const Ranking = () => {
         }
       });
 
-      let results = Array.from(clusterStats.values()).map(c => ({
+      const results = Array.from(clusterStats.values()).map(c => ({
         ...c,
         pointDiff: c.pointsFor - c.pointsAgainst,
         winRate: c.matchesPlayed > 0 ? (c.wins / c.matchesPlayed) * 100 : 0

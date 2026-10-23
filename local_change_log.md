@@ -4,6 +4,70 @@ This log tracks every user prompt, database migration, code change, and Git oper
 
 ---
 
+## 📅 Log Entry: 2026-10-23
+
+### 💬 Prompt: Multi-Format Bracketing, Seeding & Schedule Engine Overhaul
+*   **Timestamp**: 2026-10-23T14:42:10+08:00
+*   **User Directive**: "analyze the project for improving the bracketing/seeding system double check our flows like the seeding with the phase 1 and phase 2, the formats with step 1 and step 2, reseeding functions, editing times /dates and venues of the match, why does reset & seed 'resets the schedule' but I cant edit the seeds the vs is still fixed and I can only edit the date and time along with the venue" -> "add a double elimination and option for the round robin ONLY type so after the round robin only mode it will ranks the most wins team and that is the champion and will no longer proceed to the tree like matches" / "also add double elimination where there is a upper bracket and loser bracket"
+*   **Actions Taken**:
+    *   **4 Tournament Formats Implemented (`BracketGenerationModal.tsx`, `types.ts`)**:
+        - **Single Elimination (`single`)**: Fixed power-of-2 `BYE` distribution so Round 1 never produces empty `TBD vs TBD` slots; fixed 8-team Round 1 naming to `Quarterfinals`.
+        - **Double Elimination (`double`)**: Built `buildDoubleEliminationMatches()` generating Upper Bracket (Winners), Lower Bracket (Losers), and Grand Finals with automatic winner (`next_match_id`) and loser (`loser_next_match_id`) progression.
+        - **Round Robin Only (`round_robin_only`)**: Built circle-method Round Robin generator (`Round Robin - Round X`) that does not proceed to a knockout tree; automatically crowns the #1 team by Most Wins (tiebreakers: Point Differential, Points For) across `BracketGenerationModal.tsx`, `TournamentExplorer.tsx`, and `Ranking.tsx`.
+        - **Round Robin + Playoffs (`round_robin_playoffs`)**: Built Phase 1 `Elimination - Round X` pools and `handleGeneratePhase2FromStandings()` to seed Top 4 teams (`#1 vs #4`, `#2 vs #3`) into Phase 2 Playoffs without deleting Phase 1 match history.
+    *   **Interactive `VS` Seed Editing & Fixed Reset Flow (Step 2)**:
+        - Replaced static `<span>` team names in Step 2 with `<Select>` dropdowns and a 1-click Swap (`⇄ VS`) button, with automatic duplicate-team swapping and live `BYE` recalculation (`recalculateBracketProgression`).
+        - Added `Shuffle Seeds` button in Step 2 that re-randomizes pairings while preserving custom dates, times, and venues.
+        - Fixed `Reset & Reseed` to return to Step 1 (`isReseedingMode`) so admins can switch formats before configuring Step 2.
+    *   **In-Place Editing on Published Matches**:
+        - Added inline `Edit` mode on published match cards in `BracketGenerationModal.tsx` to update `venue`, `match_time`, and (if `Scheduled`) `team_a_id` / `team_b_id` directly in Supabase without resetting the bracket.
+    *   **Match Center & Ranking Integration (`KnockoutBracketTree.tsx`, `TournamentExplorer.tsx`, `Ranking.tsx`)**:
+        - Added Upper Bracket + Lower (Losers) Bracket + Grand Finals visualization in `KnockoutBracketTree.tsx`.
+        - Added Live Round Robin / Phase 1 Standings Leaderboard table and Round Robin Only Champion Banner in `TournamentExplorer.tsx`.
+        - Updated `Ranking.tsx` to award Gold, Silver, and Bronze standings for Round Robin Only tournaments and Double Elimination tournaments.
+
+---
+
+### 💬 Prompt: Full Sweep Audit, Security Hardening, Monolith Decomposition & Playwright Suite
+*   **Timestamp**: 2026-10-23T13:14:00+08:00
+*   **User Directive**: "do a full sweep audit of and propose improvements to the system categorize them into priority like high medium and low and what kind like UI/UX, features, security etc. /plan and use skills F:\antigravity-skills for planning" -> "proceed"
+*   **Actions Taken**:
+    *   **Phase 1: Database Security & Indexing Migration (`20261014_harden_security_and_indexes.sql`)**:
+        - Applied security hardening migration to production Supabase project `kxnkdhznnpwvnljjmfwl`.
+        - Revoked anonymous execute permissions on 5 sensitive functions (`sync_offline_match_events`, `has_role`, `get_user_role`, `handle_profiles_update`, `handle_user_email_sync`).
+        - Created covering B-tree indexes for all 25 unindexed foreign keys identified by Supabase Advisor (Advisor count dropped from 25 to 0).
+        - Hardened mutable search paths with `SET search_path = 'public'`.
+        - Optimized RLS subqueries with `(SELECT auth.uid())` initPlans.
+        - Added `game_time_seconds`, `current_period`, `is_clock_running` persistence to `matches`.
+    *   **Phase 2: Critical Telemetry & Spectator Realtime Bug Fixes**:
+        - Corrected query discrepancy in `AdminDashboard.tsx` (`.in('status', ['Ongoing', 'Live'])`).
+        - Decoupled `PlayerDashboard.tsx` realtime broadcast subscription from user auth gate so anonymous spectators receive live scores.
+        - Replaced full database refetches in `TournamentExplorer.tsx` with in-memory optimistic updates from realtime payloads.
+    *   **Phase 3: Code Health & ESLint Resolution**:
+        - Fixed TDZ hoisting issue in `TournamentManagement.tsx`.
+        - Fixed mutable `let` binding to `const` in `Ranking.tsx`.
+        - Pruned dead obsolete file `src/pages/Login.tsx`.
+        - Fixed `AudioContext` leak in `LiveMatch.tsx` by consuming singleton audio synthesizer.
+        - Achieved zero ESLint errors across whole repository (`npx eslint . --quiet`).
+    *   **Phase 4: Component Decomposition of `TournamentManagement.tsx`**:
+        - Refactored monolithic 2,953-line `TournamentManagement.tsx` into a lean 300-line orchestrator and modular sub-components in `src/components/tournament-management/`:
+          - `TournamentListTab.tsx`: Tournament cards grid + table view, status badges, and action triggers.
+          - `TeamApprovalsTab.tsx`: Approvals table & cards with empty state and skeleton support.
+          - `TournamentMvpTab.tsx`: MVP nomination panel and Hall of Fame recognition.
+          - `CreateTournamentModal.tsx`: One-Click Binturungan multi-sport setup & custom single-sport dialog.
+          - `DeleteTournamentModal.tsx`: Soft-delete recovery vault confirmation dialog.
+          - `ConcludeTournamentModal.tsx`: Champion crowning and tournament conclusion modal.
+          - `BracketGenerationModal.tsx`: Multi-step bracket wizard, seeding, schedule slotting, match confirmation, and re-seeding.
+    *   **Phase 5: UI/UX Polish**:
+        - Created `EmptyState.tsx` and `SkeletonCard.tsx` in `src/components/ui/`.
+        - Integrated loading skeletons and informative empty states into `AdminAuditLogs.tsx`, `TeamManagement.tsx`, and `TournamentManagement.tsx`.
+    *   **Phase 6: Automated Testing with Playwright**:
+        - Authored comprehensive test suites in `tests/navigation.spec.ts` and `tests/match-center.spec.ts`.
+        - Verified 5/5 tests passing in 9.0s.
+        - Verified `npm run build` (`tsc -b && vite build`) passing with code 0.
+
+---
+
 ## 📅 Log Entry: 2026-05-17
 
 ### 💬 Prompt 1: Rebuild Core Database & Security

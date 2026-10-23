@@ -14,6 +14,8 @@ import { ClipboardList, Search, Clock, User, Activity, Calendar as CalendarIcon 
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 
 type AuditLog = {
   id: string;
@@ -163,23 +165,27 @@ export const AdminAuditLogs = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-64 text-center">
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-orange-500"></div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Retrieving Audit Records...</p>
-                  </div>
+                <TableCell colSpan={4} className="p-6">
+                  <SkeletonCard variant="row" count={4} />
                 </TableCell>
               </TableRow>
             ) : filteredLogs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-64 text-center">
-                  <div className="flex flex-col items-center justify-center gap-2 py-8">
-                    <div className="size-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 mb-1">
-                      <ClipboardList className="size-6" />
-                    </div>
-                    <p className="font-bold text-sm text-slate-700 dark:text-slate-300">No Audit Records Found</p>
-                    <p className="text-xs text-slate-400 max-w-xs">No administrative actions match your current filter criteria.</p>
-                  </div>
+                <TableCell colSpan={4} className="p-8">
+                  <EmptyState
+                    icon={ClipboardList}
+                    title="No Audit Records Found"
+                    description={
+                      searchQuery || timeFilter !== 'all'
+                        ? 'No administrative actions match your current filter parameters.'
+                        : 'No security or administrative activity has been logged in the system ledger yet.'
+                    }
+                    actionLabel={searchQuery || timeFilter !== 'all' ? 'Clear Filters' : undefined}
+                    onAction={() => {
+                      setSearchQuery('');
+                      setTimeFilter('all');
+                    }}
+                  />
                 </TableCell>
               </TableRow>
             ) : (

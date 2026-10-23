@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { Users, UserPlus, ClipboardList, Star, AlertTriangle, Zap, Circle, GraduationCap } from 'lucide-react';
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 
 type Team = {
   id: string;
@@ -609,15 +611,26 @@ export const TeamManagement = () => {
 
         <TabsContent value="my-teams" className="space-y-6 outline-none">
           {isLoadingTeams ? (
-            <div className="flex flex-col items-center justify-center py-24 gap-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
-              <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[10px]">Syncing Team Data...</p>
-            </div>
+            <SkeletonCard count={3} variant="card" />
           ) : filteredTeams.length === 0 ? (
-            <Card className="border-dashed border-2 py-24 text-center bg-slate-50/50 dark:bg-slate-900/20 rounded-[2rem]">
-              <ClipboardList className="size-16 text-slate-300 dark:text-slate-800 mx-auto mb-6" />
-              <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">No teams found.</p>
-            </Card>
+            <EmptyState
+              icon={ClipboardList}
+              title="No Teams Found"
+              description={
+                searchQuery || statusFilter !== 'all'
+                  ? 'No teams match your current search and filter criteria.'
+                  : 'You have not formed any collegiate teams yet. Launch your first roster to get started.'
+              }
+              actionLabel={searchQuery || statusFilter !== 'all' ? 'Reset Filters' : '+ Create New Team'}
+              onAction={() => {
+                if (searchQuery || statusFilter !== 'all') {
+                  setSearchQuery('');
+                  setStatusFilter('all');
+                } else {
+                  setIsCreateOpen(true);
+                }
+              }}
+            />
           ) : viewMode === 'grid' ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredTeams.map((team, idx) => (
@@ -735,15 +748,15 @@ export const TeamManagement = () => {
 
         <TabsContent value="directory" className="space-y-6 outline-none">
           {isLoadingPlayers ? (
-            <div className="flex flex-col items-center justify-center py-24 gap-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
-              <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[10px]">Scanning Roster Database...</p>
-            </div>
+            <SkeletonCard count={3} variant="card" />
           ) : filteredPlayers.length === 0 ? (
-            <Card className="border-dashed border-2 py-24 text-center bg-slate-50/50 dark:bg-slate-900/20 rounded-[2rem]">
-              <Users className="size-16 text-slate-300 dark:text-slate-800 mx-auto mb-6" />
-              <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">No players found.</p>
-            </Card>
+            <EmptyState
+              icon={Users}
+              title="No Players Found"
+              description="No eligible student athletes match your current query."
+              actionLabel={searchQuery ? 'Clear Search' : undefined}
+              onAction={() => setSearchQuery('')}
+            />
           ) : viewMode === 'grid' ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredPlayers.map((player, idx) => (

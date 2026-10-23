@@ -363,6 +363,30 @@ export function playTestPing(): void {
 }
 
 /**
+ * Play gentle ascending chime when a live facilitator lease claim request arrives
+ */
+export function playClaimAlertChime(): void {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  try {
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, now);
+    osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.4);
+  } catch {
+    // Audio context may be restricted by autoplay policy
+  }
+}
+
+/**
  * React Hook for component integration with synchronized audio toggle
  */
 export function useAudioFx() {

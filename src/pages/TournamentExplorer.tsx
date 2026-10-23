@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Clock, Trophy, Crown, ArrowLeft, Lock } from 'lucide-react';
+import { Clock, Trophy, Crown, ArrowLeft, Lock, ListOrdered } from 'lucide-react';
 import { SPORT_ICONS, getSportIcon } from '@/lib/sportIcons';
 import { MatchCenterHeader } from '@/components/match-center/MatchCenterHeader';
 import { MatchCenterToolbar, type MatchCenterPhase } from '@/components/match-center/MatchCenterToolbar';
-import { KnockoutBracketTree } from '@/components/match-center/KnockoutBracketTree';
+import { KnockoutBracketTree, type DoubleEliminationGroups } from '@/components/match-center/KnockoutBracketTree';
 import { MatchScheduleList } from '@/components/match-center/MatchScheduleList';
 import { type Match, type Tournament, type TeamAffiliation, getAffiliationBadge } from '@/components/match-center/types';
 
@@ -31,10 +32,14 @@ const extractSportName = (match: Match, tourMap: Map<string, Tournament>): strin
 const isPlayoffRound = (roundName: string): boolean => {
   if (!roundName) return false;
   const r = roundName.toLowerCase();
+  if (r.includes('round robin') || r.includes('elimination')) return false;
   return (
     r.includes('final') ||
     r.includes('semi') ||
     r.includes('quarter') ||
+    r.includes('upper') ||
+    r.includes('lower') ||
+    r.includes('grand') ||
     r.includes('playoff') ||
     r.includes('bracket') ||
     r.includes('championship') ||
@@ -110,8 +115,27 @@ export const TournamentExplorer = () => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'matches' },
-        () => {
-          fetchExplorerData();
+        (payload: any) => {
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            setMatches((prev) =>
+              prev.map((m) =>
+                m.id === payload.new.id
+                  ? {
+                      ...m,
+                      status: payload.new.status,
+                      team_a_score: payload.new.team_a_score,
+                      team_b_score: payload.new.team_b_score,
+                      team_a_id: payload.new.team_a_id,
+                      team_b_id: payload.new.team_b_id,
+                      next_match_id: payload.new.next_match_id,
+                      loser_next_match_id: payload.new.loser_next_match_id,
+                    }
+                  : m
+              )
+            );
+          } else {
+            fetchExplorerData();
+          }
         }
       )
       .subscribe();
@@ -213,7 +237,7 @@ export const TournamentExplorer = () => {
     }
   };
 
-  // Elimination matches filtered by sport & selected tournament
+  // Elimination / Round Robin matches filtered by sport & selected tournament
   const eliminationMatches = useMemo(() => {
     return matches.filter((m) => {
       if (isPlayoffRound(m.round) || m.next_match_id) return false;
@@ -237,6 +261,82 @@ export const TournamentExplorer = () => {
   }, [matches, activeBracketTournamentId]);
 
   const hasPlayoffs = playoffMatches.length > 0;
+
+  // Detect if the active tournament is Round Robin Only (all matches are Round Robin and no playoff tree)
+  const isRoundRobinOnlyTournament = useMemo(() => {
+    if (eliminationMatches.length === 0 || hasPlayoffs) return false;
+    return eliminationMatches.every((m) => (m.round || '').toLowerCase().includes('round robin'));
+  }, [eliminationMatches, hasPlayoffs]);
+
+  // Compute Standings Leaderboard for Phase 1 / Round Robin matches
+  const phase1Standings = useMemo(() => {
+    const stats = new Map<
+      string,
+      {
+        teamId: string;
+        teamName: string;
+        gp: number;
+        wins: number;
+        losses: number;
+        pf: number;
+        pa: number;
+      }
+    >();
+
+    eliminationMatches.forEach((m) => {
+      if (m.team_a_id && m.team_a?.name && !stats.has(m.team_a_id)) {
+        stats.set(m.team_a_id, {
+          teamId: m.team_a_id,
+          teamName: m.team_a.name,
+          gp: 0,
+          wins: 0,
+          losses: 0,
+          pf: 0,
+          pa: 0,
+        });
+      }
+      if (m.team_b_id && m.team_b?.name && !stats.has(m.team_b_id)) {
+        stats.set(m.team_b_id, {
+          teamId: m.team_b_id,
+          teamName: m.team_b.name,
+          gp: 0,
+          wins: 0,
+          losses: 0,
+          pf: 0,
+          pa: 0,
+        });
+      }
+
+      const sA = m.team_a_score || 0;
+      const sB = m.team_b_score || 0;
+      if (m.status === 'Completed' || sA > 0 || sB > 0) {
+        const tA = m.team_a_id ? stats.get(m.team_a_id) : undefined;
+        const tB = m.team_b_id ? stats.get(m.team_b_id) : undefined;
+        if (tA) {
+          tA.gp += 1;
+          tA.pf += sA;
+          tA.pa += sB;
+          if (sA > sB) tA.wins += 1;
+          else if (sA < sB) tA.losses += 1;
+        }
+        if (tB) {
+          tB.gp += 1;
+          tB.pf += sB;
+          tB.pa += sA;
+          if (sB > sA) tB.wins += 1;
+          else if (sB < sA) tB.losses += 1;
+        }
+      }
+    });
+
+    return Array.from(stats.values()).sort((a, b) => {
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      const diffA = a.pf - a.pa;
+      const diffB = b.pf - b.pa;
+      if (diffB !== diffA) return diffB - diffA;
+      return b.pf - a.pf;
+    });
+  }, [eliminationMatches]);
 
   // Filter elimination matches based on search query and optional stage filter
   const filteredEliminationMatches = useMemo(() => {
@@ -270,7 +370,7 @@ export const TournamentExplorer = () => {
       .sort((a, b) => new Date(b.match_time).getTime() - new Date(a.match_time).getTime());
   }, [filteredEliminationMatches]);
 
-  // Playoff Bracket rounds grouping
+  // Playoff Bracket rounds grouping (Single Elimination)
   const playoffRoundsGrouped = useMemo(() => {
     const quarters: Match[] = [];
     const semis: Match[] = [];
@@ -282,7 +382,7 @@ export const TournamentExplorer = () => {
       const r = (m.round || '').toLowerCase();
       if (r.includes('3rd') || r.includes('bronze') || r.includes('consolation')) {
         bronze.push(m);
-      } else if (r.includes('quarter')) {
+      } else if (r.includes('quarter') || r === 'round 1') {
         quarters.push(m);
       } else if (r.includes('semi')) {
         semis.push(m);
@@ -294,6 +394,58 @@ export const TournamentExplorer = () => {
     });
 
     return { quarters, semis, finals, bronze, others };
+  }, [playoffMatches]);
+
+  // Double Elimination grouping (Upper Bracket, Lower Bracket, Grand Finals)
+  const doubleElimGrouped = useMemo<DoubleEliminationGroups>(() => {
+    const isDoubleElimination = playoffMatches.some((m) => {
+      const r = (m.round || '').toLowerCase();
+      return r.includes('upper') || r.includes('lower') || r.includes('grand final');
+    });
+
+    const upperQuarters: Match[] = [];
+    const upperSemis: Match[] = [];
+    const upperFinals: Match[] = [];
+    const lowerR1: Match[] = [];
+    const lowerR2: Match[] = [];
+    const lowerSemis: Match[] = [];
+    const lowerFinals: Match[] = [];
+    const grandFinals: Match[] = [];
+
+    if (isDoubleElimination) {
+      playoffMatches.forEach((m) => {
+        const r = (m.round || '').toLowerCase();
+        if (r.includes('grand final')) {
+          grandFinals.push(m);
+        } else if (r.includes('upper') && r.includes('quarter')) {
+          upperQuarters.push(m);
+        } else if (r.includes('upper') && r.includes('semi')) {
+          upperSemis.push(m);
+        } else if (r.includes('upper') && r.includes('final')) {
+          upperFinals.push(m);
+        } else if (r.includes('lower') && r.includes('1')) {
+          lowerR1.push(m);
+        } else if (r.includes('lower') && r.includes('2')) {
+          lowerR2.push(m);
+        } else if (r.includes('lower') && r.includes('semi')) {
+          lowerSemis.push(m);
+        } else if (r.includes('lower') && r.includes('final')) {
+          lowerFinals.push(m);
+        }
+      });
+    }
+
+    return {
+      isDoubleElimination,
+      upperQuarters,
+      upperSemis,
+      upperFinals,
+      lowerR1,
+      lowerR2,
+      lowerSemis,
+      lowerFinals,
+      grandFinals,
+    };
   }, [playoffMatches]);
 
   // Order quarters and semis into tournament seed pairs for accurate tree alignment
@@ -326,9 +478,33 @@ export const TournamentExplorer = () => {
     };
   }, [playoffRoundsGrouped]);
 
-  // Identify Champion and its designated College or Cluster/Tribe
+  // Elimination completion status: True ONLY when all elimination fixtures have completed
+  const isEliminationComplete = useMemo(() => {
+    if (eliminationMatches.length === 0) return false;
+    return eliminationMatches.every((m) => m.status === 'Completed');
+  }, [eliminationMatches]);
+
+  // Identify Champion and its designated College or Cluster/Tribe (supports Single, Double, and Round Robin Only)
   const championDetails = useMemo(() => {
-    const completedFinal = playoffRoundsGrouped.finals.find((m) => m.status === 'Completed');
+    // 1. Check Round Robin Only Champion (Most Wins when all Round Robin matches are completed)
+    if (isRoundRobinOnlyTournament && isEliminationComplete && phase1Standings.length > 0) {
+      const topTeam = phase1Standings[0];
+      const aff = getAffiliationBadge(topTeam.teamId, topTeam.teamName, teamsMap);
+      return {
+        teamName: topTeam.teamName,
+        title: aff ? aff.fullName : topTeam.teamName,
+        badge: aff ? aff.badge : null,
+        type: aff ? aff.type : 'squad',
+        record: `${topTeam.wins}W - ${topTeam.losses}L`,
+      };
+    }
+
+    // 2. Check Double Elimination Grand Finals or Single Elimination Finals
+    const targetFinalsList = doubleElimGrouped.isDoubleElimination
+      ? doubleElimGrouped.grandFinals
+      : playoffRoundsGrouped.finals;
+
+    const completedFinal = targetFinalsList.find((m) => m.status === 'Completed');
     if (!completedFinal) return null;
     let winningTeamId: string | null = null;
     let winningTeamName: string | null = null;
@@ -346,9 +522,17 @@ export const TournamentExplorer = () => {
       teamName: winningTeamName,
       title: aff ? aff.fullName : winningTeamName,
       badge: aff ? aff.badge : null,
-      type: aff ? aff.type : 'squad'
+      type: aff ? aff.type : 'squad',
+      record: null,
     };
-  }, [playoffRoundsGrouped.finals, teamsMap]);
+  }, [
+    isRoundRobinOnlyTournament,
+    isEliminationComplete,
+    phase1Standings,
+    doubleElimGrouped,
+    playoffRoundsGrouped.finals,
+    teamsMap,
+  ]);
 
   // Available elimination rounds for filter dropdown
   const availableRounds = useMemo(() => {
@@ -364,13 +548,7 @@ export const TournamentExplorer = () => {
     return matches.filter((m) => m.status === 'Ongoing').length;
   }, [matches]);
 
-  // Elimination completion status: True ONLY when all elimination fixtures have completed
-  const isEliminationComplete = useMemo(() => {
-    if (eliminationMatches.length === 0) return false;
-    return eliminationMatches.every((m) => m.status === 'Completed');
-  }, [eliminationMatches]);
-
-  // Active Phase: smart-defaults to playoffs if a tournament has ONLY playoffs, or if eliminations have concluded; otherwise defaults to elimination
+  // Active Phase: smart-defaults to playoffs if a tournament has ONLY playoffs, or if eliminations have concluded (and playoffs exist); otherwise defaults to elimination
   const activePhase: MatchCenterPhase =
     userPhaseOverride ??
     (eliminationMatches.length === 0 && hasPlayoffs
@@ -456,34 +634,65 @@ export const TournamentExplorer = () => {
       {activePhase === 'playoffs' ? (
         <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-200">
           {!hasPlayoffs ? (
-            /* Playoff Locked / Awaiting Progression Notice */
-            <Card className="border-2 border-dashed border-slate-300 dark:border-slate-800 py-12 sm:py-16 px-6 text-center bg-slate-950 text-white rounded-2xl sm:rounded-[2.5rem] relative overflow-hidden shadow-2xl">
-              <div className="absolute top-0 right-0 -mt-10 -mr-10 size-64 sm:size-72 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
-              <div className="relative z-10 max-w-lg mx-auto space-y-3.5 sm:space-y-4">
-                <div className="size-14 sm:size-16 rounded-2xl sm:rounded-3xl bg-slate-900 text-orange-500 flex items-center justify-center mx-auto border border-white/10 shadow-xl">
-                  <Lock className="size-7 sm:size-8 animate-pulse text-orange-500" />
+            isRoundRobinOnlyTournament ? (
+              /* Round Robin Only Notice & Standings Podium */
+              <Card className="border-2 border-orange-500/30 py-10 sm:py-12 px-6 text-center bg-slate-950 text-white rounded-2xl sm:rounded-[2.5rem] relative overflow-hidden shadow-2xl">
+                <div className="absolute top-0 right-0 -mt-10 -mr-10 size-64 sm:size-72 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="relative z-10 max-w-xl mx-auto space-y-4">
+                  <div className="size-14 sm:size-16 rounded-2xl sm:rounded-3xl bg-slate-900 text-orange-500 flex items-center justify-center mx-auto border border-white/10 shadow-xl">
+                    <ListOrdered className="size-7 sm:size-8 text-orange-500" />
+                  </div>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-[9px] sm:text-[10px] font-black uppercase tracking-widest border border-emerald-500/30">
+                    <Trophy className="size-3 text-emerald-400" />
+                    <span>Round Robin Only Format • Standings Championship</span>
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-black italic uppercase tracking-tight text-white">
+                    Champion Crowned by Most Wins (No Knockout Tree)
+                  </h3>
+                  <p className="text-slate-400 font-medium text-xs leading-relaxed">
+                    This tournament uses the <strong className="text-white">Round Robin Only</strong> league format. Every squad plays each other, and the team with the most wins (and highest point differential) is crowned Official Champion directly without proceeding to a knockout bracket.
+                  </p>
+                  <div className="pt-2 flex justify-center">
+                    <Button
+                      onClick={() => setUserPhaseOverride('elimination')}
+                      className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic text-xs tracking-wider h-10 sm:h-11 px-5 sm:px-6 rounded-xl shadow-lg shadow-orange-500/20 transition-all w-full sm:w-auto inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <ArrowLeft className="size-3.5" />
+                      <span>View Round Robin Standings & Fixtures</span>
+                    </Button>
+                  </div>
                 </div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/20 text-orange-400 text-[9px] sm:text-[10px] font-black uppercase tracking-widest border border-orange-500/30">
-                  <Lock className="size-3 text-orange-400" />
-                  <span>Phase 2 Pending • Elimination Stage In Progress</span>
+              </Card>
+            ) : (
+              /* Playoff Locked / Awaiting Progression Notice */
+              <Card className="border-2 border-dashed border-slate-300 dark:border-slate-800 py-12 sm:py-16 px-6 text-center bg-slate-950 text-white rounded-2xl sm:rounded-[2.5rem] relative overflow-hidden shadow-2xl">
+                <div className="absolute top-0 right-0 -mt-10 -mr-10 size-64 sm:size-72 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="relative z-10 max-w-lg mx-auto space-y-3.5 sm:space-y-4">
+                  <div className="size-14 sm:size-16 rounded-2xl sm:rounded-3xl bg-slate-900 text-orange-500 flex items-center justify-center mx-auto border border-white/10 shadow-xl">
+                    <Lock className="size-7 sm:size-8 animate-pulse text-orange-500" />
+                  </div>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/20 text-orange-400 text-[9px] sm:text-[10px] font-black uppercase tracking-widest border border-orange-500/30">
+                    <Lock className="size-3 text-orange-400" />
+                    <span>Phase 2 Pending • Elimination Stage In Progress</span>
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-black italic uppercase tracking-tight text-white">
+                    Playoff Bracket Unlocks After Elimination Round
+                  </h3>
+                  <p className="text-slate-400 font-medium text-xs leading-relaxed">
+                    Phase 1 elimination fixtures are currently underway. Once regular fixtures conclude, qualified squads advance to the Playoff Bracket.
+                  </p>
+                  <div className="pt-2 flex justify-center">
+                    <Button
+                      onClick={() => setUserPhaseOverride('elimination')}
+                      className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic text-xs tracking-wider h-10 sm:h-11 px-5 sm:px-6 rounded-xl shadow-lg shadow-orange-500/20 transition-all w-full sm:w-auto inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <ArrowLeft className="size-3.5" />
+                      <span>Back to Phase 1 Elimination</span>
+                    </Button>
+                  </div>
                 </div>
-                <h3 className="text-xl sm:text-2xl font-black italic uppercase tracking-tight text-white">
-                  Playoff Bracket Unlocks After Elimination Round
-                </h3>
-                <p className="text-slate-400 font-medium text-xs leading-relaxed">
-                  Phase 1 elimination fixtures are currently underway. Once regular fixtures conclude, qualified squads advance to the Single Elimination Playoff Bracket.
-                </p>
-                <div className="pt-2 flex justify-center">
-                  <Button
-                    onClick={() => setUserPhaseOverride('elimination')}
-                    className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic text-xs tracking-wider h-10 sm:h-11 px-5 sm:px-6 rounded-xl shadow-lg shadow-orange-500/20 transition-all w-full sm:w-auto inline-flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <ArrowLeft className="size-3.5" />
-                    <span>Back to Phase 1 Elimination</span>
-                  </Button>
-                </div>
-              </div>
-            </Card>
+              </Card>
+            )
           ) : (
             <div className="space-y-6 sm:space-y-8">
               {/* Multi-tournament bracket switcher (if sport has multiple bracket tournaments) */}
@@ -540,9 +749,10 @@ export const TournamentExplorer = () => {
                 </div>
               )}
 
-              {/* Knockout Bracket Arena */}
+              {/* Knockout Bracket Arena (Single or Double Elimination) */}
               <KnockoutBracketTree
                 playoffs={orderedPlayoffs}
+                doubleElim={doubleElimGrouped}
                 searchQuery={searchQuery}
                 mobileStage={mobilePlayoffStage}
                 setMobileStage={setMobilePlayoffStage}
@@ -553,9 +763,30 @@ export const TournamentExplorer = () => {
           )}
         </div>
       ) : (
-        /* Phase 1: Elimination Stage View */
+        /* Phase 1: Elimination / Round Robin Stage View */
         <div className="space-y-5 animate-in fade-in duration-200">
-          {/* Elimination Concluded Banner Notice */}
+          {/* Champion Banner for Round Robin Only Mode */}
+          {isRoundRobinOnlyTournament && championDetails && (
+            <div className="relative overflow-hidden rounded-2xl sm:rounded-[2rem] bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white p-5 sm:p-7 shadow-2xl border border-amber-300/30 text-center animate-in zoom-in-95 duration-500">
+              <div className="relative z-10 flex flex-col items-center gap-2">
+                <div className="size-12 sm:size-14 rounded-2xl bg-white/20 backdrop-blur-md text-yellow-300 flex items-center justify-center border border-white/30 shadow-lg">
+                  <Crown className="size-7 sm:size-8 animate-bounce" />
+                </div>
+                <span className="px-3 py-1 rounded-full bg-black/20 text-white text-[9px] sm:text-[10px] font-black uppercase tracking-widest">
+                  Round Robin Official Champion • Ranked #1 by Most Wins ({championDetails.record})
+                </span>
+                <h2 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none drop-shadow-md">
+                  {championDetails.title}
+                </h2>
+                <p className="text-white/90 font-bold uppercase tracking-widest text-[10px] sm:text-xs mt-0.5 inline-flex items-center gap-1.5">
+                  <Trophy className="size-3.5 text-yellow-200" />
+                  <span>{championDetails.teamName} • Palawan State University</span>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Elimination Concluded Banner Notice (when Phase 2 Playoffs exist) */}
           {isEliminationComplete && hasPlayoffs && (
             <div className="p-4 sm:p-5 rounded-2xl bg-slate-950 border border-emerald-500/30 text-white flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 shadow-xl relative overflow-hidden">
               <div className="flex items-center gap-3">
@@ -579,6 +810,76 @@ export const TournamentExplorer = () => {
                 <Trophy className="size-3.5" />
               </Button>
             </div>
+          )}
+
+          {/* Live Round Robin / Phase 1 Standings Table (when a specific tournament is selected or Round Robin matches exist) */}
+          {selectedTournamentId !== 'all' && phase1Standings.length > 0 && (
+            <Card className="p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 shadow-sm space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <ListOrdered className="size-4 text-orange-500" />
+                  <h4 className="text-xs sm:text-sm font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
+                    {isRoundRobinOnlyTournament
+                      ? 'Round Robin Championship Standings (Most Wins)'
+                      : 'Phase 1 Elimination Pool Standings'}
+                  </h4>
+                </div>
+                <Badge variant="outline" className="text-[9px] font-black uppercase border-orange-500/30 text-orange-500">
+                  {isRoundRobinOnlyTournament
+                    ? 'Rank #1 Wins Championship'
+                    : 'Ranked by Wins & Point Differential'}
+                </Badge>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-white/10 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                      <th className="py-2 pr-3">Rank</th>
+                      <th className="py-2 px-3">Squad</th>
+                      <th className="py-2 px-3 text-center">GP</th>
+                      <th className="py-2 px-3 text-center">W - L</th>
+                      <th className="py-2 px-3 text-center">PF</th>
+                      <th className="py-2 px-3 text-center">PA</th>
+                      <th className="py-2 pl-3 text-right">Diff</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-bold">
+                    {phase1Standings.map((st, idx) => {
+                      const diff = st.pf - st.pa;
+                      return (
+                        <tr
+                          key={st.teamId}
+                          className={
+                            idx === 0
+                              ? 'text-amber-600 dark:text-amber-400 bg-amber-500/5'
+                              : 'text-slate-700 dark:text-slate-200'
+                          }
+                        >
+                          <td className="py-2.5 pr-3 font-black">#{idx + 1}</td>
+                          <td className="py-2.5 px-3 font-black uppercase italic">
+                            {st.teamName}
+                            {idx === 0 && isRoundRobinOnlyTournament && isEliminationComplete && (
+                              <Badge className="ml-2 bg-amber-500 text-white text-[8px] font-black uppercase px-1.5 py-0">
+                                Champion
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 text-center tabular-nums">{st.gp}</td>
+                          <td className="py-2.5 px-3 text-center tabular-nums font-black">
+                            {st.wins} - {st.losses}
+                          </td>
+                          <td className="py-2.5 px-3 text-center tabular-nums text-slate-500">{st.pf}</td>
+                          <td className="py-2.5 px-3 text-center tabular-nums text-slate-500">{st.pa}</td>
+                          <td className="py-2.5 pl-3 text-right tabular-nums">
+                            {diff > 0 ? `+${diff}` : diff}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
           )}
 
           {/* Sub-view switcher for Elimination Stage: Upcoming/Live vs Results */}

@@ -59,8 +59,8 @@ export const AdminDashboard = () => {
         { count: deletedTournCount },
         { count: faciCount }
       ] = await Promise.all([
-        supabase.from('tournaments').select('*', { count: 'exact', head: true }).eq('status', 'Active').or('is_deleted.is.null,is_deleted.eq.false'),
-        supabase.from('matches').select('*', { count: 'exact', head: true }).eq('status', 'Live'),
+        supabase.from('tournaments').select('*', { count: 'exact', head: true }).in('status', ['Active', 'Ongoing']).or('is_deleted.is.null,is_deleted.eq.false'),
+        supabase.from('matches').select('*', { count: 'exact', head: true }).in('status', ['Ongoing', 'Live']),
         supabase.from('verification_documents').select('*', { count: 'exact', head: true }).eq('status', 'Pending'),
         supabase.from('verification_documents').select('*', { count: 'exact', head: true }).eq('status', 'Approved'),
         supabase.from('verification_documents').select('*', { count: 'exact', head: true }).eq('status', 'Rejected'),
