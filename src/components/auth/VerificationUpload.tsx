@@ -22,6 +22,8 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
   const isFaculty = profile?.role === 'player_faculty';
   const isStaffOrFaculty = isStaff || isFaculty;
 
+  const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB maximum limit to prevent storage bucket overflow
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) {
@@ -31,13 +33,32 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
       return;
     }
 
-    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-    const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(file.name);
+    // 1. Strict File Size Validation (Max 5MB)
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+      toast.error(`File exceeds 5MB limit (${sizeMb} MB). Please select a compressed document or image under 5MB to prevent storage overflow.`);
+      e.target.value = '';
+      setCorFile(null);
+      setImagePreviewUrl(null);
+      setParsedData(null);
+      return;
+    }
+
+    const fileNameLower = file.name.toLowerCase();
+    const isPdf = file.type === 'application/pdf' || fileNameLower.endsWith('.pdf');
+    const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(fileNameLower);
 
     if (!isPdf && !isImage) {
-      toast.error('Invalid file type: Please select an official PDF document or valid ID image (PNG/JPG).');
+      toast.error('Invalid file format. Only official PDF documents and standard images (PNG, JPG, WEBP) under 5MB are permitted.');
       e.target.value = '';
+      setCorFile(null);
+      setImagePreviewUrl(null);
+      setParsedData(null);
       return;
+    }
+
+    if (isStaffOrFaculty && isPdf) {
+      toast.warning('Faculty & staff athletic clearance requires an employee ID card photo (PNG, JPG, WEBP). Please upload your physical ID card.');
     }
 
     setCorFile(file);
@@ -46,7 +67,7 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
       const preview = URL.createObjectURL(file);
       setImagePreviewUrl(preview);
       setParsedData(null);
-      toast.info('Employee ID photo loaded. Ready to submit for administrative review.');
+      toast.info('ID photo loaded. Ready to submit for sports administration review.');
       return;
     }
 
@@ -84,9 +105,33 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
       return;
     }
 
+    if (corFile.size > MAX_FILE_SIZE_BYTES) {
+      toast.error('Selected file exceeds the 5MB storage quota. Please upload an optimized file under 5MB.');
+      return;
+    }
+
     setIsUploading(true);
 
     try {
+      // 0. Remove prior unverified (Pending or Rejected) documents and storage files for this user to prevent storage overflow
+      const { data: priorUnverified } = await supabase
+        .from('verification_documents')
+        .select('id, storage_path')
+        .eq('user_id', user.id)
+        .in('status', ['Pending', 'Rejected']);
+
+      if (priorUnverified && priorUnverified.length > 0) {
+        const pathsToPrune = priorUnverified.map(p => p.storage_path).filter(Boolean);
+        if (pathsToPrune.length > 0) {
+          try {
+            await supabase.storage.from('verification_documents').remove(pathsToPrune);
+          } catch (storageCleanupErr) {
+            console.warn('Non-fatal prior file cleanup warning:', storageCleanupErr);
+          }
+        }
+        await supabase.from('verification_documents').delete().in('id', priorUnverified.map(p => p.id));
+      }
+
       const fileExt = corFile.name.split('.').pop() || 'png';
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
@@ -230,6 +275,10 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
                   : 'file:bg-orange-500 hover:file:bg-orange-600'
               } file:text-white file:font-bold file:text-xs file:border-0 file:rounded-lg file:mr-3 file:px-3 file:py-1 cursor-pointer bg-slate-50 dark:bg-white/5 rounded-2xl border-slate-200 dark:border-white/10`}
             />
+            <div className="flex items-center justify-between px-1 text-[10px] text-slate-400 font-medium">
+              <span>Formats: {isStaffOrFaculty ? 'PNG, JPG, WEBP' : 'Official PDF, PNG, JPG, WEBP'}</span>
+              <span className="font-bold text-orange-500">Max 5 MB</span>
+            </div>
           </div>
         </div>
 

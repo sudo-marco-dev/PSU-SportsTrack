@@ -13,6 +13,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
@@ -33,6 +34,7 @@ import {
   Check,
   Building,
   Mail,
+  ArrowUpDown,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { logAudit } from '@/lib/audit';
@@ -96,6 +98,10 @@ export const SystemVerifications = () => {
   const [documents, setDocuments] = useState<PendingDocument[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('Pending');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'students' | 'staff_faculty'>('all');
+  const [sortOption, setSortOption] = useState<
+    'newest' | 'oldest' | 'students_first' | 'staff_first' | 'confidence_desc' | 'confidence_asc' | 'name_asc'
+  >('newest');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [isRevalidateModalOpen, setIsRevalidateModalOpen] = useState(false);
   const [isRevalidating, setIsRevalidating] = useState(false);
@@ -347,17 +353,85 @@ export const SystemVerifications = () => {
     };
   };
 
+  const isStaffOrFacultyDoc = (doc?: PendingDocument | null): boolean => {
+    if (!doc) return false;
+    return (
+      doc.document_type === 'STAFF_ID' ||
+      doc.document_type === 'FACULTY_ID' ||
+      doc.users?.role === 'player_staff' ||
+      doc.users?.role === 'player_faculty'
+    );
+  };
+
+  const studentCount = useMemo(() => {
+    return documents.filter((d) => !isStaffOrFacultyDoc(d)).length;
+  }, [documents]);
+
+  const staffFacultyCount = useMemo(() => {
+    return documents.filter((d) => isStaffOrFacultyDoc(d)).length;
+  }, [documents]);
+
   const filteredDocuments = useMemo(() => {
-    return documents.filter((doc) => {
-      const search = searchQuery.toLowerCase();
+    const search = searchQuery.toLowerCase().trim();
+    const result = documents.filter((doc) => {
+      const isStaffOrFaculty = isStaffOrFacultyDoc(doc);
+
+      if (roleFilter === 'students' && isStaffOrFaculty) return false;
+      if (roleFilter === 'staff_faculty' && !isStaffOrFaculty) return false;
+
+      if (!search) return true;
+
       const matchesSearch =
-        doc.users?.full_name?.toLowerCase().includes(search) ||
-        doc.extracted_student_no?.toLowerCase().includes(search) ||
-        doc.extracted_program?.toLowerCase().includes(search) ||
-        doc.document_type?.toLowerCase().includes(search);
+        Boolean(doc.users?.full_name?.toLowerCase().includes(search)) ||
+        Boolean(doc.extracted_student_no?.toLowerCase().includes(search)) ||
+        Boolean(doc.users?.student_number?.toLowerCase().includes(search)) ||
+        Boolean(doc.users?.employee_id?.toLowerCase().includes(search)) ||
+        Boolean(doc.extracted_program?.toLowerCase().includes(search)) ||
+        Boolean(doc.users?.department?.toLowerCase().includes(search)) ||
+        Boolean(doc.document_type?.toLowerCase().includes(search)) ||
+        Boolean(doc.users?.email?.toLowerCase().includes(search));
+
       return matchesSearch;
     });
-  }, [documents, searchQuery]);
+
+    result.sort((a, b) => {
+      const aIsStaff = isStaffOrFacultyDoc(a);
+      const bIsStaff = isStaffOrFacultyDoc(b);
+
+      if (sortOption === 'students_first') {
+        if (!aIsStaff && bIsStaff) return -1;
+        if (aIsStaff && !bIsStaff) return 1;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      if (sortOption === 'staff_first') {
+        if (aIsStaff && !bIsStaff) return -1;
+        if (!aIsStaff && bIsStaff) return 1;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      if (sortOption === 'confidence_desc') {
+        const scoreA = a.confidence_score ?? -1;
+        const scoreB = b.confidence_score ?? -1;
+        return scoreB - scoreA;
+      }
+      if (sortOption === 'confidence_asc') {
+        const scoreA = a.confidence_score ?? 999;
+        const scoreB = b.confidence_score ?? 999;
+        return scoreA - scoreB;
+      }
+      if (sortOption === 'name_asc') {
+        const nameA = a.users?.full_name || '';
+        const nameB = b.users?.full_name || '';
+        return nameA.localeCompare(nameB);
+      }
+      if (sortOption === 'oldest') {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      // 'newest' default
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+
+    return result;
+  }, [documents, searchQuery, roleFilter, sortOption]);
 
   const renderConfidenceBadge = (score: number | null, status: string | null, docType?: string) => {
     if (docType === 'STAFF_ID') {
@@ -457,7 +531,7 @@ export const SystemVerifications = () => {
           onSearchChange={setSearchQuery}
           filterValue={statusFilter}
           onFilterChange={setStatusFilter}
-          searchPlaceholder="Search athlete name, student ID, program..."
+          searchPlaceholder="Search athlete name, student ID, employee ID, program..."
           filterOptions={[
             { value: 'all', label: 'All Status' },
             { value: 'Pending', label: 'Pending Clearance' },
@@ -486,8 +560,113 @@ export const SystemVerifications = () => {
             </div>
           }
         >
-          <ViewToggle view={viewMode} onViewChange={setViewMode} />
+          <div className="flex items-center gap-2">
+            <div className="w-[180px] sm:w-[210px] min-w-0">
+              <Select value={sortOption} onValueChange={(val: any) => setSortOption(val)}>
+                <SelectTrigger className="w-full h-11 sm:h-12 bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-white/10 rounded-xl sm:rounded-2xl font-bold text-[11px] sm:text-xs uppercase tracking-widest text-slate-700 dark:text-slate-200">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <ArrowUpDown className="size-3.5 text-orange-500 shrink-0" />
+                    <SelectValue placeholder="Sort Order">
+                      {sortOption === 'newest'
+                        ? 'Newest First'
+                        : sortOption === 'oldest'
+                        ? 'Oldest First'
+                        : sortOption === 'students_first'
+                        ? 'Students First'
+                        : sortOption === 'staff_first'
+                        ? 'Staff & Faculty First'
+                        : sortOption === 'confidence_desc'
+                        ? 'Confidence: High to Low'
+                        : sortOption === 'confidence_asc'
+                        ? 'Confidence: Low to High'
+                        : sortOption === 'name_asc'
+                        ? 'Athlete Name (A-Z)'
+                        : 'Sort Order'}
+                    </SelectValue>
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl border-slate-200 dark:border-white/10 backdrop-blur-3xl bg-white/95 dark:bg-slate-950/95 font-bold text-[11px] uppercase tracking-wider">
+                  <SelectItem value="newest" className="cursor-pointer">Newest First</SelectItem>
+                  <SelectItem value="oldest" className="cursor-pointer">Oldest First</SelectItem>
+                  <SelectItem value="students_first" className="cursor-pointer text-orange-600 dark:text-orange-400">Students First</SelectItem>
+                  <SelectItem value="staff_first" className="cursor-pointer text-amber-600 dark:text-amber-400">Staff & Faculty First</SelectItem>
+                  <SelectItem value="confidence_desc" className="cursor-pointer">Confidence: High to Low</SelectItem>
+                  <SelectItem value="confidence_asc" className="cursor-pointer">Confidence: Low to High</SelectItem>
+                  <SelectItem value="name_asc" className="cursor-pointer">Athlete Name (A-Z)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <ViewToggle view={viewMode} onViewChange={setViewMode} />
+          </div>
         </DataToolbar>
+
+        {/* Dedicated Responsive Segmented Affiliation Filter Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-2 p-2 sm:p-2.5 bg-white/70 dark:bg-slate-950/60 backdrop-blur-2xl rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-sm">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 px-2 hidden sm:inline">
+              Scope:
+            </span>
+            <button
+              type="button"
+              onClick={() => setRoleFilter('all')}
+              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                roleFilter === 'all'
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
+              }`}
+            >
+              <Layers className="size-3.5" />
+              <span>All Submissions</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                roleFilter === 'all' ? 'bg-orange-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+              }`}>
+                {documents.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setRoleFilter('students')}
+              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                roleFilter === 'students'
+                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-orange-500 hover:bg-orange-500/10'
+              }`}
+            >
+              <GraduationCap className="size-3.5" />
+              <span>Students • COR</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                roleFilter === 'students' ? 'bg-white/20 text-white' : 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+              }`}>
+                {studentCount}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setRoleFilter('staff_faculty')}
+              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                roleFilter === 'staff_faculty'
+                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-amber-600 hover:bg-amber-500/10'
+              }`}
+            >
+              <ShieldCheck className="size-3.5" />
+              <span>Staff & Faculty • Employee ID</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                roleFilter === 'staff_faculty' ? 'bg-white/20 text-white' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+              }`}>
+                {staffFacultyCount}
+              </span>
+            </button>
+          </div>
+
+          <div className="text-[11px] font-bold text-slate-400 px-2 flex items-center gap-1.5">
+            <span>Showing</span>
+            <span className="font-black text-slate-900 dark:text-white tabular-nums">{filteredDocuments.length}</span>
+            <span>of {documents.length}</span>
+          </div>
+        </div>
 
         {filteredDocuments.length === 0 ? (
           <Card className="p-20 text-center bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[2.5rem]">
@@ -508,7 +687,7 @@ export const SystemVerifications = () => {
               const collegeName = getCollegeName(doc);
               const isNameMatch = checkNameMatch(doc.users?.full_name, doc.extracted_full_name);
               const emailCheck = checkEmailStudentIdMatch(doc.users?.email, doc.extracted_student_no, doc.users?.employee_id);
-              const isStaffOrFaculty = doc.users?.role === 'player_staff' || doc.users?.role === 'player_faculty';
+              const isStaffOrFaculty = isStaffOrFacultyDoc(doc);
 
               return (
                 <Card
@@ -625,7 +804,7 @@ export const SystemVerifications = () => {
               {filteredDocuments.map((doc) => {
                 const collegeName = getCollegeName(doc);
                 const emailCheck = checkEmailStudentIdMatch(doc.users?.email, doc.extracted_student_no, doc.users?.employee_id);
-                const isStaffOrFaculty = doc.users?.role === 'player_staff' || doc.users?.role === 'player_faculty';
+                const isStaffOrFaculty = isStaffOrFacultyDoc(doc);
 
                 return (
                   <Card
@@ -724,8 +903,8 @@ export const SystemVerifications = () => {
                   <TableRow className="hover:bg-transparent border-none">
                     <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 pl-6 min-w-[210px]">Athlete Credentials</TableHead>
                     <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 min-w-[130px]">Confidence Rate</TableHead>
-                    <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 min-w-[160px]">At-A-Glance COR Match</TableHead>
-                    <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 min-w-[160px]">Academic Program</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 min-w-[160px]">At-A-Glance Clearance Match</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 min-w-[160px]">Academic Program / Unit</TableHead>
                     <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 min-w-[90px]">Submitted</TableHead>
                     <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 text-right pr-6 w-[250px] min-w-[250px] sticky right-0 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur z-20">
                       Actions
@@ -737,7 +916,7 @@ export const SystemVerifications = () => {
                     const collegeName = getCollegeName(doc);
                     const isNameMatch = checkNameMatch(doc.users?.full_name, doc.extracted_full_name);
                     const emailCheck = checkEmailStudentIdMatch(doc.users?.email, doc.extracted_student_no, doc.users?.employee_id);
-                    const isStaffOrFaculty = doc.users?.role === 'player_staff' || doc.users?.role === 'player_faculty';
+                    const isStaffOrFaculty = isStaffOrFacultyDoc(doc);
 
                     return (
                       <TableRow

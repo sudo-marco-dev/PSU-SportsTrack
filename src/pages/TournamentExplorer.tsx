@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,12 +53,17 @@ const isPlayoffRound = (roundName: string): boolean => {
 
 export const TournamentExplorer = () => {
   const navigate = useNavigate();
+  const { isStaffAthlete, isFacultyAthlete, isStudentAthlete, profile } = useAuth();
+  const isStaffOrFaculty = Boolean(isStaffAthlete || isFacultyAthlete || profile?.role === 'player_staff' || profile?.role === 'player_faculty');
+  const isStudent = Boolean(isStudentAthlete || profile?.role === 'player_student');
+
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [teamsMap, setTeamsMap] = useState<Map<string, TeamAffiliation>>(new Map());
   const [selectedTournamentId, setSelectedTournamentId] = useState<string | 'all'>('all');
   const [selectedBracketTournId, setSelectedBracketTournId] = useState<string | null>(null);
   const [selectedSport, setSelectedSport] = useState<string | 'all'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [selectedRound, setSelectedRound] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [userPhaseOverride, setUserPhaseOverride] = useState<MatchCenterPhase | null>(null);
@@ -65,18 +71,24 @@ export const TournamentExplorer = () => {
   const [mobilePlayoffStage, setMobilePlayoffStage] = useState<'all' | 'quarters' | 'semis' | 'finals'>('all');
   const [isLoading, setIsLoading] = useState(true);
 
+  useEffect(() => {
+    if (isStaffOrFaculty) {
+      setCategoryFilter('friendly');
+    }
+  }, [isStaffOrFaculty]);
+
   const fetchExplorerData = async () => {
     try {
       const [tournamentsRes, matchesRes, teamsRes] = await Promise.all([
         supabase
           .from('tournaments')
-          .select('id, name, sport, status, start_date, end_date')
+          .select('id, name, sport, type, status, start_date, end_date')
           .or('is_deleted.is.null,is_deleted.eq.false')
           .order('start_date', { ascending: false }),
         supabase
           .from('matches')
           .select(
-            '*, tournament:tournament_id(id, name, sport, status, start_date, is_deleted), team_a:team_a_id(name), team_b:team_b_id(name)'
+            '*, tournament:tournament_id(id, name, sport, type, status, start_date, is_deleted), team_a:team_a_id(name), team_b:team_b_id(name)'
           )
           .order('match_time', { ascending: true }),
         supabase
@@ -177,18 +189,57 @@ export const TournamentExplorer = () => {
       .sort((a, b) => b.count - a.count);
   }, [matches, tourMap, tournaments]);
 
+  const isFriendlyTourn = (tourn?: { type?: string | null; name?: string | null } | null): boolean => {
+    if (!tourn) return false;
+    const tType = (tourn.type || '').toLowerCase();
+    const tName = (tourn.name || '').toLowerCase();
+    return tType.includes('friendly') || tType.includes('staff') || tName.includes('friendly') || tName.includes('staff');
+  };
+
   // Tournaments applicable to the currently selected sport
   const tournamentsForSport = useMemo(() => {
-    if (selectedSport === 'all') return tournaments;
-    return tournaments.filter((t) => {
-      if (t.sport && t.sport.toLowerCase() === selectedSport.toLowerCase()) return true;
-      return matches.some(
-        (m) =>
-          m.tournament_id === t.id &&
-          extractSportName(m, tourMap).toLowerCase() === selectedSport.toLowerCase()
+    let list = tournaments;
+    if (selectedSport !== 'all') {
+      list = list.filter((t) => {
+        if (t.sport && t.sport.toLowerCase() === selectedSport.toLowerCase()) return true;
+        return matches.some(
+          (m) =>
+            m.tournament_id === t.id &&
+            extractSportName(m, tourMap).toLowerCase() === selectedSport.toLowerCase()
+        );
+      });
+    }
+
+    if (categoryFilter === 'friendly') {
+      list = list.filter((t) => isFriendlyTourn(t));
+    } else if (categoryFilter === 'binturungan') {
+      list = list.filter(
+        (t) =>
+          (t.type || '').toLowerCase().includes('binturungan') ||
+          (t.name || '').toLowerCase().includes('binturungan')
       );
+    } else if (categoryFilter === 'collegiate') {
+      list = list.filter(
+        (t) =>
+          (t.type || '').toLowerCase().includes('colleg') ||
+          (t.name || '').toLowerCase().includes('colleg')
+      );
+    }
+
+    // Sort by role relevance: staff/faculty see friendly games first; students see championships first
+    return [...list].sort((a, b) => {
+      const aFriendly = isFriendlyTourn(a);
+      const bFriendly = isFriendlyTourn(b);
+      if (isStaffOrFaculty) {
+        if (aFriendly && !bFriendly) return -1;
+        if (!aFriendly && bFriendly) return 1;
+      } else if (isStudent) {
+        if (!aFriendly && bFriendly) return -1;
+        if (aFriendly && !bFriendly) return 1;
+      }
+      return new Date(b.start_date).getTime() - new Date(a.start_date).getTime();
     });
-  }, [tournaments, selectedSport, matches, tourMap]);
+  }, [tournaments, selectedSport, matches, tourMap, categoryFilter, isStaffOrFaculty, isStudent]);
 
   // Tournaments in the current sport that possess playoff matches
   const bracketEligibleTournaments = useMemo(() => {
@@ -243,16 +294,46 @@ export const TournamentExplorer = () => {
 
   // Elimination / Round Robin matches filtered by sport & selected tournament
   const eliminationMatches = useMemo(() => {
-    return matches.filter((m) => {
+    let list = matches.filter((m) => {
       if (isPlayoffRound(m.round) || m.next_match_id) return false;
       if (selectedTournamentId !== 'all' && m.tournament_id !== selectedTournamentId) return false;
       if (selectedSport !== 'all') {
         const sportName = extractSportName(m, tourMap);
         if (sportName.toLowerCase() !== selectedSport.toLowerCase()) return false;
       }
+      if (categoryFilter === 'friendly') {
+        return isFriendlyTourn(m.tournament);
+      }
+      if (categoryFilter === 'binturungan') {
+        return (
+          (m.tournament?.type || '').toLowerCase().includes('binturungan') ||
+          (m.tournament?.name || '').toLowerCase().includes('binturungan')
+        );
+      }
+      if (categoryFilter === 'collegiate') {
+        return (
+          (m.tournament?.type || '').toLowerCase().includes('colleg') ||
+          (m.tournament?.name || '').toLowerCase().includes('colleg')
+        );
+      }
       return true;
     });
-  }, [matches, selectedTournamentId, selectedSport, tourMap]);
+
+    list.sort((a, b) => {
+      const aFriendly = isFriendlyTourn(a.tournament);
+      const bFriendly = isFriendlyTourn(b.tournament);
+      if (isStaffOrFaculty) {
+        if (aFriendly && !bFriendly) return -1;
+        if (!aFriendly && bFriendly) return 1;
+      } else {
+        if (!aFriendly && bFriendly) return -1;
+        if (aFriendly && !bFriendly) return 1;
+      }
+      return new Date(a.match_time).getTime() - new Date(b.match_time).getTime();
+    });
+
+    return list;
+  }, [matches, selectedTournamentId, selectedSport, tourMap, categoryFilter, isStaffOrFaculty, isStudent]);
 
   // Playoff matches scoped to the active bracket tournament
   const playoffMatches = useMemo(() => {
@@ -571,16 +652,19 @@ export const TournamentExplorer = () => {
   const selectedTourObj = tournaments.find((t) => t.id === selectedTournamentId);
   const isSelectedDraft = selectedTourObj?.status === 'Draft';
 
+  const defaultCategory = isStaffOrFaculty ? 'friendly' : 'all';
   const hasActiveFilters =
     selectedTournamentId !== 'all' ||
     selectedSport !== 'all' ||
     selectedRound !== 'all' ||
-    searchQuery.trim() !== '';
+    searchQuery.trim() !== '' ||
+    categoryFilter !== defaultCategory;
 
   const handleResetFilters = () => {
     setSelectedTournamentId('all');
     setSelectedSport('all');
     setSelectedRound('all');
+    setCategoryFilter(defaultCategory);
     setSearchQuery('');
     setUserPhaseOverride(null);
     setMobilePlayoffStage('all');
@@ -621,6 +705,8 @@ export const TournamentExplorer = () => {
         isEliminationComplete={isEliminationComplete}
         elimMatchesCount={eliminationMatches.length}
         playoffMatchesCount={playoffMatches.length}
+        categoryFilter={categoryFilter}
+        onCategoryFilterChange={setCategoryFilter}
       />
 
       {/* 3. DRAFT TOURNAMENT NOTICE */}

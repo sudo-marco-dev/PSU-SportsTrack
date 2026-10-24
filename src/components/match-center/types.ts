@@ -2,6 +2,7 @@ export type Tournament = {
   id: string;
   name: string;
   sport?: string | null;
+  type?: string | null;
   status: string;
   start_date: string;
   end_date?: string | null;

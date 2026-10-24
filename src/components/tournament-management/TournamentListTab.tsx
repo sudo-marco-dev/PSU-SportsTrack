@@ -258,7 +258,9 @@ export const TournamentListTab: React.FC<TournamentListTabProps> = ({
                       <span>{t.name}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">{t.sport}</TableCell>
+                  <TableCell className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">
+                    {t.sport} • {t.type || 'Binturungan'}
+                  </TableCell>
                   <TableCell>
                     <Badge 
                       className={`${

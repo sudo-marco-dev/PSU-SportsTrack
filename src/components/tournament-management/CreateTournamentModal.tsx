@@ -162,7 +162,7 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
         <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl gap-1.5 border border-slate-200/60 dark:border-white/5 my-1">
           <button
             type="button"
-            onClick={() => { setCreationMode('binturungan'); setEventName('PSU Binturungan 2026'); }}
+            onClick={() => { setCreationMode('binturungan'); setEventName('PSU Binturungan 2026'); setSingleType('Binturungan'); }}
             className={`flex-1 py-2 px-3 rounded-lg text-xs font-black uppercase italic tracking-wider transition-all duration-150 cursor-pointer active:scale-95 flex items-center justify-center gap-1.5 ${
               creationMode === 'binturungan' 
                 ? 'bg-orange-500 text-white shadow-sm shadow-orange-500/20 scale-[1.01]' 
@@ -173,7 +173,7 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => { setCreationMode('single'); setEventName('PSU Friendly Games'); }}
+            onClick={() => { setCreationMode('single'); setEventName('PSU Friendly Games'); setSingleType('Friendly'); }}
             className={`flex-1 py-2 px-3 rounded-lg text-xs font-black uppercase italic tracking-wider transition-all duration-150 cursor-pointer active:scale-95 flex items-center justify-center gap-1.5 ${
               creationMode === 'single' 
                 ? 'bg-orange-500 text-white shadow-sm shadow-orange-500/20 scale-[1.01]' 
@@ -281,12 +281,26 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
                 <Label className="text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-[0.2em]">Tournament Category</Label>
                 <Select value={singleType} onValueChange={(val) => setSingleType(val ?? 'Binturungan')}>
                   <SelectTrigger className="h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-xl font-bold text-xs text-slate-900 dark:text-white">
-                    <SelectValue placeholder="Select category..." />
+                    <SelectValue placeholder="Select category...">
+                      {singleType === 'Binturungan'
+                        ? 'Binturungan (Tribal Fest)'
+                        : singleType === 'Inter-Collegiate'
+                        ? 'Inter-Collegiate League'
+                        : singleType === 'Friendly'
+                        ? 'Friendly Match'
+                        : singleType === 'Faculty and Staff Friendly Games'
+                        ? 'Faculty & Staff Friendly Games'
+                        : singleType === 'STRASUC'
+                        ? 'STRASUC Regional Meet'
+                        : singleType}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold text-xs">
                     <SelectItem value="Binturungan">Binturungan (Tribal Fest)</SelectItem>
                     <SelectItem value="Inter-Collegiate">Inter-Collegiate League</SelectItem>
-                    <SelectItem value="Friendly">Friendly / Exhibition</SelectItem>
+                    <SelectItem value="Friendly">Friendly Match</SelectItem>
+                    <SelectItem value="Faculty and Staff Friendly Games">Faculty & Staff Friendly Games</SelectItem>
+                    <SelectItem value="STRASUC">STRASUC Regional Meet</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -18,6 +18,8 @@ interface MatchCenterToolbarProps {
   isEliminationComplete: boolean;
   elimMatchesCount: number;
   playoffMatchesCount: number;
+  categoryFilter?: string;
+  onCategoryFilterChange?: (category: string) => void;
 }
 
 export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
@@ -31,15 +33,45 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
   hasPlayoffs,
   isEliminationComplete,
   elimMatchesCount,
-  playoffMatchesCount
+  playoffMatchesCount,
+  categoryFilter,
+  onCategoryFilterChange
 }) => {
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl md:rounded-[2rem] p-3 sm:p-4 shadow-sm space-y-3 w-full min-w-0 max-w-full overflow-hidden">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-w-0">
-        {/* Left: Tournament Dropdown + Search Input */}
-        <div className="flex flex-row-reverse sm:flex-row items-center gap-2 sm:gap-2.5 flex-1 min-w-0">
-          {/* Tournament Selector (beside search on mobile) */}
-          <div className="w-[38%] sm:w-64 md:w-72 shrink-0 min-w-0">
+        {/* Left: Division Filter + Tournament Dropdown + Search Input */}
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-2.5 flex-1 min-w-0">
+          {/* Division Selector */}
+          {onCategoryFilterChange && (
+            <div className="w-[48%] sm:w-40 md:w-44 shrink-0 min-w-0">
+              <Select
+                value={categoryFilter || 'all'}
+                onValueChange={(val: string | null) => onCategoryFilterChange(val || 'all')}
+              >
+                <SelectTrigger className="h-10 sm:h-11 rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800/80 font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                  <SelectValue placeholder="All Divisions">
+                    {categoryFilter === 'friendly'
+                      ? 'Friendly Games'
+                      : categoryFilter === 'binturungan'
+                      ? 'Binturungan'
+                      : categoryFilter === 'collegiate'
+                      ? 'Inter-Collegiate'
+                      : 'All Divisions'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="rounded-xl font-bold uppercase text-xs">
+                  <SelectItem value="all">All Divisions</SelectItem>
+                  <SelectItem value="friendly">Friendly Games</SelectItem>
+                  <SelectItem value="binturungan">Binturungan</SelectItem>
+                  <SelectItem value="collegiate">Inter-Collegiate</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Tournament Selector */}
+          <div className="w-[48%] sm:w-60 md:w-68 shrink-0 min-w-0">
             <Select
               value={selectedTournamentId}
               onValueChange={(val: string | null) => onSelectTournament(val || 'all')}
@@ -57,7 +89,7 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
                 </SelectItem>
                 {tournaments.map((t) => (
                   <SelectItem key={t.id} value={t.id}>
-                    {t.name}
+                    {t.name} {t.type ? `(${t.type})` : ''}
                   </SelectItem>
                 ))}
               </SelectContent>

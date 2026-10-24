@@ -160,6 +160,14 @@ export const Ranking = () => {
           if (tType.includes('friendly') || tType.includes('scrimmage') || tName.includes('friendly') || tName.includes('scrimmage')) {
             return false;
           }
+        } else if (target.includes('friendly') || target.includes('faculty') || target.includes('staff')) {
+          if (!tType.includes('friendly') && !tType.includes('staff') && !tName.includes('friendly') && !tName.includes('staff')) {
+            return false;
+          }
+        } else if (target.includes('colleg')) {
+          if (!tType.includes('colleg') && !tName.includes('colleg')) {
+            return false;
+          }
         } else if (!tType.includes(target) && !tName.includes(target)) {
           return false;
         }
@@ -1009,13 +1017,27 @@ export const Ranking = () => {
               </label>
               <Select value={tournamentType} onValueChange={(v) => v && setTournamentType(v)}>
                 <SelectTrigger className="h-9 sm:h-10 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-none hover:border-slate-300 dark:hover:border-slate-700 focus:ring-1 focus:ring-slate-400 transition-colors">
-                  <SelectValue placeholder="All Tournaments" />
+                  <SelectValue placeholder="All Tournaments">
+                    {tournamentType === 'all'
+                      ? 'All Competitions'
+                      : tournamentType === 'Championship'
+                      ? 'Championship Competitions'
+                      : tournamentType === 'Faculty and Staff Friendly Games'
+                      ? 'Faculty & Staff Friendly Games'
+                      : tournamentType === 'Friendly'
+                      ? 'Friendly Match'
+                      : tournamentType === 'Inter-Collegiate'
+                      ? 'Inter-Collegiate League'
+                      : tournamentType}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
                   <SelectItem value="Championship" className="text-xs font-medium">Championship Competitions</SelectItem>
                   <SelectItem value="all" className="text-xs font-medium">All Competitions</SelectItem>
                   <SelectItem value="Binturungan" className="text-xs font-medium">Binturungan</SelectItem>
+                  <SelectItem value="Inter-Collegiate" className="text-xs font-medium">Inter-Collegiate League</SelectItem>
                   <SelectItem value="STRASUC" className="text-xs font-medium">STRASUC</SelectItem>
+                  <SelectItem value="Friendly" className="text-xs font-medium">Friendly Match</SelectItem>
                   <SelectItem value="Faculty and Staff Friendly Games" className="text-xs font-medium">Faculty & Staff Friendly Games</SelectItem>
                 </SelectContent>
               </Select>
@@ -1028,7 +1050,9 @@ export const Ranking = () => {
               </label>
               <Select value={sportCategory} onValueChange={(v) => v && setSportCategory(v)}>
                 <SelectTrigger className="h-9 sm:h-10 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-none hover:border-slate-300 dark:hover:border-slate-700 focus:ring-1 focus:ring-slate-400 transition-colors">
-                  <SelectValue placeholder="All Ballgames" />
+                  <SelectValue placeholder="All Ballgames">
+                    {sportCategory === 'all' ? 'All Ballgames' : sportCategory}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
                   <SelectItem value="all" className="text-xs font-medium">All Ballgames</SelectItem>

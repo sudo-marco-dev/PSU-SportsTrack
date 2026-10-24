@@ -535,12 +535,12 @@ export const AdminRecovery = () => {
     }
   };
 
-  // Filtered lists based on search
   const filteredTournaments = useMemo(() => {
+    const q = searchQuery.toLowerCase();
     return tournaments.filter(t =>
-      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.sport.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.type.toLowerCase().includes(searchQuery.toLowerCase())
+      (t.name || '').toLowerCase().includes(q) ||
+      (t.sport || '').toLowerCase().includes(q) ||
+      (t.type || '').toLowerCase().includes(q)
     );
   }, [tournaments, searchQuery]);
 

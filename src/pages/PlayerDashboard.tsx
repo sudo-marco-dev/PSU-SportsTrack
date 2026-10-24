@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 const VerificationUpload = lazy(() =>
@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Activity, Trophy, Clock, Star, User, CalendarDays, Dumbbell, Swords, MapPin, XCircle, CheckCircle2, Zap, ArrowRight } from 'lucide-react';
+import { Activity, Trophy, Clock, Star, User, CalendarDays, Dumbbell, Swords, MapPin, XCircle, CheckCircle2, Zap, ArrowRight, Layers, Sparkles } from 'lucide-react';
 
 type RosterInvite = {
   id: string;
@@ -40,6 +40,7 @@ type LiveMatch = {
   venue?: string | null;
   team_a: { name: string } | null;
   team_b: { name: string } | null;
+  tournament?: { id: string; name: string; sport: string; type?: string | null } | null;
 };
 
 type PlayerStar = {
@@ -53,9 +54,11 @@ type PlayerStar = {
 };
 
 export const PlayerDashboard = () => {
-  const { isVerified, user, isDev, isSuperAdmin, isFacilitator, isCoach, isPlayer, isStaffAthlete, isFacultyAthlete, profile } = useAuth();
+  const { isVerified, user, isDev, isSuperAdmin, isFacilitator, isCoach, isPlayer, isStaffAthlete, isFacultyAthlete, isStudentAthlete, profile } = useAuth();
   const navigate = useNavigate();
   const isStaffOrFaculty = Boolean(isStaffAthlete || isFacultyAthlete || profile?.role === 'player_staff' || profile?.role === 'player_faculty');
+  const isStudent = Boolean(isStudentAthlete || profile?.role === 'player_student');
+
   const [hasPendingDocuments, setHasPendingDocuments] = useState(false);
   const [latestDoc, setLatestDoc] = useState<{
     id: string;
@@ -71,6 +74,81 @@ export const PlayerDashboard = () => {
   const [stars, setStars] = useState<PlayerStar[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTournament, setSelectedTournament] = useState<any | null>(null);
+  const [divisionFilter, setDivisionFilter] = useState<'all' | 'friendly' | 'binturungan' | 'collegiate'>('all');
+
+  useEffect(() => {
+    if (isStaffOrFaculty) {
+      setDivisionFilter('friendly');
+    }
+  }, [isStaffOrFaculty]);
+
+  const isFriendlyTourn = (tourn?: { type?: string | null; name?: string | null } | null): boolean => {
+    if (!tourn) return false;
+    const tType = (tourn.type || '').toLowerCase();
+    const tName = (tourn.name || '').toLowerCase();
+    return tType.includes('friendly') || tType.includes('staff') || tName.includes('friendly') || tName.includes('staff');
+  };
+
+  const visibleDraftTournaments = useMemo(() => {
+    let list = [...draftTournaments];
+
+    // For students: avoid crowding students with games they cannot be involved in
+    if (isStudent) {
+      list = list.filter((t) => !isFriendlyTourn(t));
+    } else if (divisionFilter === 'friendly') {
+      list = list.filter((t) => isFriendlyTourn(t));
+    } else if (divisionFilter === 'binturungan') {
+      list = list.filter((t) => (t.type || '').toLowerCase().includes('binturungan') || (t.name || '').toLowerCase().includes('binturungan'));
+    } else if (divisionFilter === 'collegiate') {
+      list = list.filter((t) => (t.type || '').toLowerCase().includes('colleg') || (t.name || '').toLowerCase().includes('colleg'));
+    }
+
+    list.sort((a, b) => {
+      const aFriendly = isFriendlyTourn(a);
+      const bFriendly = isFriendlyTourn(b);
+      if (isStaffOrFaculty) {
+        if (aFriendly && !bFriendly) return -1;
+        if (!aFriendly && bFriendly) return 1;
+      } else {
+        if (!aFriendly && bFriendly) return -1;
+        if (aFriendly && !bFriendly) return 1;
+      }
+      return new Date(b.created_at || b.start_date).getTime() - new Date(a.created_at || a.start_date).getTime();
+    });
+
+    return list;
+  }, [draftTournaments, isStudent, isStaffOrFaculty, divisionFilter]);
+
+  const sortedLiveMatches = useMemo(() => {
+    let list = [...liveMatches];
+    if (isStaffOrFaculty) {
+      if (divisionFilter === 'friendly') {
+        const friendlyMatches = list.filter((m) => isFriendlyTourn(m.tournament));
+        if (friendlyMatches.length > 0) list = friendlyMatches;
+      } else if (divisionFilter === 'binturungan') {
+        list = list.filter((m) => (m.tournament?.type || '').toLowerCase().includes('binturungan') || (m.tournament?.name || '').toLowerCase().includes('binturungan'));
+      } else if (divisionFilter === 'collegiate') {
+        list = list.filter((m) => (m.tournament?.type || '').toLowerCase().includes('colleg') || (m.tournament?.name || '').toLowerCase().includes('colleg'));
+      }
+    } else if (isStudent) {
+      // Avoid crowding students with faculty/staff friendly games
+      list = list.filter((m) => !isFriendlyTourn(m.tournament));
+    }
+
+    list.sort((a, b) => {
+      const aFriendly = isFriendlyTourn(a.tournament);
+      const bFriendly = isFriendlyTourn(b.tournament);
+      if (isStaffOrFaculty) {
+        if (aFriendly && !bFriendly) return -1;
+        if (!aFriendly && bFriendly) return 1;
+      } else {
+        if (!aFriendly && bFriendly) return -1;
+        if (aFriendly && !bFriendly) return 1;
+      }
+      return 0;
+    });
+    return list;
+  }, [liveMatches, isStaffOrFaculty, isStudent, divisionFilter]);
 
   useEffect(() => {
     if (isDev) {
@@ -210,7 +288,7 @@ export const PlayerDashboard = () => {
     // Fetch Live/Upcoming Matches (Public)
     const { data: matchData } = await supabase
       .from('matches')
-      .select('id, team_a_score, team_b_score, status, round, venue, team_a:team_a_id(name), team_b:team_b_id(name)')
+      .select('id, team_a_score, team_b_score, status, round, venue, team_a:team_a_id(name), team_b:team_b_id(name), tournament:tournament_id(id, name, sport, type)')
       .in('status', ['Scheduled', 'Ongoing'])
       .order('status', { ascending: false });
 
@@ -503,6 +581,7 @@ export const PlayerDashboard = () => {
       )}
 
       {/* Coming Soon • Upcoming Tournaments Banner */}
+      {/* Coming Soon • Upcoming Tournaments Banner */}
       {draftTournaments.length > 0 && (
         <section className="space-y-4 animate-in fade-in slide-in-from-bottom-3 duration-500">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
@@ -512,39 +591,129 @@ export const PlayerDashboard = () => {
                 <Clock className="size-4 md:size-5 text-orange-500" /> Coming Soon • Upcoming Events
               </h2>
             </div>
-            <span className="self-start sm:self-auto px-2.5 py-0.5 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 font-black text-[9px] md:text-[10px] uppercase tracking-wider border border-orange-500/20">
-              Draft & Recruitment Phase
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="self-start sm:self-auto px-2.5 py-0.5 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 font-black text-[9px] md:text-[10px] uppercase tracking-wider border border-orange-500/20">
+                Draft & Recruitment Phase
+              </span>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {draftTournaments.map((t) => (
-              <div 
-                key={t.id}
-                onClick={() => setSelectedTournament(t)}
-                className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 hover:border-orange-500 hover:shadow-lg transition-all duration-300 cursor-pointer group relative overflow-hidden shadow-sm"
-              >
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="px-2 py-0.5 rounded-md bg-orange-500 text-white font-bold text-[9px] uppercase tracking-wider">
-                    {t.sport}
-                  </span>
-                  <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest bg-orange-500/10 px-2 py-0.5 rounded-full">
-                    Coming Soon
-                  </span>
-                </div>
-                <h4 className="font-black text-base uppercase italic tracking-tight text-slate-900 dark:text-white truncate group-hover:text-orange-500 transition-colors">
-                  {t.name}
-                </h4>
-                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/10 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
-                  <span>Kickoff: {new Date(t.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                  <span className="text-orange-600 dark:text-orange-400 font-black uppercase tracking-wider group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
-                    <span>View Details</span>
-                    <ArrowRight className="size-3" />
-                  </span>
-                </div>
+          {/* Role-Specific Division Switcher for Staff & Faculty */}
+          {isStaffOrFaculty ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200/80 dark:border-white/10">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2 hidden sm:inline">
+                  Tournament Division:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setDivisionFilter('friendly')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
+                    divisionFilter === 'friendly'
+                      ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-amber-500 hover:bg-amber-500/10'
+                  }`}
+                >
+                  <Sparkles className="size-3" />
+                  <span>Friendly Games (Staff & Faculty)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDivisionFilter('binturungan')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
+                    divisionFilter === 'binturungan'
+                      ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-orange-500 hover:bg-orange-500/10'
+                  }`}
+                >
+                  <Trophy className="size-3" />
+                  <span>Binturungan (Tribal Fest)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDivisionFilter('collegiate')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
+                    divisionFilter === 'collegiate'
+                      ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-orange-500 hover:bg-orange-500/10'
+                  }`}
+                >
+                  <Layers className="size-3" />
+                  <span>Inter-Collegiate</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDivisionFilter('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
+                    divisionFilter === 'all'
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <span>All Divisions</span>
+                </button>
               </div>
-            ))}
-          </div>
+              <span className="text-[10px] font-bold text-slate-400 px-2 italic">
+                Viewing enabled for PSU Binturungan & Collegiate Tournaments
+              </span>
+            </div>
+          ) : isStudent ? (
+            <div className="flex items-center justify-between px-2 py-1 text-[11px] text-slate-500 dark:text-slate-400 font-semibold">
+              <span className="flex items-center gap-1.5 text-orange-600 dark:text-orange-400 font-bold uppercase text-[10px] tracking-wider">
+                <Trophy className="size-3.5" /> Official Student Division Events (Binturungan & Inter-Collegiate)
+              </span>
+              <span className="text-[10px] text-slate-400">Staff & Faculty games filtered to prevent overcrowding</span>
+            </div>
+          ) : null}
+
+          {visibleDraftTournaments.length === 0 ? (
+            <div className="p-8 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 text-center bg-slate-50/50 dark:bg-slate-900/40">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                No draft tournaments found in this division.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {visibleDraftTournaments.map((t) => {
+                const isFriendly = isFriendlyTourn(t);
+                return (
+                  <div 
+                    key={t.id}
+                    onClick={() => setSelectedTournament(t)}
+                    className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 hover:border-orange-500 hover:shadow-lg transition-all duration-300 cursor-pointer group relative overflow-hidden shadow-sm"
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 rounded-md bg-orange-500 text-white font-bold text-[9px] uppercase tracking-wider">
+                          {t.sport}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider ${
+                          isFriendly 
+                            ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20' 
+                            : 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20'
+                        }`}>
+                          {isFriendly ? 'Faculty & Staff Friendly' : (t.type || 'Binturungan')}
+                        </span>
+                      </div>
+                      <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest bg-orange-500/10 px-2 py-0.5 rounded-full">
+                        Coming Soon
+                      </span>
+                    </div>
+                    <h4 className="font-black text-base uppercase italic tracking-tight text-slate-900 dark:text-white truncate group-hover:text-orange-500 transition-colors">
+                      {t.name}
+                    </h4>
+                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/10 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
+                      <span>Kickoff: {new Date(t.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                      <span className="text-orange-600 dark:text-orange-400 font-black uppercase tracking-wider group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
+                        <span>View Details</span>
+                        <ArrowRight className="size-3" />
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
       )}
 
@@ -553,7 +722,7 @@ export const PlayerDashboard = () => {
         <h2 className="text-lg md:text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
           <Activity className="size-5 text-primary" /> Live & Upcoming Games
         </h2>
-        {liveMatches.length === 0 ? (
+        {sortedLiveMatches.length === 0 ? (
           <Card className="p-10 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-2xl md:rounded-3xl text-center bg-white/50 dark:bg-slate-900/30">
             <Activity className="size-10 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
             <h3 className="font-bold text-sm text-slate-700 dark:text-slate-300 uppercase tracking-wider">No Active Fixtures</h3>
@@ -563,7 +732,9 @@ export const PlayerDashboard = () => {
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {liveMatches.map((match, index) => (
+            {sortedLiveMatches.map((match, index) => {
+              const isMatchFriendly = isFriendlyTourn(match.tournament);
+              return (
               <Card 
                 key={match.id} 
                 className={`group transition-all duration-300 border-2 rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 fill-mode-both bg-white dark:bg-slate-900 ${
@@ -573,18 +744,29 @@ export const PlayerDashboard = () => {
               >
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start mb-2">
-                    <Badge 
-                      variant={match.status === 'Ongoing' ? 'destructive' : 'secondary'} 
-                      className={`font-black uppercase text-[10px] tracking-widest gap-1.5 px-2.5 py-0.5 rounded-full ${match.status === 'Ongoing' ? 'bg-red-600 hover:bg-red-600 text-white shadow-sm' : ''}`}
-                    >
-                      {match.status === 'Ongoing' && (
-                        <span className="relative flex size-1.5">
-                          <span className="animate-ping-slow absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                          <span className="relative inline-flex rounded-full size-1.5 bg-white"></span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Badge 
+                        variant={match.status === 'Ongoing' ? 'destructive' : 'secondary'} 
+                        className={`font-black uppercase text-[10px] tracking-widest gap-1.5 px-2.5 py-0.5 rounded-full ${match.status === 'Ongoing' ? 'bg-red-600 hover:bg-red-600 text-white shadow-sm' : ''}`}
+                      >
+                        {match.status === 'Ongoing' && (
+                          <span className="relative flex size-1.5">
+                            <span className="animate-ping-slow absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                            <span className="relative inline-flex rounded-full size-1.5 bg-white"></span>
+                          </span>
+                        )}
+                        {match.status === 'Ongoing' ? 'LIVE NOW' : match.status}
+                      </Badge>
+                      {match.tournament?.type && (
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                          isMatchFriendly
+                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                            : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20'
+                        }`}>
+                          {isMatchFriendly ? 'Friendly' : match.tournament.type}
                         </span>
                       )}
-                      {match.status === 'Ongoing' ? 'LIVE NOW' : match.status}
-                    </Badge>
+                    </div>
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">{match.round}</span>
                   </div>
                   <CardTitle className="text-lg mt-2 flex items-center justify-between font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
@@ -621,7 +803,8 @@ export const PlayerDashboard = () => {
                   </Button>
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
