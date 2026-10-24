@@ -25,7 +25,7 @@ const extractSportName = (match: Match, tourMap: Map<string, Tournament>): strin
       }
     }
   }
-  return 'General Sports';
+  return 'Basketball';
 };
 
 export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({

@@ -185,7 +185,7 @@ export const TeamManagement = () => {
       supabase
         .from('users')
         .select('id, full_name, is_verified, role, account_status, college_id, preferred_sports, primary_position, program, year_level, colleges(college_name)')
-        .in('role', ['player_student', 'player_faculty', 'Player'])
+        .in('role', ['player_student', 'player_faculty', 'player_staff', 'Player'])
         .eq('is_verified', true)
         .neq('account_status', 'inactive')
         .neq('account_status', 'soft_deleted')

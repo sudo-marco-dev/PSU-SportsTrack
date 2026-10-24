@@ -312,7 +312,7 @@ export const ScoutingHub = () => {
         supabase
           .from('users')
           .select('id, full_name, role, is_verified, college_id, program, year_level, preferred_sports, primary_position, colleges(college_name)')
-          .in('role', ['player_student', 'player_faculty', 'Player'])
+          .in('role', ['player_student', 'player_faculty', 'player_staff', 'Player'])
           .eq('is_verified', true)
           .neq('account_status', 'inactive')
           .neq('account_status', 'soft_deleted')

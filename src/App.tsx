@@ -93,7 +93,7 @@ function AppRoutes() {
               <Route path="/coach/teams" element={<TeamManagement />} />
             </Route>
 
-            <Route element={<ProtectedRoute requiredRole={['player_student', 'player_faculty']} />}>
+            <Route element={<ProtectedRoute requiredRole={['player_student', 'player_faculty', 'player_staff']} />}>
               <Route path="/player" element={<PlayerDashboard />} />
             </Route>
           </Route>

@@ -17,6 +17,7 @@ import {
   UserPlus,
   CheckCircle2,
   Calendar,
+  Building,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
@@ -47,6 +48,8 @@ type PlayerProfileInfo = {
   program: string | null;
   year_level: string | null;
   age: number | null;
+  employee_id?: string | null;
+  department?: string | null;
   preferred_sports: string[] | null;
   primary_position: string | null;
   colleges: { college_name: string } | null;
@@ -77,7 +80,7 @@ export const PlayerDossierModal = ({
     Promise.all([
       supabase
         .from('users')
-        .select('id, full_name, role, is_verified, program, year_level, age, preferred_sports, primary_position, colleges(college_name)')
+        .select('id, full_name, role, is_verified, program, year_level, age, employee_id, department, preferred_sports, primary_position, colleges(college_name)')
         .eq('id', playerId)
         .maybeSingle(),
       fetchPlayerTelemetry(playerId),
@@ -120,7 +123,7 @@ export const PlayerDossierModal = ({
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1">
                   <Badge className="bg-orange-500/15 text-orange-500 border-orange-500/30 text-[9px] font-black uppercase">
-                    {playerInfo?.role === 'player_faculty' ? 'Faculty Athlete' : 'Student Athlete'}
+                    {playerInfo?.role === 'player_faculty' ? 'Faculty Athlete' : playerInfo?.role === 'player_staff' ? 'Staff Athlete' : 'Student Athlete'}
                   </Badge>
                   {playerInfo?.is_verified && (
                     <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 text-[9px] font-black uppercase gap-1">
@@ -130,6 +133,11 @@ export const PlayerDossierModal = ({
                   {playerInfo?.primary_position && (
                     <Badge variant="outline" className="text-[9px] font-black uppercase border-slate-300 dark:border-white/20">
                       {playerInfo.primary_position}
+                    </Badge>
+                  )}
+                  {playerInfo?.employee_id && (
+                    <Badge variant="outline" className="text-[9px] font-mono font-bold uppercase border-slate-300 dark:border-white/20">
+                      ID: {playerInfo.employee_id}
                     </Badge>
                   )}
                   {eligibilityBadge && (
@@ -150,8 +158,12 @@ export const PlayerDossierModal = ({
                 </DialogTitle>
                 <DialogDescription className="text-xs font-bold text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-2 mt-0.5">
                   <span className="inline-flex items-center gap-1">
-                    <GraduationCap className="size-3.5 text-orange-500" />
-                    {playerInfo?.colleges?.college_name || 'Unassigned College'}
+                    {playerInfo?.role === 'player_faculty' || playerInfo?.role === 'player_staff' ? (
+                      <Building className="size-3.5 text-orange-500" />
+                    ) : (
+                      <GraduationCap className="size-3.5 text-orange-500" />
+                    )}
+                    {playerInfo?.department || playerInfo?.colleges?.college_name || 'Unassigned Unit'}
                   </span>
                   {playerInfo?.program && (
                     <span>• {playerInfo.program}</span>

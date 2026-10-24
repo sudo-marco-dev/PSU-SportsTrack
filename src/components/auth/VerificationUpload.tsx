@@ -11,7 +11,7 @@ import { extractTextFromPdf, parsePsuCor, type ParsedPsuCor } from '@/lib/corPar
 import { CheckCircle2, AlertTriangle, Info, Loader2, Upload, ExternalLink } from 'lucide-react';
 
 export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () => void }) => {
-  const { user, profile, refetchProfile } = useAuth();
+  const { user, profile } = useAuth();
   const [corFile, setCorFile] = useState<File | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedPsuCor | null>(null);
@@ -25,34 +25,42 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
       return;
     }
 
-    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-      toast.error('Invalid file type: Please select an official PDF document.');
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(file.name);
+
+    if (!isPdf && !isImage) {
+      toast.error('Invalid file type: Please select an official PDF document or valid ID image (PNG/JPG).');
       e.target.value = '';
       return;
     }
 
     setCorFile(file);
-    setIsParsing(true);
 
-    try {
-      const rawText = await extractTextFromPdf(file);
-      const parsed = parsePsuCor(rawText, {
-        fullName: profile?.full_name || user?.email?.split('@')[0] || '',
-        collegeName: profile?.college_name || null,
-        email: user?.email || null,
-      });
-      setParsedData(parsed);
+    if (isPdf) {
+      setIsParsing(true);
+      try {
+        const rawText = await extractTextFromPdf(file);
+        const parsed = parsePsuCor(rawText, {
+          fullName: profile?.full_name || user?.email?.split('@')[0] || '',
+          collegeName: profile?.college_name || null,
+          email: user?.email || null,
+        });
+        setParsedData(parsed);
 
-      if (parsed.isParsable) {
-        toast.success(`COR Read Successfully! Confidence match: ${parsed.confidenceScore}%`);
-      } else {
-        toast.warning('Warning: Could not detect text layers. Ensure this is an official digital PDF from the PSU Portal.');
+        if (parsed.isParsable) {
+          toast.success(`COR Read Successfully! Confidence match: ${parsed.confidenceScore}%`);
+        } else {
+          toast.warning('Warning: Could not detect text layers. Ensure this is an official digital PDF from the PSU Portal.');
+        }
+      } catch (err: any) {
+        console.error('PDF parsing error:', err);
+        toast.error('Could not parse PDF text layers. You may still upload for manual admin review.');
+      } finally {
+        setIsParsing(false);
       }
-    } catch (err: any) {
-      console.error('PDF parsing error:', err);
-      toast.error('Could not parse PDF text layers. You may still upload for manual admin review.');
-    } finally {
-      setIsParsing(false);
+    } else {
+      setParsedData(null);
+      toast.info('ID image loaded. Ready to submit for manual administrative verification.');
     }
   };
 
@@ -98,21 +106,7 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
 
       if (dbError) throw dbError;
 
-      // 3. Immediately auto-populate academic details on user profile so player can view/edit
-      const profileUpdates: Record<string, any> = {};
-      if (parsedData?.studentNo) profileUpdates.student_number = parsedData.studentNo;
-      if (parsedData?.program) profileUpdates.program = parsedData.program;
-      if (parsedData?.yearLevel) profileUpdates.year_level = parsedData.yearLevel;
-      if (parsedData?.age) profileUpdates.age = parsedData.age;
-
-      if (Object.keys(profileUpdates).length > 0) {
-        await supabase.from('users').update(profileUpdates).eq('id', user.id);
-        if (refetchProfile) {
-          await refetchProfile();
-        }
-      }
-
-      toast.success('Certificate of Registration submitted! Your profile has been updated and sent for clearance.');
+      toast.success('Clearance document submitted! It has been routed to sports administrators for review and approval.');
       if (onUploadSuccess) {
         onUploadSuccess();
       }
@@ -167,7 +161,7 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
         {/* File Input */}
         <div className="space-y-2">
           <Label htmlFor="cor" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center justify-between">
-            <span>Certificate of Registration (PDF)</span>
+            <span>Certificate of Registration (PDF) or Official ID Image</span>
             {corFile && (
               <span className="text-[10px] text-slate-400 font-normal truncate max-w-[200px]">
                 {corFile.name}
@@ -178,7 +172,7 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
             <Input
               id="cor"
               type="file"
-              accept=".pdf,application/pdf"
+              accept=".pdf,application/pdf,image/png,image/jpeg,image/webp"
               onChange={handleFileChange}
               disabled={isUploading || isParsing}
               className="h-12 file:bg-orange-500 file:text-white file:font-bold file:text-xs file:border-0 file:rounded-lg file:mr-3 file:px-3 file:py-1 cursor-pointer bg-slate-50 dark:bg-white/5 rounded-2xl border-slate-200 dark:border-white/10"

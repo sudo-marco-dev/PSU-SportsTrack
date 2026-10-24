@@ -50,7 +50,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) 
       if (req === 'coach') {
         return isCoach;
       }
-      if (req === 'player_student' || req === 'player_faculty') {
+      if (req === 'player_student' || req === 'player_faculty' || req === 'player_staff') {
         return isPlayer;
       }
       return role === req;

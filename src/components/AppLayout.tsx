@@ -43,6 +43,8 @@ export const AppLayout = () => {
     if (r === 'coach') return 'Coach';
     if (r === 'player_student') return 'Student Athlete';
     if (r === 'player_faculty') return 'Faculty Athlete';
+    if (r === 'player_staff') return 'Staff Athlete';
+    if (r === 'official') return 'Match Official';
     return r;
   };
 

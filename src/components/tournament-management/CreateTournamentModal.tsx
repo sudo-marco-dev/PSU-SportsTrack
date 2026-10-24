@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Trophy, Plus, Sparkles, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
+import { Trophy, Plus, Sparkles, CheckCircle2, AlertTriangle, Info, ShieldCheck } from 'lucide-react';
 import { logAudit } from '@/lib/audit';
 import { BINTURUNGAN_DEFAULT_SPORTS } from './types';
 
@@ -28,6 +28,7 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
   const [endDate, setEndDate] = useState('');
   const [singleSport, setSingleSport] = useState('Basketball');
   const [singleType, setSingleType] = useState('Binturungan');
+  const [enforceConflictOfInterest, setEnforceConflictOfInterest] = useState(true);
   const [isCreatingTournaments, setIsCreatingTournaments] = useState(false);
 
   const toggleSport = (sportName: string) => {
@@ -88,6 +89,7 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
           status: 'Draft',
           start_date: startDate,
           end_date: endDate,
+          enforce_conflict_of_interest: enforceConflictOfInterest,
         }));
 
         const { error } = await supabase.from('tournaments').insert(payloads);
@@ -98,7 +100,7 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
         logAudit({
           action: 'CREATE_TOURNAMENT',
           entity_type: 'tournaments',
-          details: `Initialized Binturungan event "${trimmedName}" across ${selectedSports.length} ballgames (${selectedSports.join(', ')}) in Draft mode`
+          details: `Initialized Binturungan event "${trimmedName}" across ${selectedSports.length} ballgames (${selectedSports.join(', ')}) in Draft mode (COI Enforced: ${enforceConflictOfInterest})`
         });
       } else {
         const { error } = await supabase.from('tournaments').insert({
@@ -108,6 +110,7 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
           status: 'Draft',
           start_date: startDate,
           end_date: endDate,
+          enforce_conflict_of_interest: enforceConflictOfInterest,
         });
 
         if (error) throw error;
@@ -116,7 +119,7 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
         logAudit({
           action: 'CREATE_TOURNAMENT',
           entity_type: 'tournaments',
-          details: `Created single tournament "${trimmedName}" (${singleSport} ballgame) in Draft mode`
+          details: `Created single tournament "${trimmedName}" (${singleSport} ballgame) in Draft mode (COI Enforced: ${enforceConflictOfInterest})`
         });
       }
 
@@ -316,6 +319,36 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
               <div className="flex items-center gap-1.5 text-red-500 text-[11px] font-bold px-1 pt-0.5 animate-in fade-in">
                 <AlertTriangle className="size-3 shrink-0" />
                 <span>Kickoff date cannot be after finals date.</span>
+              </div>
+            )}
+          </div>
+
+          {/* Conflict of Interest Policy Toggle */}
+          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="size-4 text-orange-500" />
+                  <Label htmlFor="coi-toggle" className="text-xs font-black uppercase text-slate-900 dark:text-white cursor-pointer">
+                    Enforce Conflict of Interest Rules
+                  </Label>
+                </div>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                  Requires neutral scorekeepers. Toggle OFF if there is an institutional shortage of facilitators.
+                </p>
+              </div>
+              <input
+                id="coi-toggle"
+                type="checkbox"
+                checked={enforceConflictOfInterest}
+                onChange={(e) => setEnforceConflictOfInterest(e.target.checked)}
+                className="size-4 accent-orange-500 rounded cursor-pointer"
+              />
+            </div>
+            {!enforceConflictOfInterest && (
+              <div className="flex items-center gap-1.5 text-amber-500 text-[10px] font-bold bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
+                <AlertTriangle className="size-3 shrink-0" />
+                <span>Facilitator Shortage Policy: Officials may preside over matches involving their own college without blocking.</span>
               </div>
             )}
           </div>

@@ -270,6 +270,12 @@ export type MatchBoxScoreData = {
     team_b_name: string;
     tournament_name: string;
     sport: string;
+    official_scorekeeper_name?: string | null;
+    finalizer_name?: string | null;
+    finalized_at?: string | null;
+    scorer_notes?: string | null;
+    conflict_flag?: boolean;
+    conflict_notes?: string | null;
   };
   teamABox: BoxScorePlayerRow[];
   teamBBox: BoxScorePlayerRow[];
@@ -456,7 +462,8 @@ export async function fetchPlayerTelemetry(playerId: string): Promise<PlayerTele
     supabase
       .from('match_score_events')
       .select('id, match_id, team_id, player_id, points, action_type, stat_type, delta, created_at')
-      .eq('player_id', playerId),
+      .eq('player_id', playerId)
+      .or('undone.is.null,undone.eq.false'),
     supabase
       .from('team_roster')
       .select(`
@@ -858,7 +865,10 @@ export async function fetchPlayerTelemetry(playerId: string): Promise<PlayerTele
 export async function fetchBatchPlayerSummaries(): Promise<Record<string, PlayerDirectorySummary>> {
   const [statsRes, eventsRes, starsRes, rostersRes] = await Promise.all([
     supabase.from('match_player_stats').select('match_id, player_id, points'),
-    supabase.from('match_score_events').select('match_id, player_id, points, delta, action_type'),
+    supabase
+      .from('match_score_events')
+      .select('match_id, player_id, points, delta, action_type')
+      .or('undone.is.null,undone.eq.false'),
     supabase.from('player_stars').select('player_id, star_type'),
     supabase
       .from('team_roster')
@@ -979,6 +989,12 @@ export async function fetchMatchBoxScore(matchId: string): Promise<MatchBoxScore
       team_a_score,
       team_b_score,
       winner_team_id,
+      official_scorekeeper_id,
+      finalized_by,
+      finalized_at,
+      scorer_notes,
+      conflict_flag,
+      conflict_notes,
       team_a:teams!matches_team_a_id_fkey(id, name),
       team_b:teams!matches_team_b_id_fkey(id, name),
       tournaments(id, name, sport)
@@ -994,8 +1010,9 @@ export async function fetchMatchBoxScore(matchId: string): Promise<MatchBoxScore
   const tr = Array.isArray(m.tournaments) ? m.tournaments[0] : m.tournaments;
 
   const teamIds = [m.team_a_id, m.team_b_id].filter(Boolean);
+  const officialIds = [m.official_scorekeeper_id, m.finalized_by].filter(Boolean) as string[];
 
-  const [rostersRes, statsRes, scoreEventsRes, starsRes, eventsRes] = await Promise.all([
+  const [rostersRes, statsRes, scoreEventsRes, starsRes, eventsRes, officialsRes] = await Promise.all([
     teamIds.length > 0
       ? supabase
           .from('team_roster')
@@ -1009,8 +1026,9 @@ export async function fetchMatchBoxScore(matchId: string): Promise<MatchBoxScore
       .eq('match_id', matchId),
     supabase
       .from('match_score_events')
-      .select('team_id, player_id, points, delta, action_type')
-      .eq('match_id', matchId),
+      .select('team_id, player_id, points, delta, action_type, undone')
+      .eq('match_id', matchId)
+      .or('undone.is.null,undone.eq.false'),
     supabase
       .from('player_stars')
       .select('player_id, star_type')
@@ -1021,7 +1039,14 @@ export async function fetchMatchBoxScore(matchId: string): Promise<MatchBoxScore
       .eq('match_id', matchId)
       .order('created_at', { ascending: false })
       .limit(40),
+    officialIds.length > 0
+      ? supabase.from('users').select('id, full_name').in('id', officialIds)
+      : Promise.resolve({ data: [] }),
   ]);
+
+  const officialsMap = new Map((officialsRes.data || []).map((u: any) => [u.id, u.full_name]));
+  const officialScorekeeperName = m.official_scorekeeper_id ? (officialsMap.get(m.official_scorekeeper_id) || null) : null;
+  const finalizerName = m.finalized_by ? (officialsMap.get(m.finalized_by) || null) : null;
 
   const mvpIds = new Set<string>((starsRes.data || []).map((s: any) => s.player_id));
 
@@ -1092,6 +1117,7 @@ export async function fetchMatchBoxScore(matchId: string): Promise<MatchBoxScore
     // Apply match_score_events breakdowns
     const eventPtsByPlayer = new Map<string, number>();
     for (const ev of (scoreEventsRes.data || []) as any[]) {
+      if (ev.undone) continue;
       if (ev.team_id !== teamId || !ev.player_id) continue;
       const key = ev.player_id;
       if (!rowsByKey.has(key)) {
@@ -1165,6 +1191,12 @@ export async function fetchMatchBoxScore(matchId: string): Promise<MatchBoxScore
       team_b_name: teamB?.name || 'Team B',
       tournament_name: tr?.name || 'Tournament',
       sport: tr?.sport || 'Basketball',
+      official_scorekeeper_name: officialScorekeeperName,
+      finalizer_name: finalizerName,
+      finalized_at: m.finalized_at || null,
+      scorer_notes: m.scorer_notes || null,
+      conflict_flag: Boolean(m.conflict_flag),
+      conflict_notes: m.conflict_notes || null,
     },
     teamABox: buildTeamBox(m.team_a_id),
     teamBBox: buildTeamBox(m.team_b_id),

@@ -9,6 +9,8 @@ export type UserRole =
   | 'coach'
   | 'player_student'
   | 'player_faculty'
+  | 'player_staff'
+  | 'official'
   | 'dev';
 
 export type AccountStatus = 'active' | 'inactive' | 'archived' | 'soft_deleted';
@@ -22,9 +24,11 @@ interface AuthContextType {
   isDev: boolean;
   isSuperAdmin: boolean;
   isFacilitator: boolean;
+  isOfficial: boolean;
   isCoach: boolean;
   isPlayer: boolean;
   isFacultyAthlete: boolean;
+  isStaffAthlete: boolean;
   isStudentAthlete: boolean;
   accountStatus: AccountStatus;
   profile: {
@@ -36,6 +40,8 @@ interface AuthContextType {
     account_status?: AccountStatus;
     faculty_id_url?: string | null;
     student_number?: string | null;
+    employee_id?: string | null;
+    department?: string | null;
     program?: string | null;
     year_level?: string | null;
     age?: number | null;
@@ -58,9 +64,11 @@ const AuthContext = createContext<AuthContextType>({
   isDev: false,
   isSuperAdmin: false,
   isFacilitator: false,
+  isOfficial: false,
   isCoach: false,
   isPlayer: false,
   isFacultyAthlete: false,
+  isStaffAthlete: false,
   isStudentAthlete: false,
   accountStatus: 'active',
   profile: null,
@@ -131,6 +139,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           account_status: status,
           faculty_id_url: data.faculty_id_url || null,
           student_number: data.student_number || null,
+          employee_id: data.employee_id || null,
+          department: data.department || null,
           program: data.program || null,
           year_level: data.year_level || null,
           age: data.age ?? null,
@@ -191,11 +201,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Derived role permission flags
   const isDev = role === 'dev';
-  const isSuperAdmin = role === 'super_admin';
+  const isSuperAdmin = role === 'super_admin' || role === 'dev';
   const isFacilitator = role === 'facilitator' || isSuperAdmin;
+  const isOfficial = role === 'official' || isSuperAdmin;
   const isCoach = role === 'coach';
-  const isPlayer = role === 'player_student' || role === 'player_faculty';
+  const isPlayer = role === 'player_student' || role === 'player_faculty' || role === 'player_staff';
   const isFacultyAthlete = role === 'player_faculty';
+  const isStaffAthlete = role === 'player_staff';
   const isStudentAthlete = role === 'player_student';
 
   return (
@@ -208,9 +220,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isDev,
       isSuperAdmin,
       isFacilitator,
+      isOfficial,
       isCoach,
       isPlayer,
       isFacultyAthlete,
+      isStaffAthlete,
       isStudentAthlete,
       accountStatus,
       profile,

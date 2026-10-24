@@ -28,8 +28,10 @@ const registerSchema = z.object({
   email: z.string().email({ message: 'Invalid email address' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
   confirmPassword: z.string(),
-  role: z.enum(['player_student', 'player_faculty', 'coach'] as const, { message: 'Role is required' }),
+  role: z.enum(['player_student', 'player_faculty', 'player_staff', 'coach'] as const, { message: 'Role is required' }),
   collegeId: z.string().optional(),
+  employeeId: z.string().optional(),
+  department: z.string().optional(),
   termsAccepted: z.boolean().refine((val) => val === true, {
     message: 'You must accept the Terms & Conditions and Privacy Policy',
   }),
@@ -63,6 +65,8 @@ export const Register = () => {
       confirmPassword: '',
       role: 'player_student',
       collegeId: '',
+      employeeId: '',
+      department: '',
       termsAccepted: false,
     },
   });
@@ -90,6 +94,8 @@ export const Register = () => {
           email: values.email.trim(),
           role: values.role,
           college_id: values.collegeId || null,
+          employee_id: values.employeeId ? values.employeeId.trim() : null,
+          department: values.department ? values.department.trim() : null,
         });
 
         if (profileError) {
@@ -246,17 +252,20 @@ export const Register = () => {
                           <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white rounded-xl">
                             <SelectValue placeholder="Select Role">
                               {field.value === 'player_faculty'
-                                ? 'Faculty'
+                                ? 'Faculty Athlete'
+                                : field.value === 'player_staff'
+                                ? 'Staff Athlete'
                                 : field.value === 'coach'
                                 ? 'Coach'
-                                : 'Student'}
+                                : 'Student Athlete'}
                             </SelectValue>
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="bg-slate-800 border-white/10 text-white">
-                          <SelectItem value="player_student">Student</SelectItem>
-                          <SelectItem value="coach">Coach</SelectItem>
-                          <SelectItem value="player_faculty">Faculty</SelectItem>
+                          <SelectItem value="player_student">Student Athlete</SelectItem>
+                          <SelectItem value="player_faculty">Faculty Athlete</SelectItem>
+                          <SelectItem value="player_staff">Staff Athlete</SelectItem>
+                          <SelectItem value="coach">Athletic Coach</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
@@ -289,6 +298,50 @@ export const Register = () => {
                   )}
                 />
               </div>
+
+              {(form.watch('role') === 'player_staff' || form.watch('role') === 'player_faculty') && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-in fade-in duration-300">
+                  <FormField
+                    control={form.control}
+                    name="employeeId"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
+                          Employee / Faculty ID
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g. EMP-2024-0123"
+                            {...field}
+                            className="h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="department"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
+                          Department / Office Unit
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g. HR, Registrar, ICTD"
+                            {...field}
+                            className="h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
 
               {/* Terms & Privacy Checkbox */}
               <FormField

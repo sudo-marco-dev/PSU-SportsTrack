@@ -39,6 +39,8 @@ export const CanvasPdfViewer = ({ storagePath, signedUrl }: CanvasPdfViewerProps
   const [scale, setScale] = useState(1.0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const isImageFile = /\.(png|jpe?g|webp|gif)$/i.test(storagePath);
 
   // 1. Fetch document in memory via JavaScript (immune to browser download managers)
   useEffect(() => {
@@ -48,9 +50,33 @@ export const CanvasPdfViewer = ({ storagePath, signedUrl }: CanvasPdfViewerProps
       setIsLoading(true);
       setError(null);
       setPdfDoc(null);
+      setImageUrl(null);
       setCurrentPage(1);
 
       try {
+        if (isImageFile) {
+          let blobUrl: string | null = signedUrl || null;
+          if (!blobUrl) {
+            const { data: signData } = await supabase.storage
+              .from('verification_documents')
+              .createSignedUrl(storagePath, 3600);
+            if (signData?.signedUrl) blobUrl = signData.signedUrl;
+          }
+          if (!blobUrl) {
+            const { data, error: dlErr } = await supabase.storage
+              .from('verification_documents')
+              .download(storagePath);
+            if (!dlErr && data) {
+              blobUrl = URL.createObjectURL(data);
+            }
+          }
+          if (blobUrl && !isCancelled) {
+            setImageUrl(blobUrl);
+            setIsLoading(false);
+            return;
+          }
+        }
+
         let arrayBuffer: ArrayBuffer | null = null;
 
         // Try downloading directly via Supabase storage client first
@@ -334,6 +360,15 @@ export const CanvasPdfViewer = ({ storagePath, signedUrl }: CanvasPdfViewerProps
             <div className="m-auto text-center p-6 space-y-2">
               <AlertTriangle className="size-8 text-red-500 mx-auto" />
               <p className="text-xs font-bold text-red-400 uppercase tracking-wider">{error}</p>
+            </div>
+          ) : isImageFile && imageUrl ? (
+            <div className="m-auto shadow-2xl rounded-lg overflow-hidden bg-slate-950/40 p-2 shrink-0 max-w-full">
+              <img
+                src={imageUrl}
+                alt="Clearance Document"
+                style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}
+                className="rounded-lg max-h-[70vh] object-contain transition-transform"
+              />
             </div>
           ) : (
             <div className="m-auto shadow-2xl rounded-lg overflow-hidden bg-white shrink-0">

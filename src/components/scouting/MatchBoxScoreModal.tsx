@@ -17,6 +17,7 @@ import {
   ExternalLink,
   Activity,
   Zap,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   fetchMatchBoxScore,
@@ -355,6 +356,63 @@ export const MatchBoxScoreModal = ({
                   </div>
                 </div>
               )}
+
+              {/* Match Officials & Scorer Accountability Audit */}
+              <div className="rounded-2xl border border-slate-200 dark:border-white/10 p-4 space-y-2.5 bg-slate-50/50 dark:bg-white/[0.02]">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="size-4 text-orange-500" />
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                      Official Scorer & Certification Audit
+                    </h4>
+                  </div>
+                  {boxData.match.conflict_flag ? (
+                    <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/30 text-[9px] font-black uppercase">
+                      Shortage Policy Override
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/30 text-[9px] font-black uppercase">
+                      Neutral Scorer Verified
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200/60 dark:border-white/5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Official Scorekeeper</span>
+                    <span className="font-bold text-orange-500">
+                      {boxData.match.official_scorekeeper_name || 'Authenticated Facilitator'}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200/60 dark:border-white/5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Match Finalizer</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-100">
+                      {boxData.match.finalizer_name || (boxData.match.status === 'Completed' ? 'System Certified' : 'Pending')}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200/60 dark:border-white/5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Certification Time</span>
+                    <span className="font-mono text-[11px] text-slate-600 dark:text-slate-300">
+                      {boxData.match.finalized_at
+                        ? new Date(boxData.match.finalized_at).toLocaleString()
+                        : 'In Progress'}
+                    </span>
+                  </div>
+                </div>
+
+                {boxData.match.conflict_notes && (
+                  <div className="text-[11px] p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-500/20 text-amber-800 dark:text-amber-200">
+                    <span className="font-bold">Shortage Policy Override:</span> {boxData.match.conflict_notes}
+                  </div>
+                )}
+                {boxData.match.scorer_notes && (
+                  <div className="text-[11px] p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900/80 border border-slate-200 dark:border-white/5 text-slate-700 dark:text-slate-300">
+                    <span className="font-bold">Scorer Certification Note:</span> {boxData.match.scorer_notes}
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>

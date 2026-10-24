@@ -192,6 +192,36 @@ export const TournamentManagement: React.FC = () => {
     setIsConcludeOpen(true);
   };
 
+  const handleToggleTournamentCoi = async (tournament: Tournament) => {
+    const nextVal = !tournament.enforce_conflict_of_interest;
+    const { error } = await supabase
+      .from('tournaments')
+      .update({ enforce_conflict_of_interest: nextVal })
+      .eq('id', tournament.id);
+
+    if (error) {
+      toast.error('Failed to update conflict of interest policy: ' + error.message);
+      return;
+    }
+
+    setTournaments(prev =>
+      prev.map(t => (t.id === tournament.id ? { ...t, enforce_conflict_of_interest: nextVal } : t))
+    );
+
+    await logAudit({
+      action: 'UPDATE_TOURNAMENT',
+      entity_type: 'tournaments',
+      entity_id: tournament.id,
+      details: `Updated COI Policy for ${tournament.name}: ${nextVal ? 'Strict COI Enforced' : 'Facilitator Shortage Exception (COI Disabled)'}`,
+    });
+
+    toast.success(
+      nextVal
+        ? `Strict COI Enforced for ${tournament.name}`
+        : `Facilitator Shortage Exception enabled for ${tournament.name}`
+    );
+  };
+
   return (
     <div className="space-y-6 relative max-w-[1600px] mx-auto px-4 pb-6">
       {/* Subtle Grain Overlay */}
@@ -276,6 +306,7 @@ export const TournamentManagement: React.FC = () => {
             viewMode={viewMode}
             onOpenWizard={openBracketWizard}
             onPromptDelete={promptDeleteTournament}
+            onToggleCoi={handleToggleTournamentCoi}
             onClearFilters={() => {
               setSearchQuery('');
               setStatusFilter('all');

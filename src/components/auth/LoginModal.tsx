@@ -41,8 +41,10 @@ const registerSchema = z.object({
   email: z.string().email({ message: 'Invalid university email' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
   confirmPassword: z.string(),
-  role: z.enum(['player_student', 'player_faculty', 'coach'] as const, { message: 'Role is required' }),
+  role: z.enum(['player_student', 'player_faculty', 'player_staff', 'coach'] as const, { message: 'Role is required' }),
   collegeId: z.string().optional(),
+  employeeId: z.string().optional(),
+  department: z.string().optional(),
   termsAccepted: z.boolean().refine((val) => val === true, {
     message: 'You must accept the Terms & Conditions and Privacy Policy',
   }),
@@ -84,6 +86,8 @@ export const LoginModal = () => {
       confirmPassword: '',
       role: 'player_student',
       collegeId: '',
+      employeeId: '',
+      department: '',
       termsAccepted: false,
     },
   });
@@ -268,6 +272,8 @@ export const LoginModal = () => {
           email: values.email.trim(),
           role: values.role,
           college_id: values.collegeId || null,
+          employee_id: values.employeeId ? values.employeeId.trim() : null,
+          department: values.department ? values.department.trim() : null,
         });
 
         if (profileError) {
@@ -534,6 +540,7 @@ export const LoginModal = () => {
                             <SelectContent className="bg-slate-900 border-white/10 text-white font-bold text-xs rounded-xl">
                               <SelectItem value="player_student">Student Athlete</SelectItem>
                               <SelectItem value="player_faculty">Faculty Athlete</SelectItem>
+                              <SelectItem value="player_staff">Staff Athlete</SelectItem>
                               <SelectItem value="coach">Athletic Coach</SelectItem>
                             </SelectContent>
                           </Select>
@@ -567,6 +574,50 @@ export const LoginModal = () => {
                       )}
                     />
                   </div>
+
+                  {(registerForm.watch('role') === 'player_staff' || registerForm.watch('role') === 'player_faculty') && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-in fade-in duration-300">
+                      <FormField
+                        control={registerForm.control}
+                        name="employeeId"
+                        render={({ field }) => (
+                          <FormItem className="space-y-1">
+                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
+                              Employee / Faculty ID
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="EMP-2024-0123"
+                                className="h-10 sm:h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-orange-500"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={registerForm.control}
+                        name="department"
+                        render={({ field }) => (
+                          <FormItem className="space-y-1">
+                            <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
+                              Office Unit / Dept
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="HR, Registrar, etc."
+                                className="h-10 sm:h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-orange-500"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
 
                   {/* Terms & Privacy Checkbox */}
                   <FormField

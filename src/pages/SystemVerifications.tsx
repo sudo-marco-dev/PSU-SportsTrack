@@ -65,6 +65,8 @@ type PendingDocument = {
     role: string;
     account_status?: string;
     student_number?: string | null;
+    employee_id?: string | null;
+    department?: string | null;
     program?: string | null;
     year_level?: string | null;
     age?: number | null;
@@ -108,7 +110,7 @@ export const SystemVerifications = () => {
   const fetchDocuments = async () => {
     let query = supabase
       .from('verification_documents')
-      .select('*, users(full_name, email, role, account_status, student_number, program, year_level, age, colleges(college_name))')
+      .select('*, users(full_name, email, role, account_status, student_number, employee_id, department, program, year_level, age, colleges(college_name))')
       .order('created_at', { ascending: false });
 
     if (statusFilter !== 'all') {
@@ -122,7 +124,7 @@ export const SystemVerifications = () => {
       // Resilient fallback query without email field if schema cache is ever out of sync
       let fallbackQuery = supabase
         .from('verification_documents')
-        .select('*, users(full_name, role, account_status, student_number, program, year_level, age, colleges(college_name))')
+        .select('*, users(full_name, role, account_status, student_number, employee_id, department, program, year_level, age, colleges(college_name))')
         .order('created_at', { ascending: false });
 
       if (statusFilter !== 'all') {
@@ -254,7 +256,7 @@ export const SystemVerifications = () => {
           is_verified: false,
           revalidated_at: new Date().toISOString(),
         })
-        .in('role', ['player_student', 'player_faculty', 'Player']);
+        .in('role', ['player_student', 'player_faculty', 'player_staff', 'Player']);
 
       if (error) throw error;
 
@@ -278,6 +280,8 @@ export const SystemVerifications = () => {
     if (!r) return 'Unknown';
     if (r === 'player_student' || r === 'Player') return 'Student Athlete';
     if (r === 'player_faculty' || r === 'faculty' || r === 'Faculty') return 'Faculty Athlete';
+    if (r === 'player_staff' || r === 'staff' || r === 'Staff') return 'Staff Athlete';
+    if (r === 'official' || r === 'Official') return 'Official';
     if (r === 'coach' || r === 'Coach') return 'Coach';
     if (r === 'facilitator') return 'Facilitator';
     if (r === 'super_admin' || r === 'Admin') return 'Super Admin';
@@ -307,16 +311,17 @@ export const SystemVerifications = () => {
     return tokens.some((t) => extClean.includes(t));
   };
 
-  const checkEmailStudentIdMatch = (email?: string | null, studentNo?: string | null) => {
+  const checkEmailStudentIdMatch = (email?: string | null, studentNo?: string | null, employeeId?: string | null) => {
     if (!email) return { isMatch: false, isPsuDomain: false, label: 'No Email' };
     const emailLower = email.toLowerCase().trim();
     const isPsuDomain = emailLower.endsWith('@psu.palawan.edu.ph') || emailLower.endsWith('psu.palawan.edu.ph');
-    if (!studentNo) return { isMatch: false, isPsuDomain, label: isPsuDomain ? 'PSU Email (No ID Parsed)' : 'Non-Corporate' };
+    const targetId = studentNo || employeeId;
+    if (!targetId) return { isMatch: false, isPsuDomain, label: isPsuDomain ? 'PSU Email (No ID Parsed)' : 'Non-Corporate' };
 
     const cleanEmailPrefix = emailLower.split('@')[0].replace(/[^0-9a-z]/g, '');
-    const cleanId = studentNo.replace(/[^0-9a-z]/g, '').toLowerCase();
+    const cleanId = targetId.replace(/[^0-9a-z]/g, '').toLowerCase();
 
-    const isMatch = cleanId.length >= 5 && cleanEmailPrefix === cleanId;
+    const isMatch = cleanId.length >= 4 && (cleanEmailPrefix === cleanId || cleanEmailPrefix.includes(cleanId));
     return {
       isMatch,
       isPsuDomain,
@@ -472,7 +477,8 @@ export const SystemVerifications = () => {
             {filteredDocuments.map((doc, idx) => {
               const collegeName = getCollegeName(doc);
               const isNameMatch = checkNameMatch(doc.users?.full_name, doc.extracted_full_name);
-              const emailCheck = checkEmailStudentIdMatch(doc.users?.email, doc.extracted_student_no);
+              const emailCheck = checkEmailStudentIdMatch(doc.users?.email, doc.extracted_student_no, doc.users?.employee_id);
+              const isStaffOrFaculty = doc.users?.role === 'player_staff' || doc.users?.role === 'player_faculty';
 
               return (
                 <Card
@@ -498,10 +504,12 @@ export const SystemVerifications = () => {
                     {/* At-a-Glance Comparison Box */}
                     <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-2 mb-5 text-[11px]">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400 font-bold uppercase text-[9px]">Student No</span>
+                        <span className="text-slate-400 font-bold uppercase text-[9px]">
+                          {isStaffOrFaculty ? 'Employee ID' : 'Student No'}
+                        </span>
                         <div className="flex items-center gap-1.5">
                           <span className="font-bold text-slate-900 dark:text-white">
-                            {doc.extracted_student_no || 'Unparsed'}
+                            {doc.extracted_student_no || doc.users?.employee_id || 'Unparsed'}
                           </span>
                           {emailCheck.isMatch ? (
                             <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 font-black tracking-wide" title={emailCheck.label}>
@@ -534,9 +542,11 @@ export const SystemVerifications = () => {
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400 font-bold uppercase text-[9px]">Program</span>
+                        <span className="text-slate-400 font-bold uppercase text-[9px]">
+                          {isStaffOrFaculty ? 'Unit / Dept' : 'Program'}
+                        </span>
                         <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[170px]">
-                          {doc.extracted_program || 'N/A'}
+                          {doc.extracted_program || doc.users?.department || 'N/A'}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
@@ -584,7 +594,8 @@ export const SystemVerifications = () => {
             <div className="md:hidden space-y-3">
               {filteredDocuments.map((doc) => {
                 const collegeName = getCollegeName(doc);
-                const emailCheck = checkEmailStudentIdMatch(doc.users?.email, doc.extracted_student_no);
+                const emailCheck = checkEmailStudentIdMatch(doc.users?.email, doc.extracted_student_no, doc.users?.employee_id);
+                const isStaffOrFaculty = doc.users?.role === 'player_staff' || doc.users?.role === 'player_faculty';
 
                 return (
                   <Card
@@ -614,18 +625,22 @@ export const SystemVerifications = () => {
                     {/* Micro metadata row */}
                     <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-1 mb-3 text-[11px]">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400 font-bold text-[9px] uppercase">Student ID</span>
+                        <span className="text-slate-400 font-bold text-[9px] uppercase">
+                          {isStaffOrFaculty ? 'Employee ID' : 'Student ID'}
+                        </span>
                         <div className="flex items-center gap-1 font-mono font-bold text-slate-700 dark:text-slate-300">
-                          <span>{doc.extracted_student_no || 'Unparsed'}</span>
+                          <span>{doc.extracted_student_no || doc.users?.employee_id || 'Unparsed'}</span>
                           {emailCheck.isMatch && (
                             <span className="text-[8px] px-1 py-0.2 rounded bg-emerald-500/15 text-emerald-600 font-black">CORP MATCH</span>
                           )}
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400 font-bold text-[9px] uppercase">Program</span>
+                        <span className="text-slate-400 font-bold text-[9px] uppercase">
+                          {isStaffOrFaculty ? 'Unit / Dept' : 'Program'}
+                        </span>
                         <span className="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[180px]">
-                          {doc.extracted_program || 'N/A'}
+                          {doc.extracted_program || doc.users?.department || 'N/A'}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
@@ -691,7 +706,8 @@ export const SystemVerifications = () => {
                   {filteredDocuments.map((doc, idx) => {
                     const collegeName = getCollegeName(doc);
                     const isNameMatch = checkNameMatch(doc.users?.full_name, doc.extracted_full_name);
-                    const emailCheck = checkEmailStudentIdMatch(doc.users?.email, doc.extracted_student_no);
+                    const emailCheck = checkEmailStudentIdMatch(doc.users?.email, doc.extracted_student_no, doc.users?.employee_id);
+                    const isStaffOrFaculty = doc.users?.role === 'player_staff' || doc.users?.role === 'player_faculty';
 
                     return (
                       <TableRow
@@ -723,7 +739,7 @@ export const SystemVerifications = () => {
                           <div className="space-y-1">
                             <div className="flex items-center gap-1.5">
                               <span className="font-bold text-slate-900 dark:text-white">
-                                {doc.extracted_student_no || 'No ID Parsed'}
+                                {doc.extracted_student_no || doc.users?.employee_id || (isStaffOrFaculty ? 'No Emp ID' : 'No ID Parsed')}
                               </span>
                               {emailCheck.isMatch ? (
                                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-black tracking-wider uppercase" title={emailCheck.label}>
@@ -754,7 +770,7 @@ export const SystemVerifications = () => {
                         <TableCell className="text-xs">
                           <div className="space-y-0.5">
                             <span className="font-bold text-slate-800 dark:text-slate-200 block truncate max-w-[150px]">
-                              {doc.extracted_program || 'N/A'}
+                              {doc.extracted_program || doc.users?.department || 'N/A'}
                             </span>
                             <span className="text-[10px] text-slate-400 block truncate max-w-[150px]">
                               {doc.extracted_year_level ? `${doc.extracted_year_level} • ` : ''}

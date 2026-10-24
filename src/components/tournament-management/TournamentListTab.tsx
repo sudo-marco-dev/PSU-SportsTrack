@@ -24,6 +24,7 @@ interface TournamentListTabProps {
   onOpenWizard: (tournament: Tournament) => void;
   onPromptDelete: (tournament: Tournament) => void;
   onClearFilters: () => void;
+  onToggleCoi?: (tournament: Tournament) => void;
 }
 
 export const TournamentListTab: React.FC<TournamentListTabProps> = ({
@@ -33,6 +34,7 @@ export const TournamentListTab: React.FC<TournamentListTabProps> = ({
   onOpenWizard,
   onPromptDelete,
   onClearFilters,
+  onToggleCoi,
 }) => {
   if (isLoading) {
     return (
@@ -73,18 +75,32 @@ export const TournamentListTab: React.FC<TournamentListTabProps> = ({
                   <div className="p-2.5 bg-slate-50 dark:bg-white/5 rounded-xl group-hover:bg-orange-500 transition-colors duration-500">
                     <SportIcon className="size-5 text-slate-400 group-hover:text-white transition-colors duration-500" />
                   </div>
-                  <Badge
-                    className={`${
-                      t.status === 'Completed'
-                        ? 'bg-emerald-600 text-white shadow-emerald-500/10'
-                        : t.status === 'Active'
-                        ? 'bg-orange-500 text-white shadow-orange-500/10'
-                        : 'bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300'
-                    } text-[10px] font-black uppercase tracking-widest py-1 px-3 rounded-full shadow-lg`}
-                  >
-                    {t.status === 'Completed' && <CheckCircle2 className="size-3 mr-1 inline" />}
-                    {t.status}
-                  </Badge>
+                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                    <button
+                      type="button"
+                      onClick={() => onToggleCoi && onToggleCoi(t)}
+                      title="Click to toggle Conflict of Interest enforcement (Shortage Policy)"
+                      className={`text-[9px] font-black uppercase tracking-wider py-1 px-2.5 rounded-full border transition-all cursor-pointer ${
+                        t.enforce_conflict_of_interest === false
+                          ? 'bg-amber-500/15 text-amber-500 border-amber-500/30 hover:bg-amber-500/25'
+                          : 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/25'
+                      }`}
+                    >
+                      {t.enforce_conflict_of_interest === false ? 'Shortage (COI Open)' : 'COI Enforced'}
+                    </button>
+                    <Badge
+                      className={`${
+                        t.status === 'Completed'
+                          ? 'bg-emerald-600 text-white shadow-emerald-500/10'
+                          : t.status === 'Active'
+                          ? 'bg-orange-500 text-white shadow-orange-500/10'
+                          : 'bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300'
+                      } text-[10px] font-black uppercase tracking-widest py-1 px-3 rounded-full shadow-lg`}
+                    >
+                      {t.status === 'Completed' && <CheckCircle2 className="size-3 mr-1 inline" />}
+                      {t.status}
+                    </Badge>
+                  </div>
                 </div>
                 <CardTitle className="text-2xl font-black italic uppercase tracking-tighter group-hover:text-orange-500 transition-colors">
                   {t.name}
@@ -156,18 +172,32 @@ export const TournamentListTab: React.FC<TournamentListTabProps> = ({
                   </div>
                 </div>
 
-                <Badge
-                  className={`${
-                    t.status === 'Completed'
-                      ? 'bg-emerald-600 text-white'
-                      : t.status === 'Active'
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300'
-                  } text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md shrink-0`}
-                >
-                  {t.status === 'Completed' && <CheckCircle2 className="size-2.5 mr-1 inline" />}
-                  {t.status}
-                </Badge>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <Badge
+                    className={`${
+                      t.status === 'Completed'
+                        ? 'bg-emerald-600 text-white'
+                        : t.status === 'Active'
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300'
+                    } text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md`}
+                  >
+                    {t.status === 'Completed' && <CheckCircle2 className="size-2.5 mr-1 inline" />}
+                    {t.status}
+                  </Badge>
+                  <button
+                    type="button"
+                    onClick={() => onToggleCoi && onToggleCoi(t)}
+                    title="Toggle Conflict of Interest policy"
+                    className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border transition-all cursor-pointer ${
+                      t.enforce_conflict_of_interest === false
+                        ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                        : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                    }`}
+                  >
+                    {t.enforce_conflict_of_interest === false ? 'COI: Shortage' : 'COI: Enforced'}
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center justify-between text-xs pt-2.5 border-t border-slate-100 dark:border-white/5">

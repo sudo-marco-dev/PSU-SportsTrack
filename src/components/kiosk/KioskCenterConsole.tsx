@@ -17,6 +17,7 @@ import {
   Timer,
   Clock,
   X,
+  CheckCircle2,
 } from 'lucide-react';
 import {
   Select,
@@ -55,6 +56,8 @@ type KioskCenterConsoleProps = {
   recentEvents: MatchEvent[];
   onUndoLastScore?: () => void;
   canUndo?: boolean;
+  onConcludeMatch?: () => void;
+  isCompleted?: boolean;
   isAudioActive: boolean;
   onToggleAudio: () => void;
   isFullscreen: boolean;
@@ -84,6 +87,8 @@ export const KioskCenterConsole = ({
   recentEvents,
   onUndoLastScore,
   canUndo = false,
+  onConcludeMatch,
+  isCompleted = false,
   isAudioActive,
   onToggleAudio,
   isFullscreen,
@@ -363,20 +368,36 @@ export const KioskCenterConsole = ({
           </button>
         </div>
 
-        {/* Instant Undo Last Score Button */}
-        {canUndo && (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={onUndoLastScore}
-            className={`${compact ? 'h-7 px-2 text-[10px] rounded-lg' : 'h-9 px-3 text-xs rounded-xl'} border-amber-500/40 text-amber-300 hover:bg-amber-500/10 font-bold gap-1 active:scale-95`}
-            title="Roll back the most recent recorded score event"
-          >
-            <Undo2 className="size-3" />
-            <span>Undo</span>
-          </Button>
-        )}
+        <div className="flex items-center gap-1.5">
+          {/* Instant Undo Last Score Button */}
+          {canUndo && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={onUndoLastScore}
+              className={`${compact ? 'h-7 px-2 text-[10px] rounded-lg' : 'h-9 px-3 text-xs rounded-xl'} border-amber-500/40 text-amber-300 hover:bg-amber-500/10 font-bold gap-1 active:scale-95`}
+              title="Roll back the most recent recorded score event"
+            >
+              <Undo2 className="size-3" />
+              <span>Undo</span>
+            </Button>
+          )}
+
+          {/* Conclude Match Button */}
+          {onConcludeMatch && !isCompleted && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={onConcludeMatch}
+              className={`${compact ? 'h-7 px-2 text-[10px] rounded-lg' : 'h-9 px-3 text-xs rounded-xl'} bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-wider gap-1 active:scale-95 shadow-md`}
+              title="Finalize official match scores and advance tournament bracket"
+            >
+              <CheckCircle2 className="size-3" />
+              <span>Conclude</span>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Mini Recent Event Ticker */}

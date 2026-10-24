@@ -17,7 +17,18 @@ import {
   Timer,
   X,
   LogIn,
+  AlertTriangle,
+  CheckCircle2,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { LoginModal } from '@/components/auth/LoginModal';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { getSportScoringProfile } from '@/lib/sportScoringRules';
@@ -56,15 +67,27 @@ type Match = {
   team_b_id: string | null;
   venue?: string | null;
   match_time?: string | null;
-  team_a: { name: string } | null;
-  team_b: { name: string } | null;
+  team_a: { name: string; college_id?: string | null } | null;
+  team_b: { name: string; college_id?: string | null } | null;
   tournament_id: string;
   tournament?: {
     name: string;
     sport: string;
+    enforce_conflict_of_interest?: boolean;
   } | null;
   active_scorekeeper_id?: string | null;
+  active_scorekeeper?: { full_name: string } | null;
+  official_scorekeeper_id?: string | null;
+  official_scorekeeper?: { full_name: string } | null;
+  finalized_by?: string | null;
+  finalizer?: { full_name: string } | null;
+  finalized_at?: string | null;
+  scorer_notes?: string | null;
+  conflict_flag?: boolean;
+  conflict_notes?: string | null;
+  enforce_conflict_of_interest?: boolean;
   lease_expires_at?: string | null;
+  lease_token?: string | null;
 };
 
 type MatchEvent = {
@@ -77,7 +100,7 @@ type MatchEvent = {
 export const FacilitatorKiosk = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
-  const { user, isSuperAdmin, isFacilitator, openLoginModal } = useAuth();
+  const { user, profile, isSuperAdmin, isFacilitator, isOfficial, openLoginModal } = useAuth();
 
   // Match and Realtime State
   const [match, setMatch] = useState<Match | null>(null);
@@ -90,6 +113,21 @@ export const FacilitatorKiosk = () => {
   // Facilitator Console Lease
   const [isHoldingLease, setIsHoldingLease] = useState(false);
   const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  // Conflict of Interest Shortage Override Modal
+  const [conflictPrompt, setConflictPrompt] = useState<{
+    isOpen: boolean;
+    reason: string;
+  }>({ isOpen: false, reason: '' });
+  const [overrideReasonInput, setOverrideReasonInput] = useState('');
+
+  // Conclude Match Finalization Modal
+  const [isConcludeModalOpen, setIsConcludeModalOpen] = useState(false);
+  const [concludeNotes, setConcludeNotes] = useState('');
+  const [isConcluding, setIsConcluding] = useState(false);
+
+  // Match Governance & Officials Accountability Modal Toggle
+  const [showOfficialsCard, setShowOfficialsCard] = useState(false);
 
   // Wake Lock & Fullscreen
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
@@ -219,10 +257,10 @@ export const FacilitatorKiosk = () => {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }, [gameTimeSeconds]);
 
-  // Strict Governance: Facilitator/Admin authorization
+  // Strict Governance: Facilitator/Official/Admin authorization
   // User must be authenticated to satisfy Postgres Row Level Security (RLS) policies
-  const isAuthorizedScorekeeper = Boolean(user && (isFacilitator || isSuperAdmin));
-  const isAuthorized = Boolean(user && (isHoldingLease || isSuperAdmin || isFacilitator));
+  const isAuthorizedScorekeeper = Boolean(user && (isFacilitator || isSuperAdmin || isOfficial));
+  const isAuthorized = Boolean(user && (isHoldingLease || isSuperAdmin || isFacilitator || isOfficial));
 
   // Broadcast Master Clock State to Arena Screens & Connected Clients
   const broadcastClockState = useCallback(
@@ -404,7 +442,7 @@ export const FacilitatorKiosk = () => {
       const [matchRes, eventsRes] = await Promise.all([
         supabase
           .from('matches')
-          .select('*, team_a:teams!matches_team_a_id_fkey(name), team_b:teams!matches_team_b_id_fkey(name), tournament:tournaments(name, sport)')
+          .select('*, team_a:teams!matches_team_a_id_fkey(name, college_id), team_b:teams!matches_team_b_id_fkey(name, college_id), tournament:tournaments(name, sport, enforce_conflict_of_interest)')
           .eq('id', matchId)
           .single(),
         supabase
@@ -417,6 +455,34 @@ export const FacilitatorKiosk = () => {
 
       if (matchRes.data) {
         const m = matchRes.data as Match;
+
+        // Resiliently resolve official scorekeeper, active scorekeeper, and finalizer display names
+        const userIdsToFetch = [
+          m.official_scorekeeper_id,
+          m.finalized_by,
+          m.active_scorekeeper_id,
+        ].filter(Boolean) as string[];
+
+        if (userIdsToFetch.length > 0) {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('id, full_name')
+            .in('id', userIdsToFetch);
+
+          if (userData) {
+            const userMap = new Map(userData.map((u) => [u.id, u.full_name]));
+            if (m.official_scorekeeper_id && userMap.has(m.official_scorekeeper_id)) {
+              m.official_scorekeeper = { full_name: userMap.get(m.official_scorekeeper_id)! };
+            }
+            if (m.finalized_by && userMap.has(m.finalized_by)) {
+              m.finalizer = { full_name: userMap.get(m.finalized_by)! };
+            }
+            if (m.active_scorekeeper_id && userMap.has(m.active_scorekeeper_id)) {
+              m.active_scorekeeper = { full_name: userMap.get(m.active_scorekeeper_id)! };
+            }
+          }
+        }
+
         setMatch(m);
 
         // Check lease
@@ -711,9 +777,22 @@ export const FacilitatorKiosk = () => {
     if (!navigator.onLine) {
       offlineQueue.bufferScore(match.id, newScoreA, newScoreB);
       const offlineEvt = offlineQueue.bufferEvent(match.id, desc);
+      if (scorerObj?.player_id) {
+        offlineQueue.bufferScoreEvent(match.id, {
+          match_id: match.id,
+          team_id: teamId,
+          player_id: scorerObj.player_id,
+          jersey_number: scorerObj.jersey_number !== null && scorerObj.jersey_number !== undefined ? String(scorerObj.jersey_number) : null,
+          points: points,
+          delta: points,
+          action_type: actionType,
+          stat_type: `PTS_${points}`,
+        });
+      }
       setMatch((prev) => (prev ? { ...prev, status: nextStatus, team_a_score: newScoreA, team_b_score: newScoreB } : prev));
       setEvents((prev) => [offlineEvt, ...prev]);
       setPendingOfflineCount(offlineQueue.getPendingCount(match.id));
+      setCanUndo(true);
       toast.warning('Offline Mode: Score buffered locally.');
       return;
     }
@@ -759,6 +838,7 @@ export const FacilitatorKiosk = () => {
         action_type: actionType,
         stat_type: `PTS_${points}`,
         delta: points,
+        recorded_by: user.id,
       })
       .select('id')
       .maybeSingle();
@@ -821,6 +901,21 @@ export const FacilitatorKiosk = () => {
     }
     const { prevScoreA, prevScoreB, scoreEventId, playerId, points: undonePoints } = lastScoreActionRef.current;
 
+    if (!navigator.onLine) {
+      offlineQueue.bufferScore(match.id, prevScoreA, prevScoreB);
+      offlineQueue.undoLastScoreEvent(match.id, playerId, undonePoints);
+      const undoDesc = `[Offline Undo]: Reverted score to ${prevScoreA} - ${prevScoreB}.`;
+      const offlineEvt = offlineQueue.bufferEvent(match.id, undoDesc);
+      setMatch((prev) => (prev ? { ...prev, team_a_score: prevScoreA, team_b_score: prevScoreB } : prev));
+      setEvents((prev) => [offlineEvt, ...prev]);
+      setPendingOfflineCount(offlineQueue.getPendingCount(match.id));
+      lastScoreActionRef.current = null;
+      setCanUndo(false);
+      toast.warning('Offline Mode: Reverted last score locally.');
+      playWhistleSound();
+      return;
+    }
+
     const { data: updatedMatches, error } = await supabase
       .from('matches')
       .update({ team_a_score: prevScoreA, team_b_score: prevScoreB })
@@ -837,11 +932,15 @@ export const FacilitatorKiosk = () => {
       return;
     }
 
-    // Mark score audit event as undone
+    // Mark score audit event as undone with scorer accountability
     if (scoreEventId) {
       await supabase
         .from('match_score_events')
-        .update({ undone: true })
+        .update({
+          undone: true,
+          undone_by: user.id,
+          undone_at: new Date().toISOString(),
+        })
         .eq('id', scoreEventId);
     }
 
@@ -1142,8 +1241,8 @@ export const FacilitatorKiosk = () => {
     await supabase.from('match_events').insert({ match_id: match.id, description: desc });
   };
 
-  // Console Lease Claim
-  const handleClaimLease = async () => {
+  // Console Lease Claim with Conflict of Interest check and Shortage Policy Override
+  const handleClaimLease = async (force: boolean = false, overrideReason?: string) => {
     if (!user) {
       toast.info('Please log in with your facilitator or admin account to claim the scoring console.');
       openLoginModal();
@@ -1151,23 +1250,78 @@ export const FacilitatorKiosk = () => {
     }
     if (!matchId) return;
 
-    const { data: updatedMatches, error } = await supabase
-      .from('matches')
-      .update({
-        active_scorekeeper_id: user.id,
-        lease_expires_at: new Date(Date.now() + 90000).toISOString(),
-      })
-      .eq('id', matchId)
-      .select('id');
+    try {
+      const { data, error } = await supabase.rpc('claim_match_lease', {
+        p_match_id: matchId,
+        p_force: force,
+        p_override_reason: overrideReason || null,
+      });
 
-    if (error) {
-      toast.error('Failed to claim console: ' + error.message);
-    } else if (!updatedMatches || updatedMatches.length === 0) {
-      toast.error('Permission Denied: Only authorized facilitators or admins can claim the scoring console.');
-    } else {
-      setIsHoldingLease(true);
-      toast.success('Kiosk Scoring Console claimed! You are presiding.');
-      fetchMatchData();
+      if (error) {
+        toast.error('Failed to claim console: ' + error.message);
+        return;
+      }
+
+      const result = Array.isArray(data) ? data[0] : data;
+      if (!result) {
+        toast.error('Unexpected response while claiming console.');
+        return;
+      }
+
+      if (result.conflict) {
+        // Affiliation conflict detected: trigger Shortage Policy dialog
+        setConflictPrompt({
+          isOpen: true,
+          reason: result.message || 'Collegiate affiliation conflict detected.',
+        });
+        toast.warning(result.message || 'Conflict of Interest detected. Facilitator shortage override required.');
+        return;
+      }
+
+      if (result.success) {
+        setIsHoldingLease(true);
+        setConflictPrompt({ isOpen: false, reason: '' });
+        toast.success(result.message || 'Kiosk Scoring Console claimed! You are presiding.');
+        fetchMatchData();
+      } else {
+        toast.error(result.message || 'Failed to claim console lease.');
+      }
+    } catch (err: any) {
+      toast.error('Error claiming console: ' + (err?.message || 'Unknown error'));
+    }
+  };
+
+  // Conclude Match with Scorer Accountability and Certification Notes
+  const handleConcludeMatch = async () => {
+    if (!user || !matchId) return;
+    setIsConcluding(true);
+    try {
+      if (offlineQueue.getPendingCount(matchId) > 0) {
+        await offlineQueue.flush(matchId, supabase);
+      }
+
+      const { error } = await supabase
+        .from('matches')
+        .update({
+          status: 'Completed',
+          finalized_by: user.id,
+          finalized_at: new Date().toISOString(),
+          scorer_notes: concludeNotes ? concludeNotes.trim() : null,
+          is_live: false,
+        })
+        .eq('id', matchId);
+
+      if (error) {
+        toast.error('Failed to conclude match: ' + error.message);
+      } else {
+        toast.success('Match successfully concluded and certified!');
+        setIsConcludeModalOpen(false);
+        fetchMatchData();
+      }
+    } catch (err: any) {
+      toast.error('Error finalizing match: ' + (err?.message || 'Unknown error'));
+    } finally {
+      setIsConcluding(false);
     }
   };
 
@@ -1289,6 +1443,8 @@ export const FacilitatorKiosk = () => {
       isFullscreen={isFullscreen}
       onToggleFullscreen={toggleFullscreen}
       compact={compact}
+      onConcludeMatch={() => setIsConcludeModalOpen(true)}
+      isCompleted={match.status === 'Completed'}
     />
   );
 
@@ -1383,6 +1539,28 @@ export const FacilitatorKiosk = () => {
             )}
           </div>
 
+          {/* Governance & Accountability Trigger */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowOfficialsCard(true)}
+            className="h-6 sm:h-7 px-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-[10px] font-bold flex items-center gap-1.5"
+            title="View Match Governance & Official Scorer Records"
+          >
+            <ShieldCheck className="size-3 text-orange-400" />
+            <span className="hidden sm:inline">Governance</span>
+            {match.conflict_flag && (
+              <span className="size-1.5 rounded-full bg-amber-400 animate-pulse" title="Shortage Override Invoked" />
+            )}
+          </Button>
+
+          {match.status === 'Completed' && (
+            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px] font-black uppercase h-6 px-1.5 shrink-0">
+              Concluded
+            </Badge>
+          )}
+
           {!user && (
             <Button
               type="button"
@@ -1399,7 +1577,7 @@ export const FacilitatorKiosk = () => {
             <Button
               type="button"
               size="sm"
-              onClick={handleClaimLease}
+              onClick={() => handleClaimLease()}
               className="bg-orange-500 hover:bg-orange-600 text-slate-950 font-black text-[10px] uppercase h-6 sm:h-7 px-2.5 rounded-lg shadow-md active:scale-95 transition-all"
             >
               Claim
@@ -1563,6 +1741,224 @@ export const FacilitatorKiosk = () => {
         benchPlayers={subModalTeam === 'a' ? benchPlayersA : benchPlayersB}
         onConfirmSub={handleConfirmSub}
       />
+
+      {/* Conflict of Interest Warning & Shortage Policy Override Dialog */}
+      <Dialog
+        open={conflictPrompt.isOpen}
+        onOpenChange={(open) => {
+          if (!open) setConflictPrompt({ isOpen: false, reason: '' });
+        }}
+      >
+        <DialogContent className="bg-slate-900 border-amber-500/40 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-400 font-black tracking-tight text-lg">
+              <AlertTriangle className="size-5 shrink-0 text-amber-400" />
+              Conflict of Interest Warning
+            </DialogTitle>
+            <DialogDescription className="text-slate-300 text-xs mt-1 leading-relaxed">
+              {conflictPrompt.reason || 'You are registered with the college department of one of the participating teams.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 text-xs">
+            <div className="p-3 rounded-lg bg-amber-950/40 border border-amber-500/30 text-amber-200">
+              <p className="font-semibold text-amber-300 mb-1">Palawan State University Athletic Policy:</p>
+              Facilitators with active team affiliation may only preside if an official Facilitator Shortage is declared by tournament commissioners.
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-300">
+                Shortage Override Justification <span className="text-amber-400">*</span>
+              </label>
+              <Input
+                placeholder="e.g., Shortage override authorized by tournament commissioner"
+                value={overrideReasonInput}
+                onChange={(e) => setOverrideReasonInput(e.target.value)}
+                className="bg-slate-950/80 border-white/20 text-white text-xs h-9"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex sm:justify-between gap-2 mt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setConflictPrompt({ isOpen: false, reason: '' })}
+              className="border-white/10 text-slate-300 hover:bg-white/5 text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                const reason = overrideReasonInput.trim() || 'Courtside facilitator shortage override invoked';
+                handleClaimLease(true, reason);
+              }}
+              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs uppercase"
+            >
+              Invoke Shortage Policy Override
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Conclude Match Confirmation & Certification Dialog */}
+      <Dialog open={isConcludeModalOpen} onOpenChange={setIsConcludeModalOpen}>
+        <DialogContent className="bg-slate-900 border-white/20 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-white font-black tracking-tight text-lg">
+              <CheckCircle2 className="size-5 shrink-0 text-emerald-400" />
+              Finalize & Certify Match
+            </DialogTitle>
+            <DialogDescription className="text-slate-300 text-xs mt-1">
+              Are you sure you want to conclude this match? The final score will be locked and standings will update across all tournament boards.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 text-xs">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/80 border border-white/10">
+              <div className="text-left">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Team A</span>
+                <p className="text-sm font-black text-white truncate max-w-[120px]">{match.team_a?.name}</p>
+                <p className="text-2xl font-mono font-black text-orange-400">{match.team_a_score}</p>
+              </div>
+              <div className="text-center px-2">
+                <Badge variant="outline" className="border-white/20 text-slate-300 text-[10px] uppercase font-mono">
+                  FINAL
+                </Badge>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Team B</span>
+                <p className="text-sm font-black text-white truncate max-w-[120px]">{match.team_b?.name}</p>
+                <p className="text-2xl font-mono font-black text-cyan-400">{match.team_b_score}</p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-300">
+                Official Certification Notes (Optional)
+              </label>
+              <Input
+                placeholder="e.g., Concluded smoothly, no protests submitted."
+                value={concludeNotes}
+                onChange={(e) => setConcludeNotes(e.target.value)}
+                className="bg-slate-950/80 border-white/20 text-white text-xs h-9"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex sm:justify-between gap-2 mt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsConcludeModalOpen(false)}
+              className="border-white/10 text-slate-300 hover:bg-white/5 text-xs"
+              disabled={isConcluding}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleConcludeMatch}
+              disabled={isConcluding}
+              className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-xs uppercase"
+            >
+              {isConcluding ? 'Finalizing...' : 'Confirm & Conclude Match'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Match Governance & Officials Accountability Record */}
+      <Dialog open={showOfficialsCard} onOpenChange={setShowOfficialsCard}>
+        <DialogContent className="bg-slate-900 border-white/20 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-white font-black tracking-tight text-lg">
+              <ShieldCheck className="size-5 shrink-0 text-orange-400" />
+              Officials & Accountability Audit
+            </DialogTitle>
+            <DialogDescription className="text-slate-300 text-xs mt-1">
+              PSU SportsTrack courtside record ensuring full transparency and match certification traceability.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 text-xs">
+            <div className="p-3 rounded-lg bg-slate-950/80 border border-white/10 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Match Round:</span>
+                <span className="font-bold text-white">{match.round}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Official Scorekeeper:</span>
+                <span className="font-bold text-orange-400">
+                  {match.official_scorekeeper?.full_name || 'Not yet recorded'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Active Console Lease:</span>
+                <span className="font-mono text-emerald-400">
+                  {isHoldingLease ? (profile?.full_name || 'You (Presiding)') : (match.active_scorekeeper?.full_name || 'No active lease')}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Finalized By:</span>
+                <span className="font-bold text-white">
+                  {match.finalizer?.full_name || (match.status === 'Completed' ? 'System Certified' : 'Pending')}
+                </span>
+              </div>
+              {match.finalized_at && (
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">Finalized At:</span>
+                  <span className="font-mono text-slate-300">
+                    {new Date(match.finalized_at).toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="p-3 rounded-lg bg-slate-950/80 border border-white/10 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Conflict Governance:</span>
+                {match.conflict_flag ? (
+                  <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px]">
+                    Shortage Policy Override
+                  </Badge>
+                ) : (
+                  <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px]">
+                    Neutral Scorer Verified
+                  </Badge>
+                )}
+              </div>
+              {match.conflict_notes && (
+                <div className="text-[11px] text-amber-300 bg-amber-950/30 p-2 rounded border border-amber-500/20">
+                  <span className="font-bold">Override Note:</span> {match.conflict_notes}
+                </div>
+              )}
+              {match.scorer_notes && (
+                <div className="text-[11px] text-slate-300 bg-slate-900/60 p-2 rounded border border-white/5">
+                  <span className="font-bold">Scorer Note:</span> {match.scorer_notes}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowOfficialsCard(false)}
+              className="w-full border-white/10 text-slate-300 hover:bg-white/5 text-xs"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Global Login Dialog for Unauthenticated Courtside Terminals */}
       <LoginModal />

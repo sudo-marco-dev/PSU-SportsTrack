@@ -66,7 +66,7 @@ export const AdminDashboard = () => {
         supabase.from('verification_documents').select('*', { count: 'exact', head: true }).eq('status', 'Pending'),
         supabase.from('verification_documents').select('*', { count: 'exact', head: true }).eq('status', 'Approved'),
         supabase.from('verification_documents').select('*', { count: 'exact', head: true }).eq('status', 'Rejected'),
-        supabase.from('users').select('*', { count: 'exact', head: true }).in('role', ['player_student', 'player_faculty', 'Player']),
+        supabase.from('users').select('*', { count: 'exact', head: true }).in('role', ['player_student', 'player_faculty', 'player_staff', 'Player']),
         supabase.from('tournaments').select('*').eq('status', 'Draft').or('is_deleted.is.null,is_deleted.eq.false').order('created_at', { ascending: false }),
         supabase.from('tournaments').select('*', { count: 'exact', head: true }).eq('is_deleted', true),
         supabase.from('teams').select('*', { count: 'exact', head: true }).eq('is_deleted', true),

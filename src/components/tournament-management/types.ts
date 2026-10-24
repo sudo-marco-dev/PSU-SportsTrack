@@ -21,6 +21,7 @@ export type Tournament = {
   is_deleted?: boolean;
   deleted_at?: string | null;
   deleted_by?: string | null;
+  enforce_conflict_of_interest?: boolean;
 };
 
 export type PendingTeam = {

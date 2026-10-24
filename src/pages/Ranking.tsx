@@ -37,6 +37,7 @@ interface RankedEntity {
   matchesPlayed: number;
   wins: number;
   losses: number;
+  draws?: number;
   winRate: number;
   pointsFor: number;
   pointsAgainst: number;
@@ -58,7 +59,7 @@ export const Ranking = () => {
   const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null);
 
   // Filter States
-  const [tournamentType, setTournamentType] = useState<string>('all');
+  const [tournamentType, setTournamentType] = useState<string>('Championship');
   const [sportCategory, setSportCategory] = useState<string>('all');
   const [winMetric, setWinMetric] = useState<string>('overall_wins');
   const [academicYear, setAcademicYear] = useState<string>('current');
@@ -93,7 +94,8 @@ export const Ranking = () => {
           .or('is_deleted.is.null,is_deleted.eq.false'),
         supabase
           .from('matches')
-          .select('id, tournament_id, round, status, team_a_id, team_b_id, team_a_score, team_b_score, match_time, venue, team_a:team_a_id(name), team_b:team_b_id(name)'),
+          .select('id, tournament_id, round, status, team_a_id, team_b_id, team_a_score, team_b_score, match_time, venue, team_a:team_a_id(name), team_b:team_b_id(name)')
+          .or('is_deleted.is.null,is_deleted.eq.false'),
         supabase
           .from('player_stars')
           .select('id, player_id, tournament_id, star_type'),
@@ -125,7 +127,7 @@ export const Ranking = () => {
   };
 
   const handleResetFilters = () => {
-    setTournamentType('all');
+    setTournamentType('Championship');
     setSportCategory('all');
     setWinMetric('overall_wins');
     setAcademicYear('current');
@@ -153,7 +155,12 @@ export const Ranking = () => {
         const tType = (t.type || '').toLowerCase();
         const tName = (t.name || '').toLowerCase();
         const target = tournamentType.toLowerCase();
-        if (!tType.includes(target) && !tName.includes(target)) {
+        if (target === 'championship') {
+          // Strictly isolate friendlies and scrimmages from official championships
+          if (tType.includes('friendly') || tType.includes('scrimmage') || tName.includes('friendly') || tName.includes('scrimmage')) {
+            return false;
+          }
+        } else if (!tType.includes(target) && !tName.includes(target)) {
           return false;
         }
       }
@@ -234,45 +241,6 @@ export const Ranking = () => {
       const tourMatches = relevantMatches.filter(m => m.tournament_id === tourn.id);
       if (tourMatches.length === 0) return;
 
-      const isRoundRobinOnly = tourMatches.every(
-        m => (m.round || '').toLowerCase().includes('round robin') && !m.next_match_id
-      );
-
-      if (isRoundRobinOnly) {
-        if (tourMatches.every(m => m.status === 'Completed')) {
-          const rrStats = new Map<string, { wins: number; pf: number; pa: number }>();
-          tourMatches.forEach(m => {
-            if (m.team_a_id && !rrStats.has(m.team_a_id)) rrStats.set(m.team_a_id, { wins: 0, pf: 0, pa: 0 });
-            if (m.team_b_id && !rrStats.has(m.team_b_id)) rrStats.set(m.team_b_id, { wins: 0, pf: 0, pa: 0 });
-            const sA = m.team_a_score || 0;
-            const sB = m.team_b_score || 0;
-            const tA = m.team_a_id ? rrStats.get(m.team_a_id) : undefined;
-            const tB = m.team_b_id ? rrStats.get(m.team_b_id) : undefined;
-            if (tA) {
-              tA.pf += sA;
-              tA.pa += sB;
-              if (sA > sB) tA.wins += 1;
-            }
-            if (tB) {
-              tB.pf += sB;
-              tB.pa += sA;
-              if (sB > sA) tB.wins += 1;
-            }
-          });
-          const sortedRR = Array.from(rrStats.entries()).sort((a, b) => {
-            if (b[1].wins !== a[1].wins) return b[1].wins - a[1].wins;
-            const diffA = a[1].pf - a[1].pa;
-            const diffB = b[1].pf - b[1].pa;
-            if (diffB !== diffA) return diffB - diffA;
-            return b[1].pf - a[1].pf;
-          });
-          if (sortedRR[0]?.[0]) tournChampions.set(tourn.id, sortedRR[0][0]);
-          if (sortedRR[1]?.[0]) tournRunnerUps.set(tourn.id, sortedRR[1][0]);
-          if (sortedRR[2]?.[0]) tournBronze.set(tourn.id, sortedRR[2][0]);
-        }
-        return;
-      }
-
       // Detect Finals match (Grand Finals for Double Elim, or Finals for Single Elim)
       const finalsMatch = tourMatches.find(m => {
         const r = (m.round || '').toLowerCase();
@@ -288,7 +256,51 @@ export const Ranking = () => {
         );
       });
 
-      if (finalsMatch && (finalsMatch.status === 'Completed' || (finalsMatch.team_a_score || 0) > 0 || (finalsMatch.team_b_score || 0) > 0)) {
+      const isRoundRobinTournament = !finalsMatch || tourMatches.every(
+        m => (m.round || '').toLowerCase().includes('round robin') && !m.next_match_id
+      );
+
+      if (isRoundRobinTournament) {
+        const completedRRMatches = tourMatches.filter(m => m.status === 'Completed');
+        if (completedRRMatches.length > 0) {
+          const rrStats = new Map<string, { wins: number; draws: number; pf: number; pa: number }>();
+          completedRRMatches.forEach(m => {
+            if (m.team_a_id && !rrStats.has(m.team_a_id)) rrStats.set(m.team_a_id, { wins: 0, draws: 0, pf: 0, pa: 0 });
+            if (m.team_b_id && !rrStats.has(m.team_b_id)) rrStats.set(m.team_b_id, { wins: 0, draws: 0, pf: 0, pa: 0 });
+            const sA = m.team_a_score || 0;
+            const sB = m.team_b_score || 0;
+            const tA = m.team_a_id ? rrStats.get(m.team_a_id) : undefined;
+            const tB = m.team_b_id ? rrStats.get(m.team_b_id) : undefined;
+            if (tA) {
+              tA.pf += sA;
+              tA.pa += sB;
+              if (sA > sB) tA.wins += 1;
+              else if (sA === sB) tA.draws += 1;
+            }
+            if (tB) {
+              tB.pf += sB;
+              tB.pa += sA;
+              if (sB > sA) tB.wins += 1;
+              else if (sB === sA) tB.draws += 1;
+            }
+          });
+          const sortedRR = Array.from(rrStats.entries()).sort((a, b) => {
+            const ptsA = a[1].wins * 3 + a[1].draws;
+            const ptsB = b[1].wins * 3 + b[1].draws;
+            if (ptsB !== ptsA) return ptsB - ptsA;
+            const diffA = a[1].pf - a[1].pa;
+            const diffB = b[1].pf - b[1].pa;
+            if (diffB !== diffA) return diffB - diffA;
+            return b[1].pf - a[1].pf;
+          });
+          if (sortedRR[0]?.[0]) tournChampions.set(tourn.id, sortedRR[0][0]);
+          if (sortedRR[1]?.[0]) tournRunnerUps.set(tourn.id, sortedRR[1][0]);
+          if (sortedRR[2]?.[0]) tournBronze.set(tourn.id, sortedRR[2][0]);
+        }
+        return;
+      }
+
+      if (finalsMatch && finalsMatch.status === 'Completed') {
         const scoreA = finalsMatch.team_a_score || 0;
         const scoreB = finalsMatch.team_b_score || 0;
         const winnerId = scoreA >= scoreB ? finalsMatch.team_a_id : finalsMatch.team_b_id;
@@ -303,7 +315,7 @@ export const Ranking = () => {
         return r.includes('bronze') || r.includes('3rd') || r.includes('lower final');
       });
 
-      if (bronzeMatch && (bronzeMatch.status === 'Completed' || (bronzeMatch.team_a_score || 0) > 0 || (bronzeMatch.team_b_score || 0) > 0)) {
+      if (bronzeMatch && bronzeMatch.status === 'Completed') {
         const scoreA = bronzeMatch.team_a_score || 0;
         const scoreB = bronzeMatch.team_b_score || 0;
         const isLowerFinal = (bronzeMatch.round || '').toLowerCase().includes('lower final');
@@ -424,9 +436,9 @@ export const Ranking = () => {
         }
       });
 
-      // Process match scores and records
+      // Process match scores and records (Completed matches only)
       relevantMatches.forEach(m => {
-        if (m.status === 'Completed' || (m.team_a_score || 0) > 0 || (m.team_b_score || 0) > 0) {
+        if (m.status === 'Completed') {
           const scoreA = m.team_a_score || 0;
           const scoreB = m.team_b_score || 0;
 
@@ -443,6 +455,7 @@ export const Ranking = () => {
             statA.pointsAgainst += scoreB;
             if (scoreA > scoreB) statA.wins += 1;
             else if (scoreA < scoreB) statA.losses += 1;
+            else statA.draws = (statA.draws || 0) + 1;
           }
 
           if (colB && collegeStats.has(colB.id)) {
@@ -452,6 +465,7 @@ export const Ranking = () => {
             statB.pointsAgainst += scoreA;
             if (scoreB > scoreA) statB.wins += 1;
             else if (scoreB < scoreA) statB.losses += 1;
+            else statB.draws = (statB.draws || 0) + 1;
           }
         }
       });
@@ -459,7 +473,7 @@ export const Ranking = () => {
       let results = Array.from(collegeStats.values()).map(c => ({
         ...c,
         pointDiff: c.pointsFor - c.pointsAgainst,
-        winRate: c.matchesPlayed > 0 ? (c.wins / c.matchesPlayed) * 100 : 0
+        winRate: c.matchesPlayed > 0 ? ((c.wins + 0.5 * (c.draws || 0)) / c.matchesPlayed) * 100 : 0
       }));
 
       // If sport filter is active, only show colleges active in that sport
@@ -559,9 +573,9 @@ export const Ranking = () => {
         }
       });
 
-      // Process match scores and records
+      // Process match scores and records (Completed matches only)
       relevantMatches.forEach(m => {
-        if (m.status === 'Completed' || (m.team_a_score || 0) > 0 || (m.team_b_score || 0) > 0) {
+        if (m.status === 'Completed') {
           const scoreA = m.team_a_score || 0;
           const scoreB = m.team_b_score || 0;
 
@@ -581,6 +595,7 @@ export const Ranking = () => {
             statA.pointsAgainst += scoreB;
             if (scoreA > scoreB) statA.wins += 1;
             else if (scoreA < scoreB) statA.losses += 1;
+            else statA.draws = (statA.draws || 0) + 1;
           }
 
           if (clB && clusterStats.has(clB.id)) {
@@ -590,6 +605,7 @@ export const Ranking = () => {
             statB.pointsAgainst += scoreA;
             if (scoreB > scoreA) statB.wins += 1;
             else if (scoreB < scoreA) statB.losses += 1;
+            else statB.draws = (statB.draws || 0) + 1;
           }
         }
       });
@@ -597,7 +613,7 @@ export const Ranking = () => {
       const results = Array.from(clusterStats.values()).map(c => ({
         ...c,
         pointDiff: c.pointsFor - c.pointsAgainst,
-        winRate: c.matchesPlayed > 0 ? (c.wins / c.matchesPlayed) * 100 : 0
+        winRate: c.matchesPlayed > 0 ? ((c.wins + 0.5 * (c.draws || 0)) / c.matchesPlayed) * 100 : 0
       }));
 
       // Search filter
@@ -741,13 +757,13 @@ export const Ranking = () => {
       }
     });
 
-    // Process squad matches
+    // Process squad matches (Completed matches only)
     relevantMatches.forEach(m => {
-      if (m.status === 'Completed' || (m.team_a_score || 0) > 0 || (m.team_b_score || 0) > 0) {
+      if (m.status === 'Completed') {
         const scoreA = m.team_a_score || 0;
         const scoreB = m.team_b_score || 0;
         const tourn = tournMap.get(m.tournament_id);
-        const sport = tourn?.sport || 'General';
+        const sport = tourn?.sport || 'Basketball';
 
         const teamAObj = relevantTeams.find(t => t.id === m.team_a_id);
         const teamBObj = relevantTeams.find(t => t.id === m.team_b_id);
@@ -763,6 +779,7 @@ export const Ranking = () => {
             statA.pointsAgainst += scoreB;
             if (scoreA > scoreB) statA.wins += 1;
             else if (scoreA < scoreB) statA.losses += 1;
+            else statA.draws = (statA.draws || 0) + 1;
           }
         }
 
@@ -775,6 +792,7 @@ export const Ranking = () => {
             statB.pointsAgainst += scoreA;
             if (scoreB > scoreA) statB.wins += 1;
             else if (scoreB < scoreA) statB.losses += 1;
+            else statB.draws = (statB.draws || 0) + 1;
           }
         }
       }
@@ -782,7 +800,7 @@ export const Ranking = () => {
 
     const allList = Array.from(teamStatsMap.values()).map(t => {
       const pointDiff = t.pointsFor - t.pointsAgainst;
-      const winRate = t.matchesPlayed > 0 ? (t.wins / t.matchesPlayed) * 100 : 0;
+      const winRate = t.matchesPlayed > 0 ? ((t.wins + 0.5 * (t.draws || 0)) / t.matchesPlayed) * 100 : 0;
       return {
         ...t,
         pointDiff,
@@ -994,6 +1012,7 @@ export const Ranking = () => {
                   <SelectValue placeholder="All Tournaments" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
+                  <SelectItem value="Championship" className="text-xs font-medium">Championship Competitions</SelectItem>
                   <SelectItem value="all" className="text-xs font-medium">All Competitions</SelectItem>
                   <SelectItem value="Binturungan" className="text-xs font-medium">Binturungan</SelectItem>
                   <SelectItem value="STRASUC" className="text-xs font-medium">STRASUC</SelectItem>

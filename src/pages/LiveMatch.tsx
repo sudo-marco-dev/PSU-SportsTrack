@@ -18,6 +18,7 @@ import {
   Star,
   MapPin,
   ShieldCheck,
+  ShieldAlert,
   Radio,
   Check,
   X,
@@ -37,7 +38,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription
+  DialogDescription,
+  DialogFooter
 } from '@/components/ui/dialog';
 import { offlineQueue } from '@/lib/offlineQueue';
 import { FacilitatorManagementModal } from '@/components/admin/FacilitatorManagementModal';
@@ -69,6 +71,7 @@ type Match = {
   team_b_id: string | null;
   team_a_score: number;
   team_b_score: number;
+  winner_team_id?: string | null;
   status: 'Scheduled' | 'Ongoing' | 'Completed';
   round: string;
   venue?: string | null;
@@ -85,6 +88,14 @@ type Match = {
   loser_next_match_slot?: 'team_a' | 'team_b' | null;
   active_scorekeeper_id?: string | null;
   lease_expires_at?: string | null;
+  official_scorekeeper_id?: string | null;
+  official_scorekeeper?: { full_name: string } | null;
+  finalized_by?: string | null;
+  finalizer?: { full_name: string } | null;
+  finalized_at?: string | null;
+  scorer_notes?: string | null;
+  conflict_flag?: boolean;
+  conflict_notes?: string | null;
 };
 
 type EligiblePlayer = {
@@ -134,10 +145,12 @@ type IncomingClaimRequest = {
 export const LiveMatch = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
-  const { user, profile, isSuperAdmin, isFacilitator } = useAuth();
+  const { user, profile, isSuperAdmin, isFacilitator, isOfficial } = useAuth();
   const [match, setMatch] = useState<Match | null>(null);
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [conflictPrompt, setConflictPrompt] = useState<{ isOpen: boolean; reason: string }>({ isOpen: false, reason: '' });
+  const [shortageReason, setShortageReason] = useState('');
   const [customEvent, setCustomEvent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [eligiblePlayers, setEligiblePlayers] = useState<EligiblePlayer[]>([]);
@@ -382,6 +395,43 @@ export const LiveMatch = () => {
     };
   }, [match?.active_scorekeeper_id, user?.id, profile?.full_name]);
 
+  // Resolve official scorekeeper and finalizer display names dynamically
+  const [officialScorekeeperName, setOfficialScorekeeperName] = useState<string | null>(null);
+  const [finalizerName, setFinalizerName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const idsToFetch = [
+      match?.official_scorekeeper_id,
+      match?.finalized_by,
+    ].filter(Boolean) as string[];
+
+    if (idsToFetch.length === 0) {
+      setOfficialScorekeeperName(null);
+      setFinalizerName(null);
+      return;
+    }
+
+    let isMounted = true;
+    supabase
+      .from('users')
+      .select('id, full_name')
+      .in('id', idsToFetch)
+      .then(({ data }) => {
+        if (!isMounted || !data) return;
+        const map = new Map(data.map((u) => [u.id, u.full_name]));
+        if (match?.official_scorekeeper_id && map.has(match.official_scorekeeper_id)) {
+          setOfficialScorekeeperName(map.get(match.official_scorekeeper_id)!);
+        }
+        if (match?.finalized_by && map.has(match.finalized_by)) {
+          setFinalizerName(map.get(match.finalized_by)!);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [match?.official_scorekeeper_id, match?.finalized_by]);
+
   // Timeout ticker for the claim request
   useEffect(() => {
     if (!isRequestingClaim) return;
@@ -403,8 +453,8 @@ export const LiveMatch = () => {
 
   const broadcastChannelRef = useRef<any>(null);
 
-  // Strict Governance: ONLY Facilitators and Superadmins can score games. Coaches are strictly read-only!
-  const isAuthorizedScorekeeper = isFacilitator || isSuperAdmin;
+  // Strict Governance: ONLY Facilitators, Officials, and Superadmins can score games. Coaches are strictly read-only!
+  const isAuthorizedScorekeeper = Boolean(isFacilitator || isSuperAdmin || isOfficial);
   const isAuthorized = isAuthorizedScorekeeper && (isHoldingLease || isSuperAdmin);
 
   useEffect(() => {
@@ -762,28 +812,47 @@ export const LiveMatch = () => {
     };
   }, [matchId]);
 
-  const handleClaimLease = async (force: boolean = false) => {
+  const handleClaimLease = async (force: boolean = false, overrideReason?: string) => {
     if (!isAuthorizedScorekeeper || !user || !matchId) return;
 
-    const { error } = await supabase
-      .from('matches')
-      .update({
-        active_scorekeeper_id: user.id,
-        lease_expires_at: new Date(Date.now() + 90000).toISOString()
-      })
-      .eq('id', matchId);
+    try {
+      const { data, error } = await supabase.rpc('claim_match_lease', {
+        p_match_id: matchId,
+        p_force: force,
+        p_override_reason: overrideReason || null,
+      });
 
-    if (error) {
-      toast.error("Failed to claim scoring console: " + error.message);
-    } else {
-      setIsHoldingLease(true);
-      setActiveScorekeeperName(profile?.full_name || 'You');
-      setMatch(prev => prev ? {
-        ...prev,
-        active_scorekeeper_id: user.id,
-        lease_expires_at: new Date(Date.now() + 90000).toISOString()
-      } : prev);
-      toast.success(force ? "Superadmin force-claimed scoring console!" : "Scoring console lease acquired!");
+      if (error) {
+        toast.error('Failed to claim scoring console: ' + error.message);
+        return;
+      }
+
+      const result = Array.isArray(data) ? data[0] : data;
+      if (!result) {
+        toast.error('Unexpected response while claiming console.');
+        return;
+      }
+
+      if (result.conflict) {
+        setConflictPrompt({
+          isOpen: true,
+          reason: result.message || 'Collegiate affiliation conflict detected.',
+        });
+        toast.warning(result.message || 'Conflict of Interest detected. Facilitator shortage override required.');
+        return;
+      }
+
+      if (result.success) {
+        setIsHoldingLease(true);
+        setConflictPrompt({ isOpen: false, reason: '' });
+        setActiveScorekeeperName(profile?.full_name || 'You');
+        toast.success(result.message || (force ? 'Superadmin force-claimed scoring console!' : 'Scoring console lease acquired!'));
+        fetchInitialData();
+      } else {
+        toast.error(result.message || 'Failed to claim console lease.');
+      }
+    } catch (err: any) {
+      toast.error('Error claiming console: ' + (err?.message || 'Unknown error'));
     }
   };
 
@@ -1014,6 +1083,18 @@ export const LiveMatch = () => {
     if (!navigator.onLine) {
       offlineQueue.bufferScore(match.id, newScoreA, newScoreB);
       const offlineEvt = offlineQueue.bufferEvent(match.id, scoreDescription);
+      if (selectedPlayer) {
+        offlineQueue.bufferScoreEvent(match.id, {
+          match_id: match.id,
+          team_id: teamId,
+          player_id: selectedPlayer.player_id,
+          jersey_number: selectedPlayer.jersey_number !== null && selectedPlayer.jersey_number !== undefined ? String(selectedPlayer.jersey_number) : null,
+          points: points,
+          delta: points,
+          action_type: actionType,
+          stat_type: `PTS_${points}`,
+        });
+      }
       setMatch(prev => prev ? { ...prev, team_a_score: newScoreA, team_b_score: newScoreB } : prev);
       setEvents(prev => [offlineEvt, ...prev]);
       setPendingOfflineCount(offlineQueue.getPendingCount(match.id));
@@ -1064,6 +1145,7 @@ export const LiveMatch = () => {
       action_type: actionType,
       stat_type: `PTS_${points}`,
       delta: points,
+      recorded_by: user?.id || null,
     });
 
     // If player credited, upsert match_player_stats
@@ -1193,6 +1275,9 @@ export const LiveMatch = () => {
     if (!navigator.onLine) {
       offlineQueue.bufferScore(match.id, newScoreA, newScoreB);
       const offlineEvt = offlineQueue.bufferEvent(match.id, deductDescription);
+      if (deductPlayerId) {
+        offlineQueue.undoLastScoreEvent(match.id, deductPlayerId, deductPoints);
+      }
       setMatch(prev => prev ? { ...prev, team_a_score: newScoreA, team_b_score: newScoreB } : prev);
       setEvents(prev => [offlineEvt, ...prev]);
       setPendingOfflineCount(offlineQueue.getPendingCount(match.id));
@@ -1243,6 +1328,7 @@ export const LiveMatch = () => {
       action_type: 'correction',
       stat_type: 'DEDUCT',
       delta: -deductPoints,
+      recorded_by: user?.id || null,
     });
 
     // Rollback player points if assigned
@@ -1307,10 +1393,11 @@ export const LiveMatch = () => {
   const handleUpdateStatus = async (newStatus: string) => {
     if (!isAuthorizedScorekeeper || !match) return;
 
-    // Tie Guard: Single elimination matches cannot end in a tie
+    // Tie Guard: Bracket elimination matches cannot end in a tie without an awarded winner
     if (newStatus === 'Completed') {
-      if (match.team_a_score === match.team_b_score) {
-        toast.error('Cannot complete a match with a tie score! Please break the tie first.');
+      const isKnockoutMatch = Boolean(match.next_match_id);
+      if (isKnockoutMatch && match.team_a_score === match.team_b_score && !match.winner_team_id) {
+        toast.error('Cannot complete an elimination bracket match with a tie score! Please break the tie first.');
         return;
       }
     }
@@ -1324,87 +1411,42 @@ export const LiveMatch = () => {
       return;
     }
 
+    const updatePayload: Record<string, any> = { status: newStatus };
+    if (newStatus === 'Completed') {
+      updatePayload.finalized_by = user?.id || null;
+      updatePayload.finalized_at = new Date().toISOString();
+      updatePayload.is_live = false;
+    }
+
     const { error } = await supabase
       .from('matches')
-      .update({ status: newStatus })
+      .update(updatePayload)
       .eq('id', match.id);
 
     if (error) {
       toast.error('Failed to update status: ' + error.message);
     } else {
-      setMatch(prev => prev ? { ...prev, status: newStatus as Match['status'] } : prev);
+      setMatch(prev => prev ? {
+        ...prev,
+        status: newStatus as Match['status'],
+        finalized_by: newStatus === 'Completed' ? (user?.id || null) : prev.finalized_by,
+        finalized_at: newStatus === 'Completed' ? updatePayload.finalized_at : prev.finalized_at,
+      } : prev);
 
-      // Automatically advance Winner (and Loser for Double Elim / 3rd Place) into downstream bracket slots
+      // Automated Postgres trigger handles bracket advancement (trg_advance_bracket_on_match_completed)
       if (newStatus === 'Completed') {
         const isTeamAWinner = (match.team_a_score || 0) > (match.team_b_score || 0);
-        const winnerId = isTeamAWinner ? match.team_a_id : match.team_b_id;
         const winnerName = isTeamAWinner ? (match.team_a?.name || 'Team A') : (match.team_b?.name || 'Team B');
-        const loserId = isTeamAWinner ? match.team_b_id : match.team_a_id;
         const loserName = isTeamAWinner ? (match.team_b?.name || 'Team B') : (match.team_a?.name || 'Team A');
 
-        try {
-          if (match.next_match_id && winnerId) {
-            let targetField: 'team_a_id' | 'team_b_id' = 'team_a_id';
-            if (match.next_match_slot === 'team_a' || match.next_match_slot === 'team_b') {
-              targetField = match.next_match_slot === 'team_a' ? 'team_a_id' : 'team_b_id';
-            } else {
-              const [{ data: nextMatchRow }, { data: feeders }] = await Promise.all([
-                supabase.from('matches').select('id, team_a_id, team_b_id').eq('id', match.next_match_id).maybeSingle(),
-                supabase.from('matches').select('id').eq('next_match_id', match.next_match_id).order('id', { ascending: true }),
-              ]);
-              if (nextMatchRow) {
-                if (nextMatchRow.team_a_id && (nextMatchRow.team_a_id === match.team_a_id || nextMatchRow.team_a_id === match.team_b_id)) {
-                  targetField = 'team_a_id';
-                } else if (nextMatchRow.team_b_id && (nextMatchRow.team_b_id === match.team_a_id || nextMatchRow.team_b_id === match.team_b_id)) {
-                  targetField = 'team_b_id';
-                } else if (feeders && feeders.length >= 2) {
-                  const idx = feeders.findIndex((f) => f.id === match.id);
-                  targetField = idx === 1 ? 'team_b_id' : 'team_a_id';
-                } else {
-                  targetField = !nextMatchRow.team_a_id ? 'team_a_id' : 'team_b_id';
-                }
-              }
-            }
-            await supabase.from('matches').update({ [targetField]: winnerId }).eq('id', match.next_match_id);
-          }
-
-          if (match.loser_next_match_id && loserId) {
-            let loserField: 'team_a_id' | 'team_b_id' = 'team_a_id';
-            if (match.loser_next_match_slot === 'team_a' || match.loser_next_match_slot === 'team_b') {
-              loserField = match.loser_next_match_slot === 'team_a' ? 'team_a_id' : 'team_b_id';
-            } else {
-              const [{ data: loserMatchRow }, { data: loserFeeders }] = await Promise.all([
-                supabase.from('matches').select('id, team_a_id, team_b_id').eq('id', match.loser_next_match_id).maybeSingle(),
-                supabase.from('matches').select('id').eq('loser_next_match_id', match.loser_next_match_id).order('id', { ascending: true }),
-              ]);
-              if (loserMatchRow) {
-                if (loserMatchRow.team_a_id && (loserMatchRow.team_a_id === match.team_a_id || loserMatchRow.team_a_id === match.team_b_id)) {
-                  loserField = 'team_a_id';
-                } else if (loserMatchRow.team_b_id && (loserMatchRow.team_b_id === match.team_a_id || loserMatchRow.team_b_id === match.team_b_id)) {
-                  loserField = 'team_b_id';
-                } else if (loserFeeders && loserFeeders.length >= 2) {
-                  const idx = loserFeeders.findIndex((f) => f.id === match.id);
-                  loserField = idx === 1 ? 'team_b_id' : 'team_a_id';
-                } else {
-                  loserField = !loserMatchRow.team_a_id ? 'team_a_id' : 'team_b_id';
-                }
-              }
-            }
-            await supabase.from('matches').update({ [loserField]: loserId }).eq('id', match.loser_next_match_id);
-          }
-
-          if (match.next_match_id || match.loser_next_match_id) {
-            toast.success(
-              match.loser_next_match_id && loserId
-                ? `Match completed! ${winnerName} advances to the next round and ${loserName} moves to the Lower/3rd Place bracket.`
-                : `Match completed! ${winnerName} automatically advances to the next bracket round.`
-            );
-          } else {
-            toast.success(`Match completed! Official winner: ${winnerName}.`);
-          }
-        } catch (advErr) {
-          console.warn('Bracket progression warning:', advErr);
-          toast.success(`Match status updated to ${newStatus}`);
+        if (match.next_match_id || match.loser_next_match_id) {
+          toast.success(
+            match.loser_next_match_id
+              ? `Match completed! ${winnerName} advances to the next round and ${loserName} moves to the Lower/3rd Place bracket.`
+              : `Match completed! ${winnerName} automatically advances to the next bracket round.`
+          );
+        } else {
+          toast.success(`Match completed! Official winner: ${winnerName}.`);
         }
       } else {
         toast.success(`Match status updated to ${newStatus}`);
@@ -1830,6 +1872,61 @@ export const LiveMatch = () => {
             </div>
           </div>
         )}
+
+        {/* Match Officials & Governance Accountability Card */}
+        <div className="p-3.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs space-y-2.5">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="size-4 text-orange-400" />
+              <span className="font-bold uppercase tracking-wider text-[11px]">
+                Match Governance & Officials Accountability
+              </span>
+            </div>
+            {match.conflict_flag ? (
+              <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px]">
+                Shortage Policy Override
+              </Badge>
+            ) : (
+              <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px]">
+                Neutral Scorer Verified
+              </Badge>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+            <div className="p-2.5 rounded-lg bg-slate-950/60 border border-white/5">
+              <span className="text-slate-400 block text-[10px] uppercase font-bold">Official Scorekeeper</span>
+              <span className="font-semibold text-orange-400">
+                {officialScorekeeperName || (match.official_scorekeeper_id ? 'Authenticated Scorer' : 'Unassigned')}
+              </span>
+            </div>
+            <div className="p-2.5 rounded-lg bg-slate-950/60 border border-white/5">
+              <span className="text-slate-400 block text-[10px] uppercase font-bold">Active Console Lease</span>
+              <span className="font-semibold text-emerald-400">
+                {isHoldingLease ? 'You (Presiding)' : (activeScorekeeperName || 'No Active Lease')}
+              </span>
+            </div>
+            <div className="p-2.5 rounded-lg bg-slate-950/60 border border-white/5">
+              <span className="text-slate-400 block text-[10px] uppercase font-bold">Match Finalizer</span>
+              <span className="font-semibold text-white">
+                {match.status === 'Completed'
+                  ? (finalizerName || 'Certified Final')
+                  : 'Match in Progress'}
+              </span>
+            </div>
+          </div>
+
+          {match.conflict_notes && (
+            <div className="text-[10px] text-amber-300 bg-amber-950/30 p-2 rounded border border-amber-500/20">
+              <span className="font-bold">Shortage Policy Override Justification:</span> {match.conflict_notes}
+            </div>
+          )}
+          {match.scorer_notes && (
+            <div className="text-[10px] text-slate-300 bg-slate-950/60 p-2 rounded border border-white/5">
+              <span className="font-bold">Scorer Certification Note:</span> {match.scorer_notes}
+            </div>
+          )}
+        </div>
 
         {/* MVP Recognition Center (Visible to EVERYONE once awarded) */}
         {awardedMVP && (
@@ -2604,6 +2701,60 @@ export const LiveMatch = () => {
         onOpenChange={setIsFacilitatorModalOpen}
         onUpdated={fetchInitialData}
       />
+
+      {/* Conflict of Interest & Shortage Policy Override Dialog */}
+      <Dialog
+        open={conflictPrompt.isOpen}
+        onOpenChange={(open) => !open && setConflictPrompt({ isOpen: false, reason: '' })}
+      >
+        <DialogContent className="max-w-md bg-slate-950 border-amber-500/30 text-white p-6 rounded-2xl shadow-2xl">
+          <DialogHeader className="space-y-2">
+            <div className="flex items-center gap-2 text-amber-400">
+              <ShieldAlert className="size-5 shrink-0" />
+              <DialogTitle className="text-lg font-black uppercase tracking-tight">
+                Conflict of Interest Warning
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-slate-300 leading-relaxed">
+              {conflictPrompt.reason}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 text-xs">
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-200 text-[11px] leading-relaxed">
+              <strong>Facilitator Shortage Policy:</strong> If no other neutral facilitator or official is available courtside, you may proceed to score this match under the shortage exception. Your official name and this override will be permanently attached to the certified box score audit log.
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                Shortage Justification Note (Optional)
+              </label>
+              <Input
+                placeholder="e.g., Sole assigned scorekeeper on court 2"
+                value={shortageReason}
+                onChange={(e) => setShortageReason(e.target.value)}
+                className="bg-slate-900 border-white/10 text-white text-xs h-9"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 mt-2">
+            <Button
+              variant="ghost"
+              onClick={() => setConflictPrompt({ isOpen: false, reason: '' })}
+              className="text-slate-400 hover:text-white text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => handleClaimLease(true, shortageReason.trim() || undefined)}
+              className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs"
+            >
+              Override & Claim Console
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Floating In-App Score Widget (Pinned when scrolling) */}
       {isScrolledPastScoreboard && match && (
