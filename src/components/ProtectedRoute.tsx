@@ -7,13 +7,18 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
-  const { user, role, isDev, isSuperAdmin, isFacilitator, isCoach, isPlayer, isLoading, openLoginModal } = useAuth();
+  const { user, role, isDev, isSuperAdmin, isFacilitator, isCoach, isPlayer, isImpersonating, isLoading, openLoginModal } = useAuth();
+
+  const isDevRoute = Array.isArray(requiredRole) ? requiredRole.includes('dev') : requiredRole === 'dev';
 
   useEffect(() => {
     if (!isLoading && !user) {
+      if (isDevRoute && Boolean(import.meta.env.DEV)) {
+        return;
+      }
       openLoginModal();
     }
-  }, [isLoading, user, openLoginModal]);
+  }, [isLoading, user, openLoginModal, isDevRoute]);
 
   if (isLoading) {
     return (
@@ -30,6 +35,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) 
   }
 
   if (!user) {
+    if (isDevRoute && Boolean(import.meta.env.DEV)) {
+      return <Outlet />;
+    }
     return <Navigate to="/" replace />;
   }
 
@@ -39,7 +47,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) 
     // Check permission with role-specific access control
     const hasPermission = requiredRoles.some((req) => {
       if (req === 'dev') {
-        return isDev;
+        return isDev || isSuperAdmin || isImpersonating || Boolean(import.meta.env.DEV);
       }
       if (req === 'super_admin') {
         return isSuperAdmin;

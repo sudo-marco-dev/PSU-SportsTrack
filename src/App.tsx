@@ -68,6 +68,11 @@ function AppRoutes() {
           <Route path="/about" element={<About />} />
           <Route path="/match/:matchId" element={<LiveMatch />} />
 
+          {/* Platform Developer Sandbox */}
+          <Route element={<ProtectedRoute requiredRole="dev" />}>
+            <Route path="/dev" element={<DevSandbox />} />
+          </Route>
+
           {/* Protected Routes Requiring Authentication */}
           <Route element={<ProtectedRoute />}>
             <Route path="/profile" element={<Profile />} />
@@ -81,11 +86,6 @@ function AppRoutes() {
               <Route path="/admin/verifications" element={<SystemVerifications />} />
               <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
               <Route path="/admin/recovery" element={<AdminRecovery />} />
-            </Route>
-
-            {/* Platform Developer Isolated Protected Route */}
-            <Route element={<ProtectedRoute requiredRole="dev" />}>
-              <Route path="/dev" element={<DevSandbox />} />
             </Route>
 
             <Route element={<ProtectedRoute requiredRole="coach" />}>

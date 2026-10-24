@@ -24,12 +24,13 @@ import {
   Search
 } from 'lucide-react';
 import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { toast } from 'sonner';
 
 export const AppLayout = () => {
-  const { user, role, isDev, isSuperAdmin, isFacilitator, isCoach, isPlayer, signOut, openLoginModal } = useAuth();
+  const { user, role, isDev, isSuperAdmin, isFacilitator, isCoach, isPlayer, isImpersonating, impersonatedPersona, clearImpersonation, signOut, openLoginModal } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -76,7 +77,7 @@ export const AppLayout = () => {
     ...(user ? [
       { name: 'Scouting Hub', href: '/scouting', icon: Search },
     ] : []),
-    ...(isDev ? [
+    ...(isDev || Boolean(import.meta.env.DEV) || isImpersonating ? [
       { name: 'Dev Sandbox', href: '/dev', icon: Terminal },
     ] : []),
     ...(isSuperAdmin ? [
@@ -284,6 +285,54 @@ export const AppLayout = () => {
                   </Button>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Active Impersonation Strip (Dev Mode Persona Switcher) */}
+        {isImpersonating && impersonatedPersona && (
+          <div className="bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-purple-500/15 border-b border-orange-500/30 px-3.5 sm:px-6 py-2.5 backdrop-blur-md sticky top-16 md:top-0 z-20 flex flex-wrap items-center justify-between gap-2 shadow-sm text-xs">
+            <div className="flex items-center gap-2 flex-wrap min-w-0">
+              <span className="flex items-center gap-1.5 font-black uppercase text-[10px] tracking-widest text-orange-600 dark:text-orange-400 shrink-0">
+                <span className="size-2 rounded-full bg-orange-500 animate-ping inline-block" />
+                Impersonating:
+              </span>
+              <span className="font-bold text-slate-900 dark:text-white truncate">
+                {impersonatedPersona.full_name}
+              </span>
+              <Badge className={`text-[9px] uppercase font-black px-1.5 py-0.2 border ${impersonatedPersona.badge_color || 'bg-orange-500/10 text-orange-600 border-orange-500/30'}`}>
+                {impersonatedPersona.persona_label || formatRole(role)}
+              </Badge>
+              {impersonatedPersona.college_name && (
+                <span className="hidden sm:inline text-slate-500 dark:text-slate-400 text-[11px] truncate max-w-xs">
+                  • {impersonatedPersona.college_name}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate(getDashboardHref())}
+                className="h-7 text-[10px] font-bold uppercase rounded-lg border-orange-500/40 text-orange-600 dark:text-orange-300 hover:bg-orange-500/10 cursor-pointer px-2"
+              >
+                Role View
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate('/dev')}
+                className="h-7 text-[10px] font-bold uppercase rounded-lg border-slate-300 dark:border-white/15 text-slate-700 dark:text-slate-200 hover:bg-white/10 cursor-pointer px-2"
+              >
+                Dev Deck
+              </Button>
+              <Button
+                size="sm"
+                onClick={clearImpersonation}
+                className="h-7 text-[10px] font-black uppercase rounded-lg bg-rose-500 hover:bg-rose-600 text-white cursor-pointer px-2.5 shadow-sm"
+              >
+                Exit
+              </Button>
             </div>
           </div>
         )}

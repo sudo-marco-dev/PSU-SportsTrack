@@ -58,6 +58,7 @@ export const ExpandableIconTabs: React.FC<ExpandableIconTabsProps> = ({
             key={tab.id}
             role="tab"
             aria-selected={isActive}
+            aria-label={tab.label}
             type="button"
             onClick={() => onChange(tab.id)}
             title={tab.label}

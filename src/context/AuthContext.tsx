@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import type { DevPersona } from '@/lib/devPersonas';
 
 export type UserRole =
   | 'super_admin'
@@ -48,6 +49,10 @@ interface AuthContextType {
     preferred_sports?: string[] | null;
     primary_position?: string | null;
   } | null;
+  impersonatedPersona: DevPersona | null;
+  impersonatePersona: (persona: DevPersona) => void;
+  clearImpersonation: () => void;
+  isImpersonating: boolean;
   isLoginModalOpen: boolean;
   openLoginModal: () => void;
   closeLoginModal: () => void;
@@ -72,6 +77,10 @@ const AuthContext = createContext<AuthContextType>({
   isStudentAthlete: false,
   accountStatus: 'active',
   profile: null,
+  impersonatedPersona: null,
+  impersonatePersona: () => { },
+  clearImpersonation: () => { },
+  isImpersonating: false,
   isLoginModalOpen: false,
   openLoginModal: () => { },
   closeLoginModal: () => { },
@@ -87,6 +96,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [accountStatus, setAccountStatus] = useState<AccountStatus>('active');
   const [profile, setProfile] = useState<AuthContextType['profile']>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  // Dev Persona Impersonation State
+  const [impersonatedPersona, setImpersonatedPersona] = useState<DevPersona | null>(() => {
+    try {
+      const saved = localStorage.getItem('psu_dev_impersonated_persona');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const impersonatePersona = (persona: DevPersona) => {
+    setImpersonatedPersona(persona);
+    try {
+      localStorage.setItem('psu_dev_impersonated_persona', JSON.stringify(persona));
+    } catch {
+      // ignore storage failure
+    }
+    toast.success(`Active Persona: ${persona.full_name} (${persona.persona_label})`);
+  };
+
+  const clearImpersonation = () => {
+    setImpersonatedPersona(null);
+    try {
+      localStorage.removeItem('psu_dev_impersonated_persona');
+    } catch {
+      // ignore storage failure
+    }
+    toast.info('Exited persona impersonation mode. Restored authenticated session.');
+  };
 
   const openLoginModal = () => setIsLoginModalOpen(true);
   const closeLoginModal = () => setIsLoginModalOpen(false);
@@ -196,26 +235,67 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
+    if (impersonatedPersona) {
+      clearImpersonation();
+    }
     await supabase.auth.signOut();
   };
 
-  // Derived role permission flags
-  const isDev = role === 'dev';
-  const isSuperAdmin = role === 'super_admin' || role === 'dev';
-  const isFacilitator = role === 'facilitator' || isSuperAdmin;
-  const isOfficial = role === 'official' || isSuperAdmin;
-  const isCoach = role === 'coach';
-  const isPlayer = role === 'player_student' || role === 'player_faculty' || role === 'player_staff';
-  const isFacultyAthlete = role === 'player_faculty';
-  const isStaffAthlete = role === 'player_staff';
-  const isStudentAthlete = role === 'player_student';
+  // Compute effective user, role, verification status, and profile based on impersonation state
+  const effectiveUser: User | null = impersonatedPersona
+    ? ({
+        id: impersonatedPersona.id,
+        email: impersonatedPersona.email,
+        aud: 'authenticated',
+        role: 'authenticated',
+        app_metadata: { provider: 'email' },
+        user_metadata: { full_name: impersonatedPersona.full_name },
+        created_at: new Date().toISOString(),
+      } as unknown as User)
+    : user;
+
+  const effectiveRole: UserRole | null = impersonatedPersona ? impersonatedPersona.role : role;
+  const effectiveIsVerified: boolean = impersonatedPersona ? impersonatedPersona.is_verified : isVerified;
+  const effectiveAccountStatus: AccountStatus = (impersonatedPersona?.account_status as AccountStatus) || (impersonatedPersona ? 'active' : accountStatus);
+
+  const effectiveProfile: AuthContextType['profile'] = impersonatedPersona
+    ? {
+        full_name: impersonatedPersona.full_name,
+        role: impersonatedPersona.role,
+        college_id: impersonatedPersona.college_id || null,
+        college_name: impersonatedPersona.college_name || null,
+        cluster_id: impersonatedPersona.cluster_id || null,
+        account_status: effectiveAccountStatus,
+        faculty_id_url: null,
+        student_number: impersonatedPersona.student_number || null,
+        employee_id: impersonatedPersona.employee_id || null,
+        department: impersonatedPersona.department || null,
+        program: impersonatedPersona.program || null,
+        year_level: impersonatedPersona.year_level || null,
+        age: 21,
+        preferred_sports: impersonatedPersona.preferred_sports || [],
+        primary_position: impersonatedPersona.primary_position || null,
+      }
+    : profile;
+
+  // Derived role permission flags computed from effective role
+  const isImpersonating = Boolean(impersonatedPersona);
+  const isDev = effectiveRole === 'dev';
+  const isSuperAdmin = effectiveRole === 'super_admin' || effectiveRole === 'dev';
+  const isFacilitator = effectiveRole === 'facilitator' || isSuperAdmin;
+  const isOfficial = effectiveRole === 'official' || isSuperAdmin;
+  const isCoach = effectiveRole === 'coach';
+  const isPlayer = effectiveRole === 'player_student' || effectiveRole === 'player_faculty' || effectiveRole === 'player_staff';
+  const isFacultyAthlete = effectiveRole === 'player_faculty';
+  const isStaffAthlete = effectiveRole === 'player_staff';
+  const isStudentAthlete = effectiveRole === 'player_student';
 
   return (
     <AuthContext.Provider value={{
-      user,
+      user: effectiveUser,
       session,
-      role,
-      isVerified,
+      role: effectiveRole,
+      isVerified: effectiveIsVerified,
       isLoading,
       isDev,
       isSuperAdmin,
@@ -226,8 +306,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isFacultyAthlete,
       isStaffAthlete,
       isStudentAthlete,
-      accountStatus,
-      profile,
+      accountStatus: effectiveAccountStatus,
+      profile: effectiveProfile,
+      impersonatedPersona,
+      impersonatePersona,
+      clearImpersonation,
+      isImpersonating,
       isLoginModalOpen,
       openLoginModal,
       closeLoginModal,

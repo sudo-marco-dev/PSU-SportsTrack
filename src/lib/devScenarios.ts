@@ -34,32 +34,94 @@ export function formatErrorMessage(err: unknown): string {
  * Wipes all test tournaments, matches, teams, and temporary records
  * while safely preserving campus colleges, clusters, and all user accounts.
  */
-export async function injectCleanSlate(supabase: SupabaseClient): Promise<ScenarioResult> {
+export async function injectCleanSlate(
+  supabase: SupabaseClient,
+  options?: { mode?: 'safe_dev_only' | 'hard_reset' }
+): Promise<ScenarioResult> {
+  const mode = options?.mode || 'safe_dev_only';
   try {
-    // 1. Break match self-referencing foreign keys
-    await supabase.from('matches').update({
-      next_match_id: null,
-      loser_next_match_id: null,
-    }).neq('id', '00000000-0000-0000-0000-000000000000');
+    if (mode === 'safe_dev_only') {
+      // 1. Find all tournaments tagged with [DEV] or matching dev demo titles
+      const { data: devTourns } = await supabase
+        .from('tournaments')
+        .select('id, name');
 
-    // 2. Clear dependent match events and star honors
-    await supabase.from('match_events').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('player_stars').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      const matchingTournIds = (devTourns || [])
+        .filter((t) => t.name?.includes('[DEV]') || t.name?.includes('PSU Binturungan 2026') || t.name?.includes('PSU Palaro 2026'))
+        .map((t) => t.id);
 
-    // 3. Delete matches
-    await supabase.from('matches').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (matchingTournIds.length > 0) {
+        // Break match references
+        await supabase
+          .from('matches')
+          .update({ next_match_id: null, loser_next_match_id: null })
+          .in('tournament_id', matchingTournIds);
 
-    // 4. Delete teams and roster associations
-    await supabase.from('team_roster').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('teams').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        const { data: devMatches } = await supabase
+          .from('matches')
+          .select('id')
+          .in('tournament_id', matchingTournIds);
 
-    // 5. Delete test tournaments
-    await supabase.from('tournaments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        if (devMatches && devMatches.length > 0) {
+          const matchIds = devMatches.map((m) => m.id);
+          await supabase.from('match_score_events').delete().in('match_id', matchIds);
+          await supabase.from('match_player_stats').delete().in('match_id', matchIds);
+          await supabase.from('match_events').delete().in('match_id', matchIds);
+          await supabase.from('player_stars').delete().in('match_id', matchIds);
+          await supabase.from('matches').delete().in('id', matchIds);
+        }
 
-    return {
-      success: true,
-      message: 'Clean Slate injected: All matches, teams, and tournament trees wiped. Colleges and accounts intact.',
-    };
+        const { data: devTeams } = await supabase
+          .from('teams')
+          .select('id')
+          .in('tournament_id', matchingTournIds);
+        if (devTeams && devTeams.length > 0) {
+          const teamIds = devTeams.map((t) => t.id);
+          await supabase.from('team_roster').delete().in('team_id', teamIds);
+        }
+
+        await supabase.from('teams').delete().in('tournament_id', matchingTournIds);
+        await supabase.from('tournaments').delete().in('id', matchingTournIds);
+      }
+
+      // Also clean faker users tagged with [DEV]
+      const { data: devUsers } = await supabase
+        .from('users')
+        .select('id, full_name');
+      const matchingUserIds = (devUsers || [])
+        .filter((u) => u.full_name?.startsWith('[DEV]'))
+        .map((u) => u.id);
+
+      if (matchingUserIds.length > 0) {
+        await supabase.from('verification_documents').delete().in('user_id', matchingUserIds);
+        await supabase.from('users').delete().in('id', matchingUserIds);
+      }
+
+      return {
+        success: true,
+        message: 'Safe Clean Slate complete: All [DEV] mock tournaments, matches, teams, and faker profiles purged safely without affecting production data.',
+      };
+    } else {
+      // Hard Reset: Complete wipe of all test tournaments and matches
+      await supabase.from('matches').update({
+        next_match_id: null,
+        loser_next_match_id: null,
+      }).neq('id', '00000000-0000-0000-0000-000000000000');
+
+      await supabase.from('match_score_events').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('match_player_stats').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('match_events').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('player_stars').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('matches').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('team_roster').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('teams').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('tournaments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
+      return {
+        success: true,
+        message: 'Complete Hard Reset executed: All test tournaments, brackets, and rosters completely wiped. Colleges and root accounts preserved.',
+      };
+    }
   } catch (err: unknown) {
     return {
       success: false,
@@ -105,56 +167,62 @@ export async function injectVerificationQueue(supabase: SupabaseClient): Promise
     if (teamErr) throw teamErr;
 
     // Seed Mock Verification Documents in Queue
-    if (students && students.length > 0) {
-      const studentIds = students.map((s) => s.id);
-      await supabase.from('verification_documents').delete().in('user_id', studentIds);
+    const targetStudents = (students && students.length > 0)
+      ? students
+      : [
+          { id: '8785501d-cfd8-41c7-a4f3-1e87858392d4', full_name: 'Mark Mendoza', email: 'mmendoza2024@psu.palawan.edu.ph' },
+          { id: '90c2dc25-d13c-4464-9992-bf561e1ce9d2', full_name: 'Juan Dela Cruz', email: 'jdelacruz2024@psu.palawan.edu.ph' },
+          { id: 'b0786737-4091-40e8-8638-71e1c37c112a', full_name: 'Kuya Roberto Dalisay', email: 'staff@gmail.com' },
+        ];
 
-      const mockDocs = [
-        {
-          user_id: students[0].id,
-          storage_path: 'mock_cor_sample_high.pdf',
-          document_type: 'COR',
-          status: 'Pending',
-          confidence_score: 95,
-          extracted_full_name: students[0].full_name || 'Juan Dela Cruz',
-          extracted_student_no: '2023-8-0284',
-          extracted_college: 'CAS',
-          extracted_program: 'BS Information Technology',
-          extracted_year_level: '3rd Year',
-        },
-        ...(students.length > 1
-          ? [{
-              user_id: students[1].id,
-              storage_path: 'mock_cor_sample_med.pdf',
-              document_type: 'COR',
-              status: 'Pending',
-              confidence_score: 80,
-              extracted_full_name: students[1].full_name || 'Maria Santos',
-              extracted_student_no: '2022-8-0115',
-              extracted_college: 'CBA',
-              extracted_program: 'BS Accountancy',
-              extracted_year_level: '4th Year',
-            }]
-          : []),
-        ...(students.length > 2
-          ? [{
-              user_id: students[2].id,
-              storage_path: 'mock_cor_sample_low.pdf',
-              document_type: 'COR',
-              status: 'Pending',
-              confidence_score: 45,
-              extracted_full_name: students[2].full_name || 'Alex Reyes',
-              extracted_student_no: '2024-8-0991',
-              extracted_college: 'CEAT',
-              extracted_program: 'BS Civil Engineering',
-              extracted_year_level: '1st Year',
-            }]
-          : []),
-      ];
+    const studentIds = targetStudents.map((s) => s.id);
+    await supabase.from('verification_documents').delete().in('user_id', studentIds);
 
-      const { error: docErr } = await supabase.from('verification_documents').insert(mockDocs);
-      if (docErr) throw docErr;
-    }
+    const mockDocs = [
+      {
+        user_id: targetStudents[0].id,
+        storage_path: 'mock_cor_sample_high.pdf',
+        document_type: 'COR',
+        status: 'Pending',
+        confidence_score: 95,
+        extracted_full_name: targetStudents[0].full_name || 'Mark Mendoza',
+        extracted_student_no: '2024-8-0912',
+        extracted_college: 'CS',
+        extracted_program: 'BS Computer Science',
+        extracted_year_level: '1st Year',
+      },
+      ...(targetStudents.length > 1
+        ? [{
+            user_id: targetStudents[1].id,
+            storage_path: 'mock_cor_sample_med.pdf',
+            document_type: 'COR',
+            status: 'Pending',
+            confidence_score: 80,
+            extracted_full_name: targetStudents[1].full_name || 'Maria Santos',
+            extracted_student_no: '2022-8-0115',
+            extracted_college: 'CBA',
+            extracted_program: 'BS Accountancy',
+            extracted_year_level: '4th Year',
+          }]
+        : []),
+      ...(targetStudents.length > 2
+        ? [{
+            user_id: targetStudents[2].id,
+            storage_path: 'mock_cor_sample_low.pdf',
+            document_type: 'STAFF_ID',
+            status: 'Pending',
+            confidence_score: 45,
+            extracted_full_name: targetStudents[2].full_name || 'Kuya Roberto Dalisay',
+            extracted_student_no: 'EMP-2024-0188',
+            extracted_college: 'General Services',
+            extracted_program: null,
+            extracted_year_level: null,
+          }]
+        : []),
+    ];
+
+    const { error: docErr } = await supabase.from('verification_documents').insert(mockDocs);
+    if (docErr) throw docErr;
 
     return {
       success: true,
