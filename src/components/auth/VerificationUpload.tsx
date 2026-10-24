@@ -13,14 +13,20 @@ import { CheckCircle2, AlertTriangle, Info, Loader2, Upload, ExternalLink } from
 export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () => void }) => {
   const { user, profile } = useAuth();
   const [corFile, setCorFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedPsuCor | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+
+  const isStaff = profile?.role === 'player_staff';
+  const isFaculty = profile?.role === 'player_faculty';
+  const isStaffOrFaculty = isStaff || isFaculty;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) {
       setCorFile(null);
+      setImagePreviewUrl(null);
       setParsedData(null);
       return;
     }
@@ -35,6 +41,16 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
     }
 
     setCorFile(file);
+
+    if (isImage) {
+      const preview = URL.createObjectURL(file);
+      setImagePreviewUrl(preview);
+      setParsedData(null);
+      toast.info('Employee ID photo loaded. Ready to submit for administrative review.');
+      return;
+    }
+
+    setImagePreviewUrl(null);
 
     if (isPdf) {
       setIsParsing(true);
@@ -58,23 +74,20 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
       } finally {
         setIsParsing(false);
       }
-    } else {
-      setParsedData(null);
-      toast.info('ID image loaded. Ready to submit for manual administrative verification.');
     }
   };
 
   const handleUpload = async () => {
     if (!user) return;
     if (!corFile) {
-      toast.error('Please select your official Certificate of Registration (COR) PDF.');
+      toast.error(isStaffOrFaculty ? 'Please select your official PSU Employee ID Card photo.' : 'Please select your official Certificate of Registration (COR) PDF.');
       return;
     }
 
     setIsUploading(true);
 
     try {
-      const fileExt = corFile.name.split('.').pop() || 'pdf';
+      const fileExt = corFile.name.split('.').pop() || 'png';
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
 
@@ -85,23 +98,26 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
 
       if (uploadError) throw uploadError;
 
-      // 2. Insert into verification_documents with parsed fields
+      // 2. Insert into verification_documents with role-aware fields
+      const docType = isStaff ? 'STAFF_ID' : isFaculty ? 'FACULTY_ID' : 'COR';
       const { error: dbError } = await supabase.from('verification_documents').insert({
         user_id: user.id,
-        document_type: 'COR',
+        document_type: docType,
         storage_path: filePath,
         status: 'Pending',
-        extracted_student_no: parsedData?.studentNo || null,
-        extracted_full_name: parsedData?.fullName || null,
-        extracted_college: parsedData?.college || null,
-        extracted_program: parsedData?.program || null,
-        extracted_school_year: parsedData?.schoolYear || null,
-        extracted_year_level: parsedData?.yearLevel || null,
-        extracted_total_units: parsedData?.totalUnits || null,
-        ocr_raw_text: parsedData?.rawText || null,
-        auto_match_status: parsedData?.confidenceLevel || (parsedData?.isParsable ? 'Moderate' : 'Non-Parsable'),
-        confidence_score: parsedData?.confidenceScore ?? 0,
-        extracted_age: parsedData?.age || null,
+        extracted_student_no: isStaffOrFaculty ? (profile?.employee_id || null) : (parsedData?.studentNo || null),
+        extracted_full_name: profile?.full_name || parsedData?.fullName || null,
+        extracted_college: profile?.college_name || parsedData?.college || null,
+        extracted_program: isStaffOrFaculty ? (profile?.department || null) : (parsedData?.program || null),
+        extracted_school_year: isStaffOrFaculty ? null : (parsedData?.schoolYear || null),
+        extracted_year_level: isStaffOrFaculty ? null : (parsedData?.yearLevel || null),
+        extracted_total_units: isStaffOrFaculty ? null : (parsedData?.totalUnits || null),
+        ocr_raw_text: isStaffOrFaculty
+          ? `[Employee ID Verification] Submitted by ${profile?.full_name || 'Employee'} (ID: ${profile?.employee_id || 'N/A'}, Dept: ${profile?.department || 'N/A'})`
+          : (parsedData?.rawText || null),
+        auto_match_status: isStaffOrFaculty ? 'Manual Review' : (parsedData?.confidenceLevel || (parsedData?.isParsable ? 'Moderate' : 'Non-Parsable')),
+        confidence_score: isStaffOrFaculty ? 100 : (parsedData?.confidenceScore ?? 0),
+        extracted_age: profile?.age || parsedData?.age || null,
       });
 
       if (dbError) throw dbError;
@@ -120,48 +136,79 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
 
   return (
     <Card className="w-full max-w-xl mx-auto shadow-xl border border-slate-200 dark:border-white/10 rounded-3xl overflow-hidden bg-white dark:bg-slate-900">
-      <div className="h-1.5 w-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600" />
+      <div className={`h-1.5 w-full ${
+        isStaff
+          ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600'
+          : isFaculty
+          ? 'bg-gradient-to-r from-indigo-500 via-blue-500 to-indigo-600'
+          : 'bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600'
+      }`} />
       <CardHeader className="p-6 pb-4">
         <div className="flex items-center gap-2 mb-1">
-          <Badge className="bg-orange-500/10 text-orange-600 border border-orange-500/20 text-[10px] font-black uppercase tracking-wider">
-            Student Athlete Clearance
+          <Badge className={`${
+            isStaff
+              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+              : isFaculty
+              ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20'
+              : 'bg-orange-500/10 text-orange-600 border border-orange-500/20'
+          } text-[10px] font-black uppercase tracking-wider`}>
+            {isStaff ? 'Staff Athlete Clearance' : isFaculty ? 'Faculty Athlete Clearance' : 'Student Athlete Clearance'}
           </Badge>
         </div>
         <CardTitle className="text-2xl font-black italic tracking-tight uppercase text-slate-900 dark:text-white">
-          VERIFY <span className="text-orange-500">ELIGIBILITY</span>
+          VERIFY <span className={isStaff ? 'text-amber-500' : isFaculty ? 'text-indigo-500' : 'text-orange-500'}>ELIGIBILITY</span>
         </CardTitle>
         <CardDescription className="text-slate-500 dark:text-slate-400 text-xs font-normal leading-relaxed">
-          Palawan State University student athletes must submit their official Certificate of Registration (COR) for enrollment verification. Valid PSU ID is no longer required.
+          {isStaff
+            ? 'Palawan State University staff athletes must submit a clear photo of their official PSU Employee ID Card for athletic clearance.'
+            : isFaculty
+            ? 'Palawan State University faculty athletes must submit a clear photo of their official PSU Faculty/Employee ID Card for athletic clearance.'
+            : 'Palawan State University student athletes must submit their official Certificate of Registration (COR) for enrollment verification. Valid PSU ID is no longer required.'}
         </CardDescription>
       </CardHeader>
 
       <CardContent className="p-6 pt-0 space-y-4">
-        {/* Official PSU Portal Advisory Notice */}
-        <div className="p-4 rounded-2xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 text-slate-800 dark:text-slate-200 text-xs leading-relaxed space-y-2">
-          <div className="flex items-center gap-2 font-bold text-orange-600 dark:text-orange-400 uppercase text-[11px] tracking-wider">
-            <Info className="size-4 shrink-0" />
-            <span>Official Portal PDF Required</span>
+        {/* Role-Adaptive Advisory Notice */}
+        {isStaffOrFaculty ? (
+          <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-slate-800 dark:text-slate-200 text-xs leading-relaxed space-y-2">
+            <div className="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-400 uppercase text-[11px] tracking-wider">
+              <Info className="size-4 shrink-0" />
+              <span>Official PSU Employee ID Required</span>
+            </div>
+            <p className="text-slate-600 dark:text-slate-300">
+              Please upload a clear, legible photo of your official PSU Employee ID Card (PNG/JPG).
+            </p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Ensure your full name, employee ID number, and photo are visible. An athletics administrator will inspect your ID card to grant tournament clearance.
+            </p>
           </div>
-          <p className="text-slate-600 dark:text-slate-300">
-            You can obtain your official digital COR PDF directly through the official{' '}
-            <a
-              href="https://oes.psu.palawan.edu.ph/aims/students/"
-              target="_blank"
-              rel="noreferrer"
-              className="text-orange-600 dark:text-orange-400 font-bold underline inline-flex items-center gap-1 hover:text-orange-700"
-            >
-              PSU Student Portal (AIMS) <ExternalLink className="size-3" />
-            </a>.
-          </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400">
-            Please upload the original digital PDF downloaded from the portal. Do not upload photos, camera scans, or PNG images converted to PDF, as non-parsable files will be rejected.
-          </p>
-        </div>
+        ) : (
+          <div className="p-4 rounded-2xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 text-slate-800 dark:text-slate-200 text-xs leading-relaxed space-y-2">
+            <div className="flex items-center gap-2 font-bold text-orange-600 dark:text-orange-400 uppercase text-[11px] tracking-wider">
+              <Info className="size-4 shrink-0" />
+              <span>Official Portal PDF Required</span>
+            </div>
+            <p className="text-slate-600 dark:text-slate-300">
+              You can obtain your official digital COR PDF directly through the official{' '}
+              <a
+                href="https://oes.psu.palawan.edu.ph/aims/students/"
+                target="_blank"
+                rel="noreferrer"
+                className="text-orange-600 dark:text-orange-400 font-bold underline inline-flex items-center gap-1 hover:text-orange-700"
+              >
+                PSU Student Portal (AIMS) <ExternalLink className="size-3" />
+              </a>.
+            </p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Please upload the original digital PDF downloaded from the portal. Do not upload photos, camera scans, or PNG images converted to PDF, as non-parsable files will be rejected.
+            </p>
+          </div>
+        )}
 
         {/* File Input */}
         <div className="space-y-2">
           <Label htmlFor="cor" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center justify-between">
-            <span>Certificate of Registration (PDF) or Official ID Image</span>
+            <span>{isStaffOrFaculty ? 'PSU Employee ID Card Photo (PNG/JPG)' : 'Certificate of Registration (PDF) or Official ID Image'}</span>
             {corFile && (
               <span className="text-[10px] text-slate-400 font-normal truncate max-w-[200px]">
                 {corFile.name}
@@ -172,13 +219,38 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
             <Input
               id="cor"
               type="file"
-              accept=".pdf,application/pdf,image/png,image/jpeg,image/webp"
+              accept={isStaffOrFaculty ? 'image/png,image/jpeg,image/webp,.png,.jpg,.jpeg' : '.pdf,application/pdf,image/png,image/jpeg,image/webp'}
               onChange={handleFileChange}
               disabled={isUploading || isParsing}
-              className="h-12 file:bg-orange-500 file:text-white file:font-bold file:text-xs file:border-0 file:rounded-lg file:mr-3 file:px-3 file:py-1 cursor-pointer bg-slate-50 dark:bg-white/5 rounded-2xl border-slate-200 dark:border-white/10"
+              className={`h-12 ${
+                isStaff
+                  ? 'file:bg-amber-600 hover:file:bg-amber-700'
+                  : isFaculty
+                  ? 'file:bg-indigo-600 hover:file:bg-indigo-700'
+                  : 'file:bg-orange-500 hover:file:bg-orange-600'
+              } file:text-white file:font-bold file:text-xs file:border-0 file:rounded-lg file:mr-3 file:px-3 file:py-1 cursor-pointer bg-slate-50 dark:bg-white/5 rounded-2xl border-slate-200 dark:border-white/10`}
             />
           </div>
         </div>
+
+        {/* Image Preview for Employee ID */}
+        {imagePreviewUrl && (
+          <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-2">
+            <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300">
+              <span className="flex items-center gap-1.5 uppercase text-[10px] tracking-wider text-amber-600 dark:text-amber-400">
+                <CheckCircle2 className="size-3.5" /> Selected ID Photo Preview
+              </span>
+              <span className="text-[10px] text-slate-400 font-normal truncate max-w-[200px]">{corFile?.name}</span>
+            </div>
+            <div className="relative rounded-xl overflow-hidden max-h-52 flex items-center justify-center bg-black/5 dark:bg-black/30 border border-slate-200 dark:border-white/10 p-1">
+              <img
+                src={imagePreviewUrl}
+                alt="Employee ID Preview"
+                className="max-h-48 w-auto object-contain rounded-lg shadow-sm"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Parsing Progress */}
         {isParsing && (
@@ -279,17 +351,23 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
         )}
 
         <Button
-          className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-xs rounded-xl shadow-lg shadow-orange-500/20 transition-all active:scale-[0.99] gap-2"
+          className={`w-full h-12 ${
+            isStaff
+              ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/20'
+              : isFaculty
+              ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20'
+              : 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20'
+          } text-white font-black uppercase italic tracking-wider text-xs rounded-xl shadow-lg transition-all active:scale-[0.99] gap-2`}
           onClick={handleUpload}
           disabled={!corFile || isUploading || isParsing}
         >
           {isUploading ? (
             <>
-              <Loader2 className="size-4 animate-spin" /> Uploading &amp; Verifying...
+              <Loader2 className="size-4 animate-spin" /> Uploading &amp; Submitting...
             </>
           ) : (
             <>
-              <Upload className="size-4" /> Submit COR for Verification
+              <Upload className="size-4" /> {isStaff ? 'Submit Employee ID for Verification' : isFaculty ? 'Submit Faculty ID for Verification' : 'Submit COR for Verification'}
             </>
           )}
         </Button>

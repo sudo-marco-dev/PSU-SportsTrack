@@ -161,9 +161,14 @@ export const SystemVerifications = () => {
         is_verified: true,
         account_status: 'active',
       };
-      if (doc.extracted_student_no) userUpdates.student_number = doc.extracted_student_no;
-      if (doc.extracted_program) userUpdates.program = doc.extracted_program;
-      if (doc.extracted_year_level) userUpdates.year_level = doc.extracted_year_level;
+      if (doc.document_type === 'STAFF_ID' || doc.document_type === 'FACULTY_ID') {
+        if (doc.extracted_student_no) userUpdates.employee_id = doc.extracted_student_no;
+        if (doc.extracted_program) userUpdates.department = doc.extracted_program;
+      } else {
+        if (doc.extracted_student_no) userUpdates.student_number = doc.extracted_student_no;
+        if (doc.extracted_program) userUpdates.program = doc.extracted_program;
+        if (doc.extracted_year_level) userUpdates.year_level = doc.extracted_year_level;
+      }
       if (doc.extracted_age) userUpdates.age = doc.extracted_age;
 
       const { error: userError } = await supabase
@@ -180,7 +185,7 @@ export const SystemVerifications = () => {
         action: 'APPROVE_DOCUMENT',
         entity_type: 'verification_documents',
         entity_id: doc.id,
-        details: `Approved COR clearance and verified user ${doc.user_id} with confidence ${doc.confidence_score ?? 0}%`,
+        details: `Approved ${doc.document_type || 'COR'} clearance and verified user ${doc.user_id} (${doc.users?.full_name || 'Athlete'})`,
       });
 
       // Update state
@@ -343,7 +348,21 @@ export const SystemVerifications = () => {
     });
   }, [documents, searchQuery]);
 
-  const renderConfidenceBadge = (score: number | null, status: string | null) => {
+  const renderConfidenceBadge = (score: number | null, status: string | null, docType?: string) => {
+    if (docType === 'STAFF_ID') {
+      return (
+        <Badge className="bg-amber-500/15 text-amber-500 border border-amber-500/30 text-[10px] font-black uppercase tracking-wider gap-1 shadow-sm">
+          <ShieldCheck className="size-3" /> Staff ID • Manual Review
+        </Badge>
+      );
+    }
+    if (docType === 'FACULTY_ID') {
+      return (
+        <Badge className="bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 text-[10px] font-black uppercase tracking-wider gap-1 shadow-sm">
+          <ShieldCheck className="size-3" /> Faculty ID • Manual Review
+        </Badge>
+      );
+    }
     if (score === null || score === undefined) {
       return (
         <Badge variant="outline" className="text-[10px] font-bold text-slate-400">
@@ -491,7 +510,7 @@ export const SystemVerifications = () => {
                       <div className="p-2.5 bg-slate-50 dark:bg-white/5 rounded-xl group-hover:bg-orange-500 transition-colors duration-300">
                         <FileText className="size-5 text-slate-400 group-hover:text-white" />
                       </div>
-                      {renderConfidenceBadge(doc.confidence_score, doc.auto_match_status)}
+                      {renderConfidenceBadge(doc.confidence_score, doc.auto_match_status, doc.document_type)}
                     </div>
 
                     <h3 className="text-xl font-black italic uppercase tracking-tight group-hover:text-orange-500 transition-colors">
@@ -618,7 +637,7 @@ export const SystemVerifications = () => {
                       </div>
 
                       <div className="shrink-0">
-                        {renderConfidenceBadge(doc.confidence_score, doc.status)}
+                        {renderConfidenceBadge(doc.confidence_score, doc.status, doc.document_type)}
                       </div>
                     </div>
 
@@ -732,7 +751,7 @@ export const SystemVerifications = () => {
                         </TableCell>
 
                         <TableCell>
-                          {renderConfidenceBadge(doc.confidence_score, doc.auto_match_status)}
+                          {renderConfidenceBadge(doc.confidence_score, doc.auto_match_status, doc.document_type)}
                         </TableCell>
 
                         <TableCell className="text-xs">
@@ -859,7 +878,7 @@ export const SystemVerifications = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  {renderConfidenceBadge(previewDoc.confidence_score, previewDoc.auto_match_status)}
+                  {renderConfidenceBadge(previewDoc.confidence_score, previewDoc.auto_match_status, previewDoc.document_type)}
                 </div>
               </div>
 
@@ -877,44 +896,48 @@ export const SystemVerifications = () => {
                       At-A-Glance Match Dossier
                     </h4>
                     <p className="text-xs text-slate-400">
-                      Comparison between registered profile credentials and parsed COR metadata.
+                      {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID'
+                        ? 'Visual inspection of submitted official PSU Employee ID Card photo.'
+                        : 'Comparison between registered profile credentials and parsed COR metadata.'}
                     </p>
                   </div>
 
-                  {/* Confidence Score Panel */}
+                  {/* Confidence / Inspection Status Panel */}
                   <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                        Match Confidence
+                        {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? 'Review Status' : 'Match Confidence'}
                       </span>
                       <span className="text-xl font-black text-orange-500 tabular-nums">
-                        {previewDoc.confidence_score ?? 0}%
+                        {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? 'Visual Check' : `${previewDoc.confidence_score ?? 0}%`}
                       </span>
                     </div>
                     <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
-                          (previewDoc.confidence_score ?? 0) >= 90
+                          previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID'
+                            ? 'bg-amber-500 w-full'
+                            : (previewDoc.confidence_score ?? 0) >= 90
                             ? 'bg-emerald-500'
                             : (previewDoc.confidence_score ?? 0) >= 60
                             ? 'bg-amber-500'
                             : 'bg-red-500'
                         }`}
-                        style={{ width: `${previewDoc.confidence_score ?? 0}%` }}
+                        style={{ width: previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? '100%' : `${previewDoc.confidence_score ?? 0}%` }}
                       />
                     </div>
                   </div>
 
                   {/* Side-by-Side Comparison */}
                   <div className="space-y-3">
-                    {/* Student Full Name Card */}
+                    {/* Full Name Card */}
                     {(() => {
                       const nameMatches = checkNameMatch(previewDoc.users?.full_name, previewDoc.extracted_full_name);
                       return (
                         <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1">
                           <div className="flex items-center justify-between">
                             <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 block">
-                              Student Full Name
+                              {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? 'Employee Full Name' : 'Student Full Name'}
                             </span>
                             {nameMatches ? (
                               <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 flex items-center gap-1">
@@ -932,8 +955,12 @@ export const SystemVerifications = () => {
                               <p className="font-bold text-white">{previewDoc.users?.full_name || 'N/A'}</p>
                             </div>
                             <div className="text-right">
-                              <p className="text-slate-400 text-[10px]">On COR:</p>
-                              <p className="font-bold text-orange-400">{previewDoc.extracted_full_name || 'Non-parsable'}</p>
+                              <p className="text-slate-400 text-[10px]">
+                                {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? 'Account Role:' : 'On COR:'}
+                              </p>
+                              <p className="font-bold text-orange-400">
+                                {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? formatRole(previewDoc.users?.role) : (previewDoc.extracted_full_name || 'Non-parsable')}
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -942,7 +969,7 @@ export const SystemVerifications = () => {
 
                     {/* PSU Corporate Email Card */}
                     {(() => {
-                      const emailCheck = checkEmailStudentIdMatch(previewDoc.users?.email, previewDoc.extracted_student_no);
+                      const emailCheck = checkEmailStudentIdMatch(previewDoc.users?.email, previewDoc.extracted_student_no, previewDoc.users?.employee_id);
                       return (
                         <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1.5">
                           <div className="flex items-center justify-between">
@@ -971,9 +998,11 @@ export const SystemVerifications = () => {
                               </p>
                             </div>
                             <div className="text-right shrink-0">
-                              <p className="text-slate-400 text-[10px]">COR Student ID:</p>
+                              <p className="text-slate-400 text-[10px]">
+                                {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? 'Employee ID:' : 'COR Student ID:'}
+                              </p>
                               <p className="font-bold text-orange-400 text-[11px]">
-                                {previewDoc.extracted_student_no || 'Unparsed'}
+                                {previewDoc.users?.employee_id || previewDoc.extracted_student_no || 'Unassigned'}
                               </p>
                             </div>
                           </div>
@@ -983,52 +1012,73 @@ export const SystemVerifications = () => {
 
                     <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1">
                       <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 block">
-                        College Department
+                        College Department / Unit
                       </span>
                       <div className="flex items-center justify-between text-xs">
                         <div>
-                          <p className="text-slate-400 text-[10px]">Registered:</p>
+                          <p className="text-slate-400 text-[10px]">Collegiate Department:</p>
                           <p className="font-bold text-white">{getCollegeName(previewDoc)}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-slate-400 text-[10px]">On COR:</p>
-                          <p className="font-bold text-orange-400">{previewDoc.extracted_college || 'Non-parsable'}</p>
+                          <p className="text-slate-400 text-[10px]">
+                            {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? 'Office / Unit:' : 'On COR:'}
+                          </p>
+                          <p className="font-bold text-orange-400">
+                            {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? (previewDoc.users?.department || 'N/A') : (previewDoc.extracted_college || 'Non-parsable')}
+                          </p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1.5 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400 text-[10px] flex items-center gap-1">
-                          <GraduationCap className="size-3 text-orange-400" /> Student Number:
-                        </span>
-                        <span className="font-bold text-white">{previewDoc.extracted_student_no || 'N/A'}</span>
+                    {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? (
+                      <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400 text-[10px] flex items-center gap-1">
+                            <ShieldCheck className="size-3 text-amber-400" /> Registered Employee ID:
+                          </span>
+                          <span className="font-bold text-white">{previewDoc.users?.employee_id || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400 text-[10px] flex items-center gap-1">
+                            <Building className="size-3 text-amber-400" /> Administrative Department:
+                          </span>
+                          <span className="font-bold text-white truncate max-w-[150px]">{previewDoc.users?.department || 'N/A'}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400 text-[10px] flex items-center gap-1">
-                          <BookOpen className="size-3 text-orange-400" /> Degree Program:
-                        </span>
-                        <span className="font-bold text-white truncate max-w-[150px]">{previewDoc.extracted_program || 'N/A'}</span>
+                    ) : (
+                      <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400 text-[10px] flex items-center gap-1">
+                            <GraduationCap className="size-3 text-orange-400" /> Student Number:
+                          </span>
+                          <span className="font-bold text-white">{previewDoc.extracted_student_no || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400 text-[10px] flex items-center gap-1">
+                            <BookOpen className="size-3 text-orange-400" /> Degree Program:
+                          </span>
+                          <span className="font-bold text-white truncate max-w-[150px]">{previewDoc.extracted_program || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400 text-[10px] flex items-center gap-1">
+                            <Layers className="size-3 text-orange-400" /> Year Level:
+                          </span>
+                          <span className="font-bold text-white">{previewDoc.extracted_year_level || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400 text-[10px] flex items-center gap-1">
+                            <Calendar className="size-3 text-orange-400" /> School Year:
+                          </span>
+                          <span className="font-bold text-white">{previewDoc.extracted_school_year || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400 text-[10px] flex items-center gap-1">
+                            <Building className="size-3 text-orange-400" /> Total Units:
+                          </span>
+                          <span className="font-bold text-white">{previewDoc.extracted_total_units || 'N/A'}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400 text-[10px] flex items-center gap-1">
-                          <Layers className="size-3 text-orange-400" /> Year Level:
-                        </span>
-                        <span className="font-bold text-white">{previewDoc.extracted_year_level || 'N/A'}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400 text-[10px] flex items-center gap-1">
-                          <Calendar className="size-3 text-orange-400" /> School Year:
-                        </span>
-                        <span className="font-bold text-white">{previewDoc.extracted_school_year || 'N/A'}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400 text-[10px] flex items-center gap-1">
-                          <Building className="size-3 text-orange-400" /> Total Units:
-                        </span>
-                        <span className="font-bold text-white">{previewDoc.extracted_total_units || 'N/A'}</span>
-                      </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* Action Buttons in Preview Modal */}

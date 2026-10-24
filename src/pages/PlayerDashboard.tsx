@@ -53,8 +53,9 @@ type PlayerStar = {
 };
 
 export const PlayerDashboard = () => {
-  const { isVerified, user, isDev, isSuperAdmin, isFacilitator, isCoach, isPlayer } = useAuth();
+  const { isVerified, user, isDev, isSuperAdmin, isFacilitator, isCoach, isPlayer, isStaffAthlete, isFacultyAthlete, profile } = useAuth();
   const navigate = useNavigate();
+  const isStaffOrFaculty = Boolean(isStaffAthlete || isFacultyAthlete || profile?.role === 'player_staff' || profile?.role === 'player_faculty');
   const [hasPendingDocuments, setHasPendingDocuments] = useState(false);
   const [latestDoc, setLatestDoc] = useState<{
     id: string;
@@ -301,7 +302,9 @@ export const PlayerDashboard = () => {
               Clearance <span className="text-orange-500">In Progress</span>
             </h1>
             <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-2 font-medium text-sm leading-relaxed">
-              Your Certificate of Registration has been parsed and submitted for clearance. You will gain full tournament eligibility once an administrator confirms your credentials.
+              {isStaffOrFaculty
+                ? 'Your official PSU Employee ID has been submitted for clearance. You will gain full tournament eligibility once an administrator confirms your employment credentials.'
+                : 'Your Certificate of Registration has been parsed and submitted for clearance. You will gain full tournament eligibility once an administrator confirms your credentials.'}
             </p>
           </div>
           {latestDoc?.confidence_score !== undefined && latestDoc?.confidence_score !== null && (
@@ -331,7 +334,9 @@ export const PlayerDashboard = () => {
                   Verification Clearance Rejected
                 </h2>
                 <p className="text-xs text-slate-600 dark:text-slate-300">
-                  Your submitted Certificate of Registration could not be approved by the athletics administration.
+                  {isStaffOrFaculty
+                    ? 'Your submitted PSU Employee ID could not be approved by the athletics administration.'
+                    : 'Your submitted Certificate of Registration could not be approved by the athletics administration.'}
                 </p>
               </div>
             </div>
@@ -346,18 +351,24 @@ export const PlayerDashboard = () => {
               </p>
             </div>
 
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Please download your official digital PDF copy directly from the{' '}
-              <a
-                href="https://oes.psu.palawan.edu.ph/aims/students/"
-                target="_blank"
-                rel="noreferrer"
-                className="text-orange-600 dark:text-orange-400 font-bold underline hover:text-orange-700"
-              >
-                PSU Student Portal (AIMS)
-              </a>{' '}
-              and re-submit below.
-            </p>
+            {isStaffOrFaculty ? (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Please ensure your uploaded photo clearly displays your full name, employee number, and department, then re-submit below.
+              </p>
+            ) : (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Please download your official digital PDF copy directly from the{' '}
+                <a
+                  href="https://oes.psu.palawan.edu.ph/aims/students/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-orange-600 dark:text-orange-400 font-bold underline hover:text-orange-700"
+                >
+                  PSU Student Portal (AIMS)
+                </a>{' '}
+                and re-submit below.
+              </p>
+            )}
           </div>
 
           {/* Re-Upload Form */}
