@@ -84,7 +84,7 @@ const REJECTION_PRESETS = [
 ];
 
 export const SystemVerifications = () => {
-  const { isSuperAdmin, isLoading } = useAuth();
+  const { isSuperAdmin, isLoading, user } = useAuth();
   const [documents, setDocuments] = useState<PendingDocument[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('Pending');
@@ -151,7 +151,11 @@ export const SystemVerifications = () => {
       // 1. Update document status
       const { error: docError } = await supabase
         .from('verification_documents')
-        .update({ status: 'Approved' })
+        .update({
+          status: 'Approved',
+          reviewed_by: user?.id || null,
+          reviewed_at: new Date().toISOString(),
+        })
         .eq('id', doc.id);
 
       if (docError) throw docError;
@@ -224,6 +228,8 @@ export const SystemVerifications = () => {
         .update({
           status: 'Rejected',
           rejection_reason: fullReason,
+          reviewed_by: user?.id || null,
+          reviewed_at: new Date().toISOString(),
         })
         .eq('id', rejectDoc.id);
 
