@@ -44,3 +44,7 @@ supabase/.temp/
 
 # Agent tooling artifacts
 skills-lock.json
+
+# Local Agent Workspace Rules
+AGENTS.md
+GEMINI.md
