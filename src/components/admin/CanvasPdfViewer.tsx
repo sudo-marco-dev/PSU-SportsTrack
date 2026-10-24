@@ -40,7 +40,7 @@ export const CanvasPdfViewer = ({ storagePath, signedUrl }: CanvasPdfViewerProps
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const isImageFile = /\.(png|jpe?g|webp|gif)$/i.test(storagePath);
+  const isImageFile = /\.(png|jpe?g|webp|gif|jfif)$/i.test(storagePath);
 
   // 1. Fetch document in memory via JavaScript (immune to browser download managers)
   useEffect(() => {
@@ -56,11 +56,16 @@ export const CanvasPdfViewer = ({ storagePath, signedUrl }: CanvasPdfViewerProps
       try {
         if (isImageFile) {
           let blobUrl: string | null = signedUrl || null;
+          let imageError: string | null = null;
           if (!blobUrl) {
-            const { data: signData } = await supabase.storage
+            const { data: signData, error: signErr } = await supabase.storage
               .from('verification_documents')
               .createSignedUrl(storagePath, 3600);
-            if (signData?.signedUrl) blobUrl = signData.signedUrl;
+            if (signData?.signedUrl) {
+              blobUrl = signData.signedUrl;
+            } else if (signErr) {
+              imageError = signErr.message;
+            }
           }
           if (!blobUrl) {
             const { data, error: dlErr } = await supabase.storage
@@ -68,10 +73,17 @@ export const CanvasPdfViewer = ({ storagePath, signedUrl }: CanvasPdfViewerProps
               .download(storagePath);
             if (!dlErr && data) {
               blobUrl = URL.createObjectURL(data);
+            } else if (dlErr) {
+              imageError = dlErr.message;
             }
           }
           if (blobUrl && !isCancelled) {
             setImageUrl(blobUrl);
+            setIsLoading(false);
+            return;
+          }
+          if (!isCancelled) {
+            setError(`Could not load image file: ${imageError || 'File not found in storage.'}`);
             setIsLoading(false);
             return;
           }

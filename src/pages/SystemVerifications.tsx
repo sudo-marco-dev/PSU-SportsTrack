@@ -83,6 +83,14 @@ const REJECTION_PRESETS = [
   'Other / Custom reason',
 ];
 
+const STAFF_REJECTION_PRESETS = [
+  'Unclear or unreadable employee ID card photo (blurry, glare, or cut off)',
+  'Employee name does not match registered account profile name',
+  'Department or institutional unit does not match registered profile',
+  'Expired or invalid Palawan State University Employee Identification card',
+  'Other / Custom reason',
+];
+
 export const SystemVerifications = () => {
   const { isSuperAdmin, isLoading, user } = useAuth();
   const [documents, setDocuments] = useState<PendingDocument[]>([]);
@@ -110,7 +118,7 @@ export const SystemVerifications = () => {
   const fetchDocuments = async () => {
     let query = supabase
       .from('verification_documents')
-      .select('*, users(full_name, email, role, account_status, student_number, employee_id, department, program, year_level, age, colleges(college_name))')
+      .select('*, users!user_id(full_name, email, role, account_status, student_number, employee_id, department, program, year_level, age, colleges(college_name))')
       .order('created_at', { ascending: false });
 
     if (statusFilter !== 'all') {
@@ -124,7 +132,7 @@ export const SystemVerifications = () => {
       // Resilient fallback query with core baseline fields if schema cache is ever out of sync
       let fallbackQuery = supabase
         .from('verification_documents')
-        .select('*, users(full_name, role, account_status, student_number, program, year_level, age, colleges(college_name))')
+        .select('*, users!user_id(full_name, role, account_status, student_number, program, year_level, age, colleges(college_name))')
         .order('created_at', { ascending: false });
 
       if (statusFilter !== 'all') {
@@ -204,12 +212,9 @@ export const SystemVerifications = () => {
 
   const handleOpenRejectModal = (doc: PendingDocument) => {
     setRejectDoc(doc);
-    // If the file was non-parsable or 0 confidence, default to non-parsable reason
-    if (doc.confidence_score === 0 || doc.auto_match_status === 'Non-Parsable') {
-      setSelectedReason(REJECTION_PRESETS[0]);
-    } else {
-      setSelectedReason(REJECTION_PRESETS[0]);
-    }
+    const isStaffOrFaculty = doc.document_type === 'STAFF_ID' || doc.document_type === 'FACULTY_ID';
+    const presets = isStaffOrFaculty ? STAFF_REJECTION_PRESETS : REJECTION_PRESETS;
+    setSelectedReason(presets[0]);
     setCustomNote('');
   };
 
@@ -875,10 +880,18 @@ export const SystemVerifications = () => {
                     <DialogTitle className="text-xl font-black uppercase italic tracking-tight flex items-center gap-2">
                       <span>{previewDoc.users?.full_name || 'Athlete'}</span>
                       <span className="text-orange-500">•</span>
-                      <span className="text-orange-500">Certificate of Registration</span>
+                      <span className="text-orange-500">
+                        {previewDoc.document_type === 'STAFF_ID'
+                          ? 'Staff Employee ID'
+                          : previewDoc.document_type === 'FACULTY_ID'
+                          ? 'Faculty Employee ID'
+                          : 'Certificate of Registration'}
+                      </span>
                     </DialogTitle>
                     <DialogDescription className="text-xs text-slate-400 font-medium mt-0.5">
-                      In-screen preview mode — inspect document text and institutional stamps.
+                      {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID'
+                        ? 'In-screen preview mode — inspect employee credentials, photo, and institutional affiliation.'
+                        : 'In-screen preview mode — inspect document text and institutional stamps.'}
                     </DialogDescription>
                   </div>
                 </div>
@@ -1134,7 +1147,7 @@ export const SystemVerifications = () => {
                 <DialogDescription className="text-xs text-slate-400 font-medium">
                   Select standard feedback to notify{' '}
                   <span className="font-bold text-white">{rejectDoc.users?.full_name || 'the player'}</span>{' '}
-                  why their Certificate of Registration was rejected.
+                  why their {rejectDoc.document_type === 'STAFF_ID' || rejectDoc.document_type === 'FACULTY_ID' ? 'Employee ID card' : 'Certificate of Registration'} was rejected.
                 </DialogDescription>
               </DialogHeader>
 
@@ -1144,7 +1157,10 @@ export const SystemVerifications = () => {
                     Select Reason for Rejection
                   </Label>
                   <div className="space-y-2">
-                    {REJECTION_PRESETS.map((reason) => {
+                    {(rejectDoc.document_type === 'STAFF_ID' || rejectDoc.document_type === 'FACULTY_ID'
+                      ? STAFF_REJECTION_PRESETS
+                      : REJECTION_PRESETS
+                    ).map((reason) => {
                       const isSelected = selectedReason === reason;
                       return (
                         <div
