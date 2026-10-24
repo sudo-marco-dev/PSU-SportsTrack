@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { toast } from 'sonner';
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import {
   ShieldCheck,
   FileText,
@@ -375,9 +376,9 @@ export const SystemVerifications = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col justify-center items-center h-[50vh] w-full gap-4 animate-in fade-in duration-300">
-        <div className="animate-spin rounded-full h-11 w-11 border-3 border-orange-500/20 border-t-orange-500" />
-        <p className="text-slate-500 font-bold tracking-widest uppercase text-xs">Loading Clearance Records...</p>
+      <div className="space-y-6 max-w-7xl mx-auto px-4 py-8 animate-in fade-in duration-300">
+        <SkeletonCard variant="stat" count={4} />
+        <SkeletonCard variant="row" count={5} />
       </div>
     );
   }

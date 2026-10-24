@@ -96,7 +96,7 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
           </h4>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {dateMatches.map((match) => {
+            {dateMatches.map((match, idx) => {
               const sportName = extractSportName(match, tourMap);
               const SportIcon = getSportIcon(sportName);
               const affA = getAffiliationBadge(match.team_a_id, match.team_a?.name, teamsMap);
@@ -110,13 +110,14 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
                   onClick={() => onNavigateMatch(match.id)}
                   role="button"
                   tabIndex={0}
+                  style={{ animationDelay: `${Math.min(idx * 40, 240)}ms` }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
                       onNavigateMatch(match.id);
                     }
                   }}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl sm:rounded-2xl p-4 hover:shadow-md hover:border-orange-500/50 transition-all cursor-pointer group space-y-3"
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl sm:rounded-2xl p-4 hover:shadow-md hover:border-orange-500/50 transition-all active:scale-[0.98] cursor-pointer group space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both"
                 >
                   {/* Top Bar: Sport and Match Status */}
                   <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-white/5 pb-2">
@@ -130,8 +131,11 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
                       )}
                     </span>
                     {match.status === 'Ongoing' ? (
-                      <span className="text-rose-500 font-black flex items-center gap-1">
-                        <span className="size-1.5 rounded-full bg-rose-500 animate-ping" />
+                      <span className="text-rose-500 font-black flex items-center gap-1.5">
+                        <span className="relative flex size-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full size-2 bg-rose-500" />
+                        </span>
                         LIVE
                       </span>
                     ) : match.status === 'Completed' ? (

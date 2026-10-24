@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ExpandableIconTabs } from '@/components/ui/expandable-icon-tabs';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import {
   fetchBatchPlayerSummaries,
   getPrimarySportStatPill,
@@ -878,12 +879,7 @@ export const ScoutingHub = () => {
         />
 
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <Loader2 className="size-8 text-orange-500 animate-spin" />
-            <p className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Loading University Scouting Archive...
-            </p>
-          </div>
+          <SkeletonCard variant="athlete-grid" count={6} className="mt-4" />
         ) : (
           <>
             {/* ============================================================== */}
@@ -896,7 +892,7 @@ export const ScoutingHub = () => {
                 </Card>
               ) : (
                 <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-                  {filteredPlayers.map((p) => {
+                  {filteredPlayers.map((p, idx) => {
                     const sum = playerSummaries[p.id];
                     const colName = p.colleges?.college_name || 'Unassigned College';
                     const prefSports = Array.isArray(p.preferred_sports) ? p.preferred_sports : [];
@@ -905,7 +901,8 @@ export const ScoutingHub = () => {
                     return (
                       <Card
                         key={p.id}
-                        className="rounded-3xl border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 hover:border-orange-500/40 transition-all shadow-sm hover:shadow-xl flex flex-col justify-between overflow-hidden"
+                        style={{ animationDelay: `${Math.min(idx * 35, 280)}ms` }}
+                        className="rounded-3xl border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 hover:border-orange-500/40 transition-all shadow-sm hover:shadow-xl flex flex-col justify-between overflow-hidden active:scale-[0.99] animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both"
                       >
                         <CardHeader className="p-5 pb-3 space-y-3">
                           <div className="flex items-start justify-between gap-2">

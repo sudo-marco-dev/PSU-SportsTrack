@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trophy, Medal, Sparkles, Shield, RotateCcw, Search, CheckCircle2, GraduationCap, Users, SlidersHorizontal, ChevronDown, ChevronUp } from 'lucide-react';
 import { type ExpandableTabItem } from '@/components/ui/expandable-icon-tabs';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 
 interface CollegeEntity {
   id: string;
@@ -1065,7 +1066,11 @@ export const Ranking = () => {
       </div>
 
       {/* Podium Showcase Section */}
-      {/* MOBILE PODIUM (< md): Compact #1 Spotlight + #2 & #3 Side-by-Side (Fits in ~190px total!) */}
+      {isLoading ? (
+        <SkeletonCard variant="podium" />
+      ) : (
+        <>
+          {/* MOBILE PODIUM (< md): Compact #1 Spotlight + #2 & #3 Side-by-Side (Fits in ~190px total!) */}
       <div className="md:hidden space-y-2.5">
         {/* #1 Champion Spotlight Banner */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/10 border-2 border-orange-500 p-3.5 shadow-lg">
@@ -1294,6 +1299,8 @@ export const Ranking = () => {
           </div>
         </Card>
       </div>
+      </>
+      )}
 
       {/* Official PSU Standings & Leaderboard Section */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
@@ -1319,9 +1326,8 @@ export const Ranking = () => {
         </div>
 
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500" />
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Loading live rankings...</p>
+          <div className="p-4 sm:p-6">
+            <SkeletonCard variant="row" count={5} />
           </div>
         ) : rankedEntities.length === 0 ? (
           <div className="py-16 px-6 text-center">
@@ -1355,8 +1361,9 @@ export const Ranking = () => {
                 return (
                   <div
                     key={item.key}
+                    style={{ animationDelay: `${Math.min(idx * 30, 240)}ms` }}
                     onClick={() => setExpandedRowKey(isExpanded ? null : item.key)}
-                    className={`p-3 transition-colors cursor-pointer select-none ${
+                    className={`p-3 transition-colors cursor-pointer select-none animate-in fade-in slide-in-from-bottom-1 duration-200 fill-mode-both ${
                       rank === 1
                         ? 'bg-orange-50/40 dark:bg-orange-500/5'
                         : rank === 2
@@ -1493,7 +1500,8 @@ export const Ranking = () => {
                     return (
                       <tr
                         key={item.key}
-                        className={`transition-colors ${
+                        style={{ animationDelay: `${Math.min(idx * 25, 200)}ms` }}
+                        className={`transition-colors animate-in fade-in slide-in-from-bottom-1 duration-150 fill-mode-both ${
                           rank === 1
                             ? 'bg-orange-50/40 dark:bg-orange-500/5 font-semibold'
                             : rank === 2

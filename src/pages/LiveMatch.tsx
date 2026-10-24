@@ -45,6 +45,7 @@ import { getSportScoringProfile } from '@/lib/sportScoringRules';
 import { getSportIcon } from '@/lib/sportIcons';
 import { pipScoreboard } from '@/lib/pipScoreboard';
 import { FloatingScoreWidget } from '@/components/scoreboard/FloatingScoreWidget';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import {
   type FloatingDelta,
   type LeadChangeAlert,
@@ -1501,9 +1502,8 @@ export const LiveMatch = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col justify-center items-center h-[50vh] w-full gap-4 animate-in fade-in duration-300">
-        <div className="animate-spin rounded-full h-11 w-11 border-3 border-orange-500/20 border-t-orange-500"></div>
-        <p className="text-slate-500 font-bold tracking-widest uppercase text-xs">Loading Match Data...</p>
+      <div className="py-6 px-4 max-w-5xl mx-auto w-full animate-in fade-in duration-300">
+        <SkeletonCard variant="scoreboard" />
       </div>
     );
   }

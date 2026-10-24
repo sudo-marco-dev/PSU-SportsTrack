@@ -62,10 +62,10 @@ export const ExpandableIconTabs: React.FC<ExpandableIconTabsProps> = ({
             onClick={() => onChange(tab.id)}
             title={tab.label}
             className={cn(
-              'relative rounded-xl font-black uppercase italic tracking-tight transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0 select-none outline-none focus-visible:ring-2 focus-visible:ring-orange-500 h-full',
+              'relative rounded-xl font-black uppercase italic tracking-tight transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0 select-none outline-none focus-visible:ring-2 focus-visible:ring-orange-500 h-full active:scale-[0.96]',
               isActive
                 ? cn(
-                    'bg-orange-500 text-white shadow-sm shadow-orange-500/25 px-3 sm:px-4 gap-1.5',
+                    'bg-orange-500 text-white shadow-md shadow-orange-500/25 px-3 sm:px-4 gap-1.5',
                     fullWidthOnMobile ? 'flex-1 sm:flex-initial' : 'flex-initial'
                   )
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5 px-2.5 sm:px-3 gap-1'

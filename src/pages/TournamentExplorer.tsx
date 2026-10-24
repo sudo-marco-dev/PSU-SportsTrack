@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Clock, Trophy, Crown, ArrowLeft, Lock, ListOrdered, Filter, X, Layers } from 'lucide-react';
 import { SPORT_ICONS, getSportIcon } from '@/lib/sportIcons';
 import { MatchCenterHeader } from '@/components/match-center/MatchCenterHeader';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { MatchCenterToolbar, type MatchCenterPhase } from '@/components/match-center/MatchCenterToolbar';
 import { KnockoutBracketTree, type DoubleEliminationGroups } from '@/components/match-center/KnockoutBracketTree';
 import { MatchScheduleList } from '@/components/match-center/MatchScheduleList';
@@ -587,11 +588,8 @@ export const TournamentExplorer = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col justify-center items-center h-[60vh] w-full gap-4">
-        <div className="size-10 sm:size-12 rounded-full border-3 border-orange-500/20 border-t-orange-500 animate-spin" />
-        <p className="text-slate-500 font-bold animate-pulse uppercase tracking-widest text-[11px]">
-          Loading Match Center...
-        </p>
+      <div className="space-y-6 pb-10 w-full min-w-0 max-w-full">
+        <SkeletonCard variant="match-center" />
       </div>
     );
   }

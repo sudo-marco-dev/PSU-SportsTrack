@@ -22,6 +22,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -803,10 +804,7 @@ export const AdminRecovery = () => {
 
       {/* Main Content Areas */}
       {isLoading ? (
-        <div className="py-20 flex flex-col items-center justify-center gap-3">
-          <Loader2 className="size-8 text-orange-500 animate-spin" />
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Loading Recovery Vault...</p>
-        </div>
+        <SkeletonCard variant="card" count={3} />
       ) : (
         <>
           {/* TAB 1: TOURNAMENTS */}

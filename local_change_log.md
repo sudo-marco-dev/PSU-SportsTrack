@@ -6,6 +6,40 @@ This log tracks every user prompt, database migration, code change, and Git oper
 
 ## 📅 Log Entry: 2026-10-24
 
+### 💬 Prompt: Mobile-First Lightweight UI Enhancements, Hardware-Accelerated CSS Shimmer Skeletons & Navigation Flair
+*   **Timestamp**: 2026-10-24T12:00:00+08:00
+*   **User Directive**:
+    - "Propose to me UI enhancements like animations, skeleton loading, and other flair to add to our system. Make sure to still keep it light for mobile and for low internet users. /plan /grill-me /teamwork-preview"
+*   **Actions Taken**:
+    *   **CSS Shimmer Engine & Reduced-Motion Accessibility (`src/index.css`)**:
+        - Created `@keyframes shimmer` translating a lightweight linear gradient highlight across GPU layers with 0 JavaScript execution.
+        - Implemented `.animate-shimmer` pseudo-element utility supporting both light mode and dark mode gradient themes.
+        - Added universal `@media (prefers-reduced-motion: reduce)` overrides to gracefully freeze shimmers, pulses, and transitions for users with motion sensitivity or battery-saving modes.
+    *   **Unified Multi-Variant Shimmer Skeleton Component (`src/components/ui/SkeletonCard.tsx`)**:
+        - Expanded `SkeletonCard` with route-specific visual geometry:
+            - `match-center`: Shimmering banner + sports navigation rail + symmetric toolbar + stacked elimination cards.
+            - `athlete-grid`: Shimmering avatar, jersey badge, sport tags, and recruitment action.
+            - `podium`: Shimmering Gold, Silver, and Bronze pedestal cards.
+            - `scoreboard`: Jumbotron twin team score columns and game clock.
+            - `kiosk`: Tactile courtside score towers and action pad.
+            - `stat`, `row`, `match`, and `card`: Standardized with hardware-accelerated shimmer.
+    *   **Eliminated Raw Loading Spinners Across Core Application Routes**:
+        - In `TournamentExplorer.tsx`, replaced raw spinner with `<SkeletonCard variant="match-center" />` (CLS: 0).
+        - In `ScoutingHub.tsx`, replaced `Loader2` spinner with `<SkeletonCard variant="athlete-grid" count={6} />`.
+        - In `Ranking.tsx`, replaced unpopulated cards with `<SkeletonCard variant="podium" />` and `<SkeletonCard variant="row" count={5} />`.
+        - In `LiveMatch.tsx`, replaced spinner with `<SkeletonCard variant="scoreboard" />`.
+        - In `FacilitatorKiosk.tsx`, replaced spinner with `<SkeletonCard variant="kiosk" />`.
+        - In `AdminRecovery.tsx` and `SystemVerifications.tsx`, replaced spinners with structured skeleton card grids and stat rows.
+    *   **Navigation & List Micro-Interactions**:
+        - `expandable-icon-tabs.tsx`: Added tactile tap feedback (`active:scale-[0.96]`) and active orange glow accent (`shadow-md shadow-orange-500/25`).
+        - `MatchScheduleList.tsx`: Added staggered card entry animations (`style={{ animationDelay: Math.min(idx * 40, 240)ms }}`) with `animate-in fade-in slide-in-from-bottom-2 duration-300`, tactile tap depth (`active:scale-[0.98]`), and dual-ring pulsing radar live beacons.
+        - `ScoutingHub.tsx` & `Ranking.tsx`: Added staggered entry delays on athlete dossier cards and leaderboard standings rows.
+    *   **Verification**:
+        - Production build (`npm run build`) passed with 0 errors in 4.29s; 0 new npm packages added.
+        - Full automated test suite: All 9 Playwright tests passed in 13.6s.
+
+---
+
 ### 💬 Prompt: Strict Ballgames Enforcement When Hosting Tournaments
 *   **Timestamp**: 2026-10-24T11:00:00+08:00
 *   **User Directive**:

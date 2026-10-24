@@ -19,6 +19,7 @@ import {
   LogIn,
 } from 'lucide-react';
 import { LoginModal } from '@/components/auth/LoginModal';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { getSportScoringProfile } from '@/lib/sportScoringRules';
 import { getSportIcon } from '@/lib/sportIcons';
 import { offlineQueue } from '@/lib/offlineQueue';
@@ -1171,14 +1172,7 @@ export const FacilitatorKiosk = () => {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white space-y-4">
-        <div className="size-16 rounded-full border-4 border-orange-500/20 border-t-orange-500 animate-spin" />
-        <span className="font-mono text-sm tracking-[0.3em] uppercase text-slate-400">
-          Initializing Facilitator Kiosk Deck...
-        </span>
-      </div>
-    );
+    return <SkeletonCard variant="kiosk" />;
   }
 
   if (!match) {
