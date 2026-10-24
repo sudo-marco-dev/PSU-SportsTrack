@@ -121,10 +121,10 @@ export const SystemVerifications = () => {
 
     if (error) {
       console.warn('Verification documents primary query failed, trying fallback:', error.message);
-      // Resilient fallback query without email field if schema cache is ever out of sync
+      // Resilient fallback query with core baseline fields if schema cache is ever out of sync
       let fallbackQuery = supabase
         .from('verification_documents')
-        .select('*, users(full_name, role, account_status, student_number, employee_id, department, program, year_level, age, colleges(college_name))')
+        .select('*, users(full_name, role, account_status, student_number, program, year_level, age, colleges(college_name))')
         .order('created_at', { ascending: false });
 
       if (statusFilter !== 'all') {
