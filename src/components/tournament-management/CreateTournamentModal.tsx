@@ -58,7 +58,7 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
         : [trimmedName];
 
       if (creationMode === 'binturungan' && selectedSports.length === 0) {
-        toast.error('Please select at least one sport for the Binturungan event.');
+        toast.error('Please select at least one ballgame for the Binturungan event.');
         setIsCreatingTournaments(false);
         return;
       }
@@ -93,12 +93,12 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
         const { error } = await supabase.from('tournaments').insert(payloads);
         if (error) throw error;
 
-        toast.success(`Successfully initialized ${selectedSports.length} Binturungan sport tournaments in Draft mode!`);
+        toast.success(`Successfully initialized ${selectedSports.length} Binturungan ballgame tournaments in Draft mode!`);
         
         logAudit({
           action: 'CREATE_TOURNAMENT',
           entity_type: 'tournaments',
-          details: `Initialized Binturungan event "${trimmedName}" across ${selectedSports.length} sports (${selectedSports.join(', ')}) in Draft mode`
+          details: `Initialized Binturungan event "${trimmedName}" across ${selectedSports.length} ballgames (${selectedSports.join(', ')}) in Draft mode`
         });
       } else {
         const { error } = await supabase.from('tournaments').insert({
@@ -116,7 +116,7 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
         logAudit({
           action: 'CREATE_TOURNAMENT',
           entity_type: 'tournaments',
-          details: `Created single tournament "${trimmedName}" (${singleSport}) in Draft mode`
+          details: `Created single tournament "${trimmedName}" (${singleSport} ballgame) in Draft mode`
         });
       }
 
@@ -166,7 +166,7 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
             }`}
           >
-            <Trophy className="size-3.5" /> One-Click Binturungan (All Sports)
+            <Trophy className="size-3.5" /> One-Click Binturungan (All 9 Ballgames)
           </button>
           <button
             type="button"
@@ -177,7 +177,7 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
             }`}
           >
-            <Plus className="size-3.5" /> Custom Single Sport
+            <Plus className="size-3.5" /> Custom Single Ballgame
           </button>
         </div>
 
@@ -199,12 +199,12 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
           </div>
 
           {creationMode === 'binturungan' ? (
-            /* ===== BINTURUNGAN SPORTS CHECKLIST ===== */
+            /* ===== BINTURUNGAN BALLGAMES CHECKLIST ===== */
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label className="text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-[0.2em] flex items-center gap-1">
                   <CheckCircle2 className="size-3 text-orange-500" /> 
-                  Sports Checklist
+                  Ballgames Checklist
                   <span className="ml-1 px-1.5 py-0.2 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 text-[9px] font-black">
                     {selectedSports.length}/{BINTURUNGAN_DEFAULT_SPORTS.length}
                   </span>
@@ -258,13 +258,13 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
               </div>
             </div>
           ) : (
-            /* ===== SINGLE SPORT SETUP ===== */
+            /* ===== SINGLE BALLGAME SETUP ===== */
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-[0.2em]">Sport Discipline</Label>
+                <Label className="text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-[0.2em]">Ballgame Discipline</Label>
                 <Select value={singleSport} onValueChange={(val) => setSingleSport(val ?? 'Basketball')}>
                   <SelectTrigger className="h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-xl font-bold text-xs text-slate-900 dark:text-white">
-                    <SelectValue placeholder="Select sport..." />
+                    <SelectValue placeholder="Select ballgame..." />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold text-xs">
                     {BINTURUNGAN_DEFAULT_SPORTS.map(s => (
@@ -348,7 +348,7 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
             ) : (
               <Trophy className="size-4" />
             )}
-            {isCreatingTournaments ? 'Initializing Events...' : creationMode === 'binturungan' ? `Launch ${selectedSports.length} Binturungan Events (Draft)` : 'Launch Event (Draft)'}
+            {isCreatingTournaments ? 'Initializing Events...' : creationMode === 'binturungan' ? `Launch ${selectedSports.length} Binturungan Ballgames (Draft)` : 'Launch Ballgame Event (Draft)'}
           </Button>
         </DialogFooter>
       </DialogContent>

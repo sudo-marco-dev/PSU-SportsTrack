@@ -53,6 +53,8 @@ export const BINTURUNGAN_DEFAULT_SPORTS: SportConfig[] = [
   { name: 'Table Tennis', icon: GiPingPongBat, category: 'Paddle' },
 ];
 
+export const BALLGAMES_LIST = BINTURUNGAN_DEFAULT_SPORTS;
+
 export type BracketFormatType = 'single' | 'double' | 'round_robin_only' | 'round_robin_playoffs';
 
 export type ProposedMatch = {

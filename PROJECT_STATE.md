@@ -84,6 +84,7 @@
 - [x] Phase 8.11 Automated Visual Regression & Multi-Viewport Verification Suite (`tests/visual-inspection.spec.ts`)
 - [x] Phase 8.12 Comprehensive PostgreSQL Security, Automated Bracket Progression & Role Escapes Lockdown (`20261024_comprehensive_security_and_engine.sql`)
 - [x] Phase 8.13 Courtside Offline Resilience, Undo Score Deductions, Bundle Code Splitting & Global UI Error Boundaries (`ErrorBoundary.tsx`, `offlineQueue.ts`, `FacilitatorKiosk.tsx`)
+- [x] Phase 8.14 Strict Ballgames Tournament Scoping & Non-Ballgame Code Purge (`CreateTournamentModal.tsx`, `sportIcons.ts`, `TournamentExplorer.tsx`, `TournamentManagement.tsx`)
 
 ## 🛠️ Recent Modifications & Change Log
 

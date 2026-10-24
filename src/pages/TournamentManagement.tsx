@@ -261,7 +261,7 @@ export const TournamentManagement: React.FC = () => {
                 { label: 'Active Games', value: 'Active' },
                 { label: 'Completed', value: 'Completed' },
               ]}
-              searchPlaceholder={activeTab === 'tournaments' ? 'Search tournaments or sports...' : 'Search teams or coaches...'}
+              searchPlaceholder={activeTab === 'tournaments' ? 'Search tournaments or ballgames...' : 'Search teams or coaches...'}
               actions={
                 <ViewToggle view={viewMode} onViewChange={setViewMode} />
               }

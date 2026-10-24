@@ -27,7 +27,7 @@ const extractSportName = (match: Match, tourMap: Map<string, Tournament>): strin
       }
     }
   }
-  return 'General Sports';
+  return 'General Ball Games';
 };
 
 const isPlayoffRound = (roundName: string): boolean => {

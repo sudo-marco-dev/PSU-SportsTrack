@@ -987,7 +987,7 @@ export const AdminRecovery = () => {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <Badge className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[10px] font-black uppercase mb-1">
-                            {tm.tournaments?.sport || 'Athletics'}
+                            {tm.tournaments?.sport || 'Basketball'}
                           </Badge>
                           <h4 className="text-base font-black text-slate-900 dark:text-white">
                             {tm.name}

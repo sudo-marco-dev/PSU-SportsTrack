@@ -479,7 +479,7 @@ export async function injectSuperDemo(supabase: SupabaseClient): Promise<Scenari
       collegeMap[code] = {
         id: c.id,
         name: c.college_name,
-        squadName: `${code} ${mascotNames[code] || 'Athletics'}`,
+        squadName: `${code} ${mascotNames[code] || 'Squad'}`,
       };
     });
 

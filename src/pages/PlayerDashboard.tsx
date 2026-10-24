@@ -690,7 +690,7 @@ export const PlayerDashboard = () => {
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between gap-2">
                         <Badge variant="outline" className="text-[9px] font-black uppercase tracking-wider text-orange-500 border-orange-500/30">
-                          {tourney?.sport || 'Athletics'}
+                          {tourney?.sport || 'Basketball'}
                         </Badge>
                         {/* Game-day status projection badge */}
                         {availability === 'active' && (

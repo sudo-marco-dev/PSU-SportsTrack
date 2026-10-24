@@ -47,7 +47,7 @@ export const TournamentListTab: React.FC<TournamentListTabProps> = ({
       <EmptyState
         icon={Trophy}
         title="No tournaments found"
-        description="No institutional sports competitions match the current filter and search parameters."
+        description="No institutional ballgame competitions match the current filter and search parameters."
         actionLabel="Reset Search Criteria"
         onAction={onClearFilters}
       />

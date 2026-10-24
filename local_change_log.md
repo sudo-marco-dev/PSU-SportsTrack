@@ -6,6 +6,34 @@ This log tracks every user prompt, database migration, code change, and Git oper
 
 ## 📅 Log Entry: 2026-10-24
 
+### 💬 Prompt: Strict Ballgames Enforcement When Hosting Tournaments
+*   **Timestamp**: 2026-10-24T11:00:00+08:00
+*   **User Directive**:
+    - "remove any mentions/codes of sports other than the listed ballgames when hosting a tournament"
+*   **Actions Taken**:
+    *   **Tournament Creation & Hosting Flow (`CreateTournamentModal.tsx`, `TournamentManagement.tsx`, `TournamentListTab.tsx`)**:
+        - Replaced generic/ambiguous "sport" mentions in the tournament creation modal with specific ballgame terminology:
+            - Mode selection: `"One-Click Binturungan (All 9 Ballgames)"` and `"Custom Single Ballgame"`.
+            - Checklist & field labels: `"Ballgames Checklist"`, `"Ballgame Discipline"`, and `"Select ballgame..."`.
+            - Toast notifications & audit logging: Updated messages to `"Please select at least one ballgame"`, `"Successfully initialized N Binturungan ballgame tournaments"`, and `"Created single tournament ... (ballgame)"`.
+            - Submit button: `"Launch N Binturungan Ballgames (Draft)"` / `"Launch Ballgame Event (Draft)"`.
+        - Updated `TournamentManagement.tsx` search placeholder to `"Search tournaments or ballgames..."`.
+        - Updated `TournamentListTab.tsx` empty state to `"No institutional ballgame competitions match the current filter and search parameters."`.
+    *   **Purged Non-Ballgame Sports Code & Vector Icons (`src/lib/sportIcons.ts`)**:
+        - Completely purged all non-ballgame sport codes (`Esports`, `Chess`, `Swimming`, `Athletics`, `Running`, `Track`) from `SPORT_ICONS`.
+        - Removed corresponding unused icon imports (`GiGamepad`, `GiChessKnight`, `GiRunningShoe`, `FaPersonSwimming`).
+        - Enforced that only the official 9 ballgames are recognized: Basketball, Volleyball, Soccer (and Football alias), Futsal, Sepak Takraw, Baseball, Softball, Pickleball, and Table Tennis.
+    *   **System-Wide Fallback & UI Cleanups (`TournamentExplorer.tsx`, `Ranking.tsx`, `AdminRecovery.tsx`, `PlayerDashboard.tsx`, `devScenarios.ts`)**:
+        - In `TournamentExplorer.tsx`, changed fallback sport string from `'General Sports'` to `'General Ball Games'`.
+        - In `Ranking.tsx`, updated dropdown filter labels to `"Ballgame Discipline"` and `"All Ballgames"`.
+        - In `AdminRecovery.tsx` and `PlayerDashboard.tsx`, replaced obsolete `'Athletics'` fallback with `'Basketball'`.
+        - In `devScenarios.ts`, replaced mascot fallback `'Athletics'` with `'Squad'`.
+    *   **Verification**:
+        - Production build (`npm run build`) completed with 0 errors; code chunk `sportIcons` reduced to 0.37 kB and vendor bundle reduced.
+        - Automated test suite: All 9 Playwright tests passed in 10.8s (`tests/match-center.spec.ts`, `tests/navigation.spec.ts`, `tests/visual-inspection.spec.ts`).
+
+---
+
 ### 💬 Prompt: Comprehensive System Improvements Sweep — Backend Security Engine, Courtside Offline Resilience, Bundle Optimization & UI Accessibility
 *   **Timestamp**: 2026-10-24T02:00:00+08:00
 *   **User Directive**:

@@ -7,12 +7,8 @@ import {
   GiBaseballGlove,
   GiSoccerKick, 
   GiPingPongBat, 
-  GiTennisRacket,
-  GiGamepad, 
-  GiChessKnight, 
-  GiRunningShoe 
+  GiTennisRacket
 } from 'react-icons/gi';
-import { FaPersonSwimming } from 'react-icons/fa6';
 import { Trophy } from 'lucide-react';
 
 export const SPORT_ICONS: Record<string, IconType> = {
@@ -26,12 +22,6 @@ export const SPORT_ICONS: Record<string, IconType> = {
   Softball: GiBaseballGlove,
   Pickleball: GiTennisRacket,
   'Table Tennis': GiPingPongBat,
-  Esports: GiGamepad,
-  Chess: GiChessKnight,
-  Swimming: FaPersonSwimming,
-  Athletics: GiRunningShoe,
-  Running: GiRunningShoe,
-  Track: GiRunningShoe,
 };
 
 export const getSportIcon = (sportName?: string | null): IconType => {

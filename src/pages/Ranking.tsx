@@ -1004,14 +1004,14 @@ export const Ranking = () => {
             {/* 2. Sport Category */}
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-                Sport Discipline
+                Ballgame Discipline
               </label>
               <Select value={sportCategory} onValueChange={(v) => v && setSportCategory(v)}>
                 <SelectTrigger className="h-9 sm:h-10 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-none hover:border-slate-300 dark:hover:border-slate-700 focus:ring-1 focus:ring-slate-400 transition-colors">
-                  <SelectValue placeholder="All Sports" />
+                  <SelectValue placeholder="All Ballgames" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
-                  <SelectItem value="all" className="text-xs font-medium">All Sports</SelectItem>
+                  <SelectItem value="all" className="text-xs font-medium">All Ballgames</SelectItem>
                   <SelectItem value="Basketball" className="text-xs font-medium">Basketball</SelectItem>
                   <SelectItem value="Volleyball" className="text-xs font-medium">Volleyball</SelectItem>
                   <SelectItem value="Soccer" className="text-xs font-medium">Soccer / Football</SelectItem>
