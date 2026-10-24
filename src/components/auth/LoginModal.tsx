@@ -31,14 +31,14 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { toast } from 'sonner';
 
 const loginSchema = z.object({
-  email: z.string().email({ message: 'Invalid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+  email: z.string().trim().toLowerCase().email({ message: 'Invalid email address' }),
+  password: z.string().min(1, { message: 'Password is required' }),
 });
 
 const registerSchema = z.object({
-  lastName: z.string().min(1, { message: 'Last name is required' }),
-  firstName: z.string().min(1, { message: 'First name is required' }),
-  email: z.string().email({ message: 'Invalid university email' }),
+  lastName: z.string().trim().min(1, { message: 'Last name is required' }),
+  firstName: z.string().trim().min(1, { message: 'First name is required' }),
+  email: z.string().trim().toLowerCase().email({ message: 'Invalid university email' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
   confirmPassword: z.string(),
   role: z.enum(['player_student', 'player_faculty', 'player_staff', 'coach'] as const, { message: 'Role is required' }),
@@ -53,6 +53,22 @@ const registerSchema = z.object({
   path: ['confirmPassword'],
 });
 
+const getAuthErrorMessage = (rawMessage: string): string => {
+  const msg = rawMessage.toLowerCase();
+  if (msg.includes('invalid login credentials') || msg.includes('invalid credentials')) {
+    return 'Invalid email or password. Please verify your credentials (check for typos and Caps Lock).';
+  }
+  if (msg.includes('email not confirmed')) {
+    return 'Your email address has not been confirmed yet. Please verify your email or contact support.';
+  }
+  if (msg.includes('too many requests') || msg.includes('rate limit')) {
+    return 'Too many login attempts. Please wait a few moments before trying again.';
+  }
+  return rawMessage;
+};
+
+const getLockoutKey = (email: string) => `psu_lockout_${email.trim().toLowerCase()}`;
+
 export const LoginModal = () => {
   const { isLoginModalOpen, closeLoginModal } = useAuth();
   const navigate = useNavigate();
@@ -61,7 +77,6 @@ export const LoginModal = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
-  const [, setFailedAttempts] = useState<number>(0);
   const [colleges, setColleges] = useState<{ id: string; college_name: string }[]>([]);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
@@ -98,118 +113,136 @@ export const LoginModal = () => {
     });
   }, []);
 
+  // Clear legacy global keys that trapped the whole browser on any single test account failure
   useEffect(() => {
-    const checkCooldown = () => {
-      const attempts = parseInt(localStorage.getItem('login_attempts') || '0', 10);
-      setFailedAttempts(attempts);
-
-      const lockUntilStr = localStorage.getItem('login_lockout_until');
-      if (lockUntilStr) {
-        const lockUntil = parseInt(lockUntilStr, 10);
-        const now = Date.now();
-        if (now < lockUntil) {
-          setCooldownRemaining(Math.ceil((lockUntil - now) / 1000));
-        } else {
-          localStorage.removeItem('login_lockout_until');
-          localStorage.removeItem('login_attempts');
-          setCooldownRemaining(0);
-          setFailedAttempts(0);
-        }
-      }
-    };
-
-    checkCooldown();
-    const interval = setInterval(checkCooldown, 1000);
-    return () => clearInterval(interval);
+    localStorage.removeItem('login_lockout_until');
+    localStorage.removeItem('login_attempts');
   }, []);
 
+  const watchedLoginEmail = loginForm.watch('email');
+
+  // Check rate limit / lockout scoped to the currently typed email
+  useEffect(() => {
+    if (!watchedLoginEmail || !watchedLoginEmail.includes('@')) {
+      setCooldownRemaining(0);
+      return;
+    }
+    const clean = watchedLoginEmail.trim().toLowerCase();
+    const lockKey = getLockoutKey(clean);
+    const lockUntilStr = localStorage.getItem(lockKey);
+    if (lockUntilStr) {
+      const lockUntil = parseInt(lockUntilStr, 10);
+      const now = Date.now();
+      if (now < lockUntil) {
+        setCooldownRemaining(Math.ceil((lockUntil - now) / 1000));
+      } else {
+        localStorage.removeItem(lockKey);
+        setCooldownRemaining(0);
+      }
+    } else {
+      setCooldownRemaining(0);
+    }
+  }, [watchedLoginEmail]);
+
+  // Tick down cooldown timer
+  useEffect(() => {
+    if (cooldownRemaining <= 0) return;
+    const interval = setInterval(() => {
+      setCooldownRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cooldownRemaining]);
+
   async function onLoginSubmit(values: z.infer<typeof loginSchema>) {
-    // 1. Check server-side rate limits first
+    const cleanEmail = values.email.trim().toLowerCase();
+    const cleanPassword = values.password;
+    const lockKey = getLockoutKey(cleanEmail);
+
+    // 1. Check server-side rate limits first (Rule 3 Invariant)
     try {
       const { data: limitCheck } = await (supabase.rpc as any)('check_login_rate_limit', {
-        p_email: values.email,
+        p_email: cleanEmail,
       });
       if (limitCheck && limitCheck.allowed === false) {
         const remainingSeconds = limitCheck.remaining_seconds || 300;
         const minutes = Math.floor(remainingSeconds / 60);
         const seconds = remainingSeconds % 60;
         setCooldownRemaining(remainingSeconds);
-        setFailedAttempts(limitCheck.failed_attempts || 3);
-        toast.error(`Account temporarily locked due to failed attempts. Please try again in ${minutes}m ${seconds}s.`);
+        localStorage.setItem(lockKey, (Date.now() + remainingSeconds * 1000).toString());
+        toast.error(`Account temporarily locked due to failed attempts. Please try again in ${minutes > 0 ? `${minutes}m ` : ''}${seconds}s.`);
         return;
       }
     } catch (rpcErr) {
       console.warn('Server-side rate limit check fallback:', rpcErr);
     }
 
-    // 2. Client local storage check fallback
-    const lockUntilStr = localStorage.getItem('login_lockout_until');
-    if (lockUntilStr) {
-      const lockUntil = parseInt(lockUntilStr, 10);
-      const now = Date.now(); // eslint-disable-line react-hooks/purity
+    // 2. Client local storage check fallback scoped to this email
+    const storedLock = localStorage.getItem(lockKey);
+    if (storedLock) {
+      const lockUntil = parseInt(storedLock, 10);
+      const now = Date.now();
       if (now < lockUntil) {
         const remainingSeconds = Math.ceil((lockUntil - now) / 1000);
         const minutes = Math.floor(remainingSeconds / 60);
         const seconds = remainingSeconds % 60;
-        toast.error(`Too many failed attempts. Please try again in ${minutes}m ${seconds}s.`);
+        setCooldownRemaining(remainingSeconds);
+        toast.error(`Account temporarily locked. Please try again in ${minutes > 0 ? `${minutes}m ` : ''}${seconds}s.`);
         return;
       } else {
-        localStorage.removeItem('login_lockout_until');
-        localStorage.removeItem('login_attempts');
+        localStorage.removeItem(lockKey);
         setCooldownRemaining(0);
-        setFailedAttempts(0);
       }
     }
 
     setIsLoading(true);
     try {
       const { data: authData, error } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
+        email: cleanEmail,
+        password: cleanPassword,
       });
 
       if (error) {
         // Record failed attempt on server
         try {
           const { data: failRecord } = await (supabase.rpc as any)('record_failed_login', {
-            p_email: values.email,
+            p_email: cleanEmail,
           });
           if (failRecord && failRecord.allowed === false) {
-            setCooldownRemaining(failRecord.remaining_seconds || 300);
+            const remainingSeconds = failRecord.remaining_seconds || 300;
+            setCooldownRemaining(remainingSeconds);
+            localStorage.setItem(lockKey, (Date.now() + remainingSeconds * 1000).toString());
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = remainingSeconds % 60;
+            toast.error(`Too many failed attempts. Account temporarily locked for ${minutes > 0 ? `${minutes}m ` : ''}${seconds}s.`);
+            return;
+          } else if (failRecord && typeof failRecord.failed_attempts === 'number') {
+            const remainingAttempts = Math.max(1, 5 - failRecord.failed_attempts);
+            toast.error(`${getAuthErrorMessage(error.message)} (${remainingAttempts} attempt${remainingAttempts > 1 ? 's' : ''} remaining)`);
+            return;
           }
         } catch (rpcErr) {
           console.warn('Server failed login recording fallback:', rpcErr);
         }
 
-        const currentAttempts = parseInt(localStorage.getItem('login_attempts') || '0', 10) + 1;
-        const maxAttempts = 3;
-        setFailedAttempts(currentAttempts);
-
-        if (currentAttempts >= maxAttempts) {
-          const lockTimeMs = 5 * 60 * 1000;
-          const lockUntil = Date.now() + lockTimeMs; // eslint-disable-line react-hooks/purity
-          localStorage.setItem('login_lockout_until', lockUntil.toString());
-          localStorage.setItem('login_attempts', currentAttempts.toString());
-          setCooldownRemaining(300);
-          toast.error('Too many failed attempts (3/3). Account temporarily locked for 5 minutes.');
-        } else {
-          localStorage.setItem('login_attempts', currentAttempts.toString());
-          const remainingAttempts = maxAttempts - currentAttempts;
-          toast.error(`${error.message} (${remainingAttempts} attempt${remainingAttempts > 1 ? 's' : ''} remaining)`);
-        }
+        toast.error(getAuthErrorMessage(error.message));
       } else {
         // Reset rate limits on server upon successful auth
         try {
           await (supabase.rpc as any)('record_successful_login', {
-            p_email: values.email,
+            p_email: cleanEmail,
           });
         } catch (rpcErr) {
           console.warn('Server successful login recording fallback:', rpcErr);
         }
 
-        localStorage.removeItem('login_attempts');
-        localStorage.removeItem('login_lockout_until');
-        setFailedAttempts(0);
+        localStorage.removeItem(lockKey);
+        setCooldownRemaining(0);
         toast.success('Logged in successfully! Welcome back.');
         loginForm.reset();
         closeLoginModal();
@@ -243,7 +276,7 @@ export const LoginModal = () => {
         }
       }
     } catch {
-      toast.error('An unexpected error occurred during login');
+      toast.error('An unexpected error occurred during login. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -252,9 +285,10 @@ export const LoginModal = () => {
   async function onRegisterSubmit(values: z.infer<typeof registerSchema>) {
     setIsLoading(true);
     try {
+      const cleanEmail = values.email.trim().toLowerCase();
       // 1. Sign up user with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: values.email,
+        email: cleanEmail,
         password: values.password,
       });
 
@@ -269,7 +303,7 @@ export const LoginModal = () => {
         const { error: profileError } = await supabase.from('users').insert({
           id: authData.user.id,
           full_name: formattedFullName,
-          email: values.email.trim(),
+          email: cleanEmail,
           role: values.role,
           college_id: values.collegeId || null,
           employee_id: values.employeeId ? values.employeeId.trim() : null,
@@ -286,7 +320,7 @@ export const LoginModal = () => {
         }
       }
     } catch {
-      toast.error('An unexpected error occurred during registration');
+      toast.error('An unexpected error occurred during registration. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -325,11 +359,23 @@ export const LoginModal = () => {
 
             {/* Lockout Banner */}
             {authMode === 'login' && cooldownRemaining > 0 && (
-              <div className="mt-5 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3">
-                <AlertCircle className="size-5 text-red-400 shrink-0" />
-                <div className="text-xs text-red-200 font-medium">
-                  Account locked. Cooldown: <span className="font-mono text-red-400 font-bold">{Math.floor(cooldownRemaining / 60)}m {cooldownRemaining % 60}s</span>
+              <div className="mt-5 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <AlertCircle className="size-5 text-red-400 shrink-0" />
+                  <div className="text-xs text-red-200 font-medium">
+                    Account locked. Cooldown: <span className="font-mono text-red-400 font-bold">{Math.floor(cooldownRemaining / 60)}m {cooldownRemaining % 60}s</span>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeLoginModal();
+                    navigate('/reset-password');
+                  }}
+                  className="text-[11px] font-bold text-orange-400 hover:text-orange-300 underline cursor-pointer shrink-0"
+                >
+                  Reset Password
+                </button>
               </div>
             )}
 
@@ -347,6 +393,11 @@ export const LoginModal = () => {
                           <div className="relative">
                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-slate-500" />
                             <Input
+                              type="email"
+                              autoCapitalize="none"
+                              autoCorrect="off"
+                              spellCheck={false}
+                              autoComplete="email"
                               placeholder="athlete@psu.edu.ph"
                               className="h-11 pl-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-orange-500"
                               {...field}
@@ -381,6 +432,10 @@ export const LoginModal = () => {
                             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-slate-500" />
                             <Input
                               type={showPassword ? 'text' : 'password'}
+                              autoCapitalize="none"
+                              autoCorrect="off"
+                              spellCheck={false}
+                              autoComplete="current-password"
                               placeholder="••••••••"
                               className="h-11 pl-11 pr-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-orange-500"
                               {...field}
@@ -474,6 +529,11 @@ export const LoginModal = () => {
                         </FormLabel>
                         <FormControl>
                           <Input
+                            type="email"
+                            autoCapitalize="none"
+                            autoCorrect="off"
+                            spellCheck={false}
+                            autoComplete="email"
                             placeholder="202381234@psu.palawan.edu.ph"
                             className="h-10 sm:h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-orange-500"
                             {...field}
@@ -494,6 +554,10 @@ export const LoginModal = () => {
                           <FormControl>
                             <Input
                               type="password"
+                              autoCapitalize="none"
+                              autoCorrect="off"
+                              spellCheck={false}
+                              autoComplete="new-password"
                               placeholder="••••••••"
                               className="h-10 sm:h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-orange-500"
                               {...field}
@@ -513,6 +577,10 @@ export const LoginModal = () => {
                           <FormControl>
                             <Input
                               type="password"
+                              autoCapitalize="none"
+                              autoCorrect="off"
+                              spellCheck={false}
+                              autoComplete="new-password"
                               placeholder="••••••••"
                               className="h-10 sm:h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-orange-500"
                               {...field}

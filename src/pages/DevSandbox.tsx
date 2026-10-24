@@ -1698,7 +1698,28 @@ export const DevSandbox = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6 md:p-7 pt-0 space-y-4">
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                <Button
+                  onClick={async () => {
+                    try {
+                      await (supabase.rpc as any)('reset_login_rate_limit');
+                      localStorage.removeItem('login_lockout_until');
+                      localStorage.removeItem('login_attempts');
+                      Object.keys(localStorage).forEach((k) => {
+                        if (k.startsWith('psu_lockout_') || k.startsWith('psu_attempts_')) {
+                          localStorage.removeItem(k);
+                        }
+                      });
+                      toast.success('Login rate limits and account lockouts cleared.');
+                    } catch (err: any) {
+                      toast.error('Failed to clear rate limits: ' + (err.message || 'Unknown error'));
+                    }
+                  }}
+                  variant="outline"
+                  className="h-12 rounded-xl border border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 font-bold text-xs uppercase cursor-pointer"
+                >
+                  Reset Rate Limits
+                </Button>
                 <Button
                   onClick={async () => {
                     await supabase.from('matches').update({ active_scorekeeper_id: null, lease_expires_at: null }).neq('id', '00000000-0000-0000-0000-000000000000');

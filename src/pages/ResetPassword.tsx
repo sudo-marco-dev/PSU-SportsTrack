@@ -26,7 +26,7 @@ const resetPasswordSchema = z
   });
 
 const requestResetSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  email: z.string().trim().toLowerCase().email('Please enter a valid email address'),
 });
 
 type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
@@ -162,7 +162,8 @@ export const ResetPassword = () => {
   const onRequestReset = async (values: RequestResetFormValues) => {
     setIsSendingReset(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
+      const cleanEmail = values.email.trim().toLowerCase();
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
 

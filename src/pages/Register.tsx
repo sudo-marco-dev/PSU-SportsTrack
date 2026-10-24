@@ -23,9 +23,9 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
 const registerSchema = z.object({
-  lastName: z.string().min(1, { message: 'Last name is required' }),
-  firstName: z.string().min(1, { message: 'First name is required' }),
-  email: z.string().email({ message: 'Invalid email address' }),
+  lastName: z.string().trim().min(1, { message: 'Last name is required' }),
+  firstName: z.string().trim().min(1, { message: 'First name is required' }),
+  email: z.string().trim().toLowerCase().email({ message: 'Invalid email address' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
   confirmPassword: z.string(),
   role: z.enum(['player_student', 'player_faculty', 'player_staff', 'coach'] as const, { message: 'Role is required' }),
@@ -74,9 +74,10 @@ export const Register = () => {
   async function onSubmit(values: z.infer<typeof registerSchema>) {
     setIsLoading(true);
     try {
+      const cleanEmail = values.email.trim().toLowerCase();
       // 1. Sign up user
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: values.email,
+        email: cleanEmail,
         password: values.password,
       });
 
@@ -91,7 +92,7 @@ export const Register = () => {
         const { error: profileError } = await supabase.from('users').insert({
           id: authData.user.id,
           full_name: formattedFullName,
-          email: values.email.trim(),
+          email: cleanEmail,
           role: values.role,
           college_id: values.collegeId || null,
           employee_id: values.employeeId ? values.employeeId.trim() : null,
@@ -101,13 +102,13 @@ export const Register = () => {
         if (profileError) {
           toast.error('Failed to create user profile: ' + profileError.message);
         } else {
-          toast.success('Registration successful!');
+          toast.success('Registration successful! Welcome to PSU SportsTrack.');
           const rolePath = values.role === 'coach' ? '/coach' : '/player';
-          window.location.href = rolePath;
+          navigate(rolePath, { replace: true });
         }
       }
-    } catch (error) {
-      toast.error('An unexpected error occurred');
+    } catch {
+      toast.error('An unexpected error occurred during registration. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -185,6 +186,11 @@ export const Register = () => {
                     </FormLabel>
                     <FormControl>
                       <Input
+                        type="email"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        autoComplete="email"
                         placeholder="202381234@psu.palawan.edu.ph"
                         {...field}
                         className="h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
@@ -204,6 +210,10 @@ export const Register = () => {
                       <div className="relative">
                         <Input
                           type={showPassword ? "text" : "password"}
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck={false}
+                          autoComplete="new-password"
                           {...field}
                           className="h-11 bg-white/5 border-white/10 text-white focus:ring-orange-500 rounded-xl"
                         />
@@ -230,6 +240,10 @@ export const Register = () => {
                       <div className="relative">
                         <Input
                           type={showPassword ? "text" : "password"}
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck={false}
+                          autoComplete="new-password"
                           {...field}
                           className="h-11 bg-white/5 border-white/10 text-white focus:ring-orange-500 rounded-xl"
                         />
