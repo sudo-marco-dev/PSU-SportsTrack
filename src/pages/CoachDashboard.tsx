@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { TrendingUp, Users, UserPlus, Clock, ArrowUpRight, Activity, Trophy, ChevronRight, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 
 type Stats = {
   activeTeams: number;
@@ -100,6 +101,10 @@ export const CoachDashboard = () => {
       setIsLoading(false);
     }
   };
+
+  if (isLoading) {
+    return <SkeletonCard variant="dashboard" className="my-2" />;
+  }
 
   return (
     <div className="space-y-8 pb-4">

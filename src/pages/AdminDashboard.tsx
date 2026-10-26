@@ -18,9 +18,11 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { FacilitatorManagementModal } from '@/components/admin/FacilitatorManagementModal';
 import { getSportIcon } from '@/lib/sportIcons';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 
 export const AdminDashboard = () => {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
     tournaments: 0,
     liveMatches: 0,
@@ -122,6 +124,8 @@ export const AdminDashboard = () => {
       setRecentMatches(formattedMatches);
     } catch (error) {
       console.error('Error fetching admin stats:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -165,6 +169,14 @@ export const AdminDashboard = () => {
   ];
 
   const getPercentage = (value: number) => (value / verificationBreakdown.total) * 100;
+
+  if (isLoading) {
+    return (
+      <div className="max-w-[1400px] mx-auto px-4 pb-6">
+        <SkeletonCard variant="admin-dashboard" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 relative max-w-[1400px] mx-auto px-4 pb-6">

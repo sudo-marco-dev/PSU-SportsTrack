@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { getSportScoringProfile } from '@/lib/sportScoringRules';
 import { getSportIcon } from '@/lib/sportIcons';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import {
   Trophy,
   ChevronLeft,
@@ -502,14 +503,7 @@ export const StadiumDisplay = () => {
   }, [events, match, sportProfile.pointUnit]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white space-y-4">
-        <div className="size-16 rounded-full border-4 border-orange-500/20 border-t-orange-500 animate-spin" />
-        <span className="font-mono text-sm tracking-[0.3em] uppercase text-slate-400">
-          Initializing Focus View Scoreboard...
-        </span>
-      </div>
-    );
+    return <SkeletonCard variant="stadium" />;
   }
 
   if (!match) {

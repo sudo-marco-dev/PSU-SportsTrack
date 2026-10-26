@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import {
   fetchPlayerTelemetry,
   getSportScoringActionCards,
@@ -1055,11 +1056,9 @@ export const Profile = () => {
             {/* Tab 0: Career Telemetry, Dynamic Multi-Sport Breakdown & Recorded Games Log */}
             <TabsContent value="career" className="w-full min-w-0 outline-none space-y-5">
               {isLoadingTelemetry ? (
-                <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <Loader2 className="size-8 text-orange-500 animate-spin" />
-                  <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">
-                    Compiling Career Telemetry &amp; Recorded Games...
-                  </p>
+                <div className="space-y-4 py-2">
+                  <SkeletonCard variant="stat" count={4} />
+                  <SkeletonCard variant="card" count={2} />
                 </div>
               ) : (() => {
                 // Sort all 9 official PSU sports from Most Played -> Least / Zero Played
@@ -1636,9 +1635,8 @@ export const Profile = () => {
               </div>
 
               {isLoadingStars ? (
-                <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <Loader2 className="size-8 text-orange-500 animate-spin" />
-                  <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Loading Trophy Case...</p>
+                <div className="py-2">
+                  <SkeletonCard variant="trophy-case" count={4} />
                 </div>
               ) : stars.length === 0 ? (
                 /* Compact, Purposeful Empty State Card */
@@ -1750,9 +1748,7 @@ export const Profile = () => {
 
                 <div className="pt-4 space-y-3">
                   {isLoadingInvitations ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="size-6 text-orange-500 animate-spin" />
-                    </div>
+                    <SkeletonCard variant="row" count={3} />
                   ) : invitations.length === 0 ? (
                     <div className="text-center py-8 px-4 space-y-2 max-w-sm mx-auto">
                       <UserX className="size-8 text-slate-300 dark:text-slate-600 mx-auto" />
