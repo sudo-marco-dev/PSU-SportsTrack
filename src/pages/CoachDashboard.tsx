@@ -209,8 +209,8 @@ export const CoachDashboard = () => {
                 <div className="p-3 bg-red-500 text-white rounded-2xl shadow-lg shadow-red-500/30 shrink-0">
                   <AlertTriangle className="size-6" />
                 </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <Badge className="bg-red-500 text-white font-black text-[9px] uppercase tracking-widest">
                       Action Required
                     </Badge>
@@ -218,11 +218,11 @@ export const CoachDashboard = () => {
                       Clearance Rejected
                     </span>
                   </div>
-                  <h3 className="text-lg md:text-xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white">
+                  <h3 className="text-lg md:text-xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white break-words">
                     Coaching Clearance Was Not Approved
                   </h3>
-                  <p className="text-xs text-slate-700 dark:text-slate-300 mt-1 leading-relaxed">
-                    Reason: <strong className="text-red-600 dark:text-red-400">{latestDoc.rejection_reason || 'Document could not be verified by administration.'}</strong>
+                  <p className="text-xs text-slate-700 dark:text-slate-300 mt-1 leading-relaxed break-words [overflow-wrap:anywhere]">
+                    Reason: <strong className="text-red-600 dark:text-red-400 font-bold break-words [overflow-wrap:anywhere]">{latestDoc.rejection_reason || 'Document could not be verified by administration.'}</strong>
                   </p>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                     Please upload a clearer, official photo of your Palawan State University Coach or Employee ID card below to re-submit.

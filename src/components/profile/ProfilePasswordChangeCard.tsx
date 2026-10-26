@@ -55,8 +55,8 @@ export const ProfilePasswordChangeCard: React.FC<ProfilePasswordChangeCardProps>
   return (
     <Card className={`border border-slate-200 dark:border-white/10 rounded-3xl shadow-sm bg-white dark:bg-slate-900 ${className}`}>
       <CardHeader className="p-6 pb-4">
-        <CardTitle className="text-lg font-bold uppercase tracking-tight flex items-center gap-2 text-slate-900 dark:text-white">
-          <KeyRound className="size-5 text-orange-500" />
+        <CardTitle className="text-base sm:text-lg font-bold uppercase tracking-tight flex items-start gap-2.5 text-slate-900 dark:text-white">
+          <KeyRound className="size-5 text-orange-500 shrink-0 mt-0.5" />
           <span>Security &amp; Password</span>
         </CardTitle>
         <CardDescription className="text-slate-500 dark:text-slate-400 font-semibold uppercase text-[10px] tracking-wider">

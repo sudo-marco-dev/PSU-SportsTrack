@@ -400,16 +400,16 @@ export const PlayerDashboard = () => {
       return (
         <div className="max-w-2xl mx-auto space-y-6 p-4">
           {/* Rejection Alert Card */}
-          <div className="p-6 rounded-3xl bg-red-50 dark:bg-red-500/10 border-2 border-red-200 dark:border-red-500/20 text-slate-900 dark:text-white shadow-xl space-y-4">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-red-500 text-white rounded-2xl shrink-0 shadow-md shadow-red-500/20">
-                <XCircle className="size-7" />
+          <div className="p-4 sm:p-6 rounded-3xl bg-red-50 dark:bg-red-500/10 border-2 border-red-200 dark:border-red-500/20 text-slate-900 dark:text-white shadow-xl space-y-4">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="p-2.5 sm:p-3 bg-red-500 text-white rounded-2xl shrink-0 mt-0.5 shadow-md shadow-red-500/20">
+                <XCircle className="size-6 sm:size-7" />
               </div>
-              <div className="space-y-1">
-                <Badge className="bg-red-500 text-white font-black text-[10px] uppercase tracking-wider">
+              <div className="space-y-1 min-w-0 flex-1">
+                <Badge className="bg-red-500 text-white font-black text-[10px] uppercase tracking-wider mb-0.5">
                   Action Required • Re-Verification
                 </Badge>
-                <h2 className="text-2xl font-black italic uppercase tracking-tight text-red-600 dark:text-red-400">
+                <h2 className="text-lg sm:text-2xl font-black italic uppercase tracking-tight text-red-600 dark:text-red-400 break-words leading-tight">
                   Verification Clearance Rejected
                 </h2>
                 <p className="text-xs text-slate-600 dark:text-slate-300">
@@ -421,11 +421,11 @@ export const PlayerDashboard = () => {
             </div>
 
             {/* Rejection Reason from Admin */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-red-200 dark:border-red-500/20 space-y-1.5">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-red-200 dark:border-red-500/20 space-y-1.5">
               <span className="text-[10px] font-black uppercase tracking-wider text-red-600 dark:text-red-400 block">
                 Official Administrator Reason
               </span>
-              <p className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-snug">
+              <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 leading-snug break-words [overflow-wrap:anywhere]">
                 {latestDoc.rejection_reason || 'Document could not be verified by administration.'}
               </p>
             </div>

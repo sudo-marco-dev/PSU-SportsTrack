@@ -33,7 +33,6 @@ import {
   UserX,
   BellOff,
   Bell,
-  BookOpen,
   Activity,
   Target,
   Search,
@@ -1800,8 +1799,9 @@ export const Profile = () => {
                 {/* 1. Account Information Card & College Department Selector */}
                 <Card className="border border-slate-200 dark:border-white/10 rounded-3xl shadow-sm bg-white dark:bg-slate-900">
                   <CardHeader className="p-6 pb-4">
-                    <CardTitle className="text-lg font-bold uppercase tracking-tight flex items-center gap-2">
-                      <User className="size-5 text-orange-500" /> Personal &amp; Campus Affiliation
+                    <CardTitle className="text-base sm:text-lg font-bold uppercase tracking-tight flex items-start gap-2.5">
+                      <User className="size-5 text-orange-500 shrink-0 mt-0.5" />
+                      <span>Personal &amp; Campus Affiliation</span>
                     </CardTitle>
                     <CardDescription className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
                       University Account Credentials
@@ -1880,8 +1880,9 @@ export const Profile = () => {
                 {/* 2. Verification Clearance Status Card */}
                 <Card className="border border-slate-200 dark:border-white/10 rounded-3xl shadow-sm bg-white dark:bg-slate-900">
                   <CardHeader className="p-6 pb-4">
-                    <CardTitle className="text-lg font-bold uppercase tracking-tight flex items-center gap-2">
-                      <ShieldCheck className="size-5 text-orange-500" /> Eligibility Clearance
+                    <CardTitle className="text-base sm:text-lg font-bold uppercase tracking-tight flex items-start gap-2.5">
+                      <ShieldCheck className="size-5 text-orange-500 shrink-0 mt-0.5" />
+                      <span>Eligibility Clearance</span>
                     </CardTitle>
                     <CardDescription className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
                       PSU Athlete Official Authorization
@@ -1930,20 +1931,20 @@ export const Profile = () => {
                       </div>
                     ) : latestVerificationDoc?.status === 'Rejected' ? (
                       <div className="space-y-4">
-                        <div className="p-5 rounded-2xl bg-red-50 dark:bg-red-500/10 border-2 border-red-200 dark:border-red-500/20 text-red-950 dark:text-red-200 space-y-3">
+                        <div className="p-4 sm:p-5 rounded-2xl bg-red-50 dark:bg-red-500/10 border-2 border-red-200 dark:border-red-500/20 text-red-950 dark:text-red-200 space-y-3">
                           <div className="flex items-start gap-3">
-                            <div className="p-2 bg-red-500 text-white rounded-xl shrink-0">
+                            <div className="p-2 bg-red-500 text-white rounded-xl shrink-0 mt-0.5">
                               <XCircle className="size-5" />
                             </div>
-                            <div>
-                              <Badge className="bg-red-500 text-white text-[9px] font-bold uppercase tracking-wider mb-1">
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <Badge className="bg-red-500 text-white text-[9px] font-bold uppercase tracking-wider mb-0.5">
                                 Re-Verification Needed
                               </Badge>
-                              <h4 className="font-bold uppercase tracking-tight text-sm text-red-600 dark:text-red-400">
+                              <h4 className="font-bold uppercase tracking-tight text-sm text-red-600 dark:text-red-400 break-words">
                                 Previous Clearance Rejected
                               </h4>
-                              <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                                Reason: <strong className="text-red-700 dark:text-red-300">{latestVerificationDoc.rejection_reason || 'Document could not be verified.'}</strong>
+                              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]">
+                                Reason: <strong className="text-red-700 dark:text-red-300 font-bold break-words [overflow-wrap:anywhere]">{latestVerificationDoc.rejection_reason || 'Document could not be verified.'}</strong>
                               </p>
                             </div>
                           </div>
@@ -1990,16 +1991,16 @@ export const Profile = () => {
               {/* 3. Academic & Student Credentials (Editable for corrections) */}
               <Card className="border border-slate-200 dark:border-white/10 rounded-3xl shadow-sm bg-white dark:bg-slate-900">
                 <CardHeader className="p-6 pb-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg font-bold uppercase tracking-tight flex items-center gap-2">
-                        <BookOpen className="size-5 text-orange-500" /> Academic &amp; Enrollment Credentials
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="text-base sm:text-lg font-bold uppercase tracking-tight text-slate-900 dark:text-white">
+                        Academic &amp; Enrollment Credentials
                       </CardTitle>
                       <CardDescription className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider mt-0.5">
                         Parsed from Certificate of Registration • Editable for Correction
                       </CardDescription>
                     </div>
-                    <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider border-orange-500/30 text-orange-600 dark:text-orange-400">
+                    <Badge variant="outline" className="w-fit text-[10px] font-bold uppercase tracking-wider border-orange-500/30 text-orange-600 dark:text-orange-400 shrink-0">
                       COR Data Layer
                     </Badge>
                   </div>
@@ -2093,16 +2094,16 @@ export const Profile = () => {
               {/* 4. Athletic Scouting Preferences (Preferred Sports & Primary Position) */}
               <Card className="border border-slate-200 dark:border-white/10 rounded-3xl shadow-sm bg-white dark:bg-slate-900">
                 <CardHeader className="p-6 pb-3">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div>
-                      <CardTitle className="text-lg font-bold uppercase tracking-tight flex items-center gap-2">
-                        <Target className="size-5 text-orange-500" /> Athletic Scouting &amp; Recruitment Preferences
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="text-base sm:text-lg font-bold uppercase tracking-tight text-slate-900 dark:text-white">
+                        Athletic Scouting &amp; Recruitment Preferences
                       </CardTitle>
                       <CardDescription className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider mt-0.5">
                         Visible to PSU Coaches &amp; Verified Users in the Scouting Directory
                       </CardDescription>
                     </div>
-                    <Badge className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20 text-[10px] font-black uppercase">
+                    <Badge className="w-fit bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20 text-[10px] font-black uppercase shrink-0">
                       Scouting Profile
                     </Badge>
                   </div>

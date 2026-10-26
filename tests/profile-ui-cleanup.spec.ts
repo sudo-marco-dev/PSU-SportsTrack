@@ -231,4 +231,131 @@ test.describe('Profile UI Cleanup & In-Profile Password Reset Suite', () => {
     await expect(page.locator('#profile-new-password')).toBeVisible();
     await expect(page.locator('#profile-confirm-password')).toBeVisible();
   });
+
+  test('should prevent URL overflow and stranded icons on mobile 390px viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    const longReason = 'Non-parsable file (Image or scanned document converted to PDF — please download original PDF directly from PSU Portal: https://oes.psu.palawan.edu.ph/aims/students/)';
+    const playerId = 'test-player-mobile-overflow';
+    const futureExpiresAt = Math.floor(Date.now() / 1000) + 7200;
+    const mockUser = {
+      id: playerId,
+      aud: 'authenticated',
+      role: 'authenticated',
+      email: 'student.mobile@psu.palawan.edu.ph',
+      app_metadata: { provider: 'email' },
+      user_metadata: { full_name: 'Juan Mobile' },
+      created_at: new Date().toISOString(),
+    };
+
+    const mockSession = {
+      access_token: 'fake-mobile-token',
+      refresh_token: 'fake-refresh-token',
+      token_type: 'bearer',
+      expires_in: 7200,
+      expires_at: futureExpiresAt,
+      user: mockUser,
+    };
+
+    await page.route('**/auth/v1/**', async (route) => {
+      const url = route.request().url();
+      if (url.includes('/user')) {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockUser) });
+      } else {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockSession) });
+      }
+    });
+
+    await page.route('**/rest/v1/users*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: playerId,
+          full_name: 'Juan Mobile',
+          role: 'player_student',
+          college_id: 'col-1',
+          college_name: 'College of Sciences (CS)',
+          student_number: '2023-8-0111',
+          is_verified: false,
+        }),
+      });
+    });
+
+    await page.route('**/rest/v1/verification_documents*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'doc-mobile-overflow',
+            user_id: playerId,
+            status: 'Rejected',
+            rejection_reason: longReason,
+            confidence_score: 10,
+            created_at: new Date().toISOString(),
+          },
+        ]),
+      });
+    });
+
+    await page.route('**/rest/v1/player_stars*', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    });
+    await page.route('**/rest/v1/team_roster*', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    });
+    await page.route('**/rest/v1/colleges*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([{ id: 'col-1', college_name: 'College of Sciences (CS)' }]),
+      });
+    });
+
+    await page.addInitScript(({ session }) => {
+      localStorage.setItem('sb-kxnkdhznnpwvnljjmfwl-auth-token', JSON.stringify(session));
+    }, { session: mockSession });
+
+    // 1. Check Profile page at 390px
+    await page.goto('/profile');
+    const accountTab = page.getByRole('tab', { name: /Account/i });
+    await expect(accountTab).toBeVisible();
+    await accountTab.click();
+
+    // Verify rejection reason does not overflow red card boundary
+    const rejectionCard = page.locator('.border-red-200, .border-red-500\\/20').first();
+    await expect(rejectionCard).toBeVisible();
+    const cardBox = await rejectionCard.boundingBox();
+    const reasonElement = page.locator(`strong:has-text("Non-parsable file")`).first();
+    await expect(reasonElement).toBeVisible();
+    const textBox = await reasonElement.boundingBox();
+
+    expect(cardBox).not.toBeNull();
+    expect(textBox).not.toBeNull();
+    if (cardBox && textBox) {
+      // Allow 2px tolerance for browser sub-pixel rendering
+      expect(textBox.x + textBox.width).toBeLessThanOrEqual(cardBox.x + cardBox.width + 2);
+    }
+
+    // Verify Academic Credentials CardTitle has NO stranded SVG icon
+    const academicTitle = page.getByText('Academic & Enrollment Credentials');
+    await expect(academicTitle).toBeVisible();
+    await expect(academicTitle.locator('svg')).toHaveCount(0);
+
+    // 2. Check Dashboard page at 390px
+    await page.goto('/player');
+    const dashRejectionCard = page.locator('.border-red-200, .border-red-500\\/20').first();
+    await expect(dashRejectionCard).toBeVisible();
+    const dashCardBox = await dashRejectionCard.boundingBox();
+    const dashReasonElement = page.locator('text=Non-parsable file').first();
+    await expect(dashReasonElement).toBeVisible();
+    const dashTextBox = await dashReasonElement.boundingBox();
+
+    expect(dashCardBox).not.toBeNull();
+    expect(dashTextBox).not.toBeNull();
+    if (dashCardBox && dashTextBox) {
+      expect(dashTextBox.x + dashTextBox.width).toBeLessThanOrEqual(dashCardBox.x + dashCardBox.width + 2);
+    }
+  });
 });

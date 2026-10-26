@@ -1260,7 +1260,7 @@ export const SystemVerifications = () => {
                           <div className="flex items-center justify-between text-xs">
                             <div className="min-w-0 pr-2">
                               <p className="text-slate-400 text-[10px]">Account Email:</p>
-                              <p className="font-mono text-white text-[11px] truncate max-w-[150px]" title={previewDoc.users?.email || 'N/A'}>
+                              <p className="font-mono text-white text-[11px] break-all" title={previewDoc.users?.email || 'N/A'}>
                                 {previewDoc.users?.email || 'N/A'}
                               </p>
                             </div>
@@ -1305,26 +1305,26 @@ export const SystemVerifications = () => {
                           </span>
                           <span className="font-bold text-white">{previewDoc.users?.employee_id || 'N/A'}</span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-400 text-[10px] flex items-center gap-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-400 text-[10px] flex items-center gap-1 shrink-0">
                             <Building className="size-3 text-amber-400" /> Department / Coaching Unit:
                           </span>
-                          <span className="font-bold text-white truncate max-w-[150px]">{previewDoc.users?.department || 'N/A'}</span>
+                          <span className="font-bold text-white text-right break-words line-clamp-2 max-w-[200px]">{previewDoc.users?.department || 'N/A'}</span>
                         </div>
                       </div>
                     ) : (
                       <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1.5 text-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-400 text-[10px] flex items-center gap-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-400 text-[10px] flex items-center gap-1 shrink-0">
                             <GraduationCap className="size-3 text-orange-400" /> Student Number:
                           </span>
                           <span className="font-bold text-white">{previewDoc.extracted_student_no || 'N/A'}</span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-400 text-[10px] flex items-center gap-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-400 text-[10px] flex items-center gap-1 shrink-0">
                             <BookOpen className="size-3 text-orange-400" /> Degree Program:
                           </span>
-                          <span className="font-bold text-white truncate max-w-[150px]">{previewDoc.extracted_program || 'N/A'}</span>
+                          <span className="font-bold text-white text-right break-words line-clamp-2 max-w-[200px]">{previewDoc.extracted_program || 'N/A'}</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-slate-400 text-[10px] flex items-center gap-1">
