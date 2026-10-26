@@ -1989,7 +1989,11 @@ export const BracketGenerationModal: React.FC<BracketGenerationModalProps> = ({
                                         }
                                       >
                                         <SelectTrigger className="h-9 rounded-lg bg-white dark:bg-slate-900 font-bold text-xs">
-                                          <SelectValue placeholder="Select Team A" />
+                                          <SelectValue placeholder="Select Team A">
+                                            {editMatchForm.team_a_id === 'TBD'
+                                              ? 'TBD (Unassigned)'
+                                              : approvedTeams.find((t) => t.id === editMatchForm.team_a_id)?.name || (editMatchForm.team_a_id && editMatchForm.team_a_id !== 'TBD' ? editMatchForm.team_a_id : undefined)}
+                                          </SelectValue>
                                         </SelectTrigger>
                                         <SelectContent className="rounded-xl font-bold text-xs">
                                           <SelectItem value="TBD">TBD (Unassigned)</SelectItem>
@@ -2030,7 +2034,11 @@ export const BracketGenerationModal: React.FC<BracketGenerationModalProps> = ({
                                         }
                                       >
                                         <SelectTrigger className="h-9 rounded-lg bg-white dark:bg-slate-900 font-bold text-xs">
-                                          <SelectValue placeholder="Select Team B" />
+                                          <SelectValue placeholder="Select Team B">
+                                            {editMatchForm.team_b_id === 'TBD'
+                                              ? 'TBD (Unassigned)'
+                                              : approvedTeams.find((t) => t.id === editMatchForm.team_b_id)?.name || (editMatchForm.team_b_id && editMatchForm.team_b_id !== 'TBD' ? editMatchForm.team_b_id : undefined)}
+                                          </SelectValue>
                                         </SelectTrigger>
                                         <SelectContent className="rounded-xl font-bold text-xs">
                                           <SelectItem value="TBD">TBD (Unassigned)</SelectItem>
@@ -2249,7 +2257,11 @@ export const BracketGenerationModal: React.FC<BracketGenerationModalProps> = ({
                                   }}
                                 >
                                   <SelectTrigger className="h-9 rounded-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10 font-black uppercase italic text-xs">
-                                    <SelectValue placeholder="Select Team A" />
+                                    <SelectValue placeholder="Select Team A">
+                                      {match.team_a_id === 'BYE'
+                                        ? 'BYE (Auto-Advance)'
+                                        : approvedTeams.find((t) => t.id === match.team_a_id)?.name || (match.team_a_id && match.team_a_id !== 'BYE' ? match.team_a_id : undefined)}
+                                    </SelectValue>
                                   </SelectTrigger>
                                   <SelectContent className="rounded-xl font-bold text-xs">
                                     {approvedTeams.map((t) => (
@@ -2279,7 +2291,11 @@ export const BracketGenerationModal: React.FC<BracketGenerationModalProps> = ({
                                   }}
                                 >
                                   <SelectTrigger className="h-9 rounded-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10 font-black uppercase italic text-xs">
-                                    <SelectValue placeholder="Select Team B" />
+                                    <SelectValue placeholder="Select Team B">
+                                      {match.team_b_id === 'BYE'
+                                        ? 'BYE (Auto-Advance)'
+                                        : approvedTeams.find((t) => t.id === match.team_b_id)?.name || (match.team_b_id && match.team_b_id !== 'BYE' ? match.team_b_id : undefined)}
+                                    </SelectValue>
                                   </SelectTrigger>
                                   <SelectContent className="rounded-xl font-bold text-xs">
                                     {approvedTeams.map((t) => (

@@ -638,10 +638,18 @@ export const LoginModal = () => {
                       render={({ field }) => (
                         <FormItem className="space-y-1">
                           <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Role</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger className="h-10 sm:h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-bold">
-                                <SelectValue placeholder="Select Role" />
+                                <SelectValue placeholder="Select Role">
+                                  {field.value === 'player_faculty'
+                                    ? 'Faculty Athlete'
+                                    : field.value === 'player_staff'
+                                    ? 'Staff Athlete'
+                                    : field.value === 'coach'
+                                    ? 'Athletic Coach'
+                                    : 'Student Athlete'}
+                                </SelectValue>
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="bg-slate-900 border-white/10 text-white font-bold text-xs rounded-xl">

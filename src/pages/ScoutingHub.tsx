@@ -772,7 +772,21 @@ export const ScoutingHub = () => {
             onValueChange={(v) => setCollegeOrClusterFilter(v || 'all')}
           >
             <SelectTrigger className="h-10 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold">
-              <SelectValue placeholder="All Colleges & Tribes" />
+              <SelectValue placeholder="All Colleges & Tribes">
+                {collegeOrClusterFilter === 'all'
+                  ? 'All Colleges & Binturungan Tribes'
+                  : collegeOrClusterFilter.startsWith('cluster:')
+                  ? (() => {
+                      const cl = clusters.find((c) => `cluster:${c.id}` === collegeOrClusterFilter);
+                      return cl ? `Tribe: ${cl.name} (${cl.college_codes.join(', ')})` : collegeOrClusterFilter;
+                    })()
+                  : collegeOrClusterFilter.startsWith('college:')
+                  ? (() => {
+                      const col = colleges.find((c) => `college:${c.id}` === collegeOrClusterFilter);
+                      return col ? col.college_name : collegeOrClusterFilter;
+                    })()
+                  : collegeOrClusterFilter}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent className="rounded-xl max-h-72">
               <SelectItem value="all" className="text-xs font-bold">
@@ -795,7 +809,17 @@ export const ScoutingHub = () => {
           {activeTab === 'players' ? (
             <Select value={playerSortBy} onValueChange={(v: any) => setPlayerSortBy(v || 'points')}>
               <SelectTrigger className="h-10 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold">
-                <SelectValue />
+                <SelectValue>
+                  {playerSortBy === 'points'
+                    ? 'Sort: Career Points'
+                    : playerSortBy === 'ppg'
+                    ? 'Sort: PPG Average'
+                    : playerSortBy === 'threes'
+                    ? 'Sort: 3-Pointers (3PM)'
+                    : playerSortBy === 'mvp'
+                    ? 'Sort: MVP Trophies'
+                    : 'Sort: Name (A-Z)'}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent className="rounded-xl">
                 <SelectItem value="points" className="text-xs font-bold">Sort: Career Points</SelectItem>
@@ -808,7 +832,13 @@ export const ScoutingHub = () => {
           ) : activeTab === 'matches' ? (
             <Select value={matchStatusFilter} onValueChange={(v: any) => setMatchStatusFilter(v || 'Completed')}>
               <SelectTrigger className="h-10 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold">
-                <SelectValue />
+                <SelectValue>
+                  {matchStatusFilter === 'Completed'
+                    ? 'Completed Matches (Archive)'
+                    : matchStatusFilter === 'Ongoing'
+                    ? 'Live / Ongoing Matches'
+                    : 'All Recorded Matches'}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent className="rounded-xl">
                 <SelectItem value="Completed" className="text-xs font-bold">Completed Matches (Archive)</SelectItem>

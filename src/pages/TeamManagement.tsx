@@ -1000,7 +1000,16 @@ export const TeamManagement = () => {
                   }}
                 >
                   <SelectTrigger className="h-10 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold">
-                    <SelectValue placeholder="All Squads (Open)" />
+                    <SelectValue placeholder="All Squads (Open)">
+                      {targetRecruitmentTeamId === 'all'
+                        ? 'All Squads (Open Browse)'
+                        : (() => {
+                            const t = teams.find((tm) => tm.id === targetRecruitmentTeamId);
+                            if (!t) return targetRecruitmentTeamId;
+                            const tr = Array.isArray(t.tournaments) ? t.tournaments[0] : t.tournaments;
+                            return `${t.name} (${tr?.sport || 'Sport'})`;
+                          })()}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
                     <SelectItem value="all" className="text-xs font-bold">
@@ -1027,7 +1036,11 @@ export const TeamManagement = () => {
                   onValueChange={(val) => setEligibilityFilter((val as 'all' | 'eligible') || 'all')}
                 >
                   <SelectTrigger className="h-10 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold">
-                    <SelectValue />
+                    <SelectValue>
+                      {eligibilityFilter === 'eligible'
+                        ? 'Only Eligible for Target Squad'
+                        : 'Show All Colleges / Tribes'}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
                     <SelectItem value="all" className="text-xs font-bold">
@@ -1047,7 +1060,9 @@ export const TeamManagement = () => {
                 </label>
                 <Select value={sportFilter} onValueChange={(val) => setSportFilter(val || 'all')}>
                   <SelectTrigger className="h-10 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold">
-                    <SelectValue />
+                    <SelectValue>
+                      {sportFilter === 'all' ? 'All Sports' : sportFilter}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="rounded-xl max-h-60">
                     <SelectItem value="all" className="text-xs font-bold">
@@ -1069,7 +1084,29 @@ export const TeamManagement = () => {
                 </label>
                 <Select value={positionFilter} onValueChange={(val) => setPositionFilter(val || 'all')}>
                   <SelectTrigger className="h-10 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold">
-                    <SelectValue />
+                    <SelectValue>
+                      {positionFilter === 'all'
+                        ? 'All Positions'
+                        : positionFilter === 'PG'
+                        ? 'Point Guard (PG)'
+                        : positionFilter === 'SG'
+                        ? 'Shooting Guard (SG)'
+                        : positionFilter === 'SF'
+                        ? 'Small Forward (SF)'
+                        : positionFilter === 'PF'
+                        ? 'Power Forward (PF)'
+                        : positionFilter === 'C'
+                        ? 'Center (C)'
+                        : positionFilter === 'Spiker'
+                        ? 'Spiker / Hitter'
+                        : positionFilter === 'Striker'
+                        ? 'Striker / Forward'
+                        : positionFilter === 'Midfield'
+                        ? 'Midfielder'
+                        : positionFilter === 'Goal'
+                        ? 'Goalkeeper'
+                        : positionFilter}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="rounded-xl max-h-60">
                     <SelectItem value="all" className="text-xs font-bold">
@@ -1098,7 +1135,17 @@ export const TeamManagement = () => {
                 </label>
                 <Select value={sortBy} onValueChange={(val: any) => setSortBy(val || 'points')}>
                   <SelectTrigger className="h-10 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold">
-                    <SelectValue />
+                    <SelectValue>
+                      {sortBy === 'points'
+                        ? 'Career Points (High → Low)'
+                        : sortBy === 'ppg'
+                        ? 'Scoring Average / PPG'
+                        : sortBy === 'threes'
+                        ? '3-Pointers Made (3PM)'
+                        : sortBy === 'mvp'
+                        ? 'MVP Trophies'
+                        : 'Athlete Name (A → Z)'}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
                     <SelectItem value="points" className="text-xs font-bold">Career Points (High → Low)</SelectItem>
@@ -1739,7 +1786,15 @@ export const TeamManagement = () => {
                           <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Status:</span>
                           <Select value={member.availability_status || 'active'} onValueChange={(val) => val && handleUpdateAvailability(member.id, val)}>
                             <SelectTrigger className={`h-8 w-28 min-w-[7rem] text-xs font-bold rounded-lg border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 ${member.availability_status === 'injured' ? 'text-red-500 font-black' : member.availability_status === 'benched' ? 'text-amber-500 font-bold' : 'text-emerald-600 font-bold'}`}>
-                              <SelectValue placeholder="Status" />
+                              <SelectValue placeholder="Status">
+                                {member.availability_status === 'injured'
+                                  ? 'Injured'
+                                  : member.availability_status === 'benched'
+                                  ? 'Benched'
+                                  : member.availability_status === 'excused'
+                                  ? 'Excused'
+                                  : 'Active'}
+                              </SelectValue>
                             </SelectTrigger>
                             <SelectContent className="rounded-xl">
                               <SelectItem value="active">

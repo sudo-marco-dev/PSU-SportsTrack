@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { logAudit } from '@/lib/audit';
+import { formatRole } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -445,7 +446,7 @@ export const FacilitatorManagementModal = ({
               <div className="flex justify-between items-center pt-1.5 border-t border-slate-200 dark:border-white/5">
                 <span className="text-slate-500">Original Role Before Appointment:</span>
                 <Badge variant="outline" className="text-orange-600 dark:text-orange-400 border-orange-500/30 text-[10px] font-black uppercase">
-                  {revokingUser.previous_role}
+                  {formatRole(revokingUser.previous_role)}
                 </Badge>
               </div>
             )}
@@ -462,7 +463,13 @@ export const FacilitatorManagementModal = ({
               }}
             >
               <SelectTrigger className="w-full rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 font-semibold text-xs">
-                <SelectValue placeholder="Select role" />
+                <SelectValue placeholder="Select role">
+                  {selectedRestoreRole === 'coach'
+                    ? 'Coach (Team Coach / Staff)'
+                    : selectedRestoreRole === 'player_faculty'
+                    ? 'Faculty Athlete'
+                    : 'Student Athlete'}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="coach">Coach (Team Coach / Staff)</SelectItem>

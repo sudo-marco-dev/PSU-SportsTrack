@@ -1842,7 +1842,9 @@ export const Profile = () => {
                             onValueChange={(val: string | null) => setSelectedCollegeId(val || '')}
                           >
                             <SelectTrigger className="w-full bg-white dark:bg-slate-800 border-slate-200 dark:border-white/10 rounded-xl text-xs font-medium h-11">
-                              <SelectValue placeholder="Select your PSU College Department..." />
+                              <SelectValue placeholder="Select your PSU College Department...">
+                                {selectedCollegeId && collegesList.find((col) => col.id === selectedCollegeId)?.college_name}
+                              </SelectValue>
                             </SelectTrigger>
                             <SelectContent className="max-h-60 rounded-xl">
                               {collegesList.map((col) => (

@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { logAudit } from '@/lib/audit';
+import { formatRole } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import {
@@ -1108,7 +1109,7 @@ export const AdminRecovery = () => {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-black uppercase mb-1">
-                            {u.role}
+                            {formatRole(u.role)}
                           </Badge>
                           <h4 className="text-base font-black text-slate-900 dark:text-white">
                             {u.full_name}

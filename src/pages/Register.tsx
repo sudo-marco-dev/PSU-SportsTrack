@@ -297,7 +297,7 @@ export const Register = () => {
                                 : field.value === 'player_staff'
                                 ? 'Staff Athlete'
                                 : field.value === 'coach'
-                                ? 'Coach'
+                                ? 'Athletic Coach'
                                 : 'Student Athlete'}
                             </SelectValue>
                           </SelectTrigger>
