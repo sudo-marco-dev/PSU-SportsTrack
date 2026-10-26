@@ -29,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { PasswordPolicyMeter } from '@/components/auth/PasswordPolicyMeter';
 
 const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email({ message: 'Invalid email address' }),
@@ -39,8 +40,14 @@ const registerSchema = z.object({
   lastName: z.string().trim().min(1, { message: 'Last name is required' }),
   firstName: z.string().trim().min(1, { message: 'First name is required' }),
   email: z.string().trim().toLowerCase().email({ message: 'Invalid university email' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-  confirmPassword: z.string(),
+  password: z
+    .string()
+    .min(8, { message: 'Password must be at least 8 characters' })
+    .regex(/[A-Z]/, { message: 'Password must contain at least one uppercase letter' })
+    .regex(/[a-z]/, { message: 'Password must contain at least one lowercase letter' })
+    .regex(/[0-9]/, { message: 'Password must contain at least one number' })
+    .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?~`]/, { message: 'Password must contain at least one special symbol' }),
+  confirmPassword: z.string().min(1, { message: 'Please confirm your password' }),
   role: z.enum(['player_student', 'player_faculty', 'player_staff', 'coach'] as const, { message: 'Role is required' }),
   collegeId: z.string().optional(),
   employeeId: z.string().optional(),
@@ -76,6 +83,8 @@ export const LoginModal = () => {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showRegisterConfirmPassword, setShowRegisterConfirmPassword] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
   const [colleges, setColleges] = useState<{ id: string; college_name: string }[]>([]);
   const [showTermsModal, setShowTermsModal] = useState(false);
@@ -106,6 +115,9 @@ export const LoginModal = () => {
       termsAccepted: false,
     },
   });
+
+  const watchedRegPassword = registerForm.watch('password');
+  const watchedRegConfirmPassword = registerForm.watch('confirmPassword');
 
   useEffect(() => {
     supabase.from('colleges').select('id, college_name').then(({ data }) => {
@@ -552,16 +564,26 @@ export const LoginModal = () => {
                         <FormItem className="space-y-1">
                           <FormLabel className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 ml-1">Password</FormLabel>
                           <FormControl>
-                            <Input
-                              type="password"
-                              autoCapitalize="none"
-                              autoCorrect="off"
-                              spellCheck={false}
-                              autoComplete="new-password"
-                              placeholder="••••••••"
-                              className="h-10 sm:h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-orange-500"
-                              {...field}
-                            />
+                            <div className="relative">
+                              <Input
+                                type={showRegisterPassword ? "text" : "password"}
+                                autoCapitalize="none"
+                                autoCorrect="off"
+                                spellCheck={false}
+                                autoComplete="new-password"
+                                placeholder="••••••••"
+                                className="h-10 sm:h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-orange-500 pr-10"
+                                {...field}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                                aria-label={showRegisterPassword ? "Hide password" : "Show password"}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-orange-500 transition-colors cursor-pointer p-1 rounded-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange-500"
+                              >
+                                {showRegisterPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                              </button>
+                            </div>
                           </FormControl>
                           <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
                         </FormItem>
@@ -575,22 +597,39 @@ export const LoginModal = () => {
                         <FormItem className="space-y-1">
                           <FormLabel className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 ml-1">Confirm</FormLabel>
                           <FormControl>
-                            <Input
-                              type="password"
-                              autoCapitalize="none"
-                              autoCorrect="off"
-                              spellCheck={false}
-                              autoComplete="new-password"
-                              placeholder="••••••••"
-                              className="h-10 sm:h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-orange-500"
-                              {...field}
-                            />
+                            <div className="relative">
+                              <Input
+                                type={showRegisterConfirmPassword ? "text" : "password"}
+                                autoCapitalize="none"
+                                autoCorrect="off"
+                                spellCheck={false}
+                                autoComplete="new-password"
+                                placeholder="••••••••"
+                                className="h-10 sm:h-11 bg-slate-900 border-white/10 text-white rounded-xl text-xs font-medium placeholder:text-slate-600 focus-visible:ring-1 focus-visible:ring-orange-500 pr-10"
+                                {...field}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowRegisterConfirmPassword(!showRegisterConfirmPassword)}
+                                aria-label={showRegisterConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-orange-500 transition-colors cursor-pointer p-1 rounded-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange-500"
+                              >
+                                {showRegisterConfirmPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                              </button>
+                            </div>
                           </FormControl>
                           <FormMessage className="text-[10px] font-bold text-red-400 ml-1" />
                         </FormItem>
                       )}
                     />
                   </div>
+
+                  {/* Real-time Password Policy & Password Match Feedback */}
+                  <PasswordPolicyMeter
+                    password={watchedRegPassword}
+                    confirmPassword={watchedRegConfirmPassword}
+                    className="mt-1"
+                  />
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <FormField

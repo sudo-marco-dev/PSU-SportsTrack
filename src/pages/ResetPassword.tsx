@@ -9,7 +9,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { KeyRound, Trophy, Mail, ArrowLeft } from 'lucide-react';
+import { KeyRound, Trophy, Mail, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { PasswordPolicyMeter } from '@/components/auth/PasswordPolicyMeter';
 
 // ── Schemas ──
 
@@ -17,8 +18,12 @@ const resetPasswordSchema = z
   .object({
     password: z
       .string()
-      .min(8, 'Password must be at least 8 characters'),
-    confirmPassword: z.string(),
+      .min(8, 'Password must be at least 8 characters')
+      .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
+      .regex(/[a-z]/, 'Must contain at least one lowercase letter')
+      .regex(/[0-9]/, 'Must contain at least one number')
+      .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?~`]/, 'Must contain at least one special symbol'),
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords do not match',
@@ -58,6 +63,8 @@ export const ResetPassword = () => {
   const [pageState, setPageState] = useState<PageState>('verifying');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isSendingReset, setIsSendingReset] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
@@ -66,6 +73,9 @@ export const ResetPassword = () => {
       confirmPassword: '',
     },
   });
+
+  const watchedPassword = form.watch('password');
+  const watchedConfirmPassword = form.watch('confirmPassword');
 
   const requestForm = useForm<RequestResetFormValues>({
     resolver: zodResolver(requestResetSchema),
@@ -392,12 +402,22 @@ export const ResetPassword = () => {
                           New Password
                         </FormLabel>
                         <FormControl>
-                          <Input
-                            type="password"
-                            placeholder="Min. 8 characters"
-                            className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
-                            {...field}
-                          />
+                          <div className="relative">
+                            <Input
+                              type={showPassword ? "text" : "password"}
+                              placeholder="Min. 8 characters"
+                              className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl pr-10"
+                              {...field}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              aria-label={showPassword ? "Hide password" : "Show password"}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 transition-colors cursor-pointer p-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+                            >
+                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          </div>
                         </FormControl>
                         <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
                       </FormItem>
@@ -412,16 +432,32 @@ export const ResetPassword = () => {
                           Confirm Password
                         </FormLabel>
                         <FormControl>
-                          <Input
-                            type="password"
-                            placeholder="Re-enter your password"
-                            className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
-                            {...field}
-                          />
+                          <div className="relative">
+                            <Input
+                              type={showConfirmPassword ? "text" : "password"}
+                              placeholder="Re-enter your password"
+                              className="h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl pr-10"
+                              {...field}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 transition-colors cursor-pointer p-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+                            >
+                              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          </div>
                         </FormControl>
                         <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
                       </FormItem>
                     )}
+                  />
+
+                  {/* Real-time Password Policy & Matching Feedback */}
+                  <PasswordPolicyMeter
+                    password={watchedPassword}
+                    confirmPassword={watchedConfirmPassword}
                   />
                   <Button
                     type="submit"

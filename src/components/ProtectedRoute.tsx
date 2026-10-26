@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth, type UserRole } from '@/context/AuthContext';
+import { PageSkeleton } from '@/components/ui/PageSkeleton';
 
 interface ProtectedRouteProps {
   requiredRole?: UserRole | UserRole[];
@@ -21,17 +22,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) 
   }, [isLoading, user, openLoginModal, isDevRoute]);
 
   if (isLoading) {
-    return (
-      <div className="flex py-28 items-center justify-center w-full">
-        <div className="flex flex-col items-center gap-4 animate-in fade-in duration-300">
-          <div className="size-12 rounded-full border-3 border-orange-500/20 border-t-orange-500 animate-spin" />
-          <div className="flex items-center gap-2">
-            <span className="text-orange-500 font-black italic tracking-wider text-xs uppercase">PSU</span>
-            <span className="text-slate-400 font-bold uppercase tracking-[0.25em] text-[10px]">Verifying Access...</span>
-          </div>
-        </div>
-      </div>
-    );
+    return <PageSkeleton variant="page" />;
   }
 
   if (!user) {

@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Activity, Trophy, Clock, Star, User, CalendarDays, Dumbbell, Swords, MapPin, XCircle, CheckCircle2, Zap, ArrowRight, Layers, Sparkles } from 'lucide-react';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 
 type RosterInvite = {
   id: string;
@@ -477,12 +478,7 @@ export const PlayerDashboard = () => {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex flex-col justify-center items-center h-[50vh] w-full gap-4 animate-in fade-in duration-300">
-        <div className="animate-spin rounded-full h-11 w-11 border-3 border-orange-500/20 border-t-orange-500" />
-        <p className="text-slate-500 font-bold tracking-widest uppercase text-xs">Loading Sports Dashboard...</p>
-      </div>
-    );
+    return <SkeletonCard variant="dashboard" className="my-2" />;
   }
 
   return (

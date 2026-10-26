@@ -60,19 +60,15 @@ export const AuthConfirm = () => {
       <div className="w-full max-w-md relative z-10">
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-8 text-center">
           {state === 'loading' && (
-            <>
-              <div className="mb-6">
-                <div className="inline-block p-4 bg-orange-500/10 rounded-full">
-                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-500 border-t-transparent" />
-                </div>
+            <div className="space-y-4 animate-shimmer">
+              <div className="size-16 rounded-2xl bg-orange-500/10 border border-orange-500/20 mx-auto flex items-center justify-center">
+                <div className="size-8 rounded-full border-2 border-orange-500/30 border-t-orange-500 animate-spin" />
               </div>
-              <h1 className="text-2xl font-black text-white uppercase italic tracking-tight mb-2">
-                Verifying<span className="text-orange-500">...</span>
-              </h1>
-              <p className="text-slate-400 font-medium text-sm">
-                Please wait while we confirm your account.
-              </p>
-            </>
+              <div className="space-y-2">
+                <div className="h-6 w-48 bg-slate-800 rounded-lg mx-auto" />
+                <div className="h-4 w-64 bg-slate-800/60 rounded-md mx-auto" />
+              </div>
+            </div>
           )}
 
           {state === 'success' && (

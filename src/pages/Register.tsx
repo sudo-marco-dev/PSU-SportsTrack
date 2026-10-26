@@ -21,13 +21,20 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { PasswordPolicyMeter } from '@/components/auth/PasswordPolicyMeter';
 
 const registerSchema = z.object({
   lastName: z.string().trim().min(1, { message: 'Last name is required' }),
   firstName: z.string().trim().min(1, { message: 'First name is required' }),
   email: z.string().trim().toLowerCase().email({ message: 'Invalid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-  confirmPassword: z.string(),
+  password: z
+    .string()
+    .min(8, { message: 'Password must be at least 8 characters' })
+    .regex(/[A-Z]/, { message: 'Password must contain at least one uppercase letter' })
+    .regex(/[a-z]/, { message: 'Password must contain at least one lowercase letter' })
+    .regex(/[0-9]/, { message: 'Password must contain at least one number' })
+    .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?~`]/, { message: 'Password must contain at least one special symbol' }),
+  confirmPassword: z.string().min(1, { message: 'Please confirm your password' }),
   role: z.enum(['player_student', 'player_faculty', 'player_staff', 'coach'] as const, { message: 'Role is required' }),
   collegeId: z.string().optional(),
   employeeId: z.string().optional(),
@@ -45,6 +52,7 @@ export const Register = () => {
   const { openLoginModal } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [colleges, setColleges] = useState<{ id: string; college_name: string }[]>([]);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
@@ -70,6 +78,9 @@ export const Register = () => {
       termsAccepted: false,
     },
   });
+
+  const watchedPassword = form.watch('password');
+  const watchedConfirmPassword = form.watch('confirmPassword');
 
   async function onSubmit(values: z.infer<typeof registerSchema>) {
     setIsLoading(true);
@@ -215,12 +226,13 @@ export const Register = () => {
                           spellCheck={false}
                           autoComplete="new-password"
                           {...field}
-                          className="h-11 bg-white/5 border-white/10 text-white focus:ring-orange-500 rounded-xl"
+                          className="h-11 bg-white/5 border-white/10 text-white focus:ring-orange-500 rounded-xl pr-10"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-orange-500 transition-colors cursor-pointer p-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 transition-colors cursor-pointer p-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
@@ -239,19 +251,34 @@ export const Register = () => {
                     <FormControl>
                       <div className="relative">
                         <Input
-                          type={showPassword ? "text" : "password"}
+                          type={showConfirmPassword ? "text" : "password"}
                           autoCapitalize="none"
                           autoCorrect="off"
                           spellCheck={false}
                           autoComplete="new-password"
                           {...field}
-                          className="h-11 bg-white/5 border-white/10 text-white focus:ring-orange-500 rounded-xl"
+                          className="h-11 bg-white/5 border-white/10 text-white focus:ring-orange-500 rounded-xl pr-10"
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 transition-colors cursor-pointer p-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+                        >
+                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
                       </div>
                     </FormControl>
                     <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
                   </FormItem>
                 )}
+              />
+
+              {/* Real-time Password Policy & Real-time Matching Meter */}
+              <PasswordPolicyMeter
+                password={watchedPassword}
+                confirmPassword={watchedConfirmPassword}
+                className="mt-1"
               />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

@@ -30,22 +30,14 @@ const DevSandbox = React.lazy(() => import('@/pages/DevSandbox').then(m => ({ de
 const ScoutingHub = React.lazy(() => import('@/pages/ScoutingHub').then(m => ({ default: m.ScoutingHub })));
 
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
-
-const PageLoader = () => (
-  <div className="flex py-28 items-center justify-center w-full">
-    <div className="flex flex-col items-center gap-4 animate-in fade-in duration-300">
-      <div className="size-12 rounded-full border-3 border-orange-500/20 border-t-orange-500 animate-spin" />
-      <span className="text-slate-400 font-bold uppercase tracking-[0.25em] text-[10px]">Loading...</span>
-    </div>
-  </div>
-);
+import { PageSkeleton } from '@/components/ui/PageSkeleton';
 
 function AppRoutes() {
   // This hook handles legacy route redirects
   useAuthRedirect();
 
   return (
-    <Suspense fallback={<PageLoader />}>
+    <Suspense fallback={<PageSkeleton variant="page" />}>
       <Routes>
         {/* Public Standalone Auth Routes */}
         <Route path="/login" element={<Navigate to="/" replace />} />

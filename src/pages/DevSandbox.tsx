@@ -1339,12 +1339,28 @@ export const DevSandbox = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                     {isLoadingUsers ? (
-                      <tr>
-                        <td colSpan={4} className="py-8 text-center text-slate-400">
-                          <RefreshCw className="size-5 animate-spin mx-auto mb-2 text-orange-500" />
-                          <span>Loading accounts ledger...</span>
-                        </td>
-                      </tr>
+                      Array.from({ length: 4 }).map((_, i) => (
+                        <tr key={i} className="animate-shimmer">
+                          <td className="py-3 px-3">
+                            <div className="flex items-center gap-2">
+                              <div className="size-7 rounded-full bg-slate-200 dark:bg-slate-800" />
+                              <div className="space-y-1">
+                                <div className="h-3.5 w-28 bg-slate-200 dark:bg-slate-800 rounded-md" />
+                                <div className="h-2.5 w-36 bg-slate-200 dark:bg-slate-800/60 rounded-md" />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="h-5 w-20 bg-slate-200 dark:bg-slate-800 rounded-full" />
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="h-5 w-16 bg-slate-200 dark:bg-slate-800 rounded-md" />
+                          </td>
+                          <td className="py-3 px-3 text-right">
+                            <div className="h-7 w-24 bg-slate-200 dark:bg-slate-800 rounded-lg ml-auto" />
+                          </td>
+                        </tr>
+                      ))
                     ) : filteredUsers.length === 0 ? (
                       <tr>
                         <td colSpan={4} className="py-8 text-center text-slate-400">
