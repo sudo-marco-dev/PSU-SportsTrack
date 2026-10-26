@@ -35,6 +35,7 @@ import {
   Building,
   Mail,
   ArrowUpDown,
+  Users,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { logAudit } from '@/lib/audit';
@@ -93,14 +94,22 @@ const STAFF_REJECTION_PRESETS = [
   'Other / Custom reason',
 ];
 
+const COACH_REJECTION_PRESETS = [
+  'Unclear or unreadable coach ID card photo (blurry, glare, or cut off)',
+  'Coach name does not match registered account profile name',
+  'College department or coaching unit does not match registered profile',
+  'Expired or invalid Palawan State University ID card',
+  'Other / Custom reason',
+];
+
 export const SystemVerifications = () => {
   const { isSuperAdmin, isLoading, user } = useAuth();
   const [documents, setDocuments] = useState<PendingDocument[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('Pending');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'students' | 'staff_faculty'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'students' | 'staff_faculty' | 'coaches'>('all');
   const [sortOption, setSortOption] = useState<
-    'newest' | 'oldest' | 'students_first' | 'staff_first' | 'confidence_desc' | 'confidence_asc' | 'name_asc'
+    'newest' | 'oldest' | 'students_first' | 'staff_first' | 'coaches_first' | 'confidence_desc' | 'confidence_asc' | 'name_asc'
   >('newest');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [isRevalidateModalOpen, setIsRevalidateModalOpen] = useState(false);
@@ -179,7 +188,10 @@ export const SystemVerifications = () => {
         is_verified: true,
         account_status: 'active',
       };
-      if (doc.document_type === 'STAFF_ID' || doc.document_type === 'FACULTY_ID') {
+      const isCoach = doc.document_type === 'COACH_ID' || doc.users?.role === 'coach';
+      const isStaffOrFaculty = doc.document_type === 'STAFF_ID' || doc.document_type === 'FACULTY_ID';
+
+      if (isCoach || isStaffOrFaculty) {
         if (doc.extracted_student_no) userUpdates.employee_id = doc.extracted_student_no;
         if (doc.extracted_program) userUpdates.department = doc.extracted_program;
       } else {
@@ -196,14 +208,15 @@ export const SystemVerifications = () => {
 
       if (userError) throw userError;
 
-      toast.success(`Clearance approved for ${doc.users?.full_name || 'Athlete'}. Profile updated.`);
+      const roleLabel = isCoach ? 'Coach' : isStaffOrFaculty ? 'Staff/Faculty' : 'Athlete';
+      toast.success(`Clearance approved for ${doc.users?.full_name || roleLabel}. Profile updated.`);
 
       // Audit Log
       logAudit({
         action: 'APPROVE_DOCUMENT',
         entity_type: 'verification_documents',
         entity_id: doc.id,
-        details: `Approved ${doc.document_type || 'COR'} clearance and verified user ${doc.user_id} (${doc.users?.full_name || 'Athlete'})`,
+        details: `Approved ${doc.document_type || 'ID'} clearance and verified user ${doc.user_id} (${doc.users?.full_name || roleLabel})`,
       });
 
       // Update state
@@ -218,8 +231,9 @@ export const SystemVerifications = () => {
 
   const handleOpenRejectModal = (doc: PendingDocument) => {
     setRejectDoc(doc);
+    const isCoach = doc.document_type === 'COACH_ID' || doc.users?.role === 'coach';
     const isStaffOrFaculty = doc.document_type === 'STAFF_ID' || doc.document_type === 'FACULTY_ID';
-    const presets = isStaffOrFaculty ? STAFF_REJECTION_PRESETS : REJECTION_PRESETS;
+    const presets = isCoach ? COACH_REJECTION_PRESETS : isStaffOrFaculty ? STAFF_REJECTION_PRESETS : REJECTION_PRESETS;
     setSelectedReason(presets[0]);
     setCustomNote('');
   };
@@ -246,7 +260,12 @@ export const SystemVerifications = () => {
 
       if (error) throw error;
 
-      toast.info('Clearance rejected. Player has been notified with rejection feedback.');
+      const roleText = (rejectDoc.document_type === 'COACH_ID' || rejectDoc.users?.role === 'coach')
+        ? 'Coach'
+        : (rejectDoc.document_type === 'STAFF_ID' || rejectDoc.document_type === 'FACULTY_ID')
+        ? 'Staff/Faculty'
+        : 'Player';
+      toast.info(`Clearance rejected. ${roleText} has been notified with rejection feedback.`);
 
       // Audit Log
       logAudit({
@@ -353,6 +372,11 @@ export const SystemVerifications = () => {
     };
   };
 
+  const isCoachDoc = (doc?: PendingDocument | null): boolean => {
+    if (!doc) return false;
+    return doc.document_type === 'COACH_ID' || doc.users?.role === 'coach' || doc.users?.role === 'Coach';
+  };
+
   const isStaffOrFacultyDoc = (doc?: PendingDocument | null): boolean => {
     if (!doc) return false;
     return (
@@ -363,21 +387,29 @@ export const SystemVerifications = () => {
     );
   };
 
+  const isStudentDoc = (doc?: PendingDocument | null): boolean => {
+    if (!doc) return false;
+    return !isCoachDoc(doc) && !isStaffOrFacultyDoc(doc);
+  };
+
   const studentCount = useMemo(() => {
-    return documents.filter((d) => !isStaffOrFacultyDoc(d)).length;
+    return documents.filter((d) => isStudentDoc(d)).length;
   }, [documents]);
 
   const staffFacultyCount = useMemo(() => {
     return documents.filter((d) => isStaffOrFacultyDoc(d)).length;
   }, [documents]);
 
+  const coachCount = useMemo(() => {
+    return documents.filter((d) => isCoachDoc(d)).length;
+  }, [documents]);
+
   const filteredDocuments = useMemo(() => {
     const search = searchQuery.toLowerCase().trim();
     const result = documents.filter((doc) => {
-      const isStaffOrFaculty = isStaffOrFacultyDoc(doc);
-
-      if (roleFilter === 'students' && isStaffOrFaculty) return false;
-      if (roleFilter === 'staff_faculty' && !isStaffOrFaculty) return false;
+      if (roleFilter === 'students' && !isStudentDoc(doc)) return false;
+      if (roleFilter === 'staff_faculty' && !isStaffOrFacultyDoc(doc)) return false;
+      if (roleFilter === 'coaches' && !isCoachDoc(doc)) return false;
 
       if (!search) return true;
 
@@ -397,10 +429,17 @@ export const SystemVerifications = () => {
     result.sort((a, b) => {
       const aIsStaff = isStaffOrFacultyDoc(a);
       const bIsStaff = isStaffOrFacultyDoc(b);
+      const aIsCoach = isCoachDoc(a);
+      const bIsCoach = isCoachDoc(b);
 
+      if (sortOption === 'coaches_first') {
+        if (aIsCoach && !bIsCoach) return -1;
+        if (!aIsCoach && bIsCoach) return 1;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
       if (sortOption === 'students_first') {
-        if (!aIsStaff && bIsStaff) return -1;
-        if (aIsStaff && !bIsStaff) return 1;
+        if (!aIsStaff && !aIsCoach && (bIsStaff || bIsCoach)) return -1;
+        if ((aIsStaff || aIsCoach) && !bIsStaff && !bIsCoach) return 1;
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
       if (sortOption === 'staff_first') {
@@ -434,6 +473,13 @@ export const SystemVerifications = () => {
   }, [documents, searchQuery, roleFilter, sortOption]);
 
   const renderConfidenceBadge = (score: number | null, status: string | null, docType?: string) => {
+    if (docType === 'COACH_ID') {
+      return (
+        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-black uppercase tracking-wider gap-1 shadow-sm">
+          <Users className="size-3" /> Coach ID • Manual Review
+        </Badge>
+      );
+    }
     if (docType === 'STAFF_ID') {
       return (
         <Badge className="bg-amber-500/15 text-amber-500 border border-amber-500/30 text-[10px] font-black uppercase tracking-wider gap-1 shadow-sm">
@@ -588,6 +634,7 @@ export const SystemVerifications = () => {
                 <SelectContent className="rounded-2xl border-slate-200 dark:border-white/10 backdrop-blur-3xl bg-white/95 dark:bg-slate-950/95 font-bold text-[11px] uppercase tracking-wider">
                   <SelectItem value="newest" className="cursor-pointer">Newest First</SelectItem>
                   <SelectItem value="oldest" className="cursor-pointer">Oldest First</SelectItem>
+                  <SelectItem value="coaches_first" className="cursor-pointer text-emerald-600 dark:text-emerald-400">Coaches First</SelectItem>
                   <SelectItem value="students_first" className="cursor-pointer text-orange-600 dark:text-orange-400">Students First</SelectItem>
                   <SelectItem value="staff_first" className="cursor-pointer text-amber-600 dark:text-amber-400">Staff & Faculty First</SelectItem>
                   <SelectItem value="confidence_desc" className="cursor-pointer">Confidence: High to Low</SelectItem>
@@ -657,6 +704,24 @@ export const SystemVerifications = () => {
                 roleFilter === 'staff_faculty' ? 'bg-white/20 text-white' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
               }`}>
                 {staffFacultyCount}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setRoleFilter('coaches')}
+              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                roleFilter === 'coaches'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-emerald-600 hover:bg-emerald-500/10'
+              }`}
+            >
+              <Users className="size-3.5" />
+              <span>Coaches • Coach ID</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                roleFilter === 'coaches' ? 'bg-white/20 text-white' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+              }`}>
+                {coachCount}
               </span>
             </button>
           </div>
@@ -1060,7 +1125,9 @@ export const SystemVerifications = () => {
                       <span>{previewDoc.users?.full_name || 'Athlete'}</span>
                       <span className="text-orange-500">•</span>
                       <span className="text-orange-500">
-                        {previewDoc.document_type === 'STAFF_ID'
+                        {previewDoc.document_type === 'COACH_ID'
+                          ? 'Coach ID Card'
+                          : previewDoc.document_type === 'STAFF_ID'
                           ? 'Staff Employee ID'
                           : previewDoc.document_type === 'FACULTY_ID'
                           ? 'Faculty Employee ID'
@@ -1068,7 +1135,7 @@ export const SystemVerifications = () => {
                       </span>
                     </DialogTitle>
                     <DialogDescription className="text-xs text-slate-400 font-medium mt-0.5">
-                      {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID'
+                      {previewDoc.document_type === 'COACH_ID' || previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID'
                         ? 'In-screen preview mode — inspect employee credentials, photo, and institutional affiliation.'
                         : 'In-screen preview mode — inspect document text and institutional stamps.'}
                     </DialogDescription>
@@ -1094,8 +1161,8 @@ export const SystemVerifications = () => {
                       At-A-Glance Match Dossier
                     </h4>
                     <p className="text-xs text-slate-400">
-                      {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID'
-                        ? 'Visual inspection of submitted official PSU Employee ID Card photo.'
+                      {previewDoc.document_type === 'COACH_ID' || previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID'
+                        ? 'Visual inspection of submitted official PSU Coach or Employee ID Card photo.'
                         : 'Comparison between registered profile credentials and parsed COR metadata.'}
                     </p>
                   </div>
@@ -1104,16 +1171,18 @@ export const SystemVerifications = () => {
                   <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                        {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? 'Review Status' : 'Match Confidence'}
+                        {previewDoc.document_type === 'COACH_ID' || previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? 'Review Status' : 'Match Confidence'}
                       </span>
                       <span className="text-xl font-black text-orange-500 tabular-nums">
-                        {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? 'Visual Check' : `${previewDoc.confidence_score ?? 0}%`}
+                        {previewDoc.document_type === 'COACH_ID' || previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? 'Visual Check' : `${previewDoc.confidence_score ?? 0}%`}
                       </span>
                     </div>
                     <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
-                          previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID'
+                          previewDoc.document_type === 'COACH_ID'
+                            ? 'bg-emerald-500 w-full'
+                            : previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID'
                             ? 'bg-amber-500 w-full'
                             : (previewDoc.confidence_score ?? 0) >= 90
                             ? 'bg-emerald-500'
@@ -1121,7 +1190,7 @@ export const SystemVerifications = () => {
                             ? 'bg-amber-500'
                             : 'bg-red-500'
                         }`}
-                        style={{ width: previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? '100%' : `${previewDoc.confidence_score ?? 0}%` }}
+                        style={{ width: previewDoc.document_type === 'COACH_ID' || previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? '100%' : `${previewDoc.confidence_score ?? 0}%` }}
                       />
                     </div>
                   </div>
@@ -1154,10 +1223,10 @@ export const SystemVerifications = () => {
                             </div>
                             <div className="text-right">
                               <p className="text-slate-400 text-[10px]">
-                                {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? 'Account Role:' : 'On COR:'}
+                                {previewDoc.document_type === 'COACH_ID' || previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? 'Account Role:' : 'On COR:'}
                               </p>
                               <p className="font-bold text-orange-400">
-                                {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? formatRole(previewDoc.users?.role) : (previewDoc.extracted_full_name || 'Non-parsable')}
+                                {previewDoc.document_type === 'COACH_ID' || previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? formatRole(previewDoc.users?.role) : (previewDoc.extracted_full_name || 'Non-parsable')}
                               </p>
                             </div>
                           </div>
@@ -1197,7 +1266,7 @@ export const SystemVerifications = () => {
                             </div>
                             <div className="text-right shrink-0">
                               <p className="text-slate-400 text-[10px]">
-                                {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? 'Employee ID:' : 'COR Student ID:'}
+                                {previewDoc.document_type === 'COACH_ID' || previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? 'Employee / Coach ID:' : 'COR Student ID:'}
                               </p>
                               <p className="font-bold text-orange-400 text-[11px]">
                                 {previewDoc.users?.employee_id || previewDoc.extracted_student_no || 'Unassigned'}
@@ -1219,26 +1288,26 @@ export const SystemVerifications = () => {
                         </div>
                         <div className="text-right">
                           <p className="text-slate-400 text-[10px]">
-                            {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? 'Office / Unit:' : 'On COR:'}
+                            {previewDoc.document_type === 'COACH_ID' || previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? 'Office / Unit:' : 'On COR:'}
                           </p>
                           <p className="font-bold text-orange-400">
-                            {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? (previewDoc.users?.department || 'N/A') : (previewDoc.extracted_college || 'Non-parsable')}
+                            {previewDoc.document_type === 'COACH_ID' || previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? (previewDoc.users?.department || 'N/A') : (previewDoc.extracted_college || 'Non-parsable')}
                           </p>
                         </div>
                       </div>
                     </div>
 
-                    {previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? (
+                    {previewDoc.document_type === 'COACH_ID' || previewDoc.document_type === 'STAFF_ID' || previewDoc.document_type === 'FACULTY_ID' ? (
                       <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1.5 text-xs">
                         <div className="flex items-center justify-between">
                           <span className="text-slate-400 text-[10px] flex items-center gap-1">
-                            <ShieldCheck className="size-3 text-amber-400" /> Registered Employee ID:
+                            <ShieldCheck className="size-3 text-amber-400" /> Registered ID:
                           </span>
                           <span className="font-bold text-white">{previewDoc.users?.employee_id || 'N/A'}</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-slate-400 text-[10px] flex items-center gap-1">
-                            <Building className="size-3 text-amber-400" /> Administrative Department:
+                            <Building className="size-3 text-amber-400" /> Department / Coaching Unit:
                           </span>
                           <span className="font-bold text-white truncate max-w-[150px]">{previewDoc.users?.department || 'N/A'}</span>
                         </div>

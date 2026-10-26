@@ -1,12 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TrendingUp, Users, UserPlus, Clock, ArrowUpRight, Activity, Trophy, ChevronRight, ArrowRight } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import {
+  TrendingUp,
+  Users,
+  UserPlus,
+  Clock,
+  ArrowUpRight,
+  Activity,
+  Trophy,
+  ChevronRight,
+  ArrowRight,
+  ShieldAlert,
+  AlertTriangle,
+  Lock,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
+
+const VerificationUpload = lazy(() =>
+  import('@/components/auth/VerificationUpload').then((m) => ({ default: m.VerificationUpload }))
+);
 
 type Stats = {
   activeTeams: number;
@@ -16,7 +34,7 @@ type Stats = {
 };
 
 export const CoachDashboard = () => {
-  const { user } = useAuth();
+  const { user, isVerified } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState<Stats>({
     activeTeams: 0,
@@ -26,12 +44,37 @@ export const CoachDashboard = () => {
   });
   const [draftTournaments, setDraftTournaments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [latestDoc, setLatestDoc] = useState<{ id: string; status: string; rejection_reason?: string | null } | null>(null);
 
   useEffect(() => {
     if (user?.id) {
       fetchAnalytics();
+      if (!isVerified) {
+        fetchVerificationStatus();
+      }
     }
-  }, [user]);
+  }, [user, isVerified]);
+
+  const fetchVerificationStatus = async () => {
+    if (!user?.id) return;
+    try {
+      const { data } = await supabase
+        .from('verification_documents')
+        .select('id, status, rejection_reason')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (data) {
+        setLatestDoc(data);
+      } else {
+        setLatestDoc(null);
+      }
+    } catch (e) {
+      console.warn('Error fetching verification status:', e);
+    }
+  };
 
   const fetchAnalytics = async () => {
     setIsLoading(true);
@@ -131,6 +174,96 @@ export const CoachDashboard = () => {
         <div className="absolute top-0 right-0 -mt-10 -mr-10 size-64 bg-orange-500/10 rounded-full blur-3xl" />
       </div>
 
+      {/* Coaching Clearance & Verification Status Section for Unverified Coaches */}
+      {!isVerified && (
+        <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+          {latestDoc?.status === 'Pending' ? (
+            <div className="p-5 md:p-6 rounded-2xl md:rounded-[2rem] bg-amber-500/10 border-2 border-amber-500/30 text-amber-950 dark:text-amber-200 shadow-xl backdrop-blur-md">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-start sm:items-center gap-4">
+                  <div className="p-3 bg-amber-500 text-white rounded-2xl shadow-lg shadow-amber-500/30 shrink-0">
+                    <Clock className="size-6 animate-pulse" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge className="bg-amber-500 text-white font-black text-[9px] uppercase tracking-widest">
+                        Clearance Pending
+                      </Badge>
+                      <span className="text-[10px] text-amber-700 dark:text-amber-300 font-bold uppercase tracking-wider">
+                        Awaiting Administrative Review
+                      </span>
+                    </div>
+                    <h3 className="text-lg md:text-xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white">
+                      Coaching Credentials Under Review
+                    </h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                      Your Coach / Employee ID photo has been received and is queued for sports office clearance. Team registration and roster management will be automatically unlocked upon administrative approval.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : latestDoc?.status === 'Rejected' ? (
+            <div className="p-5 md:p-6 rounded-2xl md:rounded-[2rem] bg-red-500/10 border-2 border-red-500/30 text-red-950 dark:text-red-200 shadow-xl backdrop-blur-md space-y-4">
+              <div className="flex items-start sm:items-center gap-4">
+                <div className="p-3 bg-red-500 text-white rounded-2xl shadow-lg shadow-red-500/30 shrink-0">
+                  <AlertTriangle className="size-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge className="bg-red-500 text-white font-black text-[9px] uppercase tracking-widest">
+                      Action Required
+                    </Badge>
+                    <span className="text-[10px] text-red-700 dark:text-red-300 font-bold uppercase tracking-wider">
+                      Clearance Rejected
+                    </span>
+                  </div>
+                  <h3 className="text-lg md:text-xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white">
+                    Coaching Clearance Was Not Approved
+                  </h3>
+                  <p className="text-xs text-slate-700 dark:text-slate-300 mt-1 leading-relaxed">
+                    Reason: <strong className="text-red-600 dark:text-red-400">{latestDoc.rejection_reason || 'Document could not be verified by administration.'}</strong>
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Please upload a clearer, official photo of your Palawan State University Coach or Employee ID card below to re-submit.
+                  </p>
+                </div>
+              </div>
+              <Suspense fallback={<div className="h-44 rounded-2xl bg-slate-100 dark:bg-slate-900 animate-pulse flex items-center justify-center text-xs font-bold text-slate-400">Loading document verification module...</div>}>
+                <VerificationUpload onUploadSuccess={() => fetchVerificationStatus()} />
+              </Suspense>
+            </div>
+          ) : (
+            <div className="p-5 md:p-6 rounded-2xl md:rounded-[2rem] bg-orange-500/10 border-2 border-orange-500/30 text-slate-900 dark:text-white shadow-xl backdrop-blur-md space-y-4">
+              <div className="flex items-start sm:items-center gap-4">
+                <div className="p-3 bg-orange-500 text-white rounded-2xl shadow-lg shadow-orange-500/30 shrink-0">
+                  <ShieldAlert className="size-6 text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge className="bg-orange-500 text-white font-black text-[9px] uppercase tracking-widest">
+                      Unverified Account
+                    </Badge>
+                    <span className="text-[10px] text-orange-600 dark:text-orange-400 font-bold uppercase tracking-wider">
+                      Coaching Verification Required
+                    </span>
+                  </div>
+                  <h3 className="text-lg md:text-xl font-black italic uppercase tracking-tight">
+                    Submit Coach ID to Unlock Team Management
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                    Welcome to PSU SportsTrack! To prevent unauthorized roster and team manipulation, university athletic regulations require coach verification. Please submit a photo of your official PSU Coach or Employee ID card below.
+                  </p>
+                </div>
+              </div>
+              <Suspense fallback={<div className="h-44 rounded-2xl bg-slate-100 dark:bg-slate-900 animate-pulse flex items-center justify-center text-xs font-bold text-slate-400">Loading document verification module...</div>}>
+                <VerificationUpload onUploadSuccess={() => fetchVerificationStatus()} />
+              </Suspense>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Coming Soon Tournaments / Registration Banner */}
       {draftTournaments.length > 0 && (
         <div className="bg-slate-950 border border-white/5 rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 relative overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-4 duration-500">
@@ -154,10 +287,20 @@ export const CoachDashboard = () => {
               </div>
             </div>
             <Button
-              onClick={() => navigate('/coach/teams')}
+              onClick={() => {
+                if (!isVerified) {
+                  toast.error('Coach verification required before applying or managing teams.');
+                  return;
+                }
+                navigate('/coach/teams');
+              }}
               className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-[10px] md:text-xs h-10 md:h-11 px-4 md:px-6 rounded-xl shadow-lg shadow-orange-500/20 shrink-0 self-stretch md:self-auto gap-2 w-full md:w-auto"
             >
-              Apply Your Team Now <ChevronRight className="size-4" />
+              {isVerified ? (
+                <>Apply Your Team Now <ChevronRight className="size-4" /></>
+              ) : (
+                <><Lock className="size-3.5" /> Verification Required</>
+              )}
             </Button>
           </div>
 
@@ -183,11 +326,17 @@ export const CoachDashboard = () => {
                 <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-400 font-medium">
                   <span>Starts: {new Date(t.start_date || t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                   <button 
-                    onClick={() => navigate('/coach/teams')} 
+                    onClick={() => {
+                      if (!isVerified) {
+                        toast.error('Coach verification required before enrolling teams.');
+                        return;
+                      }
+                      navigate('/coach/teams');
+                    }}
                     className="text-orange-400 hover:text-orange-300 font-black uppercase tracking-wider cursor-pointer transition-all hover:translate-x-0.5 active:scale-95 duration-150 inline-flex items-center gap-1"
                   >
-                    <span>Enroll</span>
-                    <ArrowRight className="size-3" />
+                    <span>{isVerified ? 'Enroll' : 'Locked'}</span>
+                    {isVerified ? <ArrowRight className="size-3" /> : <Lock className="size-2.5" />}
                   </button>
                 </div>
               </div>

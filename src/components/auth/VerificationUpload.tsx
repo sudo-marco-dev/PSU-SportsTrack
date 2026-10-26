@@ -20,7 +20,9 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
 
   const isStaff = profile?.role === 'player_staff';
   const isFaculty = profile?.role === 'player_faculty';
+  const isCoach = profile?.role === 'coach';
   const isStaffOrFaculty = isStaff || isFaculty;
+  const isIdPhotoRole = isStaff || isFaculty || isCoach;
 
   const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB maximum limit to prevent storage bucket overflow
 
@@ -48,9 +50,13 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
     const isPdf = file.type === 'application/pdf' || fileNameLower.endsWith('.pdf');
     const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(fileNameLower);
 
-    if (isStaffOrFaculty) {
+    if (isIdPhotoRole) {
       if (!isImage) {
-        toast.error('Invalid file format. Faculty & staff athletic clearance requires an employee ID card photo (PNG, JPG, WEBP).');
+        toast.error(
+          isCoach
+            ? 'Invalid file format. Coach athletic clearance requires an official coach / employee ID card photo (PNG, JPG, WEBP).'
+            : 'Invalid file format. Faculty & staff athletic clearance requires an employee ID card photo (PNG, JPG, WEBP).'
+        );
         e.target.value = '';
         setCorFile(null);
         setImagePreviewUrl(null);
@@ -108,7 +114,13 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
   const handleUpload = async () => {
     if (!user) return;
     if (!corFile) {
-      toast.error(isStaffOrFaculty ? 'Please select your official PSU Employee ID Card photo.' : 'Please select your official Certificate of Registration (COR) PDF.');
+      toast.error(
+        isCoach
+          ? 'Please select your official PSU Coach / Employee ID Card photo.'
+          : isStaffOrFaculty
+          ? 'Please select your official PSU Employee ID Card photo.'
+          : 'Please select your official Certificate of Registration (COR) PDF.'
+      );
       return;
     }
 
@@ -139,7 +151,7 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
         await supabase.from('verification_documents').delete().in('id', priorUnverified.map(p => p.id));
       }
 
-      const fileExt = corFile.name.split('.').pop() || (isStaffOrFaculty ? 'png' : 'pdf');
+      const fileExt = corFile.name.split('.').pop() || (isIdPhotoRole ? 'png' : 'pdf');
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
 
@@ -151,24 +163,26 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
       if (uploadError) throw uploadError;
 
       // 2. Insert into verification_documents with role-aware fields
-      const docType = isStaff ? 'STAFF_ID' : isFaculty ? 'FACULTY_ID' : 'COR';
+      const docType = isCoach ? 'COACH_ID' : isStaff ? 'STAFF_ID' : isFaculty ? 'FACULTY_ID' : 'COR';
       const { error: dbError } = await supabase.from('verification_documents').insert({
         user_id: user.id,
         document_type: docType,
         storage_path: filePath,
         status: 'Pending',
-        extracted_student_no: isStaffOrFaculty ? (profile?.employee_id || null) : (parsedData?.studentNo || null),
+        extracted_student_no: isIdPhotoRole ? (profile?.employee_id || null) : (parsedData?.studentNo || null),
         extracted_full_name: profile?.full_name || parsedData?.fullName || null,
         extracted_college: profile?.college_name || parsedData?.college || null,
-        extracted_program: isStaffOrFaculty ? (profile?.department || null) : (parsedData?.program || null),
-        extracted_school_year: isStaffOrFaculty ? null : (parsedData?.schoolYear || null),
-        extracted_year_level: isStaffOrFaculty ? null : (parsedData?.yearLevel || null),
-        extracted_total_units: isStaffOrFaculty ? null : (parsedData?.totalUnits || null),
-        ocr_raw_text: isStaffOrFaculty
+        extracted_program: isIdPhotoRole ? (profile?.department || null) : (parsedData?.program || null),
+        extracted_school_year: isIdPhotoRole ? null : (parsedData?.schoolYear || null),
+        extracted_year_level: isIdPhotoRole ? null : (parsedData?.yearLevel || null),
+        extracted_total_units: isIdPhotoRole ? null : (parsedData?.totalUnits || null),
+        ocr_raw_text: isCoach
+          ? `[Coach ID Verification] Submitted by ${profile?.full_name || 'Coach'} (${profile?.college_name || 'Athletics Department'})`
+          : isStaffOrFaculty
           ? `[Employee ID Verification] Submitted by ${profile?.full_name || 'Employee'} (ID: ${profile?.employee_id || 'N/A'}, Dept: ${profile?.department || 'N/A'})`
           : (parsedData?.rawText || null),
-        auto_match_status: isStaffOrFaculty ? 'Manual Review' : (parsedData?.confidenceLevel || (parsedData?.isParsable ? 'Moderate' : 'Non-Parsable')),
-        confidence_score: isStaffOrFaculty ? 100 : (parsedData?.confidenceScore ?? 0),
+        auto_match_status: isIdPhotoRole ? 'Manual Review' : (parsedData?.confidenceLevel || (parsedData?.isParsable ? 'Moderate' : 'Non-Parsable')),
+        confidence_score: isIdPhotoRole ? 100 : (parsedData?.confidenceScore ?? 0),
         extracted_age: profile?.age || parsedData?.age || null,
       });
 
@@ -189,7 +203,9 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
   return (
     <Card className="w-full max-w-xl mx-auto shadow-xl border border-slate-200 dark:border-white/10 rounded-3xl overflow-hidden bg-white dark:bg-slate-900">
       <div className={`h-1.5 w-full ${
-        isStaff
+        isCoach
+          ? 'bg-gradient-to-r from-orange-500 via-emerald-500 to-teal-600'
+          : isStaff
           ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600'
           : isFaculty
           ? 'bg-gradient-to-r from-indigo-500 via-blue-500 to-indigo-600'
@@ -198,20 +214,24 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
       <CardHeader className="p-6 pb-4">
         <div className="flex items-center gap-2 mb-1">
           <Badge className={`${
-            isStaff
+            isCoach
+              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+              : isStaff
               ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
               : isFaculty
               ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20'
               : 'bg-orange-500/10 text-orange-600 border border-orange-500/20'
           } text-[10px] font-black uppercase tracking-wider`}>
-            {isStaff ? 'Staff Athlete Clearance' : isFaculty ? 'Faculty Athlete Clearance' : 'Student Athlete Clearance'}
+            {isCoach ? 'Athletic Coach Clearance' : isStaff ? 'Staff Athlete Clearance' : isFaculty ? 'Faculty Athlete Clearance' : 'Student Athlete Clearance'}
           </Badge>
         </div>
         <CardTitle className="text-2xl font-black italic tracking-tight uppercase text-slate-900 dark:text-white">
-          VERIFY <span className={isStaff ? 'text-amber-500' : isFaculty ? 'text-indigo-500' : 'text-orange-500'}>ELIGIBILITY</span>
+          VERIFY <span className={isCoach ? 'text-emerald-500' : isStaff ? 'text-amber-500' : isFaculty ? 'text-indigo-500' : 'text-orange-500'}>ELIGIBILITY</span>
         </CardTitle>
         <CardDescription className="text-slate-500 dark:text-slate-400 text-xs font-normal leading-relaxed">
-          {isStaff
+          {isCoach
+            ? 'Palawan State University athletic coaches must submit a clear photo of their official PSU Coach / Employee ID Card for coaching clearance and team roster privileges.'
+            : isStaff
             ? 'Palawan State University staff athletes must submit a clear photo of their official PSU Employee ID Card for athletic clearance.'
             : isFaculty
             ? 'Palawan State University faculty athletes must submit a clear photo of their official PSU Faculty/Employee ID Card for athletic clearance.'
@@ -221,7 +241,20 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
 
       <CardContent className="p-6 pt-0 space-y-4">
         {/* Role-Adaptive Advisory Notice */}
-        {isStaffOrFaculty ? (
+        {isCoach ? (
+          <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-slate-800 dark:text-slate-200 text-xs leading-relaxed space-y-2">
+            <div className="flex items-center gap-2 font-bold text-emerald-700 dark:text-emerald-400 uppercase text-[11px] tracking-wider">
+              <Info className="size-4 shrink-0" />
+              <span>Official PSU Coach / Employee ID Required</span>
+            </div>
+            <p className="text-slate-600 dark:text-slate-300">
+              Please upload a clear, legible photo of your official PSU Coach or Employee ID Card (PNG/JPG/WEBP).
+            </p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Ensure your full name and photo are visible. An athletics administrator will inspect your ID card to grant coaching clearance and unlock squad creation and roster management.
+            </p>
+          </div>
+        ) : isStaffOrFaculty ? (
           <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-slate-800 dark:text-slate-200 text-xs leading-relaxed space-y-2">
             <div className="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-400 uppercase text-[11px] tracking-wider">
               <Info className="size-4 shrink-0" />
@@ -260,7 +293,13 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
         {/* File Input */}
         <div className="space-y-2">
           <Label htmlFor="cor" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center justify-between">
-            <span>{isStaffOrFaculty ? 'PSU Employee ID Card Photo (PNG/JPG)' : 'Certificate of Registration (PDF)'}</span>
+            <span>
+              {isCoach
+                ? 'PSU Coach / Employee ID Card Photo (PNG/JPG)'
+                : isStaffOrFaculty
+                ? 'PSU Employee ID Card Photo (PNG/JPG)'
+                : 'Certificate of Registration (PDF)'}
+            </span>
             {corFile && (
               <span className="text-[10px] text-slate-400 font-normal truncate max-w-[200px]">
                 {corFile.name}
@@ -271,11 +310,13 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
             <Input
               id="cor"
               type="file"
-              accept={isStaffOrFaculty ? 'image/png,image/jpeg,image/webp,.png,.jpg,.jpeg' : '.pdf,application/pdf'}
+              accept={isIdPhotoRole ? 'image/png,image/jpeg,image/webp,.png,.jpg,.jpeg' : '.pdf,application/pdf'}
               onChange={handleFileChange}
               disabled={isUploading || isParsing}
               className={`h-12 ${
-                isStaff
+                isCoach
+                  ? 'file:bg-emerald-600 hover:file:bg-emerald-700'
+                  : isStaff
                   ? 'file:bg-amber-600 hover:file:bg-amber-700'
                   : isFaculty
                   ? 'file:bg-indigo-600 hover:file:bg-indigo-700'
@@ -283,25 +324,27 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
               } file:text-white file:font-bold file:text-xs file:border-0 file:rounded-lg file:mr-3 file:px-3 file:py-1 cursor-pointer bg-slate-50 dark:bg-white/5 rounded-2xl border-slate-200 dark:border-white/10`}
             />
             <div className="flex items-center justify-between px-1 text-[10px] text-slate-400 font-medium">
-              <span>Formats: {isStaffOrFaculty ? 'PNG, JPG, WEBP' : 'Official PDF (.pdf)'}</span>
+              <span>Formats: {isIdPhotoRole ? 'PNG, JPG, WEBP' : 'Official PDF (.pdf)'}</span>
               <span className="font-bold text-orange-500">Max 5 MB</span>
             </div>
           </div>
         </div>
 
-        {/* Image Preview for Employee ID */}
+        {/* Image Preview for Employee or Coach ID */}
         {imagePreviewUrl && (
           <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-2">
             <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300">
-              <span className="flex items-center gap-1.5 uppercase text-[10px] tracking-wider text-amber-600 dark:text-amber-400">
-                <CheckCircle2 className="size-3.5" /> Selected ID Photo Preview
+              <span className={`flex items-center gap-1.5 uppercase text-[10px] tracking-wider ${
+                isCoach ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+              }`}>
+                <CheckCircle2 className="size-3.5" /> Selected {isCoach ? 'Coach' : 'Employee'} ID Photo Preview
               </span>
               <span className="text-[10px] text-slate-400 font-normal truncate max-w-[200px]">{corFile?.name}</span>
             </div>
             <div className="relative rounded-xl overflow-hidden max-h-52 flex items-center justify-center bg-black/5 dark:bg-black/30 border border-slate-200 dark:border-white/10 p-1">
               <img
                 src={imagePreviewUrl}
-                alt="Employee ID Preview"
+                alt={isCoach ? 'Coach ID Preview' : 'Employee ID Preview'}
                 className="max-h-48 w-auto object-contain rounded-lg shadow-sm"
               />
             </div>
@@ -408,7 +451,9 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
 
         <Button
           className={`w-full h-12 ${
-            isStaff
+            isCoach
+              ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
+              : isStaff
               ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/20'
               : isFaculty
               ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20'
@@ -423,7 +468,15 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
             </>
           ) : (
             <>
-              <Upload className="size-4" /> {isStaff ? 'Submit Employee ID for Verification' : isFaculty ? 'Submit Faculty ID for Verification' : 'Submit COR for Verification'}
+              <Upload className="size-4" /> {
+                isCoach
+                  ? 'Submit Coach ID for Verification'
+                  : isStaff
+                  ? 'Submit Employee ID for Verification'
+                  : isFaculty
+                  ? 'Submit Faculty ID for Verification'
+                  : 'Submit COR for Verification'
+              }
             </>
           )}
         </Button>

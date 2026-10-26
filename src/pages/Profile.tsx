@@ -1959,7 +1959,9 @@ export const Profile = () => {
                       <div className="space-y-4">
                         <div className="p-4 rounded-2xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 text-orange-950 dark:text-orange-200">
                           <p className="text-xs font-normal leading-relaxed">
-                            {profile?.role === 'player_staff' || profile?.role === 'player_faculty'
+                            {profile?.role === 'coach'
+                              ? 'Official PSU Coach / Employee ID Card photo is required for coaches to register teams and manage rosters.'
+                              : profile?.role === 'player_staff' || profile?.role === 'player_faculty'
                               ? 'Official PSU Employee ID Card photo is required for faculty and staff athletes to join department rosters and enter tournament brackets.'
                               : 'Official Certificate of Registration is required for all student players to join team rosters and enter university tournament brackets.'}
                           </p>

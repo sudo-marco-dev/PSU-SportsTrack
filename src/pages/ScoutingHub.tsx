@@ -215,7 +215,22 @@ export const ScoutingHub = () => {
     void loadCoachTeams();
   }, [isCoach, user?.id]);
 
+  const handleStartCoachRecruit = (playerId: string) => {
+    if (isCoach && !isVerified) {
+      toast.error('Coach verification required to recruit athletes. Please submit your Coach ID for clearance.');
+      return;
+    }
+    setCoachRecruitPlayerId(playerId);
+    if (coachTeams.length > 0 && !selectedCoachTeamId) {
+      setSelectedCoachTeamId(coachTeams[0].id);
+    }
+  };
+
   const handleSendDirectRecruit = async () => {
+    if (isCoach && !isVerified) {
+      toast.error('Coach verification required to recruit athletes. Please submit your Coach ID for clearance.');
+      return;
+    }
     if (!coachRecruitPlayerId || !selectedCoachTeamId) {
       toast.error('Please select a team to recruit the athlete to.');
       return;
@@ -1031,16 +1046,15 @@ export const ScoutingHub = () => {
                                 <span>Dossier</span>
                               </Button>
                               <Button
-                                onClick={() => {
-                                  setCoachRecruitPlayerId(p.id);
-                                  if (coachTeams.length > 0 && !selectedCoachTeamId) {
-                                    setSelectedCoachTeamId(coachTeams[0].id);
-                                  }
-                                }}
-                                className="w-full h-10 rounded-xl font-black uppercase text-xs tracking-wider gap-1.5 bg-orange-500 hover:bg-orange-600 text-white shadow-md shadow-orange-500/20"
+                                onClick={() => handleStartCoachRecruit(p.id)}
+                                className={`w-full h-10 rounded-xl font-black uppercase text-xs tracking-wider gap-1.5 ${
+                                  isVerified
+                                    ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-md shadow-orange-500/20'
+                                    : 'bg-slate-800 text-slate-300 border border-white/10'
+                                }`}
                               >
                                 <UserPlus className="size-3.5" />
-                                <span>Recruit</span>
+                                <span>{isVerified ? 'Recruit' : 'Recruit (Verify)'}</span>
                               </Button>
                             </div>
                           ) : (
@@ -1508,12 +1522,7 @@ export const ScoutingHub = () => {
         }}
         onRecruitPlayer={
           isCoach
-            ? (pId) => {
-                setCoachRecruitPlayerId(pId);
-                if (coachTeams.length > 0 && !selectedCoachTeamId) {
-                  setSelectedCoachTeamId(coachTeams[0].id);
-                }
-              }
+            ? (pId) => handleStartCoachRecruit(pId)
             : undefined
         }
       />

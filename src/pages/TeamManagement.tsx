@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Users, UserPlus, ClipboardList, Star, AlertTriangle, Zap, Circle, GraduationCap, Eye, Target, Filter, CheckCircle2, Trophy } from 'lucide-react';
+import { Users, UserPlus, ClipboardList, Star, AlertTriangle, Zap, Circle, GraduationCap, Eye, Target, Filter, CheckCircle2, Trophy, Lock } from 'lucide-react';
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -99,7 +99,7 @@ type RosterMember = {
 };
 
 export const TeamManagement = () => {
-  const { user } = useAuth();
+  const { user, isVerified } = useAuth();
   const [teams, setTeams] = useState<Team[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -125,6 +125,14 @@ export const TeamManagement = () => {
   // Invite Player State
   const [invitePlayerId, setInvitePlayerId] = useState<string | null>(null);
   const [selectedTeamToInvite, setSelectedTeamToInvite] = useState('');
+
+  const handleStartInvitePlayer = (playerId: string) => {
+    if (!isVerified) {
+      toast.error('Coach verification required to invite athletes. Please submit your Coach ID for clearance.');
+      return;
+    }
+    setInvitePlayerId(playerId);
+  };
 
   // Smart Recruitment Scouting Filters & Modals State
   const [playerSummaries, setPlayerSummaries] = useState<Record<string, PlayerDirectorySummary>>({});
@@ -197,7 +205,7 @@ export const TeamManagement = () => {
     if (usersRes.error) {
       toast.error('Failed to load players: ' + usersRes.error.message);
     } else {
-      setPlayers((usersRes.data as unknown) as Player[]);
+      setPlayers(Array.isArray(usersRes.data) ? ((usersRes.data as unknown) as Player[]) : []);
     }
     setPlayerSummaries(summaries);
     setIsLoadingPlayers(false);
@@ -213,6 +221,11 @@ export const TeamManagement = () => {
   };
 
   const handleCreateTeam = async () => {
+    if (!isVerified) {
+      toast.error('Coach verification required to register new teams. Please submit your Coach ID for clearance.');
+      return;
+    }
+
     if (!newTeamName.trim() || !selectedTournament) {
       toast.error('Please provide a team name and select a tournament.');
       return;
@@ -253,6 +266,11 @@ export const TeamManagement = () => {
   };
 
   const handleInvitePlayer = async () => {
+    if (!isVerified) {
+      toast.error('Coach verification required to recruit or invite players. Please submit your Coach ID for clearance.');
+      return;
+    }
+
     if (!invitePlayerId || !selectedTeamToInvite) {
       toast.error('Please select a team to invite the player to.');
       return;
@@ -348,6 +366,10 @@ export const TeamManagement = () => {
   };
 
   const handleUpdateRosterMember = async (rosterId: string, updates: Record<string, any>) => {
+    if (!isVerified) {
+      toast.error('Coach verification required to modify rosters.');
+      return;
+    }
     try {
       const { data, error } = await supabase
         .from('team_roster')
@@ -401,6 +423,10 @@ export const TeamManagement = () => {
   };
 
   const handleRemoveFromRoster = async (rosterId: string) => {
+    if (!isVerified) {
+      toast.error('Coach verification required to modify rosters.');
+      return;
+    }
     const { error } = await supabase
       .from('team_roster')
       .delete()
@@ -496,11 +522,42 @@ export const TeamManagement = () => {
             </p>
           </div>
           <div className="flex gap-4 relative z-10">
-            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <Dialog
+              open={isCreateOpen}
+              onOpenChange={(open) => {
+                if (open && !isVerified) {
+                  toast.error('Coach verification required to register new teams. Please submit your Coach ID for clearance.');
+                  return;
+                }
+                setIsCreateOpen(open);
+              }}
+            >
               <DialogTrigger render={
-                <Button size="lg" className="h-12 sm:h-14 bg-orange-500 hover:bg-orange-600 text-white font-black gap-2 px-6 sm:px-8 rounded-xl shadow-xl shadow-orange-500/20 uppercase italic tracking-wider transition-all hover:scale-[1.02] active:scale-95 group">
-                  <UserPlus className="size-5 group-hover:rotate-12 transition-transform duration-300" />
-                  <span className="text-sm sm:text-base">New Team</span>
+                <Button
+                  size="lg"
+                  onClick={(e) => {
+                    if (!isVerified) {
+                      e.preventDefault();
+                      toast.error('Coach verification required to register new teams. Please submit your Coach ID for clearance.');
+                    }
+                  }}
+                  className={`h-12 sm:h-14 font-black gap-2 px-6 sm:px-8 rounded-xl shadow-xl uppercase italic tracking-wider transition-all hover:scale-[1.02] active:scale-95 group ${
+                    isVerified
+                      ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-orange-500/20'
+                      : 'bg-slate-800 text-slate-300 border border-white/10'
+                  }`}
+                >
+                  {isVerified ? (
+                    <>
+                      <UserPlus className="size-5 group-hover:rotate-12 transition-transform duration-300" />
+                      <span className="text-sm sm:text-base">New Team</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="size-4 text-orange-400" />
+                      <span className="text-sm sm:text-base">Verification Required</span>
+                    </>
+                  )}
                 </Button>
               } />
               <DialogContent className="w-full sm:max-w-md max-w-[95vw] rounded-3xl p-6 sm:p-8 overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
@@ -677,6 +734,36 @@ export const TeamManagement = () => {
         <div className="absolute -right-20 -top-20 size-96 bg-orange-500/10 rounded-full blur-[100px]" />
       </div>
 
+      {/* Clearance Banner for Unverified Coaches */}
+      {!isVerified && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 text-amber-950 dark:text-amber-200 shadow-md backdrop-blur-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in duration-300">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="p-2.5 bg-amber-500 text-white rounded-xl shadow-md shrink-0">
+              <AlertTriangle className="size-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 bg-amber-500 text-white rounded-full">
+                  Unverified Coach
+                </span>
+                <span className="text-xs font-bold text-amber-900 dark:text-amber-300">
+                  Roster Management Restricted
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Your account is currently awaiting coach clearance. Registering teams and recruiting players is locked until your Coach / Employee ID is verified by sports administration.
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={() => window.location.href = '/coach'}
+            className="h-10 px-4 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md shrink-0 self-stretch sm:self-auto"
+          >
+            Submit ID in Dashboard
+          </Button>
+        </div>
+      )}
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col min-w-0">
         <div className="w-full sm:w-fit p-1.5 bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-2xl flex items-center gap-1.5 mb-6 shadow-sm sm:mx-auto">
           <button
@@ -758,6 +845,10 @@ export const TeamManagement = () => {
                   setSearchQuery('');
                   setStatusFilter('all');
                 } else {
+                  if (!isVerified) {
+                    toast.error('Coach verification required to register new teams. Please submit your Coach ID for clearance.');
+                    return;
+                  }
                   setIsCreateOpen(true);
                 }
               }}
@@ -1348,7 +1439,7 @@ export const TeamManagement = () => {
                           if (targetRecruitmentTeamId && targetRecruitmentTeamId !== 'all') {
                             setSelectedTeamToInvite(targetRecruitmentTeamId);
                           }
-                          setInvitePlayerId(player.id);
+                          handleStartInvitePlayer(player.id);
                         }}
                       >
                         <UserPlus className="size-3.5" />
@@ -1484,7 +1575,7 @@ export const TeamManagement = () => {
                               if (targetRecruitmentTeamId && targetRecruitmentTeamId !== 'all') {
                                 setSelectedTeamToInvite(targetRecruitmentTeamId);
                               }
-                              setInvitePlayerId(player.id);
+                              handleStartInvitePlayer(player.id);
                             }}
                           >
                             Recruit
@@ -1612,7 +1703,7 @@ export const TeamManagement = () => {
                                     if (targetRecruitmentTeamId && targetRecruitmentTeamId !== 'all') {
                                       setSelectedTeamToInvite(targetRecruitmentTeamId);
                                     }
-                                    setInvitePlayerId(player.id);
+                                    handleStartInvitePlayer(player.id);
                                   }}
                                 >
                                   Recruit
@@ -1920,7 +2011,7 @@ export const TeamManagement = () => {
           if (targetRecruitmentTeamId && targetRecruitmentTeamId !== 'all') {
             setSelectedTeamToInvite(targetRecruitmentTeamId);
           }
-          setInvitePlayerId(pId);
+          handleStartInvitePlayer(pId);
         }}
         eligibilityBadge={(() => {
           if (!dossierPlayerId || !targetRecruitmentTeam) return null;
