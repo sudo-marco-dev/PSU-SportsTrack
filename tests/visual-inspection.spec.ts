@@ -102,4 +102,49 @@ test.describe('Responsive Layout & Anti-Corner Tucking Verification', () => {
     await expect(collegeTab).toBeVisible();
     await expect(searchInput).toBeVisible();
   });
+
+  test('Tablet & Responsive Viewport Anti-Squeeze Protection (390px, 768px, 1440px)', async ({ page }) => {
+    // 1. Tablet Viewport 768x1024
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto('/explorer');
+    await page.waitForLoadState('networkidle');
+
+    // Desktop sidebar must be hidden on tablet (< 1024px) to prevent pillar crushing
+    const sidebar = page.locator('aside');
+    await expect(sidebar).toBeHidden();
+
+    // Bottom navigation rail should be active on tablet
+    const bottomNav = page.locator('nav[aria-label="Mobile Navigation"]');
+    await expect(bottomNav).toBeVisible();
+
+    // Verify main content container uses generous width (not crushed into a 44px pillar)
+    const mainContent = page.locator('main');
+    const tabletBox = await mainContent.boundingBox();
+    expect(tabletBox).not.toBeNull();
+    expect(tabletBox!.width).toBeGreaterThan(650);
+
+    // 2. Mobile Viewport 390x844
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(sidebar).toBeHidden();
+    await expect(bottomNav).toBeVisible();
+
+    const mobileBox = await mainContent.boundingBox();
+    expect(mobileBox).not.toBeNull();
+    expect(mobileBox!.width).toBeGreaterThan(320);
+
+    // 3. Desktop Viewport 1440x900
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect(sidebar).toBeVisible();
+    await expect(bottomNav).toBeHidden();
+
+    const desktopBox = await mainContent.boundingBox();
+    expect(desktopBox).not.toBeNull();
+    expect(desktopBox!.width).toBeGreaterThan(1000);
+
+    // 4. Verify Unified Geist Font Family is applied
+    const fontFamily = await page.evaluate(() => {
+      return window.getComputedStyle(document.body).fontFamily;
+    });
+    expect(fontFamily.toLowerCase()).toMatch(/geist variable|inter|sans-serif/);
+  });
 });

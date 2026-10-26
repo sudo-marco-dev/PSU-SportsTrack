@@ -1,3 +1,5 @@
+import { extractCollegeCode } from '@/lib/playerStatsEngine';
+
 export type Tournament = {
   id: string;
   name: string;
@@ -69,8 +71,7 @@ export const getAffiliationBadge = (
     };
   }
   if (t.colleges?.college_name) {
-    const match = t.colleges.college_name.match(/\(([^)]+)\)/);
-    const code = match ? match[1] : t.colleges.college_name.slice(0, 4).toUpperCase();
+    const code = extractCollegeCode(t.colleges.college_name);
     return {
       type: 'college',
       label: code,

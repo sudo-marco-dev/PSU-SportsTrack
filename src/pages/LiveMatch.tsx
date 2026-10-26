@@ -2145,7 +2145,7 @@ export const LiveMatch = () => {
                             </span>
                             <div className="min-w-0 flex flex-col sm:flex-row sm:items-center sm:gap-2">
                               <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="font-semibold text-slate-200 truncate">
+                                <span className="font-semibold text-slate-200 break-words line-clamp-2 leading-snug">
                                   {name || 'Unknown'}
                                 </span>
                                 {player.is_captain && (
@@ -2211,7 +2211,7 @@ export const LiveMatch = () => {
                             </span>
                             <div className="min-w-0 flex flex-col sm:flex-row sm:items-center sm:gap-2">
                               <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="font-semibold text-slate-200 truncate">
+                                <span className="font-semibold text-slate-200 break-words line-clamp-2 leading-snug">
                                   {name || 'Unknown'}
                                 </span>
                                 {player.is_captain && (
@@ -2439,8 +2439,8 @@ export const LiveMatch = () => {
                         </div>
 
                         {/* Bottom: Small Player Name Text */}
-                        <div className="w-full mt-1.5">
-                          <p className="text-xs font-bold text-white group-hover:text-orange-400 truncate max-w-full">
+                        <div className="w-full mt-1.5 min-w-0">
+                          <p className="text-xs font-bold text-white group-hover:text-orange-400 break-words line-clamp-2 leading-tight">
                             {playerName || 'Unknown'}
                           </p>
                           <p className="text-[10px] uppercase font-semibold text-slate-500 group-hover:text-slate-400 mt-0.5">

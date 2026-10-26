@@ -239,7 +239,7 @@ export const TournamentManagement: React.FC = () => {
           <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
             TOURNAMENT <span className="text-orange-500">ARENA</span>
           </h1>
-          <p className="text-slate-400 font-sans font-medium text-sm tracking-wide mt-2 max-w-2xl opacity-80">
+          <p className="text-slate-400 font-medium text-sm tracking-wide mt-2 max-w-2xl opacity-80">
             The central command for institutional competitions, team enrollments, and MVP recognition.
           </p>
         </div>

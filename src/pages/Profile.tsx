@@ -55,6 +55,7 @@ import { getSportIcon } from '@/lib/sportIcons';
 import { getSportScoringProfile } from '@/lib/sportScoringRules';
 import { MatchBoxScoreModal } from '@/components/scouting/MatchBoxScoreModal';
 import { ExpandableIconTabs } from '@/components/ui/expandable-icon-tabs';
+import { formatCoachName } from '@/lib/utils';
 
 type PlayerStar = {
   id: string;
@@ -518,7 +519,7 @@ export const Profile = () => {
         <div className="space-y-6">
           {/* Admin Hero Header */}
           <div className="bg-slate-950 py-5 sm:py-6 px-4 sm:px-8 rounded-2xl shadow-xl border border-white/5 relative overflow-hidden">
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-5">
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-5">
               <div className="flex items-start sm:items-center gap-3.5 sm:gap-5 min-w-0 flex-1">
                 <div className="size-12 sm:size-16 rounded-xl bg-orange-500 flex items-center justify-center text-white font-black shadow-lg shadow-orange-500/20 shrink-0">
                   <ShieldCheck className="size-7 sm:size-9" />
@@ -536,7 +537,7 @@ export const Profile = () => {
                       <CheckCircle2 className="size-3 shrink-0" /> Full Superuser Access
                     </Badge>
                   </div>
-                  <h1 className="text-xl sm:text-4xl font-black italic tracking-tighter uppercase text-white leading-tight break-words">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black italic tracking-tight uppercase text-white leading-tight break-words">
                     {profile?.full_name || user?.email?.split('@')[0]}
                   </h1>
                   <p className="text-slate-400 font-normal text-xs mt-0.5 flex items-center gap-1.5 truncate">
@@ -692,7 +693,7 @@ export const Profile = () => {
         <div className="space-y-6">
           {/* Coach Hero Header */}
           <div className="bg-slate-950 py-5 sm:py-6 px-4 sm:px-8 rounded-2xl shadow-xl border border-white/5 relative overflow-hidden">
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-5">
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-5">
               <div className="flex items-start sm:items-center gap-3.5 sm:gap-5 min-w-0 flex-1">
                 <div className="size-12 sm:size-16 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-black shadow-lg shadow-orange-500/20 shrink-0">
                   <Users className="size-7 sm:size-9" />
@@ -710,8 +711,8 @@ export const Profile = () => {
                       <CheckCircle2 className="size-3 shrink-0" /> Official PSU Coach
                     </Badge>
                   </div>
-                  <h1 className="text-xl sm:text-4xl font-black italic tracking-tighter uppercase text-white leading-tight break-words">
-                    Coach {profile?.full_name || user?.email?.split('@')[0]}
+                  <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black italic tracking-tight uppercase text-white leading-tight break-words">
+                    {formatCoachName(profile?.full_name || user?.email?.split('@')[0])}
                   </h1>
                   <p className="text-slate-400 font-normal text-xs mt-0.5 flex items-center gap-1.5 truncate">
                     <Mail className="size-3 text-slate-500 shrink-0" /> <span className="truncate">{user?.email}</span>
@@ -738,7 +739,7 @@ export const Profile = () => {
               </div>
             </div>
           </div>          {/* Coach Management Hub */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 min-w-0 [&>*]:min-w-0">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 min-w-0 [&>*]:min-w-0">
             <Card 
               className="border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 hover:border-orange-500/40 transition-all duration-200 rounded-2xl shadow-sm cursor-pointer group p-5 sm:p-6"
               onClick={() => navigate('/coach/teams')}
@@ -793,7 +794,7 @@ export const Profile = () => {
         /* ========================================================================= */
         <div className="space-y-6">
           <div className="bg-slate-950 py-5 sm:py-6 px-4 sm:px-8 rounded-2xl shadow-xl border border-white/5 relative overflow-hidden">
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-5">
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-5">
               <div className="flex items-start sm:items-center gap-3.5 sm:gap-5 min-w-0 flex-1">
                 <div className="size-12 sm:size-16 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-black shadow-lg shadow-orange-500/20 shrink-0">
                   <ShieldCheck className="size-7 sm:size-9" />
@@ -807,7 +808,7 @@ export const Profile = () => {
                       <CheckCircle2 className="size-3 shrink-0" /> Authorized Official
                     </Badge>
                   </div>
-                  <h1 className="text-xl sm:text-4xl font-black italic tracking-tighter uppercase text-white leading-tight break-words">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black italic tracking-tight uppercase text-white leading-tight break-words">
                     {profile?.full_name || user?.email?.split('@')[0]}
                   </h1>
                   <p className="text-slate-400 font-normal text-xs mt-0.5 flex items-center gap-1.5 truncate">
@@ -836,7 +837,7 @@ export const Profile = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 min-w-0 [&>*]:min-w-0">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 min-w-0 [&>*]:min-w-0">
             <Card
               className="border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 hover:border-orange-500/40 transition-all duration-200 rounded-2xl shadow-sm cursor-pointer group p-5 sm:p-6"
               onClick={() => navigate('/explorer')}
@@ -888,7 +889,7 @@ export const Profile = () => {
         <div className="space-y-5">
           {/* Player Hero Header */}
           <div className="bg-slate-950 py-5 sm:py-6 px-4 sm:px-8 rounded-2xl shadow-xl border border-white/5 relative overflow-hidden">
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-5">
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-5">
               <div className="flex items-start sm:items-center gap-3.5 sm:gap-5 min-w-0 flex-1">
                 <div className="size-12 sm:size-16 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-xl sm:text-2xl shadow-lg shadow-orange-500/20 shrink-0">
                   {user?.email?.charAt(0).toUpperCase() || 'U'}
@@ -912,7 +913,7 @@ export const Profile = () => {
                       </Badge>
                     ) : null}
                   </div>
-                  <h1 className="text-xl sm:text-4xl font-black italic tracking-tighter uppercase text-white leading-tight break-words">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black italic tracking-tight uppercase text-white leading-tight break-words">
                     {profile?.full_name || user?.email?.split('@')[0]}
                   </h1>
                   <p className="text-slate-400 font-normal text-xs mt-0.5 flex items-center gap-1.5 truncate">
@@ -1002,7 +1003,7 @@ export const Profile = () => {
                         </Badge>
                       </div>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-normal">
-                        Coach: <span className="text-slate-800 dark:text-slate-200 font-semibold">{inv.teams?.users?.full_name || 'Athletic Coach'}</span> • Event: {inv.teams?.tournaments?.name || 'Tournament'}
+                        <span className="text-slate-800 dark:text-slate-200 font-semibold">{formatCoachName(inv.teams?.users?.full_name, 'Athletic Coach')}</span> • Event: {inv.teams?.tournaments?.name || 'Tournament'}
                       </p>
                     </div>
 
@@ -1768,7 +1769,7 @@ export const Profile = () => {
                           <span className="text-[10px] font-bold uppercase tracking-wider text-orange-500">Coach Invite</span>
                           <h4 className="text-base font-bold uppercase tracking-tight text-slate-900 dark:text-white">{inv.teams?.name || 'Tournament Team'}</h4>
                           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-normal">
-                            Coach: <span className="text-slate-800 dark:text-slate-200 font-semibold">{inv.teams?.users?.full_name || 'Athletic Coach'}</span> • Sport: {inv.teams?.tournaments?.sport || 'PSU Sport'}
+                            <span className="text-slate-800 dark:text-slate-200 font-semibold">{formatCoachName(inv.teams?.users?.full_name, 'Athletic Coach')}</span> • Sport: {inv.teams?.tournaments?.sport || 'PSU Sport'}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1799,7 +1800,7 @@ export const Profile = () => {
 
             {/* Tab 3: Account Details, College & Verification */}
             <TabsContent value="account" className="w-full min-w-0 outline-none space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-6 lg:grid-cols-2">
                 {/* 1. Account Information Card & College Department Selector */}
                 <Card className="border border-slate-200 dark:border-white/10 rounded-3xl shadow-sm bg-white dark:bg-slate-900">
                   <CardHeader className="p-6 pb-4">

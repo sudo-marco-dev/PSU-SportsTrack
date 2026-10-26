@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Trophy, Medal, Sparkles, Shield, RotateCcw, Search, CheckCircle2, GraduationCap, Users, SlidersHorizontal, ChevronDown, ChevronUp } from 'lucide-react';
 import { type ExpandableTabItem } from '@/components/ui/expandable-icon-tabs';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { extractCollegeCode as engineExtractCollegeCode } from '@/lib/playerStatsEngine';
 
 interface CollegeEntity {
   id: string;
@@ -135,11 +136,9 @@ export const Ranking = () => {
     setStandingView('college');
   };
 
-  // Helper: Extract abbreviation code from full college title
+  // Helper: Extract abbreviation code from full college title using enhanced dictionary
   const extractCollegeCode = (name: string): string => {
-    const match = name.match(/\(([^)]+)\)/);
-    if (match) return match[1].trim();
-    return name.trim();
+    return engineExtractCollegeCode(name);
   };
 
   // Helper: Extract human readable short department title

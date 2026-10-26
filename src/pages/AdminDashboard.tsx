@@ -183,7 +183,7 @@ export const AdminDashboard = () => {
           <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
             SYSTEM <span className="text-orange-500">OVERVIEW</span>
           </h1>
-          <p className="text-slate-400 font-sans font-medium text-sm tracking-wide mt-2 max-w-2xl">
+          <p className="text-slate-400 font-medium text-sm tracking-wide mt-2 max-w-2xl">
             Institutional Orchestration Hub. Monitor tournament lifecycle, user eligibility, and live match execution.
           </p>
         </div>

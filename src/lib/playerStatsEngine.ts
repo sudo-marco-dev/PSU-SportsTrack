@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { getSportScoringProfile } from '@/lib/sportScoringRules';
+import { PSU_COLLEGE_DICTIONARY, extractCollegeCode } from './collegeDictionary';
+export { PSU_COLLEGE_DICTIONARY, extractCollegeCode };
 
 export type SportActionCardItem = {
   actionType: string;
@@ -348,17 +350,6 @@ const incrementBreakdown = (breakdown: ActionBreakdown, actionType: string | nul
   else if (act === 'Run') breakdown.runs += 1;
   else if (act === 'Point') breakdown.rallyPoints += 1;
 };
-
-/**
- * Extracts short college code from full college name, e.g.,
- * "College of Sciences (CS)" -> "CS"
- */
-export function extractCollegeCode(collegeName?: string | null): string {
-  if (!collegeName) return '';
-  const match = collegeName.match(/\(([^)]+)\)/);
-  if (match && match[1]) return match[1].trim().toUpperCase();
-  return collegeName.trim().toUpperCase();
-}
 
 /**
  * Checks whether a player's college matches a target team's College or Binturungan Cluster/Tribe.

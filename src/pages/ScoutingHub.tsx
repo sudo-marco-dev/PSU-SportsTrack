@@ -45,6 +45,7 @@ import {
 } from '@/lib/playerStatsEngine';
 import { PlayerDossierModal } from '@/components/scouting/PlayerDossierModal';
 import { MatchBoxScoreModal } from '@/components/scouting/MatchBoxScoreModal';
+import { formatCoachName } from '@/lib/utils';
 
 type ScoutPlayer = {
   id: string;
@@ -906,18 +907,18 @@ export const ScoutingHub = () => {
                       >
                         <CardHeader className="p-5 pb-3 space-y-3">
                           <div className="flex items-start justify-between gap-2">
-                            <div className="flex items-center gap-3 min-w-0">
+                            <div className="flex items-start gap-3 min-w-0 flex-1">
                               <div className="size-11 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 text-white font-black text-base flex items-center justify-center shrink-0">
                                 {p.full_name.charAt(0)}
                               </div>
-                              <div className="min-w-0">
+                              <div className="min-w-0 flex-1">
                                 <CardTitle
                                   onClick={() => setSelectedPlayerId(p.id)}
-                                  className="text-lg font-black italic uppercase tracking-tight text-slate-900 dark:text-white hover:text-orange-500 truncate cursor-pointer"
+                                  className="text-lg font-black italic uppercase tracking-tight text-slate-900 dark:text-white hover:text-orange-500 break-words line-clamp-2 leading-snug cursor-pointer"
                                 >
                                   {p.full_name}
                                 </CardTitle>
-                                <CardDescription className="text-[10px] font-bold uppercase tracking-wider text-orange-500 truncate">
+                                <CardDescription className="text-[10px] font-bold uppercase tracking-wider text-orange-500 break-words line-clamp-2 leading-snug mt-0.5">
                                   {p.primary_position || sum?.positions[0] || 'Verified Athlete'}
                                   {p.year_level ? ` • ${p.year_level}` : ''}
                                 </CardDescription>
@@ -930,9 +931,9 @@ export const ScoutingHub = () => {
                             )}
                           </div>
 
-                          <div className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 truncate">
+                          <div className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 min-w-0">
                             <GraduationCap className="size-3.5 text-orange-500 shrink-0" />
-                            <span className="truncate">{colName}</span>
+                            <span className="break-words line-clamp-2 leading-snug">{colName}</span>
                           </div>
 
                           {displaySports.length > 0 && (
@@ -1060,18 +1061,18 @@ export const ScoutingHub = () => {
                         className="rounded-3xl border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 p-5 space-y-4 flex flex-col justify-between"
                       >
                         <div className="space-y-3">
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-start gap-3 min-w-0">
                             <div className="size-12 rounded-2xl bg-slate-950 text-orange-500 font-black text-lg flex items-center justify-center shrink-0">
                               {coach.full_name?.charAt(0) || 'C'}
                             </div>
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20 text-[9px] font-black uppercase mb-0.5">
                                 Official PSU Coach
                               </Badge>
-                              <h3 className="text-lg font-black italic uppercase tracking-tight text-slate-900 dark:text-white truncate">
-                                Coach {coach.full_name}
+                              <h3 className="text-lg font-black italic uppercase tracking-tight text-slate-900 dark:text-white break-words line-clamp-2 leading-snug">
+                                {formatCoachName(coach.full_name)}
                               </h3>
-                              <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 truncate">
+                              <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 break-words line-clamp-2 leading-snug mt-0.5">
                                 {coach.colleges?.college_name || 'PSU Athletic Division'}
                               </p>
                             </div>
@@ -1162,11 +1163,11 @@ export const ScoutingHub = () => {
                                   </Badge>
                                 ) : null}
                               </div>
-                              <h3 className="text-xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white truncate">
+                              <h3 className="text-xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white break-words line-clamp-2 leading-snug">
                                 {team.name}
                               </h3>
-                              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate">
-                                {team.tournaments?.name || 'Tournament'} • Coach: {team.coach?.full_name || 'TBA'}
+                              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 break-words line-clamp-1">
+                                {team.tournaments?.name || 'Tournament'} • {formatCoachName(team.coach?.full_name, 'Coach TBA')}
                               </p>
                             </div>
                           </div>
@@ -1248,21 +1249,67 @@ export const ScoutingHub = () => {
                           </Badge>
                         </div>
 
-                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate">
+                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 break-words line-clamp-1">
                           {m.tournaments?.name || 'Official Tournament'}
                         </p>
 
-                        <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white grid grid-cols-3 items-center gap-2 text-center">
+                        {/* Mobile Stacked View (< sm) */}
+                        <div className="sm:hidden p-3 rounded-2xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white space-y-2">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p
+                                className={`text-xs font-black uppercase italic break-words line-clamp-2 leading-snug ${
+                                  teamAWin ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'
+                                }`}
+                              >
+                                {m.team_a?.name || 'TBD'}
+                              </p>
+                              {teamAWin && (
+                                <span className="text-[8px] font-black uppercase text-emerald-600 dark:text-emerald-400 inline-block mt-0.5">Winner</span>
+                              )}
+                            </div>
+                            <span className="text-xl font-black tabular-nums text-orange-600 dark:text-orange-400 shrink-0">
+                              {m.team_a_score}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 py-0.5">
+                            <div className="h-px bg-slate-200 dark:bg-white/10 flex-1" />
+                            <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">VS</span>
+                            <div className="h-px bg-slate-200 dark:bg-white/10 flex-1" />
+                          </div>
+
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p
+                                className={`text-xs font-black uppercase italic break-words line-clamp-2 leading-snug ${
+                                  teamBWin ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'
+                                }`}
+                              >
+                                {m.team_b?.name || 'TBD'}
+                              </p>
+                              {teamBWin && (
+                                <span className="text-[8px] font-black uppercase text-emerald-600 dark:text-emerald-400 inline-block mt-0.5">Winner</span>
+                              )}
+                            </div>
+                            <span className="text-xl font-black tabular-nums text-cyan-600 dark:text-cyan-400 shrink-0">
+                              {m.team_b_score}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Desktop Grid View (>= sm) */}
+                        <div className="hidden sm:grid p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white grid-cols-3 items-center gap-2 text-center">
                           <div className="min-w-0">
                             <p
-                              className={`text-xs sm:text-sm font-black uppercase italic truncate ${
+                              className={`text-xs sm:text-sm font-black uppercase italic break-words line-clamp-2 leading-snug ${
                                 teamAWin ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'
                               }`}
                             >
                               {m.team_a?.name || 'TBD'}
                             </p>
                             {teamAWin && (
-                              <span className="text-[8px] font-black uppercase text-emerald-600 dark:text-emerald-400">Winner</span>
+                              <span className="text-[8px] font-black uppercase text-emerald-600 dark:text-emerald-400 inline-block mt-0.5">Winner</span>
                             )}
                           </div>
                           <div className="flex items-center justify-center gap-2.5">
@@ -1276,14 +1323,14 @@ export const ScoutingHub = () => {
                           </div>
                           <div className="min-w-0">
                             <p
-                              className={`text-xs sm:text-sm font-black uppercase italic truncate ${
+                              className={`text-xs sm:text-sm font-black uppercase italic break-words line-clamp-2 leading-snug ${
                                 teamBWin ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'
                               }`}
                             >
                               {m.team_b?.name || 'TBD'}
                             </p>
                             {teamBWin && (
-                              <span className="text-[8px] font-black uppercase text-emerald-600 dark:text-emerald-400">Winner</span>
+                              <span className="text-[8px] font-black uppercase text-emerald-600 dark:text-emerald-400 inline-block mt-0.5">Winner</span>
                             )}
                           </div>
                         </div>
@@ -1333,11 +1380,11 @@ export const ScoutingHub = () => {
                     </Badge>
                   )}
                 </div>
-                <DialogTitle className="text-2xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white">
+                <DialogTitle className="text-2xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white break-words leading-tight">
                   {selectedTeamModal.name}
                 </DialogTitle>
-                <DialogDescription className="text-xs font-bold text-slate-500">
-                  {selectedTeamModal.tournaments?.name} • Coach: {selectedTeamModal.coach?.full_name || 'TBA'}
+                <DialogDescription className="text-xs font-bold text-slate-500 break-words line-clamp-1">
+                  {selectedTeamModal.tournaments?.name} • {formatCoachName(selectedTeamModal.coach?.full_name, 'Coach TBA')}
                 </DialogDescription>
               </DialogHeader>
 
@@ -1362,7 +1409,7 @@ export const ScoutingHub = () => {
                           className="p-3 rounded-xl bg-slate-50 dark:bg-white/5 hover:bg-orange-500/10 border border-slate-100 dark:border-white/10 flex items-center justify-between text-left cursor-pointer transition-colors"
                         >
                           <div className="min-w-0">
-                            <p className="text-xs font-black uppercase text-slate-900 dark:text-white truncate">
+                            <p className="text-xs font-black uppercase text-slate-900 dark:text-white break-words line-clamp-2 leading-snug">
                               {rm.jerseyNumber !== null ? `#${rm.jerseyNumber} ` : ''}
                               {rm.playerName}
                             </p>

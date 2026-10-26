@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { extractCollegeCode } from '@/lib/playerStatsEngine';
 
 export interface ScenarioResult {
   success: boolean;
@@ -525,8 +526,7 @@ export async function injectSuperDemo(supabase: SupabaseClient): Promise<Scenari
 
     // Map college codes
     const getCode = (name: string): string => {
-      const match = name.match(/\(([^)]+)\)/);
-      return match ? match[1] : name.slice(0, 4).toUpperCase();
+      return extractCollegeCode(name);
     };
 
     const collegeMap: Record<string, { id: string; name: string; squadName: string }> = {};

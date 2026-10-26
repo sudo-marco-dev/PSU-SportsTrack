@@ -116,11 +116,11 @@ export const PlayerDossierModal = ({
       <DialogContent className="w-full sm:max-w-4xl max-w-[96vw] max-h-[90dvh] overflow-hidden rounded-3xl p-5 sm:p-7 flex flex-col bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
         <DialogHeader className="shrink-0 pb-2 border-b border-slate-100 dark:border-white/10">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3.5 min-w-0">
+            <div className="flex items-start gap-3.5 min-w-0 flex-1">
               <div className="size-12 sm:size-14 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 text-white font-black text-xl flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/20">
                 {playerInfo?.full_name?.charAt(0) || 'A'}
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1">
                   <Badge className="bg-orange-500/15 text-orange-500 border-orange-500/30 text-[9px] font-black uppercase">
                     {playerInfo?.role === 'player_faculty' ? 'Faculty Athlete' : playerInfo?.role === 'player_staff' ? 'Staff Athlete' : 'Student Athlete'}
@@ -153,7 +153,7 @@ export const PlayerDossierModal = ({
                     </Badge>
                   )}
                 </div>
-                <DialogTitle className="text-xl sm:text-2xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white truncate">
+                <DialogTitle className="text-xl sm:text-2xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white break-words leading-tight">
                   {playerInfo?.full_name || 'Athlete Scouting Dossier'}
                 </DialogTitle>
                 <DialogDescription className="text-xs font-bold text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-2 mt-0.5">

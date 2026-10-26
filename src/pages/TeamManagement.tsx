@@ -19,6 +19,7 @@ import {
   evaluateSquadEligibility,
   getPrimarySportStatPill,
   AVAILABLE_SPORTS,
+  extractCollegeCode,
   type PlayerDirectorySummary,
 } from '@/lib/playerStatsEngine';
 import { getSportIcon } from '@/lib/sportIcons';
@@ -490,7 +491,7 @@ export const TeamManagement = () => {
             <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
               ROSTER & <span className="text-orange-500">RECRUITMENT</span>
             </h1>
-            <p className="text-slate-400 font-sans font-medium text-sm tracking-wide mt-2 max-w-2xl opacity-80">
+            <p className="text-slate-400 font-medium text-sm tracking-wide mt-2 max-w-2xl opacity-80">
               Form your elite squad, manage rosters, and recruit verified university talent.
             </p>
           </div>
@@ -504,7 +505,7 @@ export const TeamManagement = () => {
               } />
               <DialogContent className="w-full sm:max-w-md max-w-[95vw] rounded-3xl p-6 sm:p-8 overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
                 <DialogHeader className="min-w-0">
-                  <DialogTitle className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter truncate text-slate-900 dark:text-white">Form <span className="text-orange-500">New Team</span></DialogTitle>
+                  <DialogTitle className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter break-words leading-tight text-slate-900 dark:text-white">Form <span className="text-orange-500">New Team</span></DialogTitle>
                   <DialogDescription className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest mt-1">
                     Enroll your squad into an official tournament.
                   </DialogDescription>
@@ -560,8 +561,7 @@ export const TeamManagement = () => {
                           setSelectedCollegeId(id);
                           const col = colleges.find(c => c.id === id);
                           if (col && !newTeamName) {
-                            const match = col.college_name.match(/\(([^)]+)\)/);
-                            const code = match ? match[1] : col.college_name.slice(0, 4);
+                            const code = extractCollegeCode(col.college_name);
                             setNewTeamName(`${code} Squad`);
                           }
                         }}
@@ -789,7 +789,7 @@ export const TeamManagement = () => {
                         </Badge>
                       </div>
 
-                      <CardTitle className="text-xl sm:text-2xl font-black italic uppercase tracking-tighter text-slate-900 dark:text-white group-hover:text-orange-500 transition-colors truncate" title={team.name}>{team.name}</CardTitle>
+                      <CardTitle className="text-xl sm:text-2xl font-black italic uppercase tracking-tighter text-slate-900 dark:text-white group-hover:text-orange-500 transition-colors break-words line-clamp-2 leading-snug" title={team.name}>{team.name}</CardTitle>
                       
                       <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                         {team.affiliation_type === 'cluster' && team.clusters?.name ? (
@@ -800,13 +800,13 @@ export const TeamManagement = () => {
                         ) : team.colleges?.college_name ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 dark:text-orange-400 font-black text-[9px] uppercase tracking-wider border border-orange-500/20">
                             <GraduationCap className="size-3" />
-                            {team.colleges.college_name.match(/\(([^)]+)\)/)?.[1] || team.colleges.college_name.slice(0, 4)}
+                            {extractCollegeCode(team.colleges.college_name)}
                           </span>
                         ) : null}
 
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 font-bold text-[9px] uppercase tracking-wider border border-slate-200/80 dark:border-white/5 truncate max-w-[200px]" title={team.tournaments?.name}>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 font-bold text-[9px] uppercase tracking-wider border border-slate-200/80 dark:border-white/5 break-words line-clamp-1" title={team.tournaments?.name}>
                           <Trophy className="size-2.5 text-orange-500 shrink-0" />
-                          <span className="truncate">{team.tournaments?.name || 'Tournament'}</span>
+                          <span>{team.tournaments?.name || 'Tournament'}</span>
                         </span>
                       </div>
                     </CardHeader>
@@ -855,7 +855,7 @@ export const TeamManagement = () => {
                                 </span>
                               ) : team.colleges?.college_name ? (
                                 <span className="not-italic px-1.5 py-0.2 rounded-md bg-orange-500/10 text-orange-600 dark:text-orange-400 font-black text-[9px] uppercase tracking-wider border border-orange-500/20">
-                                  {team.colleges.college_name.match(/\(([^)]+)\)/)?.[1] || team.colleges.college_name.slice(0, 4)}
+                                  {extractCollegeCode(team.colleges.college_name)}
                                 </span>
                               ) : null}
                             </div>
@@ -867,7 +867,7 @@ export const TeamManagement = () => {
                       </div>
 
                       <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100 dark:border-white/5">
-                        <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate max-w-[170px]" title={team.tournaments?.name}>
+                        <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider break-words line-clamp-1 min-w-0" title={team.tournaments?.name}>
                           {team.tournaments?.name || 'Tournament'}
                         </p>
                         <Button
@@ -919,7 +919,7 @@ export const TeamManagement = () => {
                                 </span>
                               ) : team.colleges?.college_name ? (
                                 <span className="not-italic px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 dark:text-orange-400 font-black text-[9px] uppercase tracking-wider border border-orange-500/20">
-                                  {team.colleges.college_name.match(/\(([^)]+)\)/)?.[1] || team.colleges.college_name.slice(0, 4)}
+                                  {extractCollegeCode(team.colleges.college_name)}
                                 </span>
                               ) : null}
                             </div>
@@ -1182,19 +1182,19 @@ export const TeamManagement = () => {
                     <div className="min-w-0">
                       <CardHeader className="p-5 sm:p-6 pb-3 min-w-0 space-y-3">
                         <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="flex items-start gap-3 min-w-0 flex-1">
                             <div className="size-11 sm:size-12 bg-slate-50 dark:bg-white/5 rounded-2xl flex items-center justify-center font-black text-slate-400 group-hover:bg-orange-500 group-hover:text-white transition-all duration-500 shrink-0 shadow-sm">
                               {player.full_name.charAt(0)}
                             </div>
                             <div className="min-w-0 flex-1">
                               <CardTitle
-                                className="text-lg sm:text-xl font-black italic uppercase tracking-tighter truncate text-slate-900 dark:text-white group-hover:text-orange-500 transition-colors cursor-pointer"
+                                className="text-lg sm:text-xl font-black italic uppercase tracking-tighter text-slate-900 dark:text-white group-hover:text-orange-500 transition-colors cursor-pointer break-words line-clamp-2 leading-snug"
                                 title={player.full_name}
                                 onClick={() => setDossierPlayerId(player.id)}
                               >
                                 {player.full_name}
                               </CardTitle>
-                              <CardDescription className="font-bold text-orange-500 uppercase text-[9px] tracking-[0.15em] mt-0.5 truncate flex items-center gap-1.5">
+                              <CardDescription className="font-bold text-orange-500 uppercase text-[9px] tracking-[0.15em] mt-0.5 break-words line-clamp-2 leading-snug flex items-center gap-1.5">
                                 <span>{player.primary_position || summary?.positions[0] || 'Verified Athlete'}</span>
                                 {player.year_level && (
                                   <span className="text-slate-400">• {player.year_level}</span>
@@ -1223,7 +1223,7 @@ export const TeamManagement = () => {
                             College Affiliation
                           </p>
                           <p
-                            className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate"
+                            className="text-xs font-bold text-slate-700 dark:text-slate-300 break-words line-clamp-2 leading-snug"
                             title={collegeName}
                           >
                             {collegeName}
@@ -1342,25 +1342,25 @@ export const TeamManagement = () => {
                       className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-slate-900 p-4 shadow-sm"
                     >
                       <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex items-start gap-3 min-w-0 flex-1">
                           <div className="size-10 rounded-xl bg-gradient-to-br from-orange-500/20 to-amber-500/20 text-orange-600 dark:text-orange-400 flex items-center justify-center font-black text-sm shrink-0 border border-orange-500/30">
                             {player.full_name.charAt(0)}
                           </div>
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <button
                               type="button"
                               onClick={() => setDossierPlayerId(player.id)}
-                              className="font-black italic uppercase tracking-tight text-sm text-slate-900 dark:text-white hover:text-orange-500 text-left truncate block max-w-[200px]"
+                              className="font-black italic uppercase tracking-tight text-sm text-slate-900 dark:text-white hover:text-orange-500 text-left break-words line-clamp-2 leading-snug block"
                             >
                               {player.full_name}
                             </button>
-                            <div className="flex items-center gap-1.5 flex-wrap">
+                            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                               {player.primary_position && (
                                 <span className="text-[10px] font-black text-orange-500 uppercase">
                                   {player.primary_position}
                                 </span>
                               )}
-                              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase truncate">
+                              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase break-words line-clamp-1">
                                 • {collegeName}
                               </span>
                             </div>
@@ -1588,7 +1588,7 @@ export const TeamManagement = () => {
       <Dialog open={!!manageRosterTeamId} onOpenChange={(open) => !open && setManageRosterTeamId(null)}>
         <DialogContent className="w-full sm:max-w-2xl max-w-[95vw] max-h-[88dvh] overflow-hidden rounded-3xl p-5 sm:p-8 flex flex-col min-w-0 bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
           <DialogHeader className="min-w-0">
-            <DialogTitle className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter truncate text-slate-900 dark:text-white">Manage <span className="text-orange-500">Roster</span></DialogTitle>
+            <DialogTitle className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter break-words leading-tight text-slate-900 dark:text-white">Manage <span className="text-orange-500">Roster</span></DialogTitle>
             <DialogDescription className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest mt-1">View and manage players invited to this team.</DialogDescription>
           </DialogHeader>
           <div className="py-4 max-h-[60vh] overflow-y-auto overflow-x-hidden pr-1 scrollbar-hide min-w-0 flex-1">
@@ -1611,13 +1611,13 @@ export const TeamManagement = () => {
                   return (
                     <div key={member.id} className="p-4 sm:p-5 border-2 border-slate-100 dark:border-white/5 rounded-2xl bg-white dark:bg-slate-900 group hover:border-orange-500/30 transition-all duration-300 space-y-3 min-w-0">
                       <div className="flex items-center justify-between gap-3 min-w-0">
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="flex items-start gap-3 min-w-0 flex-1">
                           <div className="size-10 rounded-xl bg-slate-50 dark:bg-white/5 flex items-center justify-center font-black text-slate-500 group-hover:bg-orange-500 group-hover:text-white transition-all shrink-0">
                             {((Array.isArray(member.users) ? member.users[0]?.full_name : member.users?.full_name) || '?')[0]}
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap min-w-0">
-                              <span className="font-black italic uppercase tracking-tighter text-base sm:text-lg leading-none truncate max-w-full text-slate-900 dark:text-white">
+                              <span className="font-black italic uppercase tracking-tighter text-base sm:text-lg break-words line-clamp-2 leading-snug text-slate-900 dark:text-white">
                                 {Array.isArray(member.users) ? member.users[0]?.full_name : member.users?.full_name || 'Unknown Player'}
                               </span>
                               {member.is_captain && (
@@ -1627,7 +1627,7 @@ export const TeamManagement = () => {
                               )}
                             </div>
                             <div className="flex items-center gap-2 mt-1 flex-wrap min-w-0">
-                              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider truncate max-w-[200px]">{collegeName}</span>
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider break-words line-clamp-2 leading-snug">{collegeName}</span>
                               <span className="text-slate-300 dark:text-slate-600">•</span>
                               <Badge
                                 variant={member.status === 'Approved' ? 'default' : 'secondary'}
@@ -1785,7 +1785,7 @@ export const TeamManagement = () => {
       <Dialog open={!!invitePlayerId} onOpenChange={(open) => !open && setInvitePlayerId(null)}>
         <DialogContent className="w-full sm:max-w-md max-w-[95vw] rounded-3xl p-6 sm:p-8 overflow-hidden min-w-0 bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
           <DialogHeader className="min-w-0">
-            <DialogTitle className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter truncate text-slate-900 dark:text-white">Recruit <span className="text-orange-500">Athlete</span></DialogTitle>
+            <DialogTitle className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter break-words leading-tight text-slate-900 dark:text-white">Recruit <span className="text-orange-500">Athlete</span></DialogTitle>
             <DialogDescription className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest mt-1">Select a team to send an invitation to this player.</DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-2.5 min-w-0">

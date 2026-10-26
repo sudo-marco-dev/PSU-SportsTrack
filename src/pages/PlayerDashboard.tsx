@@ -699,7 +699,7 @@ export const PlayerDashboard = () => {
                         Coming Soon
                       </span>
                     </div>
-                    <h4 className="font-black text-base uppercase italic tracking-tight text-slate-900 dark:text-white truncate group-hover:text-orange-500 transition-colors">
+                    <h4 className="font-black text-base uppercase italic tracking-tight text-slate-900 dark:text-white break-words line-clamp-2 leading-snug group-hover:text-orange-500 transition-colors">
                       {t.name}
                     </h4>
                     <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/10 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
@@ -769,15 +769,15 @@ export const PlayerDashboard = () => {
                     </div>
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">{match.round}</span>
                   </div>
-                  <CardTitle className="text-lg mt-2 flex items-center justify-between font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
-                    <span className="truncate">{match.team_a?.name || 'TBD'}</span>
-                    <span className="text-slate-300 dark:text-slate-600 text-xs mx-2">VS</span>
-                    <span className="truncate">{match.team_b?.name || 'BYE'}</span>
+                  <CardTitle className="text-base sm:text-lg mt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
+                    <span className="break-words line-clamp-2 leading-snug">{match.team_a?.name || 'TBD'}</span>
+                    <span className="text-slate-400 dark:text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider self-center sm:self-auto shrink-0 py-0.5 sm:py-0">VS</span>
+                    <span className="break-words line-clamp-2 leading-snug text-left sm:text-right">{match.team_b?.name || 'BYE'}</span>
                   </CardTitle>
                   {match.venue && (
-                    <div className="flex items-center gap-1 mt-2 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
+                    <div className="flex items-center gap-1 mt-2 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider min-w-0">
                       <MapPin className="size-3 text-orange-500 shrink-0" />
-                      <span className="truncate">{match.venue}</span>
+                      <span className="break-words line-clamp-1">{match.venue}</span>
                     </div>
                   )}
                 </CardHeader>

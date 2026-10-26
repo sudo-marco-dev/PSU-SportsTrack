@@ -1819,19 +1819,19 @@ export const FacilitatorKiosk = () => {
 
           <div className="space-y-3 py-2 text-xs">
             <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/80 border border-white/10">
-              <div className="text-left">
+              <div className="text-left min-w-0 flex-1">
                 <span className="text-[10px] uppercase font-bold text-slate-400">Team A</span>
-                <p className="text-sm font-black text-white truncate max-w-[120px]">{match.team_a?.name}</p>
+                <p className="text-sm font-black text-white break-words line-clamp-2 leading-snug">{match.team_a?.name}</p>
                 <p className="text-2xl font-mono font-black text-orange-400">{match.team_a_score}</p>
               </div>
-              <div className="text-center px-2">
+              <div className="text-center px-2 shrink-0">
                 <Badge variant="outline" className="border-white/20 text-slate-300 text-[10px] uppercase font-mono">
                   FINAL
                 </Badge>
               </div>
-              <div className="text-right">
+              <div className="text-right min-w-0 flex-1">
                 <span className="text-[10px] uppercase font-bold text-slate-400">Team B</span>
-                <p className="text-sm font-black text-white truncate max-w-[120px]">{match.team_b?.name}</p>
+                <p className="text-sm font-black text-white break-words line-clamp-2 leading-snug">{match.team_b?.name}</p>
                 <p className="text-2xl font-mono font-black text-cyan-400">{match.team_b_score}</p>
               </div>
             </div>
