@@ -60,7 +60,7 @@ function AppRoutes() {
     // 3. Global listener for Supabase PASSWORD_RECOVERY event
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
-        if (location.pathname !== '/reset-password') {
+        if (location.pathname !== '/reset-password' && location.pathname !== '/auth/confirm') {
           navigate('/reset-password', { replace: true });
         }
       }
