@@ -48,17 +48,24 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
     const isPdf = file.type === 'application/pdf' || fileNameLower.endsWith('.pdf');
     const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(fileNameLower);
 
-    if (!isPdf && !isImage) {
-      toast.error('Invalid file format. Only official PDF documents and standard images (PNG, JPG, WEBP) under 5MB are permitted.');
-      e.target.value = '';
-      setCorFile(null);
-      setImagePreviewUrl(null);
-      setParsedData(null);
-      return;
-    }
-
-    if (isStaffOrFaculty && isPdf) {
-      toast.warning('Faculty & staff athletic clearance requires an employee ID card photo (PNG, JPG, WEBP). Please upload your physical ID card.');
+    if (isStaffOrFaculty) {
+      if (!isImage) {
+        toast.error('Invalid file format. Faculty & staff athletic clearance requires an employee ID card photo (PNG, JPG, WEBP).');
+        e.target.value = '';
+        setCorFile(null);
+        setImagePreviewUrl(null);
+        setParsedData(null);
+        return;
+      }
+    } else {
+      if (!isPdf) {
+        toast.error('Invalid file format. Certificate of Registration (COR) verification strictly accepts official digital PDF documents (.pdf) only for automated parsing.');
+        e.target.value = '';
+        setCorFile(null);
+        setImagePreviewUrl(null);
+        setParsedData(null);
+        return;
+      }
     }
 
     setCorFile(file);
@@ -132,7 +139,7 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
         await supabase.from('verification_documents').delete().in('id', priorUnverified.map(p => p.id));
       }
 
-      const fileExt = corFile.name.split('.').pop() || 'png';
+      const fileExt = corFile.name.split('.').pop() || (isStaffOrFaculty ? 'png' : 'pdf');
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
 
@@ -253,7 +260,7 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
         {/* File Input */}
         <div className="space-y-2">
           <Label htmlFor="cor" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center justify-between">
-            <span>{isStaffOrFaculty ? 'PSU Employee ID Card Photo (PNG/JPG)' : 'Certificate of Registration (PDF) or Official ID Image'}</span>
+            <span>{isStaffOrFaculty ? 'PSU Employee ID Card Photo (PNG/JPG)' : 'Certificate of Registration (PDF)'}</span>
             {corFile && (
               <span className="text-[10px] text-slate-400 font-normal truncate max-w-[200px]">
                 {corFile.name}
@@ -264,7 +271,7 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
             <Input
               id="cor"
               type="file"
-              accept={isStaffOrFaculty ? 'image/png,image/jpeg,image/webp,.png,.jpg,.jpeg' : '.pdf,application/pdf,image/png,image/jpeg,image/webp'}
+              accept={isStaffOrFaculty ? 'image/png,image/jpeg,image/webp,.png,.jpg,.jpeg' : '.pdf,application/pdf'}
               onChange={handleFileChange}
               disabled={isUploading || isParsing}
               className={`h-12 ${
@@ -276,7 +283,7 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
               } file:text-white file:font-bold file:text-xs file:border-0 file:rounded-lg file:mr-3 file:px-3 file:py-1 cursor-pointer bg-slate-50 dark:bg-white/5 rounded-2xl border-slate-200 dark:border-white/10`}
             />
             <div className="flex items-center justify-between px-1 text-[10px] text-slate-400 font-medium">
-              <span>Formats: {isStaffOrFaculty ? 'PNG, JPG, WEBP' : 'Official PDF, PNG, JPG, WEBP'}</span>
+              <span>Formats: {isStaffOrFaculty ? 'PNG, JPG, WEBP' : 'Official PDF (.pdf)'}</span>
               <span className="font-bold text-orange-500">Max 5 MB</span>
             </div>
           </div>
