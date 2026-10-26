@@ -1,10 +1,8 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
-const VerificationUpload = lazy(() =>
-  import('@/components/auth/VerificationUpload').then((m) => ({ default: m.VerificationUpload }))
-);
+import { ProfilePasswordChangeCard } from '@/components/profile/ProfilePasswordChangeCard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +23,7 @@ import {
   Shield,
   LogOut,
   ChevronRight,
+  ArrowRight,
   ClipboardList,
   Users,
   Settings,
@@ -34,9 +33,7 @@ import {
   UserX,
   BellOff,
   Bell,
-  Building,
   BookOpen,
-  Layers,
   Activity,
   Target,
   Search,
@@ -671,21 +668,18 @@ export const Profile = () => {
 
               <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-0.5">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">College / Unit Affiliation</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <GraduationCap className="size-3.5 text-orange-500" />
-                  <span className="font-bold text-slate-900 dark:text-white text-sm">{profile?.college_name || 'PSU Main Administration'}</span>
-                </div>
+                <p className="font-bold text-slate-900 dark:text-white text-sm mt-0.5">{profile?.college_name || 'PSU Main Administration'}</p>
               </div>
 
               <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-0.5">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Institution</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <Building className="size-3.5 text-orange-500" />
-                  <span className="font-bold text-slate-900 dark:text-white text-sm uppercase">Palawan State University</span>
-                </div>
+                <p className="font-bold text-slate-900 dark:text-white text-sm uppercase mt-0.5">Palawan State University</p>
               </div>
             </CardContent>
           </Card>
+
+          {/* Admin Direct In-Profile Password Reset */}
+          <ProfilePasswordChangeCard />
         </div>
       ) : isCoach ? (
         /* ========================================================================= */
@@ -788,6 +782,9 @@ export const Profile = () => {
               </div>
             </Card>
           </div>
+
+          {/* Coach Direct In-Profile Password Reset */}
+          <ProfilePasswordChangeCard />
         </div>
       ) : (isFacilitator || isDev) ? (
         /* ========================================================================= */
@@ -882,6 +879,9 @@ export const Profile = () => {
               </div>
             </Card>
           </div>
+
+          {/* Facilitator / Dev Direct In-Profile Password Reset */}
+          <ProfilePasswordChangeCard />
         </div>
       ) : (
         /* ========================================================================= */
@@ -1815,18 +1815,15 @@ export const Profile = () => {
 
                     <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-0.5">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Athlete Role</p>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <Shield className="size-3.5 text-orange-500" />
-                        <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm uppercase">
-                          {isSuperAdmin ? 'Super Admin' : isFacilitator ? 'Facilitator' : isCoach ? 'Coach' : isFacultyAthlete ? 'Faculty Athlete' : 'Student Athlete'}
-                        </span>
-                      </div>
+                      <p className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm uppercase mt-0.5">
+                        {isSuperAdmin ? 'Super Admin' : isFacilitator ? 'Facilitator' : isCoach ? 'Coach' : isFacultyAthlete ? 'Faculty Athlete' : 'Student Athlete'}
+                      </p>
                     </div>
 
                     {/* College Department Selector / Display */}
                     <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-1.5">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                        <GraduationCap className="size-3.5 text-orange-500" /> PSU College Department
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        PSU College Department
                       </p>
                       {profile?.college_name ? (
                         <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-white/10 flex items-center justify-between">
@@ -1951,27 +1948,42 @@ export const Profile = () => {
                             </div>
                           </div>
                         </div>
-                        <Suspense fallback={<div className="h-44 rounded-2xl bg-slate-100 dark:bg-slate-900 animate-pulse flex items-center justify-center text-xs font-bold text-slate-400">Loading document verification module...</div>}>
-                          <VerificationUpload onUploadSuccess={() => checkVerificationStatus()} />
-                        </Suspense>
+                        <div className="pt-1">
+                          <Button
+                            onClick={() => navigate('/player')}
+                            className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs h-10 px-4 rounded-xl gap-2 shadow-md shadow-orange-500/20 active:scale-[0.98] transition-all"
+                          >
+                            <span>Submit Replacement Document on Dashboard</span>
+                            <ArrowRight className="size-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <div className="p-4 rounded-2xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 text-orange-950 dark:text-orange-200">
+                        <div className="p-4 rounded-2xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 text-orange-950 dark:text-orange-200 space-y-3">
                           <p className="text-xs font-normal leading-relaxed">
                             {profile?.role === 'player_staff' || profile?.role === 'player_faculty'
                               ? 'Official PSU Employee ID Card photo is required for faculty and staff athletes to join department rosters and enter tournament brackets.'
                               : 'Official Certificate of Registration is required for all student players to join team rosters and enter university tournament brackets.'}
                           </p>
+                          <div>
+                            <Button
+                              onClick={() => navigate('/player')}
+                              className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs h-10 px-4 rounded-xl gap-2 shadow-md shadow-orange-500/20 active:scale-[0.98] transition-all"
+                            >
+                              <span>Complete Clearance on Dashboard</span>
+                              <ArrowRight className="size-3.5" />
+                            </Button>
+                          </div>
                         </div>
-                        <Suspense fallback={<div className="h-44 rounded-2xl bg-slate-100 dark:bg-slate-900 animate-pulse flex items-center justify-center text-xs font-bold text-slate-400">Loading document verification module...</div>}>
-                          <VerificationUpload onUploadSuccess={() => checkVerificationStatus()} />
-                        </Suspense>
                       </div>
                     )}
                   </CardContent>
                 </Card>
               </div>
+
+              {/* 3. Security & Password (Direct In-Profile Reset) */}
+              <ProfilePasswordChangeCard />
 
               {/* 3. Academic & Student Credentials (Editable for corrections) */}
               <Card className="border border-slate-200 dark:border-white/10 rounded-3xl shadow-sm bg-white dark:bg-slate-900">
@@ -1997,8 +2009,8 @@ export const Profile = () => {
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label htmlFor="studentNumber" className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                        <GraduationCap className="size-3.5 text-orange-500" /> Student Number
+                      <Label htmlFor="studentNumber" className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                        Student Number
                       </Label>
                       <Input
                         id="studentNumber"
@@ -2010,8 +2022,8 @@ export const Profile = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="program" className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                        <BookOpen className="size-3.5 text-orange-500" /> Degree Program
+                      <Label htmlFor="program" className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                        Degree Program
                       </Label>
                       <Input
                         id="program"
@@ -2023,8 +2035,8 @@ export const Profile = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="yearLevel" className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                        <Layers className="size-3.5 text-orange-500" /> Year Level
+                      <Label htmlFor="yearLevel" className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                        Year Level
                       </Label>
                       <Select
                         value={academicProfile.yearLevel}
@@ -2044,8 +2056,8 @@ export const Profile = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="age" className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                        <User className="size-3.5 text-orange-500" /> Athlete Age
+                      <Label htmlFor="age" className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                        Athlete Age
                       </Label>
                       <Input
                         id="age"
