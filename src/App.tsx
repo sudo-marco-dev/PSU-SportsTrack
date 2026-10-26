@@ -1,10 +1,11 @@
-import React, { Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from '@/context/AuthContext';
+import React, { Suspense, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ThemeProvider } from '@/context/ThemeProvider';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Toaster } from '@/components/ui/sonner';
 import { AppLayout } from '@/components/AppLayout';
+import { supabase } from '@/lib/supabase';
 
 // Lazy-loaded page routes — split into separate chunks for faster initial load
 const Register = React.lazy(() => import('@/pages/Register').then(m => ({ default: m.Register })));
@@ -33,8 +34,42 @@ import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
 
 function AppRoutes() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { openLoginModal } = useAuth();
+
   // This hook handles legacy route redirects
   useAuthRedirect();
+
+  useEffect(() => {
+    // 1. Automatically open login modal if redirected with ?login=true
+    if (location.search.includes('login=true')) {
+      openLoginModal();
+    }
+
+    // 2. Intercept password recovery flows arriving with hash or query parameters on other routes
+    const hash = window.location.hash || '';
+    const search = window.location.search || '';
+    const isRecoveryFlow = hash.includes('type=recovery') || search.includes('type=recovery');
+
+    if (isRecoveryFlow && location.pathname !== '/reset-password' && location.pathname !== '/auth/confirm') {
+      navigate('/reset-password' + hash, { replace: true });
+      return;
+    }
+
+    // 3. Global listener for Supabase PASSWORD_RECOVERY event
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        if (location.pathname !== '/reset-password') {
+          navigate('/reset-password', { replace: true });
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [location.pathname, location.search, navigate, openLoginModal]);
 
   return (
     <Suspense fallback={<PageSkeleton variant="page" />}>

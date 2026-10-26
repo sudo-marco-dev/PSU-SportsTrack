@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import type { EmailOtpType } from '@supabase/supabase-js';
 
-type ConfirmState = 'loading' | 'success' | 'error';
+type ConfirmState = 'loading' | 'success' | 'recovery-ready' | 'error';
 
 export const AuthConfirm = () => {
   const [searchParams] = useSearchParams();
@@ -35,11 +35,22 @@ export const AuthConfirm = () => {
           return;
         }
 
+        const next = searchParams.get('next') || searchParams.get('redirect_to');
+
+        // If this is a password recovery flow, route to password reset form
+        if (type === 'recovery') {
+          setState('recovery-ready');
+          setTimeout(() => {
+            navigate(next || '/reset-password', { replace: true });
+          }, 1500);
+          return;
+        }
+
         setState('success');
 
-        // Redirect to the root after a brief delay so the user sees the success message
+        // Redirect to the root (or specified next route) after a brief delay so the user sees the success message
         setTimeout(() => {
-          navigate('/', { replace: true });
+          navigate(next || '/', { replace: true });
         }, 2000);
       } catch (err) {
         console.error('[AuthConfirm] Unexpected error:', err);
@@ -69,6 +80,27 @@ export const AuthConfirm = () => {
                 <div className="h-4 w-64 bg-slate-800/60 rounded-md mx-auto" />
               </div>
             </div>
+          )}
+
+          {state === 'recovery-ready' && (
+            <>
+              <div className="mb-6">
+                <div className="inline-block p-4 bg-orange-500/10 rounded-full">
+                  <svg className="w-12 h-12 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                  </svg>
+                </div>
+              </div>
+              <h1 className="text-2xl font-black text-white uppercase italic tracking-tight mb-2">
+                Password Reset <span className="text-orange-500">Authorized!</span>
+              </h1>
+              <p className="text-slate-300 font-medium text-sm mb-6">
+                Your recovery token has been verified. Redirecting you to set a new password...
+              </p>
+              <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full bg-orange-500 rounded-full animate-[progress_1.5s_ease-in-out]" style={{ width: '100%' }} />
+              </div>
+            </>
           )}
 
           {state === 'success' && (

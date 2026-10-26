@@ -125,9 +125,21 @@ export const ResetPassword = () => {
       }
     });
 
+    // Check URL hash for type=recovery or access_token directly
+    const checkHashAndRecovery = () => {
+      const hash = window.location.hash || '';
+      if (hash.includes('type=recovery') || hash.includes('access_token')) {
+        setPageState('ready');
+      }
+    };
+
+    checkHashAndRecovery();
+    window.addEventListener('hashchange', checkHashAndRecovery);
+
     // Also check if there's already an active session (user may have been redirected)
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
+      const hash = window.location.hash || '';
+      if (session || hash.includes('type=recovery') || hash.includes('access_token')) {
         setPageState('ready');
       } else if (!tokenHash) {
         // No session and no token — show the email request form
@@ -136,6 +148,7 @@ export const ResetPassword = () => {
     });
 
     return () => {
+      window.removeEventListener('hashchange', checkHashAndRecovery);
       subscription.unsubscribe();
     };
   }, [searchParams]);
@@ -155,13 +168,13 @@ export const ResetPassword = () => {
       }
 
       setPageState('success');
-      toast.success('Password updated successfully!');
+      toast.success('Password updated successfully! Please sign in with your new credentials.');
 
-      // Sign out and redirect to login after a brief delay
+      // Sign out and redirect to home with ?login=true so the sign in modal automatically prompts
       setTimeout(async () => {
         await supabase.auth.signOut();
-        navigate('/login', { replace: true });
-      }, 2500);
+        navigate('/?login=true', { replace: true });
+      }, 2200);
     } catch (err) {
       console.error('[ResetPassword] Unexpected error:', err);
       toast.error('An unexpected error occurred.');
