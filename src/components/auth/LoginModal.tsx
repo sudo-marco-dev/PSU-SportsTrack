@@ -131,6 +131,20 @@ export const LoginModal = () => {
     localStorage.removeItem('login_attempts');
   }, []);
 
+  // Whenever the login modal is opened or closed, always reset authMode to 'login' and clear form fields
+  useEffect(() => {
+    if (isLoginModalOpen) {
+      setAuthMode('login');
+    } else {
+      setAuthMode('login');
+      setShowPassword(false);
+      setShowRegisterPassword(false);
+      setShowRegisterConfirmPassword(false);
+      loginForm.reset();
+      registerForm.reset();
+    }
+  }, [isLoginModalOpen]);
+
   const watchedLoginEmail = loginForm.watch('email');
 
   // Check rate limit / lockout scoped to the currently typed email
@@ -340,7 +354,15 @@ export const LoginModal = () => {
 
   return (
     <>
-      <Dialog open={isLoginModalOpen} onOpenChange={(open) => { if (!open) closeLoginModal(); }}>
+      <Dialog
+        open={isLoginModalOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeLoginModal();
+            setAuthMode('login');
+          }
+        }}
+      >
         <DialogContent className="w-full max-w-[94vw] sm:max-w-md md:max-w-lg p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-white/10 shadow-2xl bg-slate-950 text-white relative max-h-[92vh] overflow-y-auto">
           <div>
             {/* Header Badge */}

@@ -48,4 +48,41 @@ test.describe('Navigation and Layout Suite', () => {
     await expect(page).toHaveURL(/\/about/);
     await expect(page.locator('text=Digital Arena for').first()).toBeVisible();
   });
+
+  test('should reset to Sign In portal view when closed and reopened after switching to Create Account', async ({ page }) => {
+    await page.goto('/');
+
+    // 1. Click Log In in public view
+    const loginButton = page.getByRole('button', { name: /Log In/i }).first();
+    await expect(loginButton).toBeVisible();
+    await loginButton.click();
+
+    // 2. Verify Sign In Portal is displayed
+    const signInHeading = page.getByRole('heading', { name: /Sign In/i }).first();
+    await expect(signInHeading).toBeVisible();
+
+    // 3. Accidentally click "Create Account"
+    const createAccountPrompt = page.getByRole('button', { name: 'Create Account' });
+    await expect(createAccountPrompt).toBeVisible();
+    await createAccountPrompt.click();
+
+    // 4. Verify Create Account view is shown
+    const createAccountHeading = page.getByRole('heading', { name: /Create.*Account/i }).first();
+    await expect(createAccountHeading).toBeVisible();
+
+    // 5. Press the X button at the top
+    const closeButton = page.locator('[data-slot="dialog-close"]').first();
+    await expect(closeButton).toBeVisible();
+    await closeButton.click();
+
+    // 6. Verify back to public view and modal is hidden
+    await expect(createAccountHeading).not.toBeVisible();
+
+    // 7. Click Log In again
+    await loginButton.click();
+
+    // 8. Must show Sign In Portal, NOT Create Account!
+    await expect(signInHeading).toBeVisible();
+    await expect(createAccountHeading).not.toBeVisible();
+  });
 });
