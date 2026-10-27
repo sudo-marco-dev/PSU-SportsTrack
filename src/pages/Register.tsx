@@ -22,11 +22,21 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { PasswordPolicyMeter } from '@/components/auth/PasswordPolicyMeter';
 import { LegalModal } from '@/components/legal/LegalModal';
+import { OtpVerificationStep } from '@/components/auth/OtpVerificationStep';
+
+const PSU_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@psu\.palawan\.edu\.ph$/i;
 
 const registerSchema = z.object({
   lastName: z.string().trim().min(1, { message: 'Last name is required' }),
   firstName: z.string().trim().min(1, { message: 'First name is required' }),
-  email: z.string().trim().toLowerCase().email({ message: 'Invalid email address' }),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .email({ message: 'Invalid email address' })
+    .refine((val) => PSU_EMAIL_REGEX.test(val), {
+      message: 'Registration requires an official PSU email address ending with @psu.palawan.edu.ph',
+    }),
   password: z
     .string()
     .min(8, { message: 'Password must be at least 8 characters' })
@@ -56,6 +66,10 @@ export const Register = () => {
   const [colleges, setColleges] = useState<{ id: string; college_name: string }[]>([]);
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<'privacy' | 'terms'>('terms');
+  const [pendingVerification, setPendingVerification] = useState<{
+    email: string;
+    role: string;
+  } | null>(null);
 
   useEffect(() => {
     supabase.from('colleges').select('id, college_name').then(({ data }) => {
@@ -86,10 +100,24 @@ export const Register = () => {
     setIsLoading(true);
     try {
       const cleanEmail = values.email.trim().toLowerCase();
-      // 1. Sign up user
+      const formattedFullName = `${values.lastName.trim()}, ${values.firstName.trim()}`;
+
+      // 1. Sign up user with metadata for server trigger & email confirmation
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: cleanEmail,
         password: values.password,
+        options: {
+          data: {
+            full_name: formattedFullName,
+            first_name: values.firstName.trim(),
+            last_name: values.lastName.trim(),
+            role: values.role,
+            college_id: values.collegeId || null,
+            employee_id: values.employeeId ? values.employeeId.trim() : null,
+            department: values.department ? values.department.trim() : null,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/confirm?type=signup`,
+        },
       });
 
       if (authError) {
@@ -98,8 +126,17 @@ export const Register = () => {
       }
 
       if (authData.user) {
-        // 2. Insert into public.users (Last Name, First Name basis)
-        const formattedFullName = `${values.lastName.trim()}, ${values.firstName.trim()}`;
+        // If email confirmation is required, authData.session is null
+        if (!authData.session) {
+          setPendingVerification({
+            email: cleanEmail,
+            role: values.role,
+          });
+          toast.info('Verification code sent! Enter the OTP or click the confirmation link to activate your account.');
+          return;
+        }
+
+        // Direct session fallback (e.g. if email confirmation is disabled in development)
         const { error: profileError } = await supabase.from('users').insert({
           id: authData.user.id,
           full_name: formattedFullName,
@@ -110,13 +147,13 @@ export const Register = () => {
           department: values.department ? values.department.trim() : null,
         });
 
-        if (profileError) {
-          toast.error('Failed to create user profile: ' + profileError.message);
-        } else {
-          toast.success('Registration successful! Welcome to PSU SportsTrack.');
-          const rolePath = values.role === 'coach' ? '/coach' : '/player';
-          navigate(rolePath, { replace: true });
+        if (profileError && !profileError.message.includes('duplicate key')) {
+          console.error('Profile creation note:', profileError.message);
         }
+
+        toast.success('Registration successful! Welcome to PSU SportsTrack.');
+        const rolePath = values.role === 'coach' ? '/coach' : '/player';
+        navigate(rolePath, { replace: true });
       }
     } catch {
       toast.error('An unexpected error occurred during registration. Please try again.');
@@ -133,325 +170,342 @@ export const Register = () => {
 
       <Card className="w-full max-w-lg bg-white/5 backdrop-blur-xl border-white/10 shadow-2xl relative z-10 overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-orange-500" />
-        <CardHeader className="space-y-1.5 text-center pb-4 pt-7">
-          <CardTitle className="text-3xl sm:text-4xl font-black tracking-tight text-white uppercase italic">
-            CREATE AN <span className="text-orange-500">ACCOUNT</span>
-          </CardTitle>
-          <CardDescription className="text-slate-400 font-medium uppercase text-[10px] tracking-[0.25em]">
-            Register your official PSU Student, Coach, or Faculty profile
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="px-6 sm:px-8">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3.5">
-              {/* Last Name & First Name Inputs */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <FormField
-                  control={form.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
-                        Last Name
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Dela Cruz"
-                          {...field}
-                          className="h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
-                        />
-                      </FormControl>
-                      <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
-                    </FormItem>
-                  )}
-                />
 
-                <FormField
-                  control={form.control}
-                  name="firstName"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
-                        First Name
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Juan"
-                          {...field}
-                          className="h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
-                        />
-                      </FormControl>
-                      <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem className="space-y-1">
-                    <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
-                      University Email
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        autoCapitalize="none"
-                        autoCorrect="off"
-                        spellCheck={false}
-                        autoComplete="email"
-                        placeholder="202381234@psu.palawan.edu.ph"
-                        {...field}
-                        className="h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
-                      />
-                    </FormControl>
-                    <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem className="space-y-1">
-                    <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Security Password</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          type={showPassword ? "text" : "password"}
-                          autoCapitalize="none"
-                          autoCorrect="off"
-                          spellCheck={false}
-                          autoComplete="new-password"
-                          {...field}
-                          className="h-11 bg-white/5 border-white/10 text-white focus:ring-orange-500 rounded-xl pr-10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          aria-label={showPassword ? "Hide password" : "Show password"}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 transition-colors cursor-pointer p-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </FormControl>
-                    <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem className="space-y-1">
-                    <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Confirm Password</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          type={showConfirmPassword ? "text" : "password"}
-                          autoCapitalize="none"
-                          autoCorrect="off"
-                          spellCheck={false}
-                          autoComplete="new-password"
-                          {...field}
-                          className="h-11 bg-white/5 border-white/10 text-white focus:ring-orange-500 rounded-xl pr-10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 transition-colors cursor-pointer p-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
-                        >
-                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </FormControl>
-                    <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
-                  </FormItem>
-                )}
-              />
-
-              {/* Real-time Password Policy & Real-time Matching Meter */}
-              <PasswordPolicyMeter
-                password={watchedPassword}
-                confirmPassword={watchedConfirmPassword}
-                className="mt-1"
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <FormField
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Role</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white rounded-xl">
-                            <SelectValue placeholder="Select Role">
-                              {field.value === 'player_faculty'
-                                ? 'Faculty Athlete'
-                                : field.value === 'player_staff'
-                                ? 'Staff Athlete'
-                                : field.value === 'coach'
-                                ? 'Athletic Coach'
-                                : 'Student Athlete'}
-                            </SelectValue>
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="bg-slate-800 border-white/10 text-white">
-                          <SelectItem value="player_student">Student Athlete</SelectItem>
-                          <SelectItem value="player_faculty">Faculty Athlete</SelectItem>
-                          <SelectItem value="player_staff">Staff Athlete</SelectItem>
-                          <SelectItem value="coach">Athletic Coach</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="collegeId"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Department</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white rounded-xl">
-                            <SelectValue placeholder="College">
-                              {field.value && colleges.find((c) => c.id === field.value)?.college_name}
-                            </SelectValue>
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="bg-slate-800 border-white/10 text-white">
-                          {colleges.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>{c.college_name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {(form.watch('role') === 'player_staff' || form.watch('role') === 'player_faculty') && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-in fade-in duration-300">
-                  <FormField
-                    control={form.control}
-                    name="employeeId"
-                    render={({ field }) => (
-                      <FormItem className="space-y-1">
-                        <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
-                          Employee / Faculty ID
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="e.g. EMP-2024-0123"
-                            {...field}
-                            className="h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="department"
-                    render={({ field }) => (
-                      <FormItem className="space-y-1">
-                        <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
-                          Department / Office Unit
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="e.g. HR, Registrar, ICTD"
-                            {...field}
-                            className="h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
-
-              {/* Terms & Privacy Checkbox */}
-              <FormField
-                control={form.control}
-                name="termsAccepted"
-                render={({ field }) => (
-                  <FormItem className="space-y-1 pt-1">
-                    <div className="flex items-start gap-2.5">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel className="text-[11px] sm:text-xs font-normal text-slate-300 cursor-pointer leading-relaxed block">
-                          I agree to the{' '}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setLegalModalTab('terms');
-                              setShowLegalModal(true);
-                            }}
-                            className="text-orange-400 hover:text-orange-300 underline font-semibold transition-colors cursor-pointer"
-                          >
-                            Terms &amp; Conditions
-                          </button>
-                          {' '}and{' '}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setLegalModalTab('privacy');
-                              setShowLegalModal(true);
-                            }}
-                            className="text-orange-400 hover:text-orange-300 underline font-semibold transition-colors cursor-pointer"
-                          >
-                            Privacy Policy
-                          </button>
-                        </FormLabel>
-                      </div>
-                    </div>
-                    <FormMessage className="text-orange-500 text-[10px] font-bold uppercase ml-1" />
-                  </FormItem>
-                )}
-              />
-
-              <Button className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl transition-all active:scale-[0.98] mt-3" type="submit" disabled={isLoading}>
-                {isLoading ? 'Creating Profile...' : 'Complete Registration'}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-2 text-center pb-6 pt-3 bg-transparent border-t-0">
-          <div className="text-slate-400 text-xs font-medium">
-            Already a member?{' '}
-            <button
-              type="button"
-              onClick={() => {
-                navigate('/');
-                openLoginModal();
+        {pendingVerification ? (
+          <CardContent className="p-6 sm:p-8 pt-8">
+            <OtpVerificationStep
+              email={pendingVerification.email}
+              role={pendingVerification.role}
+              onBack={() => setPendingVerification(null)}
+              onVerified={() => {
+                const rolePath = pendingVerification.role === 'coach' ? '/coach' : '/player';
+                navigate(rolePath, { replace: true });
               }}
-              className="text-orange-400 hover:text-orange-300 transition-colors font-semibold underline underline-offset-4 cursor-pointer ml-1"
-            >
-              Sign in
-            </button>
-          </div>
-        </CardFooter>
+            />
+          </CardContent>
+        ) : (
+          <>
+            <CardHeader className="space-y-1.5 text-center pb-4 pt-7">
+              <CardTitle className="text-3xl sm:text-4xl font-black tracking-tight text-white uppercase italic">
+                CREATE AN <span className="text-orange-500">ACCOUNT</span>
+              </CardTitle>
+              <CardDescription className="text-slate-400 font-medium uppercase text-[10px] tracking-[0.25em]">
+                Register your official PSU Student, Coach, or Faculty profile
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="px-6 sm:px-8">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3.5">
+                  {/* Last Name & First Name Inputs */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <FormField
+                      control={form.control}
+                      name="lastName"
+                      render={({ field }) => (
+                        <FormItem className="space-y-1">
+                          <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
+                            Last Name
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Dela Cruz"
+                              {...field}
+                              className="h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
+                            />
+                          </FormControl>
+                          <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="firstName"
+                      render={({ field }) => (
+                        <FormItem className="space-y-1">
+                          <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
+                            First Name
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Juan"
+                              {...field}
+                              className="h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
+                            />
+                          </FormControl>
+                          <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
+                          University Email
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="email"
+                            autoCapitalize="none"
+                            autoCorrect="off"
+                            spellCheck={false}
+                            autoComplete="email"
+                            placeholder="202381234@psu.palawan.edu.ph"
+                            {...field}
+                            className="h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Security Password</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type={showPassword ? "text" : "password"}
+                              autoCapitalize="none"
+                              autoCorrect="off"
+                              spellCheck={false}
+                              autoComplete="new-password"
+                              {...field}
+                              className="h-11 bg-white/5 border-white/10 text-white focus:ring-orange-500 rounded-xl pr-10"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              aria-label={showPassword ? "Hide password" : "Show password"}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 transition-colors cursor-pointer p-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+                            >
+                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          </div>
+                        </FormControl>
+                        <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Confirm Password</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type={showConfirmPassword ? "text" : "password"}
+                              autoCapitalize="none"
+                              autoCorrect="off"
+                              spellCheck={false}
+                              autoComplete="new-password"
+                              {...field}
+                              className="h-11 bg-white/5 border-white/10 text-white focus:ring-orange-500 rounded-xl pr-10"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 transition-colors cursor-pointer p-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+                            >
+                              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          </div>
+                        </FormControl>
+                        <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Real-time Password Policy & Real-time Matching Meter */}
+                  <PasswordPolicyMeter
+                    password={watchedPassword}
+                    confirmPassword={watchedConfirmPassword}
+                    className="mt-1"
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <FormField
+                      control={form.control}
+                      name="role"
+                      render={({ field }) => (
+                        <FormItem className="space-y-1">
+                          <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Role</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white rounded-xl">
+                                <SelectValue placeholder="Select Role">
+                                  {field.value === 'player_faculty'
+                                    ? 'Faculty Athlete'
+                                    : field.value === 'player_staff'
+                                    ? 'Staff Athlete'
+                                    : field.value === 'coach'
+                                    ? 'Athletic Coach'
+                                    : 'Student Athlete'}
+                                </SelectValue>
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-slate-800 border-white/10 text-white">
+                              <SelectItem value="player_student">Student Athlete</SelectItem>
+                              <SelectItem value="player_faculty">Faculty Athlete</SelectItem>
+                              <SelectItem value="player_staff">Staff Athlete</SelectItem>
+                              <SelectItem value="coach">Athletic Coach</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="collegeId"
+                      render={({ field }) => (
+                        <FormItem className="space-y-1">
+                          <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Department</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white rounded-xl">
+                                <SelectValue placeholder="College">
+                                  {field.value && colleges.find((c) => c.id === field.value)?.college_name}
+                                </SelectValue>
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-slate-800 border-white/10 text-white">
+                              {colleges.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>{c.college_name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {(form.watch('role') === 'player_staff' || form.watch('role') === 'player_faculty') && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-in fade-in duration-300">
+                      <FormField
+                        control={form.control}
+                        name="employeeId"
+                        render={({ field }) => (
+                          <FormItem className="space-y-1">
+                            <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
+                              Employee / Faculty ID
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="e.g. EMP-2024-0123"
+                                {...field}
+                                className="h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
+                              />
+                            </FormControl>
+                            <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="department"
+                        render={({ field }) => (
+                          <FormItem className="space-y-1">
+                            <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
+                              Department / Office Unit
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="e.g. HR, Registrar, ICTD"
+                                {...field}
+                                className="h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
+                              />
+                            </FormControl>
+                            <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+
+                  {/* Terms & Privacy Checkbox */}
+                  <FormField
+                    control={form.control}
+                    name="termsAccepted"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1 pt-1">
+                        <div className="flex items-start gap-2.5">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="text-[11px] sm:text-xs font-normal text-slate-300 cursor-pointer leading-relaxed block">
+                              I agree to the{' '}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setLegalModalTab('terms');
+                                  setShowLegalModal(true);
+                                }}
+                                className="text-orange-400 hover:text-orange-300 underline font-semibold transition-colors cursor-pointer"
+                              >
+                                Terms &amp; Conditions
+                              </button>
+                              {' '}and{' '}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setLegalModalTab('privacy');
+                                  setShowLegalModal(true);
+                                }}
+                                className="text-orange-400 hover:text-orange-300 underline font-semibold transition-colors cursor-pointer"
+                              >
+                                Privacy Policy
+                              </button>
+                            </FormLabel>
+                          </div>
+                        </div>
+                        <FormMessage className="text-orange-500 text-[10px] font-bold uppercase ml-1" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl transition-all active:scale-[0.98] mt-3 cursor-pointer" type="submit" disabled={isLoading}>
+                    {isLoading ? 'Creating Profile...' : 'Complete Registration'}
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+            <CardFooter className="flex flex-col space-y-2 text-center pb-6 pt-3 bg-transparent border-t-0">
+              <div className="text-slate-400 text-xs font-medium">
+                Already a member?{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigate('/');
+                    openLoginModal();
+                  }}
+                  className="text-orange-400 hover:text-orange-300 transition-colors font-semibold underline underline-offset-4 cursor-pointer ml-1"
+                >
+                  Sign in
+                </button>
+              </div>
+            </CardFooter>
+          </>
+        )}
       </Card>
 
       {/* Official Legal Documents Modal */}

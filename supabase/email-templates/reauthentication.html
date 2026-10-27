@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Verification Code</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0b1120; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f8fafc; -webkit-font-smoothing: antialiased;">
+  <!-- Preheader text -->
+  <div style="display: none; max-height: 0; overflow: hidden; opacity: 0; mso-hide: all;">
+    Your Palawan State University SportsTrack security verification code is {{ .Token }}.
+  </div>
+
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #0b1120; padding: 36px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 540px; background-color: #0f172a; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 20px; overflow: hidden; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);">
+          <!-- Top Accent Bar -->
+          <tr>
+            <td style="height: 4px; background: linear-gradient(90deg, #ea580c 0%, #f97316 50%, #f59e0b 100%);"></td>
+          </tr>
+
+          <!-- Header / Branding -->
+          <tr>
+            <td style="padding: 32px 32px 20px 32px; text-align: center;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto;">
+                <tr>
+                  <td align="center" style="padding: 10px 18px; background-color: rgba(249, 115, 22, 0.1); border: 1px solid rgba(249, 115, 22, 0.25); border-radius: 9999px;">
+                    <span style="font-size: 11px; font-weight: 800; letter-spacing: 2px; color: #fb923c; text-transform: uppercase;">
+                      Palawan State University
+                    </span>
+                  </td>
+                </tr>
+              </table>
+              <h1 style="margin: 16px 0 4px 0; font-size: 26px; font-weight: 900; font-style: italic; text-transform: uppercase; letter-spacing: -0.5px; color: #ffffff;">
+                PSU <span style="color: #f97316;">SportsTrack</span>
+              </h1>
+              <p style="margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">
+                Security Verification
+              </p>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding: 0 32px;">
+              <div style="border-top: 1px solid rgba(255, 255, 255, 0.08);"></div>
+            </td>
+          </tr>
+
+          <!-- Body Content -->
+          <tr>
+            <td style="padding: 28px 32px 32px 32px; text-align: center;">
+              <h2 style="margin: 0 0 12px 0; font-size: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.3px; color: #ffffff;">
+                Identity Verification
+              </h2>
+              <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.6; color: #cbd5e1; max-width: 440px; margin-left: auto; margin-right: auto;">
+                Please enter this single-use code to authenticate your current action on PSU SportsTrack:
+              </p>
+
+              <!-- 6-Digit OTP Box -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto 24px auto;">
+                <tr>
+                  <td align="center" style="background-color: #030712; border: 2px dashed #f97316; border-radius: 14px; padding: 20px 36px;">
+                    <div style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; margin-bottom: 6px;">
+                      Verification Code
+                    </div>
+                    <div style="font-family: 'SF Mono', Consolas, Monaco, monospace; font-size: 38px; font-weight: 900; letter-spacing: 10px; color: #f97316; padding-left: 10px;">
+                      {{ .Token }}
+                    </div>
+                    <div style="font-size: 11px; color: #64748b; margin-top: 6px;">
+                      Expires in 10 minutes
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 20px 0 0 0; font-size: 12px; line-height: 1.5; color: #64748b;">
+                Never share this verification code with anyone. PSU SportsTrack staff will never ask for your code.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #0b1120; border-top: 1px solid rgba(255, 255, 255, 0.06); padding: 24px 32px; text-align: center;">
+              <p style="margin: 0 0 8px 0; font-size: 11px; line-height: 1.5; color: #64748b;">
+                Security alert dispatched for <strong style="color: #94a3b8;">{{ .Email }}</strong>.
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #475569;">
+                &copy; Palawan State University Sports Governance Board. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -12,54 +12,146 @@ export const AuthConfirm = () => {
   const [errorMessage, setErrorMessage] = useState<string>('');
 
   useEffect(() => {
-    const tokenHash = searchParams.get('token_hash');
-    const type = searchParams.get('type') as EmailOtpType | null;
+    let isMounted = true;
 
-    if (!tokenHash || !type) {
-      setState('error');
-      setErrorMessage('Invalid confirmation link. Missing required parameters.');
-      return;
-    }
-
-    const verifyToken = async () => {
+    const verifyTokenOrSession = async () => {
       try {
-        const { error } = await supabase.auth.verifyOtp({
-          token_hash: tokenHash,
-          type,
-        });
+        const tokenHash = searchParams.get('token_hash');
+        const code = searchParams.get('code');
+        const rawType = searchParams.get('type');
+        const type = (rawType || 'signup') as EmailOtpType;
+        const hash = window.location.hash || '';
 
-        if (error) {
-          console.error('[AuthConfirm] Verification failed:', error.message);
-          setState('error');
-          setErrorMessage(error.message);
-          return;
+        let verifiedUser: any = null;
+
+        // Pathway 1: token_hash verification (Standard Supabase Email Confirmation / Magic Link)
+        if (tokenHash) {
+          const { data, error } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type,
+          });
+
+          if (error) {
+            console.error('[AuthConfirm] Token verification failed:', error.message);
+            if (isMounted) {
+              setState('error');
+              setErrorMessage(error.message);
+            }
+            return;
+          }
+          verifiedUser = data.user;
+        }
+        // Pathway 2: PKCE code exchange (?code=...)
+        else if (code) {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) {
+            console.error('[AuthConfirm] PKCE code exchange failed:', error.message);
+            if (isMounted) {
+              setState('error');
+              setErrorMessage(error.message);
+            }
+            return;
+          }
+          verifiedUser = data.user || data.session?.user;
+        }
+        // Pathway 3: Hash parameters or already authenticated session
+        else if (hash.includes('access_token') || hash.includes('type=')) {
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData?.session?.user) {
+            verifiedUser = sessionData.session.user;
+          } else {
+            // Give auth client brief moment to parse hash
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            const { data: retryData } = await supabase.auth.getSession();
+            if (retryData?.session?.user) {
+              verifiedUser = retryData.session.user;
+            } else {
+              if (isMounted) {
+                setState('error');
+                setErrorMessage('Unable to process verification from URL parameters.');
+              }
+              return;
+            }
+          }
+        } else {
+          // Check if session is already active
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData?.session?.user) {
+            verifiedUser = sessionData.session.user;
+          } else {
+            if (isMounted) {
+              setState('error');
+              setErrorMessage('Invalid confirmation link. Missing required parameters.');
+            }
+            return;
+          }
         }
 
-        const next = searchParams.get('next') || searchParams.get('redirect_to');
+        if (!isMounted) return;
 
-        // If this is a password recovery flow, route to password reset form
-        if (type === 'recovery') {
+        // If this is password recovery, route to reset-password
+        if (type === 'recovery' || hash.includes('type=recovery')) {
           setState('recovery-ready');
           setTimeout(() => {
-            navigate(next || '/reset-password', { replace: true });
+            navigate('/reset-password', { replace: true });
           }, 1500);
           return;
         }
 
+        // Profile sync fallback: ensure public.users profile exists
+        if (verifiedUser?.id) {
+          const metadata = verifiedUser.user_metadata || {};
+          const role = metadata.role || 'player_student';
+          const fullName = metadata.full_name || verifiedUser.email;
+          const collegeId = metadata.college_id || null;
+          const employeeId = metadata.employee_id || null;
+          const department = metadata.department || null;
+
+          try {
+            await supabase.from('users').upsert(
+              {
+                id: verifiedUser.id,
+                email: verifiedUser.email,
+                full_name: fullName,
+                role: role,
+                college_id: collegeId,
+                employee_id: employeeId,
+                department: department,
+                account_status: 'active',
+                is_verified: false,
+              },
+              { onConflict: 'id', ignoreDuplicates: true }
+            );
+          } catch (profileErr) {
+            console.warn('[AuthConfirm] Profile fallback sync note:', profileErr);
+          }
+        }
+
         setState('success');
 
-        // Redirect to the root (or specified next route) after a brief delay so the user sees the success message
+        const next = searchParams.get('next') || searchParams.get('redirect_to');
+        const role = verifiedUser?.user_metadata?.role;
+        const defaultPath = role === 'coach' ? '/coach' : '/player';
+
         setTimeout(() => {
-          navigate(next || '/', { replace: true });
-        }, 2000);
-      } catch (err) {
-        console.error('[AuthConfirm] Unexpected error:', err);
-        setState('error');
-        setErrorMessage('An unexpected error occurred during verification.');
+          if (isMounted) {
+            navigate(next || defaultPath, { replace: true });
+          }
+        }, 1800);
+      } catch (err: any) {
+        console.error('[AuthConfirm] Unexpected error during verification:', err);
+        if (isMounted) {
+          setState('error');
+          setErrorMessage(err?.message || 'An unexpected error occurred during email verification.');
+        }
       }
     };
 
-    verifyToken();
+    verifyTokenOrSession();
+
+    return () => {
+      isMounted = false;
+    };
   }, [searchParams, navigate]);
 
   return (
@@ -79,6 +171,9 @@ export const AuthConfirm = () => {
                 <div className="h-6 w-48 bg-slate-800 rounded-lg mx-auto" />
                 <div className="h-4 w-64 bg-slate-800/60 rounded-md mx-auto" />
               </div>
+              <p className="text-xs text-slate-400 font-medium pt-2">
+                Verifying your official university credentials...
+              </p>
             </div>
           )}
 
@@ -113,13 +208,13 @@ export const AuthConfirm = () => {
                 </div>
               </div>
               <h1 className="text-2xl font-black text-white uppercase italic tracking-tight mb-2">
-                Account <span className="text-emerald-400">Confirmed!</span>
+                PSU Email <span className="text-emerald-400">Verified!</span>
               </h1>
               <p className="text-slate-300 font-medium text-sm mb-6">
-                Your email has been verified successfully. Redirecting you now...
+                Your official Palawan State University account is now active. Redirecting you to your dashboard...
               </p>
               <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-500 rounded-full animate-[progress_2s_ease-in-out]" style={{ width: '100%' }} />
+                <div className="h-full bg-emerald-500 rounded-full animate-[progress_1.8s_ease-in-out]" style={{ width: '100%' }} />
               </div>
             </>
           )}
@@ -137,16 +232,16 @@ export const AuthConfirm = () => {
                 Verification <span className="text-red-400">Failed</span>
               </h1>
               <p className="text-slate-400 font-medium text-sm mb-2">
-                We couldn't verify your account.
+                We couldn't verify your university credentials.
               </p>
               <div className="bg-red-500/10 rounded-lg p-4 mb-6 border border-red-500/20">
                 <p className="text-sm text-red-300 font-medium">{errorMessage}</p>
               </div>
               <Link
-                to="/"
-                className="inline-flex items-center justify-center w-full min-h-[48px] px-6 py-3 bg-orange-600 hover:bg-orange-500 active:scale-95 text-white font-bold rounded-lg transition duration-200 shadow-lg shadow-orange-600/30 uppercase tracking-wider text-sm"
+                to="/register"
+                className="inline-flex items-center justify-center w-full min-h-[48px] px-6 py-3 bg-orange-600 hover:bg-orange-500 active:scale-95 text-white font-bold rounded-lg transition duration-200 shadow-lg shadow-orange-600/30 uppercase tracking-wider text-sm cursor-pointer"
               >
-                Return to Dashboard
+                Back to Registration
               </Link>
             </>
           )}

@@ -8,7 +8,8 @@ import {
   Lock,
   Mail,
   AlertCircle,
-  UserPlus
+  UserPlus,
+  ShieldCheck,
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -31,6 +32,9 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { toast } from 'sonner';
 import { PasswordPolicyMeter } from '@/components/auth/PasswordPolicyMeter';
 import { LegalModal } from '@/components/legal/LegalModal';
+import { OtpVerificationStep } from '@/components/auth/OtpVerificationStep';
+
+const PSU_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@psu\.palawan\.edu\.ph$/i;
 
 const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email({ message: 'Invalid email address' }),
@@ -40,7 +44,14 @@ const loginSchema = z.object({
 const registerSchema = z.object({
   lastName: z.string().trim().min(1, { message: 'Last name is required' }),
   firstName: z.string().trim().min(1, { message: 'First name is required' }),
-  email: z.string().trim().toLowerCase().email({ message: 'Invalid university email' }),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .email({ message: 'Invalid university email' })
+    .refine((val) => PSU_EMAIL_REGEX.test(val), {
+      message: 'Registration requires an official PSU email address ending with @psu.palawan.edu.ph',
+    }),
   password: z
     .string()
     .min(8, { message: 'Password must be at least 8 characters' })
@@ -81,7 +92,9 @@ export const LoginModal = () => {
   const { isLoginModalOpen, closeLoginModal } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'otp'>('login');
+  const [pendingOtpEmail, setPendingOtpEmail] = useState<string>('');
+  const [pendingRole, setPendingRole] = useState<string>('player_student');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
@@ -257,6 +270,13 @@ export const LoginModal = () => {
           console.warn('Server failed login recording fallback:', rpcErr);
         }
 
+        if (error.message.toLowerCase().includes('email not confirmed')) {
+          setPendingOtpEmail(cleanEmail);
+          setAuthMode('otp');
+          toast.info('Your university email has not been verified yet. Please enter the OTP code or check your inbox.');
+          return;
+        }
+
         toast.error(getAuthErrorMessage(error.message));
       } else {
         // Reset rate limits on server upon successful auth
@@ -313,10 +333,24 @@ export const LoginModal = () => {
     setIsLoading(true);
     try {
       const cleanEmail = values.email.trim().toLowerCase();
-      // 1. Sign up user with Supabase Auth
+      const formattedFullName = `${values.lastName.trim()}, ${values.firstName.trim()}`;
+
+      // 1. Sign up user with metadata for server trigger & email confirmation
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: cleanEmail,
         password: values.password,
+        options: {
+          data: {
+            full_name: formattedFullName,
+            first_name: values.firstName.trim(),
+            last_name: values.lastName.trim(),
+            role: values.role,
+            college_id: values.collegeId || null,
+            employee_id: values.employeeId ? values.employeeId.trim() : null,
+            department: values.department ? values.department.trim() : null,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/confirm?type=signup`,
+        },
       });
 
       if (authError) {
@@ -325,8 +359,15 @@ export const LoginModal = () => {
       }
 
       if (authData.user) {
-        // 2. Insert profile into users table (Last Name, First Name basis)
-        const formattedFullName = `${values.lastName.trim()}, ${values.firstName.trim()}`;
+        if (!authData.session) {
+          setPendingOtpEmail(cleanEmail);
+          setPendingRole(values.role);
+          setAuthMode('otp');
+          toast.info('Verification code sent! Enter the OTP code or click the confirmation link in your email.');
+          return;
+        }
+
+        // Direct session fallback (e.g. dev environments where email confirmation is disabled)
         const { error: profileError } = await supabase.from('users').insert({
           id: authData.user.id,
           full_name: formattedFullName,
@@ -337,14 +378,15 @@ export const LoginModal = () => {
           department: values.department ? values.department.trim() : null,
         });
 
-        if (profileError) {
-          toast.error('Failed to create user profile: ' + profileError.message);
-        } else {
-          toast.success('Registration successful! Welcome to PSU SportsTrack.');
-          registerForm.reset();
-          closeLoginModal();
-          window.location.reload();
+        if (profileError && !profileError.message.includes('duplicate key')) {
+          console.error('Profile creation note:', profileError.message);
         }
+
+        toast.success('Registration successful! Welcome to PSU SportsTrack.');
+        registerForm.reset();
+        closeLoginModal();
+        const destination = values.role === 'coach' ? '/coach' : '/player';
+        navigate(destination, { replace: true });
       }
     } catch {
       toast.error('An unexpected error occurred during registration. Please try again.');
@@ -369,7 +411,13 @@ export const LoginModal = () => {
             {/* Header Badge */}
             <div className="flex items-center mb-5 sm:mb-6">
               <div className="size-11 sm:size-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 shadow-sm">
-                {authMode === 'login' ? <Trophy className="size-5 sm:size-6" /> : <UserPlus className="size-5 sm:size-6" />}
+                {authMode === 'login' ? (
+                  <Trophy className="size-5 sm:size-6" />
+                ) : authMode === 'register' ? (
+                  <UserPlus className="size-5 sm:size-6" />
+                ) : (
+                  <ShieldCheck className="size-5 sm:size-6" />
+                )}
               </div>
             </div>
 
@@ -381,14 +429,18 @@ export const LoginModal = () => {
               <DialogTitle className="text-2xl sm:text-3xl font-black italic uppercase tracking-tight text-white leading-none">
                 {authMode === 'login' ? (
                   <>Sign In <span className="text-orange-500">Portal</span></>
-                ) : (
+                ) : authMode === 'register' ? (
                   <>Create <span className="text-orange-500">Account</span></>
+                ) : (
+                  <>Verify <span className="text-orange-500">PSU Email</span></>
                 )}
               </DialogTitle>
               <DialogDescription className="text-slate-400 text-xs font-normal mt-1.5 leading-relaxed">
                 {authMode === 'login'
                   ? 'Enter your university email and password to access your dashboard.'
-                  : 'Register your official student, coach, or faculty profile to access PSU tournaments.'}
+                  : authMode === 'register'
+                  ? 'Register your official student, coach, or faculty profile to access PSU tournaments.'
+                  : 'Enter the 6-digit verification code or click the confirmation link sent to your email.'}
               </DialogDescription>
             </div>
 
@@ -821,61 +873,80 @@ export const LoginModal = () => {
                 </form>
               </Form>
             )}
+
+            {/* MODE 3: OTP VERIFICATION */}
+            {authMode === 'otp' && (
+              <div className="mt-5 animate-in fade-in duration-300">
+                <OtpVerificationStep
+                  email={pendingOtpEmail}
+                  role={pendingRole}
+                  onBack={() => setAuthMode('register')}
+                  onVerified={() => {
+                    closeLoginModal();
+                    setAuthMode('login');
+                    const destination = pendingRole === 'coach' ? '/coach' : '/player';
+                    navigate(destination, { replace: true });
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           {/* Footer Auth Mode Toggle Prompt */}
-          <div className="mt-5 pt-4 border-t border-white/5 space-y-2">
-            <p className="text-xs font-normal text-slate-400 text-center">
-              {authMode === 'login' ? (
-                <>
-                  New to PSU SportsTrack?{' '}
-                  <button
-                    type="button"
-                    onClick={() => setAuthMode('register')}
-                    className="text-orange-500 hover:text-orange-400 hover:underline font-bold transition-colors ml-1 cursor-pointer"
-                  >
-                    Create Account
-                  </button>
-                </>
-              ) : (
-                <>
-                  Already have an account?{' '}
-                  <button
-                    type="button"
-                    onClick={() => setAuthMode('login')}
-                    className="text-orange-500 hover:text-orange-400 hover:underline font-bold transition-colors ml-1 cursor-pointer"
-                  >
-                    Sign In
-                  </button>
-                </>
-              )}
-            </p>
+          {authMode !== 'otp' && (
+            <div className="mt-5 pt-4 border-t border-white/5 space-y-2">
+              <p className="text-xs font-normal text-slate-400 text-center">
+                {authMode === 'login' ? (
+                  <>
+                    New to PSU SportsTrack?{' '}
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode('register')}
+                      className="text-orange-500 hover:text-orange-400 hover:underline font-bold transition-colors ml-1 cursor-pointer"
+                    >
+                      Create Account
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    Already have an account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode('login')}
+                      className="text-orange-500 hover:text-orange-400 hover:underline font-bold transition-colors ml-1 cursor-pointer"
+                    >
+                      Sign In
+                    </button>
+                  </>
+                )}
+              </p>
 
-            <div className="text-center text-[10px] text-slate-500 pt-1">
-              Protected by{' '}
-              <button
-                type="button"
-                onClick={() => {
-                  setLegalModalTab('terms');
-                  setShowLegalModal(true);
-                }}
-                className="text-slate-400 hover:text-orange-400 underline transition-colors cursor-pointer"
-              >
-                Terms of Service
-              </button>
-              {' '}and{' '}
-              <button
-                type="button"
-                onClick={() => {
-                  setLegalModalTab('privacy');
-                  setShowLegalModal(true);
-                }}
-                className="text-slate-400 hover:text-orange-400 underline transition-colors cursor-pointer"
-              >
-                Privacy Policy
-              </button>
+              <div className="text-center text-[10px] text-slate-500 pt-1">
+                Protected by{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLegalModalTab('terms');
+                    setShowLegalModal(true);
+                  }}
+                  className="text-slate-400 hover:text-orange-400 underline transition-colors cursor-pointer"
+                >
+                  Terms of Service
+                </button>
+                {' '}and{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLegalModalTab('privacy');
+                    setShowLegalModal(true);
+                  }}
+                  className="text-slate-400 hover:text-orange-400 underline transition-colors cursor-pointer"
+                >
+                  Privacy Policy
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
 
