@@ -135,11 +135,6 @@ export const PlayerDossierModal = ({
                       {playerInfo.primary_position}
                     </Badge>
                   )}
-                  {playerInfo?.employee_id && (
-                    <Badge variant="outline" className="text-[9px] font-mono font-bold uppercase border-slate-300 dark:border-white/20">
-                      ID: {playerInfo.employee_id}
-                    </Badge>
-                  )}
                   {eligibilityBadge && (
                     <Badge
                       className={
@@ -154,7 +149,7 @@ export const PlayerDossierModal = ({
                   )}
                 </div>
                 <DialogTitle className="text-xl sm:text-2xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white break-words leading-tight">
-                  {playerInfo?.full_name || 'Athlete Scouting Dossier'}
+                  {playerInfo?.full_name || 'Athlete Profile & Game Logs'}
                 </DialogTitle>
                 <DialogDescription className="text-xs font-bold text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-2 mt-0.5">
                   <span className="inline-flex items-center gap-1">

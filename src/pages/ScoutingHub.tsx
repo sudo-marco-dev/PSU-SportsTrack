@@ -29,7 +29,6 @@ import {
   UserCheck,
   UserPlus,
   Loader2,
-  Lock,
   SlidersHorizontal,
   X,
 } from 'lucide-react';
@@ -112,10 +111,8 @@ type ClusterOption = {
 };
 
 export const ScoutingHub = () => {
-  const { user, isVerified, isAdmin, isFacilitator, isCoach, isDev } = useAuth();
+  const { user, isVerified, isCoach } = useAuth();
   const navigate = useNavigate();
-
-  const hasScoutingAccess = Boolean(isVerified || isAdmin || isFacilitator || isCoach || isDev);
 
   const [activeTab, setActiveTab] = useState('players');
   const [searchQuery, setSearchQuery] = useState('');
@@ -166,12 +163,8 @@ export const ScoutingHub = () => {
   const [selectedTeamModal, setSelectedTeamModal] = useState<ScoutTeam | null>(null);
 
   useEffect(() => {
-    if (!hasScoutingAccess) {
-      setIsLoading(false);
-      return;
-    }
     void fetchArchiveData();
-  }, [hasScoutingAccess]);
+  }, []);
 
   // Fetch coach squads for direct recruitment
   useEffect(() => {
@@ -656,30 +649,6 @@ export const ScoutingHub = () => {
     });
   }, [matches, matchStatusFilter, searchQuery, sportFilter]);
 
-  if (!hasScoutingAccess) {
-    return (
-      <div className="max-w-xl mx-auto py-8 sm:py-16 px-1 sm:px-4 text-center space-y-5 w-full min-w-0">
-        <Card className="p-5 sm:p-8 rounded-3xl border-2 border-orange-500/20 bg-white dark:bg-slate-900 shadow-xl space-y-4 overflow-hidden">
-          <div className="size-14 sm:size-16 rounded-2xl bg-orange-500/10 text-orange-500 flex items-center justify-center mx-auto">
-            <Lock className="size-7 sm:size-8" />
-          </div>
-          <h1 className="text-xl sm:text-2xl font-black italic uppercase tracking-tight text-slate-900 dark:text-white leading-tight">
-            Verified University Access Required
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-            The PSU Scouting &amp; Historical Archive Hub (containing full athlete telemetry, shot breakdowns, coach records, and historical match box scores) is reserved for verified university athletes, coaches, and tournament officials.
-          </p>
-          <Button
-            onClick={() => navigate('/profile')}
-            className="w-full sm:w-auto h-auto min-h-[44px] py-2.5 px-4 sm:px-6 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-xs rounded-xl whitespace-normal text-center leading-snug"
-          >
-            Complete Verification in Profile
-          </Button>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6 pb-8 w-full min-w-0 max-w-full overflow-x-hidden">
       {/* Hero Banner */}
@@ -689,14 +658,14 @@ export const ScoutingHub = () => {
             <div className="flex items-center gap-2 mb-2">
               <Search className="size-4 text-orange-500" />
               <span className="text-orange-500 font-black text-xs tracking-[0.2em] uppercase">
-                Verified University Intelligence
+                Official PSU Athletics Directory
               </span>
             </div>
             <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
-              SCOUTING &amp; <span className="text-orange-500">ARCHIVE HUB</span>
+              ATHLETICS <span className="text-orange-500">HUB</span>
             </h1>
             <p className="text-slate-400 text-xs sm:text-sm font-medium mt-2 max-w-2xl">
-              Explore verified PSU athletes, career 3-point &amp; scoring telemetry, coaching records, collegiate/tribe squads, and completed match box scores.
+              Official Palawan State University Athlete Directory, Coach Roster &amp; Match Statistics Archive.
             </p>
           </div>
 
@@ -921,7 +890,7 @@ export const ScoutingHub = () => {
           activeTab={activeTab}
           onChange={setActiveTab}
           className="w-full sm:w-fit sm:mx-auto sm:self-center"
-          ariaLabel="Scouting Hub Navigation"
+          ariaLabel="Athletics Hub Navigation"
         />
 
         {isLoading ? (
@@ -1064,7 +1033,7 @@ export const ScoutingHub = () => {
                               className="w-full h-10 rounded-xl font-black uppercase text-xs tracking-wider gap-1.5 border-slate-200 dark:border-white/10 hover:border-orange-500/50"
                             >
                               <Eye className="size-3.5 text-orange-500" />
-                              <span>View Scouting Dossier &amp; Games</span>
+                              <span>View Athletic Profile &amp; Stats</span>
                             </Button>
                           )}
                         </CardContent>

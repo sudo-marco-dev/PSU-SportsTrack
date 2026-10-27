@@ -75,9 +75,11 @@ export const AppLayout = () => {
       href: '/ranking',
       icon: Medal
     },
-    ...(user ? [
-      { name: 'Scouting Hub', href: '/scouting', icon: Search },
-    ] : []),
+    {
+      name: 'Athletics Hub',
+      href: '/athletics',
+      icon: Search
+    },
     ...(isDev || Boolean(import.meta.env.DEV) || isImpersonating ? [
       { name: 'Dev Sandbox', href: '/dev', icon: Terminal },
     ] : []),
@@ -108,7 +110,7 @@ export const AppLayout = () => {
   const isActive = (path: string) => location.pathname === path;
 
   // Secondary management routes that make "More" tab show active state
-  const isMoreRouteActive = ['/about', '/legal', '/privacy', '/terms'].includes(location.pathname) || (isDev
+  const isMoreRouteActive = ['/about', '/legal', '/privacy', '/terms', '/athletics', '/scouting'].includes(location.pathname) || (isDev
     ? ['/dev'].includes(location.pathname)
     : isAdmin
     ? ['/admin/tournaments', '/admin/verifications', '/admin/audit-logs', '/admin/recovery'].includes(location.pathname)

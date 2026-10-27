@@ -93,6 +93,8 @@ function AppRoutes() {
           <Route path="/" element={<PlayerDashboard />} />
           <Route path="/explorer" element={<TournamentExplorer />} />
           <Route path="/ranking" element={<Ranking />} />
+          <Route path="/athletics" element={<ScoutingHub />} />
+          <Route path="/scouting" element={<Navigate to="/athletics" replace />} />
           <Route path="/about" element={<About />} />
           <Route path="/legal" element={<Legal />} />
           <Route path="/privacy" element={<Navigate to="/legal?tab=privacy" replace />} />
@@ -107,7 +109,6 @@ function AppRoutes() {
           {/* Protected Routes Requiring Authentication */}
           <Route element={<ProtectedRoute />}>
             <Route path="/profile" element={<Profile />} />
-            <Route path="/scouting" element={<ScoutingHub />} />
             <Route path="/achievements" element={<Navigate to="/profile" replace />} />
 
             {/* Admin Protected Routes */}

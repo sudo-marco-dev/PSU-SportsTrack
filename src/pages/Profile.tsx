@@ -221,7 +221,7 @@ export const Profile = () => {
         .eq('id', user.id);
 
       if (error) throw error;
-      toast.success('Athletic scouting preferences saved!');
+      toast.success('Athletic preferences saved!');
       if (refetchProfile) await refetchProfile();
     } catch (err: any) {
       toast.error('Failed to save preferences: ' + err.message);
@@ -948,19 +948,17 @@ export const Profile = () => {
                     <span className="text-sm sm:text-lg font-bold text-white tabular-nums">{stars.length}</span>
                   </div>
                 </div>
-                {isVerified && (
-                  <Button
-                    onClick={() => navigate('/scouting')}
-                    className="col-span-2 sm:col-span-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs h-10 px-3.5 rounded-xl shadow-md shadow-orange-500/20"
-                  >
-                    <Search className="size-3.5 mr-1.5 shrink-0" />
-                    Scouting Hub
-                  </Button>
-                )}
+                <Button
+                  onClick={() => navigate('/athletics')}
+                  className="col-span-2 sm:col-span-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs h-10 px-3.5 rounded-xl shadow-md shadow-orange-500/20"
+                >
+                  <Search className="size-3.5 mr-1.5 shrink-0" />
+                  Athletics Hub
+                </Button>
                 <Button
                   variant="outline"
                   onClick={() => setShowSignOutPrompt(true)}
-                  className={`${isVerified ? 'col-span-1' : 'col-span-3 sm:col-span-1'} border-white/10 bg-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 text-slate-300 font-semibold text-xs h-10 px-3 rounded-xl transition-all`}
+                  className="col-span-1 border-white/10 bg-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 text-slate-300 font-semibold text-xs h-10 px-3 rounded-xl transition-all"
                 >
                   <LogOut className="size-3.5 mr-1.5 shrink-0" />
                   Sign Out
@@ -2092,20 +2090,20 @@ export const Profile = () => {
                 </CardContent>
               </Card>
 
-              {/* 4. Athletic Scouting Preferences (Preferred Sports & Primary Position) */}
+              {/* 4. Athletic Preferences (Preferred Sports & Primary Position) */}
               <Card className="border border-slate-200 dark:border-white/10 rounded-3xl shadow-sm bg-white dark:bg-slate-900">
                 <CardHeader className="p-6 pb-3">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                     <div className="min-w-0 flex-1">
                       <CardTitle className="text-base sm:text-lg font-bold uppercase tracking-tight text-slate-900 dark:text-white">
-                        Athletic Scouting &amp; Recruitment Preferences
+                        Athletic &amp; Recruitment Preferences
                       </CardTitle>
                       <CardDescription className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider mt-0.5">
-                        Visible to PSU Coaches &amp; Verified Users in the Scouting Directory
+                        Visible to PSU Coaches, Scouts &amp; the Public in the Athletics Hub
                       </CardDescription>
                     </div>
                     <Badge className="w-fit bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20 text-[10px] font-black uppercase shrink-0">
-                      Scouting Profile
+                      Athletics Profile
                     </Badge>
                   </div>
                 </CardHeader>
