@@ -55,7 +55,7 @@ type PlayerStar = {
 };
 
 export const PlayerDashboard = () => {
-  const { isVerified, user, isDev, isSuperAdmin, isFacilitator, isCoach, isPlayer, isStaffAthlete, isFacultyAthlete, isStudentAthlete, profile } = useAuth();
+  const { isVerified, user, isDev, isAdmin, isFacilitator, isCoach, isPlayer, isStaffAthlete, isFacultyAthlete, isStudentAthlete, profile } = useAuth();
   const navigate = useNavigate();
   const isStaffOrFaculty = Boolean(isStaffAthlete || isFacultyAthlete || profile?.role === 'player_staff' || profile?.role === 'player_faculty');
   const isStudent = Boolean(isStudentAthlete || profile?.role === 'player_student');
@@ -154,14 +154,14 @@ export const PlayerDashboard = () => {
   useEffect(() => {
     if (isDev) {
       navigate('/dev', { replace: true });
-    } else if (isSuperAdmin) {
+    } else if (isAdmin) {
       navigate('/admin', { replace: true });
     } else if (isCoach) {
       navigate('/coach', { replace: true });
     } else if (isFacilitator) {
       navigate('/explorer', { replace: true });
     }
-  }, [isDev, isSuperAdmin, isFacilitator, isCoach, navigate]);
+  }, [isDev, isAdmin, isFacilitator, isCoach, navigate]);
 
   useEffect(() => {
     if (user && isPlayer && !isVerified) {
@@ -183,10 +183,10 @@ export const PlayerDashboard = () => {
         });
     }
 
-    if (!isSuperAdmin && !isCoach) {
+    if (!isAdmin && !isCoach) {
       fetchDashboardData();
     }
-  }, [user, isPlayer, isVerified, isSuperAdmin, isCoach]);
+  }, [user, isPlayer, isVerified, isAdmin, isCoach]);
 
   useEffect(() => {
     const matchSubscription = supabase
@@ -365,7 +365,7 @@ export const PlayerDashboard = () => {
     }
   };
 
-  if (isSuperAdmin || isCoach || isFacilitator || isDev) {
+  if (isAdmin || isCoach || isFacilitator || isDev) {
     return null;
   }
 

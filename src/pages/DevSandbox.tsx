@@ -942,7 +942,7 @@ export const DevSandbox = () => {
                     <Button
                       onClick={() => {
                         if (role === 'coach') navigate('/coach');
-                        else if (role === 'super_admin') navigate('/admin');
+                        else if (role === 'admin' || role === 'super_admin') navigate('/admin');
                         else if (role === 'facilitator') navigate('/explorer');
                         else navigate('/player');
                       }}
@@ -1391,7 +1391,8 @@ export const DevSandbox = () => {
                                 onChange={(e) => handleUpdateRole(u.id, e.target.value as UserRole)}
                                 className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-[11px] font-bold rounded-lg px-2 py-1 cursor-pointer focus:border-orange-500"
                               >
-                                <option value="super_admin">super_admin</option>
+                                <option value="admin">admin</option>
+                                <option value="super_admin">super_admin (legacy)</option>
                                 <option value="dev">dev</option>
                                 <option value="facilitator">facilitator</option>
                                 <option value="coach">coach</option>

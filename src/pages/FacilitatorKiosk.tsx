@@ -100,7 +100,7 @@ type MatchEvent = {
 export const FacilitatorKiosk = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
-  const { user, profile, isSuperAdmin, isFacilitator, isOfficial, openLoginModal } = useAuth();
+  const { user, profile, isAdmin, isFacilitator, isOfficial, openLoginModal } = useAuth();
 
   // Match and Realtime State
   const [match, setMatch] = useState<Match | null>(null);
@@ -259,8 +259,8 @@ export const FacilitatorKiosk = () => {
 
   // Strict Governance: Facilitator/Official/Admin authorization
   // User must be authenticated to satisfy Postgres Row Level Security (RLS) policies
-  const isAuthorizedScorekeeper = Boolean(user && (isFacilitator || isSuperAdmin || isOfficial));
-  const isAuthorized = Boolean(user && (isHoldingLease || isSuperAdmin || isFacilitator || isOfficial));
+  const isAuthorizedScorekeeper = Boolean(user && (isFacilitator || isAdmin || isOfficial));
+  const isAuthorized = Boolean(user && (isHoldingLease || isAdmin || isFacilitator || isOfficial));
 
   // Broadcast Master Clock State to Arena Screens & Connected Clients
   const broadcastClockState = useCallback(

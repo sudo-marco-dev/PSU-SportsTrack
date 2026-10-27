@@ -21,7 +21,8 @@ import {
   Info,
   RotateCcw,
   Terminal,
-  Search
+  Search,
+  FileText
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -30,7 +31,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { toast } from 'sonner';
 
 export const AppLayout = () => {
-  const { user, role, isDev, isSuperAdmin, isFacilitator, isCoach, isPlayer, isImpersonating, impersonatedPersona, clearImpersonation, signOut, openLoginModal } = useAuth();
+  const { user, role, isDev, isAdmin, isFacilitator, isCoach, isPlayer, isImpersonating, impersonatedPersona, clearImpersonation, signOut, openLoginModal } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -39,7 +40,7 @@ export const AppLayout = () => {
   const formatRole = (r: string | null) => {
     if (!r) return 'Spectator';
     if (r === 'dev') return 'Developer';
-    if (r === 'super_admin') return 'Super Admin';
+    if (r === 'admin' || r === 'super_admin') return 'Admin';
     if (r === 'facilitator') return 'Facilitator';
     if (r === 'coach') return 'Coach';
     if (r === 'player_student') return 'Student Athlete';
@@ -52,7 +53,7 @@ export const AppLayout = () => {
   const getDashboardHref = () => {
     if (!user) return '/';
     if (isDev) return '/dev';
-    if (isSuperAdmin) return '/admin';
+    if (isAdmin) return '/admin';
     if (isCoach) return '/coach';
     if (isPlayer) return '/player';
     return '/explorer';
@@ -80,13 +81,13 @@ export const AppLayout = () => {
     ...(isDev || Boolean(import.meta.env.DEV) || isImpersonating ? [
       { name: 'Dev Sandbox', href: '/dev', icon: Terminal },
     ] : []),
-    ...(isSuperAdmin ? [
+    ...(isAdmin ? [
       { name: 'Tournaments', href: '/admin/tournaments', icon: Trophy },
       { name: 'System Verifications', href: '/admin/verifications', icon: ShieldCheck },
       { name: 'System Audit', href: '/admin/audit-logs', icon: ClipboardList },
       { name: 'Recovery Center', href: '/admin/recovery', icon: RotateCcw },
     ] : []),
-    ...(isFacilitator && !isSuperAdmin ? [
+    ...(isFacilitator && !isAdmin ? [
       { name: 'Live Scorer', href: '/explorer', icon: Activity },
     ] : []),
     ...(isCoach ? [
@@ -97,14 +98,19 @@ export const AppLayout = () => {
       href: '/about',
       icon: Info
     },
+    {
+      name: 'Legal & Privacy',
+      href: '/legal',
+      icon: FileText
+    },
   ];
 
   const isActive = (path: string) => location.pathname === path;
 
   // Secondary management routes that make "More" tab show active state
-  const isMoreRouteActive = ['/about'].includes(location.pathname) || (isDev
+  const isMoreRouteActive = ['/about', '/legal', '/privacy', '/terms'].includes(location.pathname) || (isDev
     ? ['/dev'].includes(location.pathname)
-    : isSuperAdmin
+    : isAdmin
     ? ['/admin/tournaments', '/admin/verifications', '/admin/audit-logs', '/admin/recovery'].includes(location.pathname)
     : isCoach
     ? ['/coach/teams'].includes(location.pathname)

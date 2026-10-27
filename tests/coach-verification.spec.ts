@@ -331,7 +331,7 @@ test.describe('Athletic Coach Verification & Roster Clearance Suite', () => {
     await expect(page.getByRole('button', { name: /Submit Coach ID for Verification/i })).toBeVisible();
   });
 
-  test('should allow super admin to view coach submissions under Coaches tab and approve clearance', async ({ page }) => {
+  test('should allow admin to view coach submissions under Coaches tab and approve clearance', async ({ page }) => {
     const adminId = 'admin-user-001';
     const mockAdminUser = {
       id: adminId,
@@ -408,7 +408,7 @@ test.describe('Athletic Coach Verification & Roster Clearance Suite', () => {
           body: JSON.stringify({
             id: adminId,
             full_name: 'Sports Director',
-            role: 'super_admin',
+            role: 'admin',
             is_verified: true,
             account_status: 'active',
           }),

@@ -36,7 +36,7 @@ test.describe('Registration and Verification Clearance Suite', () => {
     // Navigate directly to /admin/verifications
     await page.goto('/admin/verifications');
 
-    // Expect to be redirected to home page or login prompt because not super_admin
+    // Expect to be redirected to home page or login prompt because not admin
     await page.waitForURL('**/');
     await expect(page).toHaveURL(/\/$/);
   });

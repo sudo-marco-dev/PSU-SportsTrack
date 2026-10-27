@@ -6,9 +6,9 @@ async function setupSuperAdminSession(page: Page, adminId = '11111111-1111-1111-
     id: adminId,
     aud: 'authenticated',
     role: 'authenticated',
-    email: 'superadmin@psu.palawan.edu.ph',
+    email: 'admin@psu.palawan.edu.ph',
     app_metadata: { provider: 'email' },
-    user_metadata: { full_name: 'Super Admin' },
+    user_metadata: { full_name: 'Administrator' },
     created_at: new Date().toISOString(),
   };
 
@@ -44,8 +44,8 @@ async function setupSuperAdminSession(page: Page, adminId = '11111111-1111-1111-
       contentType: 'application/json',
       body: JSON.stringify({
         id: adminId,
-        full_name: 'Super Admin',
-        role: 'super_admin',
+        full_name: 'Administrator',
+        role: 'admin',
         is_verified: true,
         account_status: 'active',
       }),
@@ -218,7 +218,7 @@ test.describe('PSU SportsTrack Comprehensive Feature & Audit Suite', () => {
     await expect(page.getByRole('option', { name: 'Table Tennis' })).toBeVisible();
   });
 
-  test('Admin Verifications View with Mocked Super Admin Session', async ({ page }) => {
+  test('Admin Verifications View with Mocked Admin Session', async ({ page }) => {
     await setupSuperAdminSession(page);
 
     await page.route('**/rest/v1/verification_documents*', async (route) => {

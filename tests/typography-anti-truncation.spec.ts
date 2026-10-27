@@ -111,7 +111,7 @@ test.describe('Typography, Anti-Truncation & College Code Engine Tests', () => {
     await page.goto('/dev');
     await page.waitForLoadState('networkidle');
 
-    // Quick switch to coach persona or super admin to view scouting hub
+    // Quick switch to coach persona or admin to view scouting hub
     const personaBtn = page.getByRole('button', { name: /Danilo Soriano/i }).first();
     if (await personaBtn.isVisible()) {
       await personaBtn.click();

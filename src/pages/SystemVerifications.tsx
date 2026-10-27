@@ -103,7 +103,7 @@ const COACH_REJECTION_PRESETS = [
 ];
 
 export const SystemVerifications = () => {
-  const { isSuperAdmin, isLoading, user } = useAuth();
+  const { isAdmin, isLoading, user } = useAuth();
   const [documents, setDocuments] = useState<PendingDocument[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('Pending');
@@ -125,10 +125,10 @@ export const SystemVerifications = () => {
   const [isSubmittingReject, setIsSubmittingReject] = useState(false);
 
   useEffect(() => {
-    if (isSuperAdmin) {
+    if (isAdmin) {
       fetchDocuments();
     }
-  }, [isSuperAdmin, statusFilter]);
+  }, [isAdmin, statusFilter]);
 
   const fetchDocuments = async () => {
     let query = supabase
@@ -304,7 +304,7 @@ export const SystemVerifications = () => {
       await logAudit({
         action: 'ANNUAL_REVALIDATION',
         entity_type: 'users',
-        details: 'Super Admin triggered annual revalidation cycle: all athletes marked inactive awaiting new COR submission.',
+        details: 'Admin triggered annual revalidation cycle: all athletes marked inactive awaiting new COR submission.',
       });
 
       toast.success('Annual Revalidation triggered! Athletes marked inactive until renewed COR documents are approved.');
@@ -325,7 +325,7 @@ export const SystemVerifications = () => {
     if (r === 'official' || r === 'Official') return 'Official';
     if (r === 'coach' || r === 'Coach') return 'Coach';
     if (r === 'facilitator') return 'Facilitator';
-    if (r === 'super_admin' || r === 'Admin') return 'Super Admin';
+    if (r === 'admin' || r === 'super_admin' || r === 'Admin') return 'Admin';
     return r;
   };
 
@@ -538,7 +538,7 @@ export const SystemVerifications = () => {
     );
   }
 
-  if (!isSuperAdmin) {
+  if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
 

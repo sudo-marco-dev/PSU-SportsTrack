@@ -145,7 +145,7 @@ type IncomingClaimRequest = {
 export const LiveMatch = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
-  const { user, profile, isSuperAdmin, isFacilitator, isOfficial } = useAuth();
+  const { user, profile, isAdmin, isFacilitator, isOfficial } = useAuth();
   const [match, setMatch] = useState<Match | null>(null);
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -453,9 +453,9 @@ export const LiveMatch = () => {
 
   const broadcastChannelRef = useRef<any>(null);
 
-  // Strict Governance: ONLY Facilitators, Officials, and Superadmins can score games. Coaches are strictly read-only!
-  const isAuthorizedScorekeeper = Boolean(isFacilitator || isSuperAdmin || isOfficial);
-  const isAuthorized = isAuthorizedScorekeeper && (isHoldingLease || isSuperAdmin);
+  // Strict Governance: ONLY Facilitators, Officials, and Admins can score games. Coaches are strictly read-only!
+  const isAuthorizedScorekeeper = Boolean(isFacilitator || isAdmin || isOfficial);
+  const isAuthorized = isAuthorizedScorekeeper && (isHoldingLease || isAdmin);
 
   useEffect(() => {
     if (!matchId) {
@@ -846,7 +846,7 @@ export const LiveMatch = () => {
         setIsHoldingLease(true);
         setConflictPrompt({ isOpen: false, reason: '' });
         setActiveScorekeeperName(profile?.full_name || 'You');
-        toast.success(result.message || (force ? 'Superadmin force-claimed scoring console!' : 'Scoring console lease acquired!'));
+        toast.success(result.message || (force ? 'Admin force-claimed scoring console!' : 'Scoring console lease acquired!'));
         fetchInitialData();
       } else {
         toast.error(result.message || 'Failed to claim console lease.');
@@ -1025,7 +1025,7 @@ export const LiveMatch = () => {
   const handleInitiateScore = (team: 'a' | 'b', points: number, actionType: string, actionDescription?: string) => {
     if (!isAuthorizedScorekeeper || !match || match.status !== 'Ongoing') return;
 
-    if (!isHoldingLease && !isSuperAdmin) {
+    if (!isHoldingLease && !isAdmin) {
       toast.error("You must claim the scoring lease before updating the scoreboard.");
       return;
     }
@@ -1210,7 +1210,7 @@ export const LiveMatch = () => {
   const handleOpenDeductModal = (team: 'a' | 'b') => {
     if (!isAuthorizedScorekeeper || !match || match.status !== 'Ongoing') return;
 
-    if (!isHoldingLease && !isSuperAdmin) {
+    if (!isHoldingLease && !isAdmin) {
       toast.error("You must claim the scoring lease before adjusting points.");
       return;
     }
@@ -1817,7 +1817,7 @@ export const LiveMatch = () => {
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
-                {isSuperAdmin && (
+                {isAdmin && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -1863,7 +1863,7 @@ export const LiveMatch = () => {
                     Release Console
                   </Button>
                 )}
-                {!isHoldingLease && match.active_scorekeeper_id && isSuperAdmin && (
+                {!isHoldingLease && match.active_scorekeeper_id && isAdmin && (
                   <Button size="sm" variant="destructive" className="h-7 text-xs font-bold" onClick={() => handleClaimLease(true)}>
                     Force-Claim (Admin)
                   </Button>

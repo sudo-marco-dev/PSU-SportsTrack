@@ -19,7 +19,7 @@ The production platform recognizes six primary user types:
 | **Faculty Athlete** | `player_faculty` | `isFacultyAthlete = true` | `/player` | University professors and personnel competing in dedicated faculty sports divisions. |
 | **Coach** | `coach` | `isCoach = true` | `/coach` | Team mentor managing rosters, recruitments, uniform numbers, and starting lineups. |
 | **Court-Side Facilitator** | `facilitator` | `isFacilitator = true` | `/explorer` | Appointed table official operating game timers, scorecards, fouls, and box scores. |
-| **Super Administrator** | `super_admin` | `isSuperAdmin = true` | `/admin` | University athletic directorate with complete administrative oversight and audit rights. |
+| **Administrator (Admin)** | `admin` *(compat: `super_admin`)* | `isAdmin = true` | `/admin` | University athletic directorate with complete administrative oversight and audit rights. |
 
 > **Note**: For temporary capstone testing, scenario seeding, and thesis defense evaluation, a standalone developer sandbox role (`dev`) is documented separately in [Section 6: Developer Workbench & Pre-Production Debugging Suite](#6-developer-workbench--pre-production-debugging-suite-non-production-only) at the bottom of this document.
 
@@ -112,7 +112,7 @@ Appointed game referees, table officials, and scorekeepers.
 
 ---
 
-### 2.6 Super Administrator (`super_admin`)
+### 2.6 Administrator (`admin`)
 Athletic directors, tournament commissioners, and university system administrators.
 
 *   **Accessible Routes**: Unrestricted system-wide access across all production routes, including `/admin`, `/admin/tournaments`, `/admin/verifications`, `/admin/audit-logs`, `/admin/recovery`.
@@ -138,7 +138,7 @@ Athletic directors, tournament commissioners, and university system administrato
 
 ## 3. Production Route Permission Matrix
 
-| Route Path | View / Component | Public | Student Athlete | Faculty Athlete | Coach | Facilitator | Super Admin |
+| Route Path | View / Component | Public | Student Athlete | Faculty Athlete | Coach | Facilitator | Admin |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 | `/` | Live Dashboard & Ticker | Yes | Yes | Yes | Yes | Yes | Yes |
 | `/explorer` | Tournament Explorer & Brackets | Yes | Yes | Yes | Yes | Yes | Yes |
@@ -164,23 +164,23 @@ Athletic directors, tournament commissioners, and university system administrato
 
 Production database constraint enforced on `users.role`:
 ```sql
-CHECK (role IN ('super_admin', 'facilitator', 'coach', 'player_student', 'player_faculty'))
+CHECK (role IN ('admin', 'super_admin', 'facilitator', 'coach', 'player_student', 'player_faculty', 'player_staff', 'official', 'dev'))
 ```
 
 | Database Table | Select (Read) | Insert (Create) | Update (Modify) | Delete (Remove) |
 | :--- | :--- | :--- | :--- | :--- |
-| `users` | Public (active profiles) | Authenticated (registration) | Self (own profile) or Super Admin | Super Admin only (soft delete) |
-| `colleges` / `clusters` | Public | Super Admin | Super Admin | Super Admin |
-| `tournaments` | Public (published) | Super Admin | Super Admin | Super Admin |
-| `teams` | Public | Coach (own college) or Super Admin | Coach (own team) or Super Admin | Super Admin |
-| `team_roster` | Public | Coach (own team) or Super Admin | Coach (own team) or Super Admin | Coach (own team) or Super Admin |
-| `matches` | Public | Super Admin | Facilitator (holding lease) or Super Admin | Super Admin |
-| `match_events` | Public | Facilitator (holding lease) or Super Admin | Super Admin | Super Admin |
-| `match_score_events`| Public | Facilitator (holding lease) or Super Admin | Facilitator (rollback) or Super Admin | Super Admin |
-| `player_stars` | Public | Facilitator / Super Admin | Super Admin | Super Admin |
-| `verification_documents` | Self (own document) or Super Admin | Self (authenticated upload) | Super Admin (approve / reject) | Super Admin |
-| `audit_logs` | Super Admin | Authenticated (audit logging routines) | Super Admin | Super Admin |
-| `storage.objects` (`verification_documents`) | Self or Super Admin | Authenticated (own user ID path) | Super Admin | Super Admin |
+| `users` | Public (active profiles) | Authenticated (registration) | Self (own profile) or Admin | Admin only (soft delete) |
+| `colleges` / `clusters` | Public | Admin | Admin | Admin |
+| `tournaments` | Public (published) | Admin | Admin | Admin |
+| `teams` | Public | Coach (own college) or Admin | Coach (own team) or Admin | Admin |
+| `team_roster` | Public | Coach (own team) or Admin | Coach (own team) or Admin | Coach (own team) or Admin |
+| `matches` | Public | Admin | Facilitator (holding lease) or Admin | Admin |
+| `match_events` | Public | Facilitator (holding lease) or Admin | Admin | Admin |
+| `match_score_events`| Public | Facilitator (holding lease) or Admin | Facilitator (rollback) or Admin | Admin |
+| `player_stars` | Public | Facilitator / Admin | Admin | Admin |
+| `verification_documents` | Self (own document) or Admin | Self (authenticated upload) | Admin (approve / reject) | Admin |
+| `audit_logs` | Admin | Authenticated (audit logging routines) | Admin | Admin |
+| `storage.objects` (`verification_documents`) | Self or Admin | Authenticated (own user ID path) | Admin | Admin |
 
 ---
 
@@ -219,11 +219,11 @@ System engineers and capstone evaluators requiring root sandbox controls, rapid 
 
 *   **Accessible Routes**: `/dev`, plus public inspection views.
 *   **Strict Role Isolation**:
-    *   **Segregated from Super Admin**: Platform Developers operate strictly within the `/dev` command center and cannot access super administrator management suites (`/admin/*`). Likewise, Super Administrators cannot access developer sandbox controls (`/dev`).
+    *   **Segregated from Admin**: Platform Developers operate strictly within the `/dev` command center and cannot access administrator management suites (`/admin/*`). Likewise, Administrators cannot access developer sandbox controls (`/dev`).
     *   **Independent Account & Provisioning**: The `'dev'` persona uses distinct credentials (`dev@sportstrack.com`). Developer accounts cannot be created through the public registration portal; they must be explicitly assigned directly in the database table (`public.users.role = 'dev'`).
-    *   **Database Check Constraint (Dev Migration)**: In local and preview environments, database migration `20261012_add_dev_role.sql` permits `'dev'` in `users_role_check`:
+    *   **Database Check Constraint (Dev Migration)**: In local and preview environments, database migration `20261027_normalize_admin_role.sql` permits `'admin'`, `'super_admin'`, and `'dev'` in `users_role_check`:
         ```sql
-        CHECK (role = ANY (ARRAY['super_admin', 'facilitator', 'coach', 'player_student', 'player_faculty', 'dev']))
+        CHECK (role = ANY (ARRAY['admin', 'super_admin', 'facilitator', 'coach', 'player_student', 'player_faculty', 'dev']))
         ```
 
 ### 6.2 Capstone Command Deck Capabilities (`/dev`)
@@ -236,7 +236,7 @@ The Developer Workbench is organized into five specialized evaluation tabs:
     *   *Live Halftime Showdown*: Injects a high-octane 4th-quarter basketball match (CAS 68 vs CBA 65) with running clock, fouls, timeouts, player star tallies, and commentary feed ready for immediate kiosk and jumbotron demonstration.
     *   *Completed Championship*: Deploys championship finals, bronze deciders, MVP Red/Gold stars, and updates the official Palawan State University medal standing ledger (`/ranking`).
 2.  **User & Stats Ledger**:
-    *   Real-time user directory with 1-click role switcher dropdown (`dev`, `super_admin`, `facilitator`, `coach`, `player_student`, `player_faculty`).
+    *   Real-time user directory with 1-click role switcher dropdown (`dev`, `admin`, `super_admin` (legacy), `facilitator`, `coach`, `player_student`, `player_faculty`).
     *   1-click verification status toggle (`is_verified`).
     *   Instant rate-limiting lockout reset for testing login failure barriers.
 3.  **Live Match Event Bot**:

@@ -11,7 +11,8 @@ import {
   Medal, 
   Users, 
   ArrowRight,
-  School
+  School,
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -173,6 +174,33 @@ export const About: React.FC = () => {
           </div>
           <ArrowRight className="size-4 text-slate-400 dark:text-slate-500 group-hover:text-orange-500 group-hover:translate-x-0.5 transition-all" />
         </Link>
+      </div>
+
+      {/* Official University Policies & Data Privacy Banner */}
+      <div className="rounded-2xl p-6 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="space-y-1 text-center sm:text-left">
+          <div className="flex items-center gap-2 justify-center sm:justify-start">
+            <FileText className="size-4 text-orange-500" />
+            <h4 className="font-black italic uppercase tracking-tight text-xs sm:text-sm text-slate-900 dark:text-white">
+              Official University Policies &amp; Data Privacy
+            </h4>
+          </div>
+          <p className="text-slate-500 dark:text-slate-400 text-xs font-normal">
+            PSU SportsTrack complies with the Data Privacy Act of 2012 (RA 10173). Read our complete legal terms.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link to="/legal?tab=terms">
+            <Button variant="outline" className="text-xs font-bold rounded-xl border-slate-300 dark:border-white/10 h-9">
+              Terms &amp; Conditions
+            </Button>
+          </Link>
+          <Link to="/legal?tab=privacy">
+            <Button variant="outline" className="text-xs font-bold rounded-xl border-slate-300 dark:border-white/10 h-9">
+              Privacy Policy
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import type { DevPersona } from '@/lib/devPersonas';
 
 export type UserRole =
+  | 'admin'
   | 'super_admin'
   | 'facilitator'
   | 'coach'
@@ -23,6 +24,7 @@ interface AuthContextType {
   isVerified: boolean;
   isLoading: boolean;
   isDev: boolean;
+  isAdmin: boolean;
   isSuperAdmin: boolean;
   isFacilitator: boolean;
   isOfficial: boolean;
@@ -67,6 +69,7 @@ const AuthContext = createContext<AuthContextType>({
   isVerified: false,
   isLoading: true,
   isDev: false,
+  isAdmin: false,
   isSuperAdmin: false,
   isFacilitator: false,
   isOfficial: false,
@@ -281,9 +284,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // Derived role permission flags computed from effective role
   const isImpersonating = Boolean(impersonatedPersona);
   const isDev = effectiveRole === 'dev';
-  const isSuperAdmin = effectiveRole === 'super_admin' || effectiveRole === 'dev';
-  const isFacilitator = effectiveRole === 'facilitator' || isSuperAdmin;
-  const isOfficial = effectiveRole === 'official' || isSuperAdmin;
+  const isAdmin = effectiveRole === 'admin' || effectiveRole === 'super_admin' || effectiveRole === 'dev';
+  const isSuperAdmin = isAdmin;
+  const isFacilitator = effectiveRole === 'facilitator' || isAdmin;
+  const isOfficial = effectiveRole === 'official' || isAdmin;
   const isCoach = effectiveRole === 'coach';
   const isPlayer = effectiveRole === 'player_student' || effectiveRole === 'player_faculty' || effectiveRole === 'player_staff';
   const isFacultyAthlete = effectiveRole === 'player_faculty';
@@ -298,6 +302,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isVerified: effectiveIsVerified,
       isLoading,
       isDev,
+      isAdmin,
       isSuperAdmin,
       isFacilitator,
       isOfficial,

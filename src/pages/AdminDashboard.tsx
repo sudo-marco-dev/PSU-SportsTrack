@@ -388,7 +388,7 @@ export const AdminDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Capstone Showcase Demo Tool - Only visible to SuperAdmin */}
+      {/* Capstone Showcase Demo Tool - Only visible to Admin */}
       <div className="grid lg:grid-cols-3 gap-8 relative z-10">
         {/* Quick Actions */}
         <div className="lg:col-span-2 space-y-6">

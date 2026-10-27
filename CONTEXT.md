@@ -94,7 +94,7 @@ graph TD
     CheckAuth -- No --> PublicAccess[Public Access: Explorer, Brackets, Live Scores, Rankings]
     CheckAuth -- Yes --> RoleCheck{Role Type}
     
-    RoleCheck -- SuperAdmin --> SuperAdminPerms["Super Admin Access:
+    RoleCheck -- Admin --> AdminPerms["Admin Access:
       - Tournament & Bracket Generation
       - College & Cluster Management
       - Document Approvals & Rejections
@@ -170,11 +170,11 @@ graph TD
   * On match completion, winner advances to `next_match_id` and loser (for Semi-Finals) cascades to `loser_next_match_id`.
 
 ### 5.5. Realtime Live Scoring, Facilitator Lease & MVP Accolades
-* **Facilitator-Only Authority**: Only users with the `facilitator` role (or `super_admin`) have access to scoring buttons, commentary inputs, and match completion actions. Coaches and players are strictly view-only spectators.
+* **Facilitator-Only Authority**: Only users with the `facilitator` role (or `admin`) have access to scoring buttons, commentary inputs, and match completion actions. Coaches and players are strictly view-only spectators.
 * **Single Facilitator Lease Engine**:
   * Managed via `active_scorekeeper_id` and `lease_expires_at` on `matches`.
   * The active Facilitator console sends a 15s heartbeat to maintain a 90s lease window.
-  * Superadmins hold a force-claim override button.
+  * Admins hold a force-claim override button.
 * **Dual-Channel Live Synchronization**:
   1. **Broadcast Channel (`match-broadcast:${matchId}`)**: Low-latency (<300ms) peer-to-peer WebSocket event distribution for instantaneous score changes (`score_update`), event additions (`event_update`), and MVP awards (`mvp_update`).
   2. **Postgres Changes Channel (`postgres_changes`)**: Streams database replication events on `matches`, `match_events`, and `player_stars` tables.
@@ -183,8 +183,8 @@ graph TD
   * Matches can be concluded locally (`"Pending Sync"`).
   * Upon reconnection, mutations are flushed via atomic batch sync RPC `sync_offline_match_events`.
 * **MVP Accolades**:
-  * **Red Stars**: Match MVP awarded exclusively by the presiding Facilitator or Superadmin at match conclusion.
-  * **Gold Stars**: Tournament MVP awarded by Superadmins at tournament completion.
+  * **Red Stars**: Match MVP awarded exclusively by the presiding Facilitator or Admin at match conclusion.
+  * **Gold Stars**: Tournament MVP awarded by Admins at tournament completion.
 
 ### 5.6. Audit Logging & Capstone Demo Protocol
 * **Audit Actions Tracked**: `APPROVE_DOCUMENT`, `REJECT_DOCUMENT`, `CREATE_TOURNAMENT`, `UPDATE_TOURNAMENT`, `DELETE_TOURNAMENT`, `APPROVE_TEAM`, `REJECT_TEAM`, `GENERATE_BRACKET`, `AWARD_STAR`, `EMERGENCY_SUBSTITUTION`.

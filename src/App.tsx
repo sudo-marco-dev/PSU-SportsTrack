@@ -21,6 +21,7 @@ const Profile = React.lazy(() => import('@/pages/Profile').then(m => ({ default:
 const TournamentExplorer = React.lazy(() => import('@/pages/TournamentExplorer').then(m => ({ default: m.TournamentExplorer })));
 const Ranking = React.lazy(() => import('@/pages/Ranking').then(m => ({ default: m.Ranking })));
 const About = React.lazy(() => import('@/pages/About').then(m => ({ default: m.About })));
+const Legal = React.lazy(() => import('@/pages/Legal').then(m => ({ default: m.Legal })));
 const NotFound = React.lazy(() => import('@/pages/NotFound').then(m => ({ default: m.NotFound })));
 const AuthConfirm = React.lazy(() => import('@/pages/AuthConfirm').then(m => ({ default: m.AuthConfirm })));
 const ResetPassword = React.lazy(() => import('@/pages/ResetPassword').then(m => ({ default: m.ResetPassword })));
@@ -93,6 +94,9 @@ function AppRoutes() {
           <Route path="/explorer" element={<TournamentExplorer />} />
           <Route path="/ranking" element={<Ranking />} />
           <Route path="/about" element={<About />} />
+          <Route path="/legal" element={<Legal />} />
+          <Route path="/privacy" element={<Navigate to="/legal?tab=privacy" replace />} />
+          <Route path="/terms" element={<Navigate to="/legal?tab=terms" replace />} />
           <Route path="/match/:matchId" element={<LiveMatch />} />
 
           {/* Platform Developer Sandbox */}
@@ -106,8 +110,8 @@ function AppRoutes() {
             <Route path="/scouting" element={<ScoutingHub />} />
             <Route path="/achievements" element={<Navigate to="/profile" replace />} />
 
-            {/* Super Admin Protected Routes */}
-            <Route element={<ProtectedRoute requiredRole="super_admin" />}>
+            {/* Admin Protected Routes */}
+            <Route element={<ProtectedRoute requiredRole={['admin', 'super_admin']} />}>
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/tournaments" element={<TournamentManagement />} />
               <Route path="/admin/verifications" element={<SystemVerifications />} />

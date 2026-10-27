@@ -28,7 +28,7 @@ export function formatRole(r?: string | null, fallback = 'Spectator'): string {
   if (lower === 'player_staff' || lower === 'staff') return 'Staff Athlete';
   if (lower === 'coach') return 'Athletic Coach';
   if (lower === 'facilitator') return 'Facilitator';
-  if (lower === 'super_admin' || lower === 'admin') return 'Super Admin';
+  if (lower === 'super_admin' || lower === 'admin') return 'Admin';
   if (lower === 'official') return 'Match Official';
   if (lower === 'dev') return 'Developer';
 
@@ -62,6 +62,7 @@ export function formatSelectValue(val: any): any {
     lower === 'player_staff' ||
     lower === 'coach' ||
     lower === 'facilitator' ||
+    lower === 'admin' ||
     lower === 'super_admin' ||
     lower === 'official' ||
     lower === 'dev'

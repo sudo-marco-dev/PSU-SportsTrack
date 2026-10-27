@@ -112,10 +112,10 @@ type ClusterOption = {
 };
 
 export const ScoutingHub = () => {
-  const { user, isVerified, isSuperAdmin, isFacilitator, isCoach, isDev } = useAuth();
+  const { user, isVerified, isAdmin, isFacilitator, isCoach, isDev } = useAuth();
   const navigate = useNavigate();
 
-  const hasScoutingAccess = Boolean(isVerified || isSuperAdmin || isFacilitator || isCoach || isDev);
+  const hasScoutingAccess = Boolean(isVerified || isAdmin || isFacilitator || isCoach || isDev);
 
   const [activeTab, setActiveTab] = useState('players');
   const [searchQuery, setSearchQuery] = useState('');

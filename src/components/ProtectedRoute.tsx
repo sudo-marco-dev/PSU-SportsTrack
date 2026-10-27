@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
-  const { user, role, isDev, isSuperAdmin, isFacilitator, isCoach, isPlayer, isImpersonating, isLoading, openLoginModal } = useAuth();
+  const { user, role, isDev, isAdmin, isFacilitator, isCoach, isPlayer, isImpersonating, isLoading, openLoginModal } = useAuth();
 
   const isDevRoute = Array.isArray(requiredRole) ? requiredRole.includes('dev') : requiredRole === 'dev';
 
@@ -38,10 +38,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) 
     // Check permission with role-specific access control
     const hasPermission = requiredRoles.some((req) => {
       if (req === 'dev') {
-        return isDev || isSuperAdmin || isImpersonating || Boolean(import.meta.env.DEV);
+        return isDev || isAdmin || isImpersonating || Boolean(import.meta.env.DEV);
       }
-      if (req === 'super_admin') {
-        return isSuperAdmin;
+      if (req === 'admin' || req === 'super_admin') {
+        return isAdmin;
       }
       if (req === 'facilitator') {
         return isFacilitator;

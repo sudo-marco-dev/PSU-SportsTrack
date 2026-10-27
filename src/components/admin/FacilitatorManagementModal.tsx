@@ -96,6 +96,7 @@ export const FacilitatorManagementModal = ({
         .from('users')
         .select('*, colleges(college_name)')
         .neq('role', 'facilitator')
+        .neq('role', 'admin')
         .neq('role', 'super_admin')
         .neq('account_status', 'soft_deleted')
         .order('full_name', { ascending: true })
@@ -276,7 +277,7 @@ export const FacilitatorManagementModal = ({
                   No Appointed Facilitators Yet
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-1">
-                  Admins and Super Admins hold scoring authority by default. You can appoint students, faculty, or committee members as dedicated match officials.
+                  Admins hold scoring authority by default. You can appoint students, faculty, or committee members as dedicated match officials.
                 </p>
                 <Button
                   size="sm"

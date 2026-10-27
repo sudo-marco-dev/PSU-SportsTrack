@@ -8,7 +8,8 @@ test.describe('Role & Enum Formatting Engine Tests', () => {
     expect(formatRole('player_staff')).toBe('Staff Athlete');
     expect(formatRole('coach')).toBe('Athletic Coach');
     expect(formatRole('facilitator')).toBe('Facilitator');
-    expect(formatRole('super_admin')).toBe('Super Admin');
+    expect(formatRole('admin')).toBe('Admin');
+    expect(formatRole('super_admin')).toBe('Admin');
     expect(formatRole('official')).toBe('Match Official');
     expect(formatRole('dev')).toBe('Developer');
     expect(formatRole(null)).toBe('Spectator');

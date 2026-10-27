@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 export function NotFound() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isSuperAdmin, isCoach, isPlayer, isFacilitator } = useAuth();
+  const { user, isAdmin, isCoach, isPlayer, isFacilitator } = useAuth();
 
   useEffect(() => {
     // Log 404 attempts for debugging / analytics
@@ -17,8 +17,8 @@ export function NotFound() {
     if (!user) {
       // Not authenticated -> redirect to public dashboard
       navigate('/', { replace: true });
-    } else if (isSuperAdmin) {
-      // Super Admin -> redirect to admin dashboard
+    } else if (isAdmin) {
+      // Admin -> redirect to admin dashboard
       navigate('/admin', { replace: true });
     } else if (isCoach) {
       // Coach -> redirect to coach dashboard
@@ -74,7 +74,7 @@ export function NotFound() {
             >
               {!user 
                 ? 'Sign In to Arena' 
-                : isSuperAdmin 
+                : isAdmin 
                   ? 'Admin Command Center'
                   : isCoach 
                     ? 'Coach Dashboard'

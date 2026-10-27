@@ -6,6 +6,7 @@ import { LogOut, User as UserIcon } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { formatRole } from '@/lib/utils';
 
 export const Navbar = () => {
   const { user, profile } = useAuth();
@@ -27,7 +28,7 @@ export const Navbar = () => {
             PSU SportsTrack
           </Link>
 
-          {profile?.role === 'super_admin' && (
+          {(profile?.role === 'admin' || profile?.role === 'super_admin') && (
             <Link 
               to="/admin/tournaments" 
               className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
@@ -44,7 +45,7 @@ export const Navbar = () => {
           </div>
           
           <Badge variant="secondary" className="font-semibold px-3 py-1">
-            {profile?.role || 'User'}
+            {formatRole(profile?.role) || 'User'}
           </Badge>
 
           <Button 

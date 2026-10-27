@@ -19,9 +19,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { PasswordPolicyMeter } from '@/components/auth/PasswordPolicyMeter';
+import { LegalModal } from '@/components/legal/LegalModal';
 
 const registerSchema = z.object({
   lastName: z.string().trim().min(1, { message: 'Last name is required' }),
@@ -54,8 +54,8 @@ export const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [colleges, setColleges] = useState<{ id: string; college_name: string }[]>([]);
-  const [showTermsModal, setShowTermsModal] = useState(false);
-  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showLegalModal, setShowLegalModal] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<'privacy' | 'terms'>('terms');
 
   useEffect(() => {
     supabase.from('colleges').select('id, college_name').then(({ data }) => {
@@ -404,7 +404,8 @@ export const Register = () => {
                             type="button"
                             onClick={(e) => {
                               e.preventDefault();
-                              setShowTermsModal(true);
+                              setLegalModalTab('terms');
+                              setShowLegalModal(true);
                             }}
                             className="text-orange-400 hover:text-orange-300 underline font-semibold transition-colors cursor-pointer"
                           >
@@ -415,7 +416,8 @@ export const Register = () => {
                             type="button"
                             onClick={(e) => {
                               e.preventDefault();
-                              setShowPrivacyModal(true);
+                              setLegalModalTab('privacy');
+                              setShowLegalModal(true);
                             }}
                             className="text-orange-400 hover:text-orange-300 underline font-semibold transition-colors cursor-pointer"
                           >
@@ -452,79 +454,12 @@ export const Register = () => {
         </CardFooter>
       </Card>
 
-      {/* Terms & Conditions Draft Modal */}
-      <Dialog open={showTermsModal} onOpenChange={setShowTermsModal}>
-        <DialogContent className="max-w-[92vw] sm:max-w-lg rounded-2xl sm:rounded-3xl p-6 bg-slate-950 text-white border border-white/10 max-h-[85vh] overflow-y-auto">
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="size-2 rounded-full bg-orange-500" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-orange-400">Governance Draft</span>
-            </div>
-            <DialogTitle className="text-xl sm:text-2xl font-black italic uppercase tracking-tight text-white">
-              Terms &amp; Conditions
-            </DialogTitle>
-            <div className="text-slate-300 text-xs sm:text-sm space-y-3 leading-relaxed border-t border-white/10 pt-3">
-              <p>
-                <strong>1. Acceptance of Terms:</strong> By registering and using PSU SportsTrack, student-athletes, coaches, and university officials agree to abide by the university athletic policies and student code of conduct.
-              </p>
-              <p>
-                <strong>2. Academic &amp; Athletic Eligibility:</strong> All registered participants must be officially enrolled or employed at Palawan State University and maintain university athletic eligibility standards.
-              </p>
-              <p>
-                <strong>3. Sportsmanship &amp; Integrity:</strong> Foul play, falsification of game statistics, or unsportsmanlike behavior will result in disqualification from university tournaments.
-              </p>
-              <p className="text-[11px] text-slate-500 italic pt-2 border-t border-white/5">
-                Note: Official legal terms are currently being drafted by the Palawan State University Sports Governance Board.
-              </p>
-            </div>
-            <div className="pt-2 flex justify-end">
-              <Button 
-                onClick={() => setShowTermsModal(false)}
-                className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs h-9 px-4 rounded-xl"
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Privacy Policy Draft Modal */}
-      <Dialog open={showPrivacyModal} onOpenChange={setShowPrivacyModal}>
-        <DialogContent className="max-w-[92vw] sm:max-w-lg rounded-2xl sm:rounded-3xl p-6 bg-slate-950 text-white border border-white/10 max-h-[85vh] overflow-y-auto">
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="size-2 rounded-full bg-orange-500" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-orange-400">Data Privacy Notice</span>
-            </div>
-            <DialogTitle className="text-xl sm:text-2xl font-black italic uppercase tracking-tight text-white">
-              Privacy Policy
-            </DialogTitle>
-            <div className="text-slate-300 text-xs sm:text-sm space-y-3 leading-relaxed border-t border-white/10 pt-3">
-              <p>
-                <strong>1. Information We Collect:</strong> We collect student/faculty names, institutional email addresses, campus colleges, and athletic performance records for the purpose of tournament management.
-              </p>
-              <p>
-                <strong>2. Use of Information:</strong> Profile information and match statistics are displayed publicly across leaderboards, tournament rosters, and official match records.
-              </p>
-              <p>
-                <strong>3. Data Security:</strong> University credentials and account data are secured in accordance with PSU IT data governance standards. We do not share personal information with unauthorized third parties.
-              </p>
-              <p className="text-[11px] text-slate-500 italic pt-2 border-t border-white/5">
-                Note: Official privacy policy details are currently being drafted in accordance with university compliance requirements.
-              </p>
-            </div>
-            <div className="pt-2 flex justify-end">
-              <Button 
-                onClick={() => setShowPrivacyModal(false)}
-                className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs h-9 px-4 rounded-xl"
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Official Legal Documents Modal */}
+      <LegalModal
+        open={showLegalModal}
+        onOpenChange={setShowLegalModal}
+        defaultTab={legalModalTab}
+      />
     </div>
   );
 };

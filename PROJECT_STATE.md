@@ -36,7 +36,7 @@
 - [x] Phase 5.6 Admin Audit Log Time Filters (Today, Week, Month)
 - [x] Phase 5.7 Registration Security (Confirm Password Field)
 - [x] Phase 5.8 Coach Recruitment Validation (Duplicate Sport Prevention)
-- [x] Phase 5.9 Role Normalization & Unified RBAC (`super_admin`, `facilitator`, `coach`, `player_student`, `player_faculty`, `dev`)
+- [x] Phase 5.9 Role Normalization & Unified RBAC (`admin`, `super_admin`, `facilitator`, `coach`, `player_student`, `player_faculty`, `dev`)
 - [x] Phase 5.10 Institutional PSU COR Verification & Student Corporate Email Parser
 - [x] Phase 5.11 Courtside Scorer Attribution, Score Deduction & Realtime Box Score Deck
 - [x] Phase 5.12 Anti-Slop Vector Sports Icon System (`react-icons/gi`, `react-icons/fa6` & centralized `sportIcons.ts`)
@@ -246,7 +246,7 @@
 
 ### Phase 5: Facilitator Governance, Bronze Brackets & Capstone Readiness
 - **Description**: Implementing the 5 core systems finalized during architectural grilling:
-  1. **Facilitator Scoring Authority & Lease Engine**: Restricting live scoring and match controls strictly to `facilitator` and `super_admin` (removing coach scoring permissions). Single facilitator 90s heartbeat lease engine with Admin override.
+  1. **Facilitator Scoring Authority & Lease Engine**: Restricting live scoring and match controls strictly to `facilitator` and `admin` (removing coach scoring permissions). Single facilitator 90s heartbeat lease engine with Admin override.
   2. **Coach Pre-Match Lineup & Availability Ops**: Starting lineup selection (Starters vs Bench), jersey number management (`team_roster.jersey_number`), sports positions, and game-day availability check-in (`active`, `injured`, `excused`).
   3. **Automated 3rd-Place (Bronze Medal) Bracket Engine**: Connecting semi-final losers to a Bronze Playoff fixture (`loser_next_match_id`), and rendering prominently on the tournament bracket canvas.
   4. **Court-Side Offline Resilience**: IndexedDB event buffering for intermittent campus network dropouts, deferred completion syncing, and atomic batch sync RPC.
@@ -267,9 +267,9 @@
 
 ### Canonical Role Normalization & Unified Governance
 - **Description**: Rebuilt and unified the entire user role architecture to eliminate legacy PascalCase/snake_case disparities:
-  1. **Canonical Schema Check**: Hardened database constraint to strictly require canonical snake_case identifiers (`CHECK (role IN ('super_admin', 'facilitator', 'coach', 'player_student', 'player_faculty'))`).
+  1. **Canonical Schema Check**: Hardened database constraint to strictly require canonical snake_case identifiers (`CHECK (role IN ('admin', 'super_admin', 'facilitator', 'coach', 'player_student', 'player_faculty'))`).
   2. **Database Data Normalization**: Executed data migration normalizing all existing users to canonical values.
-  3. **Strict Context & Route Guards**: Refactored `AuthContext.tsx` and `ProtectedRoute.tsx` to eliminate redundant fallback checks, cleanly routing `super_admin` directly to `/admin`, `coach` to `/coach`, and athletes to `/player`.
+  3. **Strict Context & Route Guards**: Refactored `AuthContext.tsx` and `ProtectedRoute.tsx` to eliminate redundant fallback checks, cleanly routing `admin` directly to `/admin`, `coach` to `/coach`, and athletes to `/player`.
   4. **Documentation Sync**: Rewrote `user_roles_and_access_control.md` to establish the definitive source of truth for platform RBAC.
 - **Files Modified**:
   - `supabase/migrations/20261010_unify_roles.sql`
@@ -393,7 +393,7 @@
   5. **Live Match Event Bot**: Interactive play simulator and auto-play bot pulsing real-time score events every 6s over WebSockets for multi-device sync testing.
   6. **Database Health & Row Counter**: Live row counts across 6 primary tables with one-click cleanup routines.
   7. **Capstone Defense Presentation Script**: 6-step guided walkthrough with direct interactive deep-links.
-  8. **Strict Admin & Dev Isolation**: Completely segregated Super Admin from Developer tools. Super Administrators have zero access to `/dev`, no dev buttons on `AdminDashboard.tsx`, and no dev links in navigation. Platform Developers operate within `/dev` with their own independent login credentials.
+  8. **Strict Admin & Dev Isolation**: Completely segregated Admin from Developer tools. Administrators have zero access to `/dev`, no dev buttons on `AdminDashboard.tsx`, and no dev links in navigation. Platform Developers operate within `/dev` with their own independent login credentials.
   9. **UI Polish & Contrast Elevation**: Softened the Developer Workbench layout by removing the pitch-black hard-angle box wrapper, introducing a curved hero banner (`rounded-[2.5rem]`) with ambient radial glow, and engineering high-contrast pill navigation triggers (`TabsList` / `TabsTrigger`) with bold uppercase collegiate typography and WCAG AAA legibility.
 - **Files Modified / Created**:
   - `supabase/migrations/20261012_add_dev_role.sql`

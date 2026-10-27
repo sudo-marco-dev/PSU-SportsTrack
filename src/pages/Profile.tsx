@@ -36,7 +36,8 @@ import {
   Activity,
   Target,
   Search,
-  Calendar
+  Calendar,
+  FileText
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
@@ -88,7 +89,7 @@ type PendingInvitation = {
 };
 
 export const Profile = () => {
-  const { user, role, isVerified, isDev, isSuperAdmin, isCoach, isPlayer, isFacilitator, isFacultyAthlete, profile, signOut, refetchProfile } = useAuth();
+  const { user, role, isVerified, isDev, isAdmin, isCoach, isPlayer, isFacilitator, isFacultyAthlete, profile, signOut, refetchProfile } = useAuth();
   const navigate = useNavigate();
   const [stars, setStars] = useState<PlayerStar[]>([]);
   const [isLoadingStars, setIsLoadingStars] = useState(true);
@@ -174,14 +175,14 @@ export const Profile = () => {
         fetchAthleteTelemetryData(user.id);
         checkVerificationStatus();
         fetchPendingInvitations();
-      } else if (isSuperAdmin) {
+      } else if (isAdmin) {
         fetchAdminStats();
       } else if (isCoach) {
         fetchCoachStats();
       }
     }
     setIsLoadingStars(false);
-  }, [user, role, isPlayer, isSuperAdmin, isCoach]);
+  }, [user, role, isPlayer, isAdmin, isCoach]);
 
   const fetchAthleteTelemetryData = async (playerId: string) => {
     setIsLoadingTelemetry(true);
@@ -512,7 +513,7 @@ export const Profile = () => {
       {/* ========================================================================= */}
       {/* 1. ADMIN ROLE PROFILE VIEW */}
       {/* ========================================================================= */}
-      {isSuperAdmin ? (
+      {isAdmin ? (
         <div className="space-y-6">
           {/* Admin Hero Header */}
           <div className="bg-slate-950 py-5 sm:py-6 px-4 sm:px-8 rounded-2xl shadow-xl border border-white/5 relative overflow-hidden">
@@ -531,7 +532,7 @@ export const Profile = () => {
                       <span className="break-words">{profile?.college_name || 'PSU Main Campus'}</span>
                     </Badge>
                     <Badge className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/30 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1">
-                      <CheckCircle2 className="size-3 shrink-0" /> Full Superuser Access
+                      <CheckCircle2 className="size-3 shrink-0" /> Full Admin Access
                     </Badge>
                   </div>
                   <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black italic tracking-tight uppercase text-white leading-tight break-words">
@@ -1816,7 +1817,7 @@ export const Profile = () => {
                     <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 space-y-0.5">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Athlete Role</p>
                       <p className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm uppercase mt-0.5">
-                        {isSuperAdmin ? 'Super Admin' : isFacilitator ? 'Facilitator' : isCoach ? 'Coach' : isFacultyAthlete ? 'Faculty Athlete' : 'Student Athlete'}
+                        {isAdmin ? 'Admin' : isFacilitator ? 'Facilitator' : isCoach ? 'Coach' : isFacultyAthlete ? 'Faculty Athlete' : 'Student Athlete'}
                       </p>
                     </div>
 
@@ -2170,6 +2171,42 @@ export const Profile = () => {
                       ) : (
                         'Save Athletic Preferences'
                       )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 4. University Legal & Governance Policies */}
+              <Card className="border border-slate-200 dark:border-white/10 rounded-3xl shadow-sm bg-white dark:bg-slate-900">
+                <CardHeader className="p-6 pb-3">
+                  <CardTitle className="text-base sm:text-lg font-bold uppercase tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                    <FileText className="size-5 text-orange-500" />
+                    Legal &amp; Governance Policies
+                  </CardTitle>
+                  <CardDescription className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
+                    Official Palawan State University Sports Governance
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-6 pt-2 space-y-3">
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    PSU SportsTrack is operated under the Palawan State University Sports Department adhering to the Philippine Data Privacy Act of 2012 (RA 10173).
+                  </p>
+                  <div className="flex flex-wrap gap-3 pt-1">
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate('/legal?tab=terms')}
+                      className="text-xs font-bold rounded-xl border-slate-200 dark:border-white/10 gap-1.5"
+                    >
+                      <FileText className="size-3.5 text-orange-500" />
+                      Terms and Conditions
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate('/legal?tab=privacy')}
+                      className="text-xs font-bold rounded-xl border-slate-200 dark:border-white/10 gap-1.5"
+                    >
+                      <ShieldCheck className="size-3.5 text-emerald-500" />
+                      Privacy Policy
                     </Button>
                   </div>
                 </CardContent>
