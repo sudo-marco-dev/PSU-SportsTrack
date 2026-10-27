@@ -66,6 +66,8 @@ export const Register = () => {
   const [colleges, setColleges] = useState<{ id: string; college_name: string }[]>([]);
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<'privacy' | 'terms'>('terms');
+  const [isMandatoryLegalModal, setIsMandatoryLegalModal] = useState(false);
+  const [termsAcceptedAt, setTermsAcceptedAt] = useState<string | null>(null);
   const [pendingVerification, setPendingVerification] = useState<{
     email: string;
     role: string;
@@ -96,11 +98,12 @@ export const Register = () => {
   const watchedPassword = form.watch('password');
   const watchedConfirmPassword = form.watch('confirmPassword');
 
-  async function onSubmit(values: z.infer<typeof registerSchema>) {
+  async function onSubmit(values: z.infer<typeof registerSchema>, acceptedTimestamp?: string) {
     setIsLoading(true);
     try {
       const cleanEmail = values.email.trim().toLowerCase();
       const formattedFullName = `${values.lastName.trim()}, ${values.firstName.trim()}`;
+      const finalAcceptedAt = acceptedTimestamp || termsAcceptedAt || new Date().toISOString();
 
       // 1. Sign up user with metadata for server trigger & email confirmation
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -115,6 +118,7 @@ export const Register = () => {
             college_id: values.collegeId || null,
             employee_id: values.employeeId ? values.employeeId.trim() : null,
             department: values.department ? values.department.trim() : null,
+            terms_accepted_at: finalAcceptedAt,
           },
           emailRedirectTo: `${window.location.origin}/auth/confirm?type=signup`,
         },
@@ -145,6 +149,7 @@ export const Register = () => {
           college_id: values.collegeId || null,
           employee_id: values.employeeId ? values.employeeId.trim() : null,
           department: values.department ? values.department.trim() : null,
+          terms_accepted_at: finalAcceptedAt,
         });
 
         if (profileError && !profileError.message.includes('duplicate key')) {
@@ -161,6 +166,26 @@ export const Register = () => {
       setIsLoading(false);
     }
   }
+
+  const handleAttemptSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.getValues('termsAccepted')) {
+      const isFieldsValid = await form.trigger([
+        'lastName',
+        'firstName',
+        'email',
+        'password',
+        'confirmPassword',
+        'role',
+        'collegeId',
+      ]);
+      if (!isFieldsValid) return;
+      setIsMandatoryLegalModal(true);
+      setShowLegalModal(true);
+      return;
+    }
+    await form.handleSubmit((vals) => onSubmit(vals, termsAcceptedAt || new Date().toISOString()))(e);
+  };
 
   return (
     <div className="flex min-h-dvh items-center justify-center p-4 bg-slate-900 relative overflow-hidden">
@@ -195,7 +220,7 @@ export const Register = () => {
             </CardHeader>
             <CardContent className="px-6 sm:px-8">
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3.5">
+                <form onSubmit={handleAttemptSubmit} className="space-y-3.5">
                   {/* Last Name & First Name Inputs */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <FormField
@@ -446,7 +471,15 @@ export const Register = () => {
                           <FormControl>
                             <Checkbox
                               checked={field.value}
-                              onCheckedChange={field.onChange}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setIsMandatoryLegalModal(true);
+                                  setShowLegalModal(true);
+                                } else {
+                                  field.onChange(false);
+                                  setTermsAcceptedAt(null);
+                                }
+                              }}
                             />
                           </FormControl>
                           <div className="space-y-1 leading-none">
@@ -457,6 +490,7 @@ export const Register = () => {
                                 onClick={(e) => {
                                   e.preventDefault();
                                   setLegalModalTab('terms');
+                                  setIsMandatoryLegalModal(true);
                                   setShowLegalModal(true);
                                 }}
                                 className="text-orange-400 hover:text-orange-300 underline font-semibold transition-colors cursor-pointer"
@@ -469,6 +503,7 @@ export const Register = () => {
                                 onClick={(e) => {
                                   e.preventDefault();
                                   setLegalModalTab('privacy');
+                                  setIsMandatoryLegalModal(true);
                                   setShowLegalModal(true);
                                 }}
                                 className="text-orange-400 hover:text-orange-300 underline font-semibold transition-colors cursor-pointer"
@@ -511,8 +546,23 @@ export const Register = () => {
       {/* Official Legal Documents Modal */}
       <LegalModal
         open={showLegalModal}
-        onOpenChange={setShowLegalModal}
+        onOpenChange={(open) => {
+          setShowLegalModal(open);
+          if (!open) setIsMandatoryLegalModal(false);
+        }}
         defaultTab={legalModalTab}
+        mandatoryAcceptance={isMandatoryLegalModal}
+        onAccept={(timestamp) => {
+          setTermsAcceptedAt(timestamp);
+          form.setValue('termsAccepted', true, { shouldValidate: true });
+          setIsMandatoryLegalModal(false);
+          const currentValues = form.getValues();
+          void onSubmit(currentValues, timestamp);
+        }}
+        onDecline={() => {
+          setIsMandatoryLegalModal(false);
+          toast.info('You must accept the Terms & Conditions and Privacy Policy to register.');
+        }}
       />
     </div>
   );

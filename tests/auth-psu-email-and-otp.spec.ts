@@ -14,7 +14,14 @@ test.describe('PSU Official Email Domain & OTP Verification Flow', () => {
     const passwordInputs = page.locator('input[autocomplete="new-password"]');
     await passwordInputs.first().fill('PsuChampion2026!');
     await passwordInputs.nth(1).fill('PsuChampion2026!');
+
+    // Accept mandatory terms via modal
     await page.getByRole('checkbox').click();
+    const modalTerms = page.locator('label').filter({ hasText: /Terms and Conditions of Palawan State University/i });
+    const modalPrivacy = page.locator('label').filter({ hasText: /Privacy Policy in accordance with Philippine RA 10173/i });
+    await modalTerms.click();
+    await modalPrivacy.click();
+    await page.getByRole('button', { name: /Accept & Continue Registration/i }).click();
 
     // 1. Test Gmail
     await emailInput.fill('juan.delacruz@gmail.com');
@@ -75,10 +82,13 @@ test.describe('PSU Official Email Domain & OTP Verification Flow', () => {
     const passwordInputs = page.locator('input[autocomplete="new-password"]');
     await passwordInputs.first().fill('PsuChampion2026!');
     await passwordInputs.nth(1).fill('PsuChampion2026!');
-    await page.getByRole('checkbox').click();
-
-    // Click submit
+    // Click submit and accept mandatory legal modal
     await page.getByRole('button', { name: /complete registration/i }).click();
+    const acceptBtn = page.getByRole('button', { name: /Accept & Continue Registration/i });
+    await expect(acceptBtn).toBeVisible();
+    await page.locator('label').filter({ hasText: /Terms and Conditions of Palawan State University/i }).click();
+    await page.locator('label').filter({ hasText: /Privacy Policy in accordance with Philippine RA 10173/i }).click();
+    await acceptBtn.click();
 
     // Verify OTP Verification view appears
     await expect(page.locator('text=ENTER OTP CODE')).toBeVisible();

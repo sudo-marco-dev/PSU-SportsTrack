@@ -103,6 +103,8 @@ export const LoginModal = () => {
   const [colleges, setColleges] = useState<{ id: string; college_name: string }[]>([]);
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<'privacy' | 'terms'>('terms');
+  const [isMandatoryLegalModal, setIsMandatoryLegalModal] = useState(false);
+  const [termsAcceptedAt, setTermsAcceptedAt] = useState<string | null>(null);
 
   // Login Form
   const loginForm = useForm<z.infer<typeof loginSchema>>({
@@ -329,11 +331,12 @@ export const LoginModal = () => {
     }
   }
 
-  async function onRegisterSubmit(values: z.infer<typeof registerSchema>) {
+  async function onRegisterSubmit(values: z.infer<typeof registerSchema>, acceptedTimestamp?: string) {
     setIsLoading(true);
     try {
       const cleanEmail = values.email.trim().toLowerCase();
       const formattedFullName = `${values.lastName.trim()}, ${values.firstName.trim()}`;
+      const finalAcceptedAt = acceptedTimestamp || termsAcceptedAt || new Date().toISOString();
 
       // 1. Sign up user with metadata for server trigger & email confirmation
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -348,6 +351,7 @@ export const LoginModal = () => {
             college_id: values.collegeId || null,
             employee_id: values.employeeId ? values.employeeId.trim() : null,
             department: values.department ? values.department.trim() : null,
+            terms_accepted_at: finalAcceptedAt,
           },
           emailRedirectTo: `${window.location.origin}/auth/confirm?type=signup`,
         },
@@ -376,6 +380,7 @@ export const LoginModal = () => {
           college_id: values.collegeId || null,
           employee_id: values.employeeId ? values.employeeId.trim() : null,
           department: values.department ? values.department.trim() : null,
+          terms_accepted_at: finalAcceptedAt,
         });
 
         if (profileError && !profileError.message.includes('duplicate key')) {
@@ -394,6 +399,26 @@ export const LoginModal = () => {
       setIsLoading(false);
     }
   }
+
+  const handleAttemptRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!registerForm.getValues('termsAccepted')) {
+      const isFieldsValid = await registerForm.trigger([
+        'lastName',
+        'firstName',
+        'email',
+        'password',
+        'confirmPassword',
+        'role',
+        'collegeId',
+      ]);
+      if (!isFieldsValid) return;
+      setIsMandatoryLegalModal(true);
+      setShowLegalModal(true);
+      return;
+    }
+    await registerForm.handleSubmit((vals) => onRegisterSubmit(vals, termsAcceptedAt || new Date().toISOString()))(e);
+  };
 
   return (
     <>
@@ -562,7 +587,7 @@ export const LoginModal = () => {
             {/* MODE 2: REGISTER FORM */}
             {authMode === 'register' && (
               <Form {...registerForm}>
-                <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-3.5 mt-5 animate-in fade-in duration-300">
+                <form onSubmit={handleAttemptRegisterSubmit} className="space-y-3.5 mt-5 animate-in fade-in duration-300">
                   {/* Last Name and First Name Inputs (Foolproof Name Basis) */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <FormField
@@ -819,7 +844,15 @@ export const LoginModal = () => {
                           <FormControl>
                             <Checkbox
                               checked={field.value}
-                              onCheckedChange={field.onChange}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setIsMandatoryLegalModal(true);
+                                  setShowLegalModal(true);
+                                } else {
+                                  field.onChange(false);
+                                  setTermsAcceptedAt(null);
+                                }
+                              }}
                             />
                           </FormControl>
                           <div className="space-y-1 leading-none">
@@ -830,6 +863,7 @@ export const LoginModal = () => {
                                 onClick={(e) => {
                                   e.preventDefault();
                                   setLegalModalTab('terms');
+                                  setIsMandatoryLegalModal(true);
                                   setShowLegalModal(true);
                                 }}
                                 className="text-orange-400 hover:text-orange-300 underline font-semibold transition-colors cursor-pointer"
@@ -842,6 +876,7 @@ export const LoginModal = () => {
                                 onClick={(e) => {
                                   e.preventDefault();
                                   setLegalModalTab('privacy');
+                                  setIsMandatoryLegalModal(true);
                                   setShowLegalModal(true);
                                 }}
                                 className="text-orange-400 hover:text-orange-300 underline font-semibold transition-colors cursor-pointer"
@@ -953,8 +988,23 @@ export const LoginModal = () => {
       {/* Official Legal Documents Modal */}
       <LegalModal
         open={showLegalModal}
-        onOpenChange={setShowLegalModal}
+        onOpenChange={(open) => {
+          setShowLegalModal(open);
+          if (!open) setIsMandatoryLegalModal(false);
+        }}
         defaultTab={legalModalTab}
+        mandatoryAcceptance={isMandatoryLegalModal}
+        onAccept={(timestamp) => {
+          setTermsAcceptedAt(timestamp);
+          registerForm.setValue('termsAccepted', true, { shouldValidate: true });
+          setIsMandatoryLegalModal(false);
+          const currentValues = registerForm.getValues();
+          void onRegisterSubmit(currentValues, timestamp);
+        }}
+        onDecline={() => {
+          setIsMandatoryLegalModal(false);
+          toast.info('You must accept the Terms & Conditions and Privacy Policy to register.');
+        }}
       />
     </>
   );
