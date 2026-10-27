@@ -13,6 +13,7 @@ interface OtpVerificationStepProps {
 }
 
 const RESEND_COOLDOWN_SECONDS = 60;
+const OTP_LENGTH = 8;
 
 export const OtpVerificationStep = ({
   email,
@@ -20,7 +21,7 @@ export const OtpVerificationStep = ({
   onBack,
   className = '',
 }: OtpVerificationStepProps) => {
-  const [digits, setDigits] = useState<string[]>(['', '', '', '', '', '']);
+  const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_SECONDS);
@@ -79,12 +80,12 @@ export const OtpVerificationStep = ({
     setDigits(newDigits);
 
     // Auto-advance focus
-    if (index < 5) {
+    if (index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
     } else {
-      // Auto-submit when all 6 digits are filled
+      // Auto-submit when all digits are filled
       const fullOtp = newDigits.join('');
-      if (fullOtp.length === 6) {
+      if (fullOtp.length === OTP_LENGTH) {
         verifyCode(fullOtp);
       }
     }
@@ -102,7 +103,7 @@ export const OtpVerificationStep = ({
     } else if (e.key === 'ArrowLeft' && index > 0) {
       e.preventDefault();
       inputRefs.current[index - 1]?.focus();
-    } else if (e.key === 'ArrowRight' && index < 5) {
+    } else if (e.key === 'ArrowRight' && index < OTP_LENGTH - 1) {
       e.preventDefault();
       inputRefs.current[index + 1]?.focus();
     }
@@ -111,11 +112,11 @@ export const OtpVerificationStep = ({
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     setErrorMessage(null);
-    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, OTP_LENGTH);
     if (!pastedData) return;
 
     const newDigits = [...digits];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < OTP_LENGTH; i++) {
       newDigits[i] = pastedData[i] || '';
     }
     setDigits(newDigits);
@@ -125,16 +126,16 @@ export const OtpVerificationStep = ({
     if (nextEmptyIndex !== -1) {
       inputRefs.current[nextEmptyIndex]?.focus();
     } else {
-      inputRefs.current[5]?.focus();
-      if (pastedData.length === 6) {
+      inputRefs.current[OTP_LENGTH - 1]?.focus();
+      if (pastedData.length === OTP_LENGTH || pastedData.length === 6) {
         verifyCode(pastedData);
       }
     }
   };
 
   const verifyCode = async (otpCode: string) => {
-    if (otpCode.length !== 6) {
-      setErrorMessage('Please enter the complete 6-digit OTP code.');
+    if (otpCode.length !== OTP_LENGTH && otpCode.length !== 6) {
+      setErrorMessage(`Please enter the complete ${OTP_LENGTH}-digit OTP code.`);
       return;
     }
 
@@ -186,9 +187,9 @@ export const OtpVerificationStep = ({
         toast.error('Failed to resend code: ' + error.message);
       } else {
         setCooldown(RESEND_COOLDOWN_SECONDS);
-        toast.success('A new 6-digit OTP and confirmation link have been sent to your email.');
+        toast.success('A new OTP code and confirmation link have been sent to your email.');
         // Reset inputs
-        setDigits(['', '', '', '', '', '']);
+        setDigits(Array(OTP_LENGTH).fill(''));
         inputRefs.current[0]?.focus();
       }
     } catch {
@@ -215,7 +216,7 @@ export const OtpVerificationStep = ({
             ENTER <span className="text-orange-500">OTP CODE</span>
           </h2>
           <p className="text-slate-400 text-xs sm:text-sm max-w-sm mx-auto leading-relaxed">
-            We sent a 6-digit verification code and a confirmation link to:
+            We sent an 8-digit verification code and a confirmation link to:
           </p>
           <div className="pt-1">
             <span className="inline-block px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-orange-400 font-mono text-xs sm:text-sm font-semibold break-all select-all">
@@ -232,14 +233,14 @@ export const OtpVerificationStep = ({
           Two Ways to Verify:
         </p>
         <p className="text-[11px] text-slate-400 leading-normal pl-5">
-          1. <strong>Enter the 6-digit code</strong> below, <span className="text-slate-200">OR</span><br />
+          1. <strong>Enter the 8-digit code</strong> below, <span className="text-slate-200">OR</span><br />
           2. <strong>Click the confirmation link</strong> in the email sent to your university inbox.
         </p>
       </div>
 
-      {/* 6 Segmented Digit Inputs */}
+      {/* Segmented Digit Inputs */}
       <div className="space-y-3">
-        <div className="flex justify-center items-center gap-2 sm:gap-2.5">
+        <div className="flex justify-center items-center gap-1.5 sm:gap-2.5 max-w-full overflow-x-auto py-1">
           {digits.map((digit, idx) => (
             <input
               key={idx}
@@ -257,7 +258,7 @@ export const OtpVerificationStep = ({
               onPaste={handlePaste}
               disabled={isVerifying}
               aria-label={`Digit ${idx + 1} of verification code`}
-              className="size-11 sm:size-13 text-center text-xl sm:text-2xl font-black font-mono bg-slate-900/90 text-white border-2 border-white/10 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition-all outline-none disabled:opacity-50"
+              className="size-9 sm:size-12 text-center text-lg sm:text-2xl font-black font-mono bg-slate-900/90 text-white border-2 border-white/10 rounded-lg sm:rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition-all outline-none disabled:opacity-50"
             />
           ))}
         </div>

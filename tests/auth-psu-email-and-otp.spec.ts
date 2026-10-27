@@ -86,9 +86,9 @@ test.describe('PSU Official Email Domain & OTP Verification Flow', () => {
     await expect(page.locator('text=202380123@psu.palawan.edu.ph')).toBeVisible();
     await expect(page.locator('text=Two Ways to Verify:')).toBeVisible();
 
-    // Verify 6 OTP inputs are rendered
+    // Verify 8 OTP inputs are rendered
     const digitInputs = page.locator('input[inputmode="numeric"]');
-    await expect(digitInputs).toHaveCount(6);
+    await expect(digitInputs).toHaveCount(8);
 
     // Verify Resend countdown
     await expect(page.getByText(/resend code in/i)).toBeVisible();
@@ -97,10 +97,10 @@ test.describe('PSU Official Email Domain & OTP Verification Flow', () => {
     await digitInputs.nth(0).fill('9');
     await expect(digitInputs.nth(0)).toHaveValue('9');
 
-    // Test pasting a 6-digit OTP
+    // Test pasting an 8-digit OTP (e.g. 38671470)
     await digitInputs.nth(0).evaluate((el) => {
       const clipboardData = new DataTransfer();
-      clipboardData.setData('text/plain', '123456');
+      clipboardData.setData('text/plain', '38671470');
       const pasteEvent = new ClipboardEvent('paste', {
         clipboardData,
         bubbles: true,
@@ -109,12 +109,14 @@ test.describe('PSU Official Email Domain & OTP Verification Flow', () => {
       el.dispatchEvent(pasteEvent);
     });
 
-    await expect(digitInputs.nth(0)).toHaveValue('1');
-    await expect(digitInputs.nth(1)).toHaveValue('2');
-    await expect(digitInputs.nth(2)).toHaveValue('3');
-    await expect(digitInputs.nth(3)).toHaveValue('4');
-    await expect(digitInputs.nth(4)).toHaveValue('5');
-    await expect(digitInputs.nth(5)).toHaveValue('6');
+    await expect(digitInputs.nth(0)).toHaveValue('3');
+    await expect(digitInputs.nth(1)).toHaveValue('8');
+    await expect(digitInputs.nth(2)).toHaveValue('6');
+    await expect(digitInputs.nth(3)).toHaveValue('7');
+    await expect(digitInputs.nth(4)).toHaveValue('1');
+    await expect(digitInputs.nth(5)).toHaveValue('4');
+    await expect(digitInputs.nth(6)).toHaveValue('7');
+    await expect(digitInputs.nth(7)).toHaveValue('0');
 
     // Test back button returns to the registration form
     const backBtn = page.getByRole('button', { name: /back to registration form/i });
