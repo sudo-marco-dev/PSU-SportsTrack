@@ -85,7 +85,7 @@ export async function generateFakerUsers(
       const colConfig = COLLEGE_CONFIGS[Math.floor(Math.random() * COLLEGE_CONFIGS.length)];
       const collegeId = collegeMap.get(colConfig.name) || null;
       const program = colConfig.programs[Math.floor(Math.random() * colConfig.programs.length)];
-      const yearLevel = `${Math.floor(1 + Math.random() * 4)}th Year`;
+      const yearLevel = Math.floor(1 + Math.random() * 4);
 
       const studentNumber = assignedRole === 'player_student' ? `2024-8-${uniqueSuffix}` : null;
       const employeeId = assignedRole !== 'player_student' ? `EMP-2024-${uniqueSuffix}` : null;

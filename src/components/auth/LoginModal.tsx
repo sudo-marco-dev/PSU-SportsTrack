@@ -34,6 +34,7 @@ import { PasswordPolicyMeter } from '@/components/auth/PasswordPolicyMeter';
 import { LegalModal } from '@/components/legal/LegalModal';
 import { OtpVerificationStep } from '@/components/auth/OtpVerificationStep';
 import { LEGAL_ACCEPTANCE_STORAGE_KEY, REGISTER_DRAFT_STORAGE_KEY } from '@/pages/Legal';
+import { getFriendlyErrorMessage } from '@/lib/friendlyErrors';
 
 const PSU_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@psu\.palawan\.edu\.ph$/i;
 
@@ -74,17 +75,7 @@ const registerSchema = z.object({
 });
 
 const getAuthErrorMessage = (rawMessage: string): string => {
-  const msg = rawMessage.toLowerCase();
-  if (msg.includes('invalid login credentials') || msg.includes('invalid credentials')) {
-    return 'Invalid email or password. Please verify your credentials (check for typos and Caps Lock).';
-  }
-  if (msg.includes('email not confirmed')) {
-    return 'Your email address has not been confirmed yet. Please verify your email or contact support.';
-  }
-  if (msg.includes('too many requests') || msg.includes('rate limit')) {
-    return 'Too many login attempts. Please wait a few moments before trying again.';
-  }
-  return rawMessage;
+  return getFriendlyErrorMessage(rawMessage, 'Invalid email or password. Please verify your credentials and try again.');
 };
 
 const getLockoutKey = (email: string) => `psu_lockout_${email.trim().toLowerCase()}`;
@@ -494,7 +485,7 @@ export const LoginModal = () => {
       });
 
       if (authError) {
-        toast.error(authError.message);
+        toast.error(getFriendlyErrorMessage(authError));
         return;
       }
 

@@ -4,7 +4,7 @@ const supabaseUrl =
   import.meta.env.VITE_SUPABASE_URL || 'https://kxnkdhznnpwvnljjmfwl.supabase.co';
 const supabaseAnonKey =
   import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4bmtkaHpubnB3dm5samptZndsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6MjAwMDAwMDAwMH0.placeholder';
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4bmtkaHpubnB3dm5samptZndsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg5ODQ2MDcsImV4cCI6MjA5NDU2MDYwN30.9oZ5dtOOQtOzkyuu8t_lSauQAH1e992ED0HGI8WOs9M';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

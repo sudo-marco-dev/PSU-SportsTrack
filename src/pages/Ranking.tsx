@@ -1035,7 +1035,6 @@ export const Ranking = () => {
                   <SelectItem value="all" className="text-xs font-medium">All Competitions</SelectItem>
                   <SelectItem value="Binturungan" className="text-xs font-medium">Binturungan</SelectItem>
                   <SelectItem value="Inter-Collegiate" className="text-xs font-medium">Inter-Collegiate League</SelectItem>
-                  <SelectItem value="STRASUC" className="text-xs font-medium">STRASUC</SelectItem>
                   <SelectItem value="Friendly" className="text-xs font-medium">Friendly Match</SelectItem>
                   <SelectItem value="Faculty and Staff Friendly Games" className="text-xs font-medium">Faculty & Staff Friendly Games</SelectItem>
                 </SelectContent>

@@ -86,7 +86,7 @@ type DatabaseUser = {
   employee_id?: string | null;
   department?: string | null;
   program?: string | null;
-  year_level?: string | null;
+  year_level?: number | string | null;
   created_at?: string;
 };
 

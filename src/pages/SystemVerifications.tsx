@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { formatYearLevel, parseYearLevelInt } from '@/lib/formatYearLevel';
 import {
   ShieldCheck,
   FileText,
@@ -71,7 +72,7 @@ type PendingDocument = {
     employee_id?: string | null;
     department?: string | null;
     program?: string | null;
-    year_level?: string | null;
+    year_level?: number | string | null;
     age?: number | null;
     colleges?: { college_name: string } | { college_name: string }[];
   } | null;
@@ -197,7 +198,10 @@ export const SystemVerifications = () => {
       } else {
         if (doc.extracted_student_no) userUpdates.student_number = doc.extracted_student_no;
         if (doc.extracted_program) userUpdates.program = doc.extracted_program;
-        if (doc.extracted_year_level) userUpdates.year_level = doc.extracted_year_level;
+        if (doc.extracted_year_level) {
+          const parsedYr = parseYearLevelInt(doc.extracted_year_level);
+          if (parsedYr !== null) userUpdates.year_level = parsedYr;
+        }
       }
       if (doc.extracted_age) userUpdates.age = doc.extracted_age;
 
@@ -1047,7 +1051,7 @@ export const SystemVerifications = () => {
                               {doc.extracted_program || doc.users?.department || 'N/A'}
                             </span>
                             <span className="text-[10px] text-slate-400 block truncate max-w-[150px]">
-                              {doc.extracted_year_level ? `${doc.extracted_year_level} • ` : ''}
+                              {doc.extracted_year_level ? `${formatYearLevel(doc.extracted_year_level)} • ` : ''}
                               {doc.extracted_school_year || 'Term N/A'}
                             </span>
                           </div>
@@ -1330,7 +1334,7 @@ export const SystemVerifications = () => {
                           <span className="text-slate-400 text-[10px] flex items-center gap-1">
                             <Layers className="size-3 text-orange-400" /> Year Level:
                           </span>
-                          <span className="font-bold text-white">{previewDoc.extracted_year_level || 'N/A'}</span>
+                          <span className="font-bold text-white">{previewDoc.extracted_year_level ? formatYearLevel(previewDoc.extracted_year_level) : 'N/A'}</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-slate-400 text-[10px] flex items-center gap-1">

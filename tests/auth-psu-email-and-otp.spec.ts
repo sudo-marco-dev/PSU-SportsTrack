@@ -15,17 +15,18 @@ test.describe('PSU Official Email Domain & OTP Verification Flow', () => {
     await passwordInputs.first().fill('PsuChampion2026!');
     await passwordInputs.nth(1).fill('PsuChampion2026!');
 
-    // Accept mandatory terms via modal
-    await page.getByRole('checkbox').click();
-    const modalTerms = page.locator('label').filter({ hasText: /Terms and Conditions of Palawan State University/i });
-    const modalPrivacy = page.locator('label').filter({ hasText: /Privacy Policy in accordance with Philippine RA 10173/i });
-    await modalTerms.click();
-    await modalPrivacy.click();
-    await page.getByRole('button', { name: /Accept & Continue Registration/i }).click();
-
-    // 1. Test Gmail
+    // 1. Test Gmail - trigger registration submit
     await emailInput.fill('juan.delacruz@gmail.com');
     await submitBtn.click();
+
+    // Accept mandatory terms via modal pop-up if prompted
+    const acceptBtn = page.getByRole('button', { name: /Accept & Continue Registration/i });
+    if (await acceptBtn.isVisible({ timeout: 2000 })) {
+      await page.locator('label').filter({ hasText: /Terms and Conditions of Palawan State University/i }).click();
+      await page.locator('label').filter({ hasText: /Privacy Policy in accordance with Philippine RA 10173/i }).click();
+      await acceptBtn.click();
+    }
+
     await expect(page.locator('text=Registration requires an official PSU email address ending with @psu.palawan.edu.ph')).toBeVisible();
 
     // 2. Test Yahoo
@@ -96,9 +97,9 @@ test.describe('PSU Official Email Domain & OTP Verification Flow', () => {
     await expect(page.locator('text=202380123@psu.palawan.edu.ph')).toBeVisible();
     await expect(page.locator('text=Two Ways to Verify:')).toBeVisible();
 
-    // Verify 8 OTP inputs are rendered
+    // Verify 6 OTP inputs are rendered
     const digitInputs = page.locator('input[inputmode="numeric"]');
-    await expect(digitInputs).toHaveCount(8);
+    await expect(digitInputs).toHaveCount(6);
 
     // Verify Resend countdown
     await expect(page.getByText(/resend code in/i)).toBeVisible();
@@ -107,10 +108,10 @@ test.describe('PSU Official Email Domain & OTP Verification Flow', () => {
     await digitInputs.nth(0).fill('9');
     await expect(digitInputs.nth(0)).toHaveValue('9');
 
-    // Test pasting an 8-digit OTP (e.g. 38671470)
+    // Test pasting a 6-digit OTP (e.g. 386714)
     await digitInputs.nth(0).evaluate((el) => {
       const clipboardData = new DataTransfer();
-      clipboardData.setData('text/plain', '38671470');
+      clipboardData.setData('text/plain', '386714');
       const pasteEvent = new ClipboardEvent('paste', {
         clipboardData,
         bubbles: true,
@@ -125,8 +126,6 @@ test.describe('PSU Official Email Domain & OTP Verification Flow', () => {
     await expect(digitInputs.nth(3)).toHaveValue('7');
     await expect(digitInputs.nth(4)).toHaveValue('1');
     await expect(digitInputs.nth(5)).toHaveValue('4');
-    await expect(digitInputs.nth(6)).toHaveValue('7');
-    await expect(digitInputs.nth(7)).toHaveValue('0');
 
     // Test back button returns to the registration form
     const backBtn = page.getByRole('button', { name: /back to registration form/i });

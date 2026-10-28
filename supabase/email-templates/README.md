@@ -35,7 +35,7 @@ Under **Authentication** -> **Providers** -> **Email**:
 1. **Enable email provider**: `ON`
 2. **Confirm email**: `ON` (Required for the dual-pathway OTP code and confirmation link registration flow).
 3. **Secure email change**: `ON` (Sends confirmation to both emails when updated).
-4. **OTP Expiry**: Set to `86400` seconds (24 hours) for sign-up or your desired window.
+4. **OTP Expiry**: Set to `180` seconds (3 minutes) for sign-up (or desired window).
 
 ---
 

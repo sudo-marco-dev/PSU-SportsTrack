@@ -25,6 +25,7 @@ import {
 import { getSportIcon } from '@/lib/sportIcons';
 import { PlayerDossierModal } from '@/components/scouting/PlayerDossierModal';
 import { MatchBoxScoreModal } from '@/components/scouting/MatchBoxScoreModal';
+import { formatYearLevel } from '@/lib/formatYearLevel';
 
 type Team = {
   id: string;
@@ -70,7 +71,7 @@ type Player = {
   preferred_sports?: string[] | null;
   primary_position?: string | null;
   program?: string | null;
-  year_level?: string | null;
+  year_level?: number | string | null;
   colleges: {
     college_name: string;
   } | null;
@@ -624,7 +625,9 @@ export const TeamManagement = () => {
                         }}
                       >
                         <SelectTrigger className="h-12 w-full min-w-0 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-xl font-bold px-3">
-                          <SelectValue placeholder="Select PSU College" />
+                          <SelectValue placeholder="Select PSU College">
+                            {selectedCollegeId && (colleges.find(c => c.id === selectedCollegeId)?.college_name || selectedCollegeId)}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent className="rounded-xl max-w-[calc(100vw-3rem)] sm:max-w-md">
                           {colleges.map((c) => (
@@ -652,7 +655,9 @@ export const TeamManagement = () => {
                         }}
                       >
                         <SelectTrigger className="h-12 w-full min-w-0 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 rounded-xl font-bold px-3">
-                          <SelectValue placeholder="Select Binturungan Tribe" />
+                          <SelectValue placeholder="Select Binturungan Tribe">
+                            {selectedClusterId && (clusters.find(c => c.id === selectedClusterId)?.name || selectedClusterId)}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent className="rounded-xl max-w-[calc(100vw-3rem)] sm:max-w-md">
                           {clusters.map((cl) => (
@@ -1335,7 +1340,7 @@ export const TeamManagement = () => {
                               <CardDescription className="font-bold text-orange-500 uppercase text-[9px] tracking-[0.15em] mt-0.5 break-words line-clamp-2 leading-snug flex items-center gap-1.5">
                                 <span>{player.primary_position || summary?.positions[0] || 'Verified Athlete'}</span>
                                 {player.year_level && (
-                                  <span className="text-slate-400">• {player.year_level}</span>
+                                  <span className="text-slate-400">• {formatYearLevel(player.year_level)}</span>
                                 )}
                               </CardDescription>
                             </div>
