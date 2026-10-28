@@ -103,6 +103,16 @@ test.describe('Registration Page Role Dropdown & Non-Overlapping Verification', 
 
 test.describe('Login Modal Create Account Role & Department Dropdowns', () => {
   test('should display formatted roles and non-overlapping Department dropdown in LoginModal', async ({ page }) => {
+    await page.route('**/rest/v1/colleges*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          { id: 'col-1', college_name: 'College of Sciences (CS)' },
+          { id: 'col-2', college_name: 'College of Engineering and Technology (CET)' },
+        ]),
+      });
+    });
     await page.goto('/');
 
     // Locate and click Log In button

@@ -352,8 +352,7 @@ export const AppLayout = () => {
           </ErrorBoundary>
         </main>
 
-        {/* Mobile Bottom Navigation Rail — Hidden on /legal which renders its own dedicated sticky bottom bar */}
-        {location.pathname !== '/legal' && (
+        {/* Mobile Bottom Navigation Rail */}
         <nav
           aria-label="Mobile Navigation"
           className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-slate-900/95 backdrop-blur-md border-t border-white/15 pb-safe w-full max-w-[100vw] overflow-hidden shadow-2xl [isolation:isolate]"
@@ -487,7 +486,6 @@ export const AppLayout = () => {
             </button>
           </div>
         </nav>
-        )}
       </div>
 
       {/* Global Sign Out Confirmation Dialog */}

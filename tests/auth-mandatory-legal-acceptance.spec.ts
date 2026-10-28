@@ -1,4 +1,33 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+async function scrollLegalModalToAcceptance(page: Page) {
+  const scrollContainer = page.getByTestId('modal-legal-scroll-container');
+  // Scroll Terms to 100%
+  await scrollContainer.evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+    el.dispatchEvent(new Event('scroll'));
+  });
+
+  // Advance to Privacy
+  const nextBtn = page.getByTestId('modal-next-read-privacy-btn');
+  await expect(nextBtn).toBeVisible();
+  await nextBtn.click();
+
+  // Scroll Privacy to 100%
+  await scrollContainer.evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+    el.dispatchEvent(new Event('scroll'));
+  });
+
+  // Check both checkboxes
+  const termsCheckbox = page.getByTestId('modal-legal-terms-checkbox');
+  const privacyCheckbox = page.getByTestId('modal-legal-privacy-checkbox');
+  await expect(termsCheckbox).toBeEnabled();
+  await expect(privacyCheckbox).toBeEnabled();
+
+  await termsCheckbox.click();
+  await privacyCheckbox.click();
+}
 
 test.describe('Mandatory Terms & Privacy Policy Pop-up on Account Creation', () => {
   test('should mandatorily pop up legal modal upon clicking Complete Registration on /register', async ({ page }) => {
@@ -18,40 +47,55 @@ test.describe('Mandatory Terms & Privacy Policy Pop-up on Account Creation', () 
     const submitBtn = page.getByRole('button', { name: /Complete Registration/i });
     await submitBtn.click();
 
-    // Verify mandatory legal modal immediately pops up
-    const acceptBtn = page.getByRole('button', { name: /Accept & Continue Registration/i });
+    // Verify mandatory legal modal immediately pops up without page redirect
+    await expect(page).toHaveURL(/\/register$/);
+    const acceptBtn = page.getByTestId('modal-legal-accept-btn');
     await expect(acceptBtn).toBeVisible();
 
     // Verify Accept button is initially disabled
     await expect(acceptBtn).toBeDisabled();
 
-    // Verify the two explicit checkboxes inside the modal
-    const termsCheck = page.locator('label').filter({ hasText: /Terms and Conditions of Palawan State University/i });
-    const privacyCheck = page.locator('label').filter({ hasText: /Privacy Policy in accordance with Philippine RA 10173/i });
+    // Checkboxes are initially disabled before scrolling
+    const termsCheckbox = page.getByTestId('modal-legal-terms-checkbox');
+    const privacyCheckbox = page.getByTestId('modal-legal-privacy-checkbox');
+    await expect(termsCheckbox).toBeDisabled();
+    await expect(privacyCheckbox).toBeDisabled();
 
-    await expect(termsCheck).toBeVisible();
-    await expect(privacyCheck).toBeVisible();
+    // Step 1: Scroll Terms to bottom
+    const scrollContainer = page.getByTestId('modal-legal-scroll-container');
+    await scrollContainer.evaluate((el) => {
+      el.scrollTop = el.scrollHeight;
+      el.dispatchEvent(new Event('scroll'));
+    });
 
-    // Check only the Terms checkbox -> Accept button should remain disabled
-    await termsCheck.click();
-    await expect(acceptBtn).toBeDisabled();
+    // Terms checkbox is now unlocked and enabled!
+    await expect(termsCheckbox).toBeEnabled();
+    await termsCheckbox.click();
+    await expect(acceptBtn).toBeDisabled(); // Privacy not yet scrolled/accepted
 
-    // Switch between tabs inside modal to review Privacy Policy
-    const privacyTab = page.getByRole('tab', { name: /Privacy Policy/i });
-    await privacyTab.click();
-    await expect(page.locator('text=Philippine Data Privacy Act of 2012').first()).toBeVisible();
+    // Step 2: Advance to Privacy tab
+    const nextBtn = page.getByTestId('modal-next-read-privacy-btn');
+    await expect(nextBtn).toBeVisible();
+    await nextBtn.click();
 
-    // Check the Privacy Policy checkbox -> Accept button should now be enabled!
-    await privacyCheck.click();
+    // Scroll Privacy container to 100%
+    await scrollContainer.evaluate((el) => {
+      el.scrollTop = el.scrollHeight;
+      el.dispatchEvent(new Event('scroll'));
+    });
+
+    // Privacy checkbox is now enabled!
+    await expect(privacyCheckbox).toBeEnabled();
+    await privacyCheckbox.click();
     await expect(acceptBtn).toBeEnabled();
 
     // Click Decline & Cancel to test cancellation flow
-    const declineBtn = page.getByRole('button', { name: /Decline & Cancel/i });
+    const declineBtn = page.getByTestId('modal-legal-decline-btn');
     await declineBtn.click();
 
     // Modal should close and user remains on register page
     await expect(acceptBtn).not.toBeVisible();
-    await expect(page).toHaveURL(/\/register/);
+    await expect(page).toHaveURL(/\/register$/);
   });
 
   test('should accept both terms & privacy and seamlessly proceed to OTP verification', async ({ page }) => {
@@ -91,15 +135,11 @@ test.describe('Mandatory Terms & Privacy Policy Pop-up on Account Creation', () 
     await page.getByRole('button', { name: /Complete Registration/i }).click();
 
     // Verify modal pops up
-    const acceptBtn = page.getByRole('button', { name: /Accept & Continue Registration/i });
+    const acceptBtn = page.getByTestId('modal-legal-accept-btn');
     await expect(acceptBtn).toBeVisible();
 
-    // Check both checkboxes
-    const termsCheck = page.locator('label').filter({ hasText: /Terms and Conditions of Palawan State University/i });
-    const privacyCheck = page.locator('label').filter({ hasText: /Privacy Policy in accordance with Philippine RA 10173/i });
-
-    await termsCheck.click();
-    await privacyCheck.click();
+    // Complete scroll gating and accept
+    await scrollLegalModalToAcceptance(page);
     await expect(acceptBtn).toBeEnabled();
 
     // Click Accept & Continue Registration
@@ -159,16 +199,12 @@ test.describe('Mandatory Terms & Privacy Policy Pop-up on Account Creation', () 
     await submitAccountBtn.click();
 
     // Verify mandatory legal modal appears
-    const acceptBtn = page.getByRole('button', { name: /Accept & Continue Registration/i });
+    const acceptBtn = page.getByTestId('modal-legal-accept-btn');
     await expect(acceptBtn).toBeVisible();
     await expect(acceptBtn).toBeDisabled();
 
-    // Check both
-    const termsCheck = page.locator('label').filter({ hasText: /Terms and Conditions of Palawan State University/i });
-    const privacyCheck = page.locator('label').filter({ hasText: /Privacy Policy in accordance with Philippine RA 10173/i });
-
-    await termsCheck.click();
-    await privacyCheck.click();
+    // Complete scroll gating and accept
+    await scrollLegalModalToAcceptance(page);
     await expect(acceptBtn).toBeEnabled();
 
     // Accept & Continue
@@ -178,5 +214,57 @@ test.describe('Mandatory Terms & Privacy Policy Pop-up on Account Creation', () 
     // Transition to OTP verification inside modal
     const otpHeading = page.getByRole('heading', { name: /ENTER OTP CODE/i });
     await expect(otpHeading).toBeVisible({ timeout: 10000 });
+  });
+
+  test('should open in-context modal directly when clicking unchecked terms checkbox on /register without redirecting to /legal', async ({ page }) => {
+    await page.goto('/register');
+    await page.waitForLoadState('networkidle');
+
+    // Tap the unchecked terms checkbox
+    const regCheckbox = page.getByTestId('register-terms-checkbox');
+    await expect(regCheckbox).toBeVisible();
+    await regCheckbox.click();
+
+    // Verify modal pops up in-place, URL stays /register
+    await expect(page).toHaveURL(/\/register$/);
+    const acceptBtn = page.getByTestId('modal-legal-accept-btn');
+    await expect(acceptBtn).toBeVisible();
+
+    // Complete scroll gating and accept
+    await scrollLegalModalToAcceptance(page);
+    await acceptBtn.click();
+
+    // Modal closes, user is still on /register, and checkbox is checked in-place
+    await expect(acceptBtn).not.toBeVisible();
+    await expect(page).toHaveURL(/\/register$/);
+    await expect(page.getByTestId('register-terms-checkbox')).toHaveAttribute('data-checked', '');
+  });
+
+  test('should open in-context modal directly when clicking unchecked terms checkbox in LoginModal without redirecting to /legal', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    // Open Login Modal and switch to Create Account
+    await page.getByRole('button', { name: /Log In/i }).first().click();
+    await page.getByRole('button', { name: /Create Account/i }).click();
+
+    // Tap the unchecked terms checkbox inside LoginModal
+    const modalCheckbox = page.getByTestId('modal-register-terms-checkbox');
+    await expect(modalCheckbox).toBeVisible();
+    await modalCheckbox.click();
+
+    // Verify modal pops up in-place, URL stays /
+    await expect(page).toHaveURL(/\/$/);
+    const acceptBtn = page.getByTestId('modal-legal-accept-btn');
+    await expect(acceptBtn).toBeVisible();
+
+    // Complete scroll gating and accept
+    await scrollLegalModalToAcceptance(page);
+    await acceptBtn.click();
+
+    // Modal closes, LoginModal remains open in Create Account view, and checkbox is checked in-place
+    await expect(acceptBtn).not.toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByTestId('modal-register-terms-checkbox')).toHaveAttribute('data-checked', '');
   });
 });

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,6 @@ import {
   Building,
   Mail,
   ArrowRight,
-  ExternalLink,
   Lock,
   ChevronUp,
   ChevronDown,
@@ -35,9 +33,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
   mandatoryAcceptance = false,
   onAccept,
   onDecline,
-  onReadFullPage,
 }) => {
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'privacy' | 'terms'>(defaultTab);
   const [termsChecked, setTermsChecked] = useState(false);
   const [privacyChecked, setPrivacyChecked] = useState(false);
@@ -55,19 +51,27 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
     const maxScroll = el.scrollHeight - el.clientHeight;
     let pct = 0;
-    if (maxScroll <= 24) {
+    if (maxScroll <= 24 || el.scrollTop >= maxScroll - 24) {
       pct = 100;
     } else {
       pct = Math.min(100, Math.max(0, Math.round((el.scrollTop / (maxScroll - 16)) * 100)));
     }
 
     if (tab === 'terms') {
-      setTermsProgress((prev) => Math.max(prev, pct));
+      setTermsProgress((prev) => {
+        const next = Math.max(prev, pct);
+        if (next >= 98) setHasReadTerms(true);
+        return next;
+      });
       if (pct >= 98) {
         setHasReadTerms(true);
       }
     } else {
-      setPrivacyProgress((prev) => Math.max(prev, pct));
+      setPrivacyProgress((prev) => {
+        const next = Math.max(prev, pct);
+        if (next >= 98) setHasReadPrivacy(true);
+        return next;
+      });
       if (pct >= 98) {
         setHasReadPrivacy(true);
       }
@@ -142,15 +146,6 @@ export const LegalModal: React.FC<LegalModalProps> = ({
     }
   };
 
-  const handleOpenFullPage = () => {
-    if (onReadFullPage) {
-      onReadFullPage(activeTab);
-      return;
-    }
-    onOpenChange(false);
-    navigate(`/legal?mode=${mandatoryAcceptance ? 'accept' : 'view'}&tab=${activeTab}`);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[96vw] sm:max-w-2xl lg:max-w-3xl rounded-2xl sm:rounded-3xl p-3.5 xs:p-4 sm:p-6 bg-slate-950 text-white border border-white/15 max-h-[90dvh] short:max-h-[94dvh] flex flex-col gap-2.5 sm:gap-3">
@@ -165,14 +160,6 @@ export const LegalModal: React.FC<LegalModalProps> = ({
               <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
                 Effective: SY 2026-2027
               </span>
-              <button
-                type="button"
-                onClick={handleOpenFullPage}
-                className="inline-flex items-center gap-1 text-[10px] font-bold text-orange-400 hover:text-orange-300 underline underline-offset-2 cursor-pointer whitespace-nowrap"
-              >
-                <ExternalLink className="size-3" />
-                <span>Read on Full Page</span>
-              </button>
             </div>
           </div>
 
@@ -237,6 +224,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
         {/* Scrollable Content */}
         <div
           ref={scrollContainerRef}
+          data-testid="modal-legal-scroll-container"
           onScroll={() => evaluateScrollProgress(activeTab)}
           className="flex-1 min-h-[160px] overflow-y-auto pr-1 py-2.5 sm:py-3 space-y-5 text-xs sm:text-sm text-slate-300 leading-relaxed scrollbar-thin scrollbar-thumb-white/15"
         >
@@ -271,12 +259,17 @@ export const LegalModal: React.FC<LegalModalProps> = ({
               <div className="pt-3 border-t border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-slate-900/90 border border-orange-500/30">
                 <div className="text-[11px] text-slate-300">
                   <span className="font-black uppercase text-orange-400 block">
-                    Step 1 Complete • Terms &amp; Conditions Reviewed
+                    {mandatoryAcceptance ? 'Step 1 Complete • Terms & Conditions Reviewed' : 'Next Policy Document'}
                   </span>
-                  <span>Proceed to read the Privacy Policy to unlock full registration acceptance.</span>
+                  <span>
+                    {mandatoryAcceptance
+                      ? 'Proceed to read the Privacy Policy to unlock full registration acceptance.'
+                      : 'Proceed to review the official Privacy Policy.'}
+                  </span>
                 </div>
                 <Button
                   type="button"
+                  data-testid="modal-next-read-privacy-btn"
                   onClick={handleGoToPrivacyStep}
                   className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-[11px] h-9 px-4 rounded-xl shrink-0 gap-1.5 cursor-pointer"
                 >
@@ -389,48 +382,78 @@ export const LegalModal: React.FC<LegalModalProps> = ({
               <div className="space-y-2.5 animate-in fade-in duration-200">
                 <div className="p-2.5 sm:p-3.5 rounded-2xl bg-slate-900 border border-white/15 space-y-2">
                   <label
-                    onClick={() => {
-                      if (!hasReadTerms) {
-                        setHasReadTerms(true);
-                        setTermsProgress(100);
-                      }
-                    }}
-                    className="flex items-start gap-2.5 cursor-pointer text-[11px] sm:text-xs select-none"
+                    htmlFor="modal-legal-terms-checkbox"
+                    className={`flex items-start gap-2.5 text-[11px] sm:text-xs select-none transition-colors ${
+                      hasReadTerms ? 'cursor-pointer' : 'opacity-70 cursor-not-allowed'
+                    }`}
                   >
                     <Checkbox
+                      id="modal-legal-terms-checkbox"
+                      data-testid="modal-legal-terms-checkbox"
+                      disabled={!hasReadTerms}
                       checked={termsChecked}
                       onCheckedChange={(c) => {
-                        setHasReadTerms(true);
-                        setTermsProgress(100);
-                        setTermsChecked(Boolean(c));
+                        if (hasReadTerms) {
+                          setTermsChecked(Boolean(c));
+                        }
                       }}
                       className="mt-0.5 border-orange-400 data-[checked]:bg-orange-500 data-[checked]:border-orange-500 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
                     />
-                    <span className="text-slate-200 leading-snug">
-                      I have read, understood, and agree to the <strong>Terms and Conditions</strong> of Palawan State University SportsTrack.
-                    </span>
+                    <div className="space-y-0.5 min-w-0 flex-1">
+                      <span className="text-slate-200 leading-snug block">
+                        I have read, understood, and agree to the <strong>Terms and Conditions</strong> of Palawan State University SportsTrack.
+                      </span>
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${hasReadTerms ? 'text-emerald-400' : 'text-orange-400'}`}>
+                        {hasReadTerms ? (
+                          <>
+                            <CheckCircle2 className="size-3" />
+                            <span>Unlocked (100% Read)</span>
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="size-3" />
+                            <span>Scroll Terms &amp; Conditions to 100% to unlock ({termsProgress}%)</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
                   </label>
                   <label
-                    onClick={() => {
-                      if (!hasReadPrivacy) {
-                        setHasReadPrivacy(true);
-                        setPrivacyProgress(100);
-                      }
-                    }}
-                    className="flex items-start gap-2.5 cursor-pointer text-[11px] sm:text-xs select-none"
+                    htmlFor="modal-legal-privacy-checkbox"
+                    className={`flex items-start gap-2.5 text-[11px] sm:text-xs select-none transition-colors ${
+                      hasReadPrivacy ? 'cursor-pointer' : 'opacity-70 cursor-not-allowed'
+                    }`}
                   >
                     <Checkbox
+                      id="modal-legal-privacy-checkbox"
+                      data-testid="modal-legal-privacy-checkbox"
+                      disabled={!hasReadPrivacy}
                       checked={privacyChecked}
                       onCheckedChange={(c) => {
-                        setHasReadPrivacy(true);
-                        setPrivacyProgress(100);
-                        setPrivacyChecked(Boolean(c));
+                        if (hasReadPrivacy) {
+                          setPrivacyChecked(Boolean(c));
+                        }
                       }}
                       className="mt-0.5 border-orange-400 data-[checked]:bg-orange-500 data-[checked]:border-orange-500 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
                     />
-                    <span className="text-slate-200 leading-snug">
-                      I have read, understood, and agree to the <strong>Privacy Policy</strong> in accordance with Philippine RA 10173 (Data Privacy Act of 2012).
-                    </span>
+                    <div className="space-y-0.5 min-w-0 flex-1">
+                      <span className="text-slate-200 leading-snug block">
+                        I have read, understood, and agree to the <strong>Privacy Policy</strong> in accordance with Philippine RA 10173 (Data Privacy Act of 2012).
+                      </span>
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${hasReadPrivacy ? 'text-emerald-400' : 'text-orange-400'}`}>
+                        {hasReadPrivacy ? (
+                          <>
+                            <CheckCircle2 className="size-3" />
+                            <span>Unlocked (100% Read)</span>
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="size-3" />
+                            <span>Scroll Privacy Policy to 100% to unlock ({privacyProgress}%)</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
                   </label>
                 </div>
 
@@ -438,6 +461,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                   <Button
                     type="button"
                     variant="outline"
+                    data-testid="modal-legal-decline-btn"
                     onClick={() => {
                       onDecline?.();
                       onOpenChange(false);
@@ -448,7 +472,8 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                   </Button>
                   <Button
                     type="button"
-                    disabled={!termsChecked || !privacyChecked}
+                    data-testid="modal-legal-accept-btn"
+                    disabled={!termsChecked || !privacyChecked || !hasReadTerms || !hasReadPrivacy}
                     onClick={() => {
                       const now = new Date().toISOString();
                       onAccept?.(now);

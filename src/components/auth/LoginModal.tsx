@@ -59,7 +59,7 @@ const registerSchema = z.object({
     .regex(/[A-Z]/, { message: 'Password must contain at least one uppercase letter' })
     .regex(/[a-z]/, { message: 'Password must contain at least one lowercase letter' })
     .regex(/[0-9]/, { message: 'Password must contain at least one number' })
-    .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?~`]/, { message: 'Password must contain at least one special symbol' }),
+    .regex(/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~`]/, { message: 'Password must contain at least one special symbol' }),
   confirmPassword: z.string().min(1, { message: 'Please confirm your password' }),
   role: z.enum(['player_student', 'player_faculty', 'player_staff', 'coach'] as const, { message: 'Role is required' }),
   collegeId: z.string().optional(),
@@ -275,30 +275,6 @@ export const LoginModal = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname, location.key, isLoginModalOpen]);
-
-  const handleSaveModalDraftAndNavigateToLegal = (tab: 'terms' | 'privacy') => {
-    const currentReturnTo = `${location.pathname}${location.search}`;
-    hasVisitedLegalRouteRef.current = false;
-    try {
-      const currentValues = registerForm.getValues();
-      sessionStorage.setItem(
-        REGISTER_DRAFT_STORAGE_KEY,
-        JSON.stringify({
-          ...currentValues,
-          termsAcceptedAt,
-          source: 'login-modal',
-          returnTo: currentReturnTo,
-          awaitingLegalReturn: true,
-          visitedLegalPage: false,
-        })
-      );
-    } catch {
-      // ignore storage error
-    }
-    isRestoringFromLegalRef.current = true;
-    closeLoginModal();
-    navigate(`/legal?mode=accept&from=login-modal&tab=${tab}&returnTo=${encodeURIComponent(currentReturnTo)}`);
-  };
 
   // Whenever the login modal is opened or closed, reset unless restoring from /legal
   useEffect(() => {
@@ -1010,26 +986,13 @@ export const LoginModal = () => {
                               checked={field.value}
                               onCheckedChange={(checked) => {
                                 if (checked) {
-                                  handleSaveModalDraftAndNavigateToLegal('terms');
+                                  setLegalModalTab('terms');
+                                  setIsMandatoryLegalModal(true);
+                                  setShouldAutoSubmitAfterModal(false);
+                                  setShowLegalModal(true);
                                 } else {
                                   field.onChange(false);
                                   setTermsAcceptedAt(null);
-                                  try {
-                                    const rawDraft = sessionStorage.getItem(REGISTER_DRAFT_STORAGE_KEY);
-                                    if (rawDraft) {
-                                      const parsed = JSON.parse(rawDraft);
-                                      sessionStorage.setItem(
-                                        REGISTER_DRAFT_STORAGE_KEY,
-                                        JSON.stringify({
-                                          ...parsed,
-                                          termsAccepted: false,
-                                          termsAcceptedAt: null,
-                                        })
-                                      );
-                                    }
-                                  } catch {
-                                    // ignore storage error
-                                  }
                                 }
                               }}
                               className="mt-0.5"
@@ -1042,7 +1005,11 @@ export const LoginModal = () => {
                                 type="button"
                                 onClick={(e) => {
                                   e.preventDefault();
-                                  handleSaveModalDraftAndNavigateToLegal('terms');
+                                  e.stopPropagation();
+                                  setLegalModalTab('terms');
+                                  setIsMandatoryLegalModal(!field.value);
+                                  setShouldAutoSubmitAfterModal(false);
+                                  setShowLegalModal(true);
                                 }}
                                 className="text-orange-400 hover:text-orange-300 underline font-semibold transition-colors cursor-pointer"
                               >
@@ -1053,7 +1020,11 @@ export const LoginModal = () => {
                                 type="button"
                                 onClick={(e) => {
                                   e.preventDefault();
-                                  handleSaveModalDraftAndNavigateToLegal('privacy');
+                                  e.stopPropagation();
+                                  setLegalModalTab('privacy');
+                                  setIsMandatoryLegalModal(!field.value);
+                                  setShouldAutoSubmitAfterModal(false);
+                                  setShowLegalModal(true);
                                 }}
                                 className="text-orange-400 hover:text-orange-300 underline font-semibold transition-colors cursor-pointer"
                               >
@@ -1173,10 +1144,6 @@ export const LoginModal = () => {
         }}
         defaultTab={legalModalTab}
         mandatoryAcceptance={isMandatoryLegalModal}
-        onReadFullPage={(tab) => {
-          setShowLegalModal(false);
-          handleSaveModalDraftAndNavigateToLegal(tab);
-        }}
         onAccept={(timestamp) => {
           setTermsAcceptedAt(timestamp);
           registerForm.setValue('termsAccepted', true, { shouldValidate: true });

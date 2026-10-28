@@ -89,13 +89,13 @@ test.describe('Password Reset Recovery Flow Suite', () => {
       });
     });
 
-    await page.goto('/auth/confirm?token_hash=mock_signup_hash&type=signup');
+    await page.goto('/auth/confirm?token_hash=mock_signup_hash&type=signup&next=/');
 
-    // Should display Account Confirmed!
-    await expect(page.locator('text=Account Confirmed!')).toBeVisible({ timeout: 5000 });
+    // Should display PSU Email Verified!
+    await expect(page.locator('text=PSU Email Verified!')).toBeVisible({ timeout: 5000 });
 
     // Should redirect to root /
-    await page.waitForURL('**/', { timeout: 6000 });
+    await page.waitForURL((url) => url.pathname === '/', { timeout: 6000 });
     expect(new URL(page.url()).pathname).toBe('/');
   });
 });

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Sequential Legal Scroll Verification, Form Persistence & Multi-Device Responsive UX', () => {
-  test('/register: clicking unchecked Terms checkbox saves form state, redirects to /legal, enforces sequential scroll-to-bottom, and restores form on accept without premature submit', async ({
+test.describe('Sequential Legal Scroll Verification, In-Modal Acceptance & Multi-Device Responsive UX', () => {
+  test('/register: clicking unchecked Terms checkbox pops up in-context LegalModal directly, enforces sequential scroll-to-bottom, and checks checkbox in-place without page redirect or premature submit', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 667 });
@@ -20,69 +20,59 @@ test.describe('Sequential Legal Scroll Verification, Form Persistence & Multi-De
     await expect(regCheckbox).toBeVisible();
     await regCheckbox.click();
 
-    // 3. Should redirect to full-page /legal in acceptance mode
-    await expect(page).toHaveURL(/\/legal\?mode=accept&from=register&tab=terms/);
+    // 3. Must NOT redirect to /legal — stays directly on /register with pop-up modal
+    await expect(page).toHaveURL(/\/register$/);
 
-    // 4. Verify slim collapsible sticky bottom bar is visible and compact while reading
-    const stickyBar = page.getByTestId('legal-sticky-bottom-bar');
-    await expect(stickyBar).toBeVisible();
-    const initialBarBox = await stickyBar.boundingBox();
-    expect(initialBarBox).not.toBeNull();
-    expect(initialBarBox!.height).toBeLessThanOrEqual(72);
-
-    // 5. Expand drawer manually to verify both checkboxes and accept button are strictly disabled before scrolling
-    await page.getByTestId('toggle-legal-drawer-btn').click();
-    const termsCheckbox = page.getByTestId('legal-terms-checkbox');
-    const privacyCheckbox = page.getByTestId('legal-privacy-checkbox');
-    const acceptBtn = page.getByTestId('legal-accept-btn');
-
-    await expect(termsCheckbox).toBeDisabled();
-    await expect(privacyCheckbox).toBeDisabled();
+    // 4. In-context LegalModal is visible
+    const acceptBtn = page.getByTestId('modal-legal-accept-btn');
+    await expect(acceptBtn).toBeVisible();
     await expect(acceptBtn).toBeDisabled();
 
-    // Collapse drawer again while reading
-    await page.getByTestId('toggle-legal-drawer-btn').click();
+    // Both checkboxes inside modal must be disabled prior to scrolling
+    const termsCheckbox = page.getByTestId('modal-legal-terms-checkbox');
+    const privacyCheckbox = page.getByTestId('modal-legal-privacy-checkbox');
+    await expect(termsCheckbox).toBeDisabled();
+    await expect(privacyCheckbox).toBeDisabled();
 
-    // 6. Step 1: Scroll Terms & Conditions container to 100%
-    const scrollContainer = page.getByTestId('legal-scroll-container');
+    // 5. Step 1: Scroll Terms & Conditions container to 100%
+    const scrollContainer = page.getByTestId('modal-legal-scroll-container');
     await scrollContainer.evaluate((el) => {
       el.scrollTop = el.scrollHeight;
       el.dispatchEvent(new Event('scroll'));
     });
 
-    await expect(stickyBar).toContainText('Terms: 100%');
+    // Terms checkbox is now unlocked and enabled!
+    await expect(termsCheckbox).toBeEnabled();
 
     // Click "Next: Read Privacy Policy" button at the bottom of Terms
-    const nextPrivacyBtn = page.getByTestId('next-read-privacy-btn');
+    const nextPrivacyBtn = page.getByTestId('modal-next-read-privacy-btn');
     await expect(nextPrivacyBtn).toBeVisible();
     await nextPrivacyBtn.click();
 
-    // Verify we are now on Privacy Policy tab and Privacy checkbox is still locked until scrolled
+    // Verify we are now on Privacy Policy tab inside modal
     await expect(page.getByRole('heading', { name: 'Privacy Policy' })).toBeVisible();
 
-    // 7. Step 2: Scroll Privacy Policy container to 100%
+    // 6. Step 2: Scroll Privacy Policy container to 100%
     await scrollContainer.evaluate((el) => {
       el.scrollTop = el.scrollHeight;
       el.dispatchEvent(new Event('scroll'));
     });
 
-    await expect(stickyBar).toContainText('Privacy: 100%');
-
-    // Drawer should auto-expand once both reach 100%, and both checkboxes should now be enabled
-    await expect(termsCheckbox).toBeEnabled();
+    // Privacy checkbox is now enabled
     await expect(privacyCheckbox).toBeEnabled();
     await expect(acceptBtn).toBeDisabled(); // Still disabled until user checks both boxes
 
-    // 8. Check both checkboxes
+    // 7. Check both checkboxes
     await termsCheckbox.click();
     await expect(acceptBtn).toBeDisabled(); // Still disabled with only 1 checked
     await privacyCheckbox.click();
     await expect(acceptBtn).toBeEnabled();
 
-    // 9. Click "Accept & Return to Registration"
+    // 8. Click "Accept & Continue Registration"
     await acceptBtn.click();
 
-    // 10. Verify navigation back to /register with all form fields preserved and checkbox checked without premature submit
+    // 9. Modal closes, user remains on /register with all form fields preserved and checkbox checked in-place without premature submit
+    await expect(acceptBtn).not.toBeVisible();
     await expect(page).toHaveURL(/\/register$/);
     await expect(page.locator('input[placeholder="Dela Cruz"]')).toHaveValue('Santos');
     await expect(page.locator('input[placeholder="Juan"]')).toHaveValue('Miguel');
@@ -90,13 +80,13 @@ test.describe('Sequential Legal Scroll Verification, Form Persistence & Multi-De
     await expect(passwordInputs.nth(0)).toHaveValue('StrongPass123!');
     await expect(passwordInputs.nth(1)).toHaveValue('StrongPass123!');
 
-    // Checkbox on /register is now checked (data-checked attribute present on @base-ui Checkbox)
+    // Checkbox on /register is now checked in-place
     await expect(page.getByTestId('register-terms-checkbox')).toHaveAttribute('data-checked', '');
     // Complete Registration button is still visible (form was not prematurely submitted)
     await expect(page.getByRole('button', { name: /Complete Registration/i })).toBeVisible();
   });
 
-  test('LoginModal Sign-Up view: clicking unchecked Terms checkbox saves modal draft, redirects to /legal, and re-opens Sign-Up modal with fields restored upon acceptance', async ({
+  test('LoginModal Sign-Up view: clicking unchecked Terms checkbox pops up in-context LegalModal directly, enforces sequential scroll-to-bottom, and checks checkbox in-place without page redirect', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -115,26 +105,26 @@ test.describe('Sequential Legal Scroll Verification, Form Persistence & Multi-De
     const modalCheckbox = page.getByTestId('modal-register-terms-checkbox');
     await modalCheckbox.click();
 
-    // 4. Verify redirect to /legal with from=login-modal
-    await expect(page).toHaveURL(/\/legal\?mode=accept&from=login-modal/);
+    // 4. Must NOT redirect to /legal — stays directly on / with pop-up modal
+    await expect(page).toHaveURL(/\/$/);
 
     // 5. Scroll Terms to 100%, advance to Privacy, scroll Privacy to 100%, check both boxes, and accept
-    const scrollContainer = page.getByTestId('legal-scroll-container');
+    const scrollContainer = page.getByTestId('modal-legal-scroll-container');
     await scrollContainer.evaluate((el) => {
       el.scrollTop = el.scrollHeight;
       el.dispatchEvent(new Event('scroll'));
     });
-    await page.getByTestId('next-read-privacy-btn').click();
+    await page.getByTestId('modal-next-read-privacy-btn').click();
     await scrollContainer.evaluate((el) => {
       el.scrollTop = el.scrollHeight;
       el.dispatchEvent(new Event('scroll'));
     });
 
-    await page.getByTestId('legal-terms-checkbox').click();
-    await page.getByTestId('legal-privacy-checkbox').click();
-    await page.getByTestId('legal-accept-btn').click();
+    await page.getByTestId('modal-legal-terms-checkbox').click();
+    await page.getByTestId('modal-legal-privacy-checkbox').click();
+    await page.getByTestId('modal-legal-accept-btn').click();
 
-    // 6. Verify return to / and automatic re-opening of LoginModal in Create Account mode with fields restored & checkbox checked
+    // 6. Verify modal closes, LoginModal remains open in Create Account mode with fields preserved & checkbox checked in-place
     await expect(page.getByRole('heading', { name: /Create Account/i })).toBeVisible();
     await expect(page.locator('input[placeholder="Dela Cruz"]')).toHaveValue('Villanueva');
     await expect(page.locator('input[placeholder="Juan"]')).toHaveValue('Angela');
@@ -155,7 +145,7 @@ test.describe('Sequential Legal Scroll Verification, Form Persistence & Multi-De
       await page.setViewportSize({ width: vp.width, height: vp.height });
 
       // Check /legal layout & no horizontal overflow
-      await page.goto('/legal?mode=accept&from=register');
+      await page.goto('/legal');
       await expect(page.getByRole('heading', { name: /Official Legal & Governance Policies/i })).toBeVisible();
       const legalOverflow = await page.evaluate(() => {
         return document.documentElement.scrollWidth > document.documentElement.clientWidth + 2;
@@ -193,34 +183,55 @@ test.describe('Sequential Legal Scroll Verification, Form Persistence & Multi-De
     }
   });
 
-  test('LoginModal Sign-Up view: pressing native browser Back button from /legal re-opens Sign-Up modal with draft fields preserved', async ({
+  test('/legal page: pure reference document reader without sticky acceptance drawer, and Back/Close returns to previous page without kicking to /register', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/');
 
-    await page.getByRole('button', { name: /Log In/i }).first().click();
-    await page.getByRole('button', { name: /Create Account/i }).click();
+    // 1. Visit /about first so there is a previous history entry
+    await page.goto('/about');
+    await expect(page.getByRole('heading', { name: /Digital Arena/i })).toBeVisible();
 
-    await page.locator('input[placeholder="Dela Cruz"]').fill('Bautista');
-    await page.locator('input[placeholder="Juan"]').fill('Carlo');
-    await page.locator('input[placeholder="202381234@psu.palawan.edu.ph"]').fill('carlo.b@psu.palawan.edu.ph');
-
-    await page.getByTestId('modal-register-terms-checkbox').click();
-    await expect(page).toHaveURL(/\/legal\?mode=accept&from=login-modal/);
+    // 2. Navigate to /legal
+    await page.goto('/legal');
     await expect(page.getByRole('heading', { name: /Official Legal & Governance Policies/i })).toBeVisible();
 
-    // Press the browser's native Back button instead of in-page buttons
-    await page.goBack();
-    await expect(page).toHaveURL(/\/$/);
+    // 3. Verify sticky bottom acceptance drawer does NOT exist on /legal
+    const stickyBar = page.getByTestId('legal-sticky-bottom-bar');
+    await expect(stickyBar).not.toBeVisible();
+    await expect(page.getByTestId('legal-accept-btn')).not.toBeVisible();
+    await expect(page.getByTestId('legal-decline-btn')).not.toBeVisible();
+    await expect(page.getByTestId('legal-terms-checkbox')).not.toBeVisible();
+    await expect(page.getByTestId('legal-privacy-checkbox')).not.toBeVisible();
 
-    // LoginModal must automatically re-open on Create Account view with draft fields intact
-    await expect(page.getByRole('heading', { name: /Create Account/i })).toBeVisible();
-    await expect(page.locator('input[placeholder="Dela Cruz"]')).toHaveValue('Bautista');
-    await expect(page.locator('input[placeholder="Juan"]')).toHaveValue('Carlo');
-    await expect(page.locator('input[placeholder="202381234@psu.palawan.edu.ph"]')).toHaveValue('carlo.b@psu.palawan.edu.ph');
-    // Since user backed out without accepting, checkbox remains unchecked
-    await expect(page.getByTestId('modal-register-terms-checkbox')).not.toHaveAttribute('data-checked', '');
+    // 4. Tab switching between Terms and Privacy
+    const privacyTab = page.getByRole('tab', { name: /Privacy Policy/i });
+    await privacyTab.click();
+    await expect(page.getByRole('heading', { name: 'Privacy Policy' })).toBeVisible();
+
+    const termsTab = page.getByRole('tab', { name: /Terms & Conditions/i });
+    await termsTab.click();
+    await expect(page.getByRole('heading', { name: 'Terms and Conditions' })).toBeVisible();
+
+    // 5. Test "Next: Read Privacy Policy" guided button at bottom of Terms
+    const nextPrivacyBtn = page.getByTestId('next-read-privacy-btn');
+    await expect(nextPrivacyBtn).toBeVisible();
+    await nextPrivacyBtn.click();
+    await expect(page.getByRole('heading', { name: 'Privacy Policy' })).toBeVisible();
+
+    // 6. Test Back button returns user to /about (not /register!)
+    const backBtn = page.getByRole('button', { name: /^Back$/i }).first();
+    await expect(backBtn).toBeVisible();
+    await backBtn.click();
+    await expect(page).toHaveURL(/\/about$/);
+
+    // 7. Navigate directly to /legal (no history) and click Close button
+    await page.goto('/legal');
+    const closeBtn = page.getByRole('button', { name: /^Close$/i }).first();
+    await expect(closeBtn).toBeVisible();
+    await closeBtn.click();
+    // Must return to home '/' or previous, NEVER /register
+    await expect(page).not.toHaveURL(/\/register$/);
   });
 
   test('/legal orientation change & FacilitatorKiosk tablet/short-screen responsiveness', async ({
@@ -228,7 +239,7 @@ test.describe('Sequential Legal Scroll Verification, Form Persistence & Multi-De
   }) => {
     // 1. Start in portrait (375x667) on /legal and scroll partway
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/legal?mode=accept&from=register');
+    await page.goto('/legal');
 
     const scrollContainer = page.getByTestId('legal-scroll-container');
     await scrollContainer.evaluate((el) => {
@@ -236,13 +247,10 @@ test.describe('Sequential Legal Scroll Verification, Form Persistence & Multi-De
       el.dispatchEvent(new Event('scroll'));
     });
 
-    const stickyBar = page.getByTestId('legal-sticky-bottom-bar');
-    await expect(stickyBar).not.toContainText('Terms: 0%');
-
     // Rotate to landscape (667x375) and back to tall tablet (768x1024)
     await page.setViewportSize({ width: 667, height: 375 });
     await page.setViewportSize({ width: 768, height: 1024 });
-    await expect(stickyBar).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Official Legal & Governance Policies/i })).toBeVisible();
 
     // 2. Verify FacilitatorKiosk on 768x1024 portrait tablet & 375x520 short mobile screen
     await page.route('**/rest/v1/matches*', async (route) => {
@@ -290,4 +298,3 @@ test.describe('Sequential Legal Scroll Verification, Form Persistence & Multi-De
     expect(kioskShortOverflow).toBe(false);
   });
 });
-

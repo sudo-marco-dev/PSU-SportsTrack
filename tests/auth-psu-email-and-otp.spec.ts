@@ -1,4 +1,33 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+async function scrollLegalModalToAcceptance(page: Page) {
+  const scrollContainer = page.getByTestId('modal-legal-scroll-container');
+  // Scroll Terms to 100%
+  await scrollContainer.evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+    el.dispatchEvent(new Event('scroll'));
+  });
+
+  // Advance to Privacy
+  const nextBtn = page.getByTestId('modal-next-read-privacy-btn');
+  await expect(nextBtn).toBeVisible();
+  await nextBtn.click();
+
+  // Scroll Privacy to 100%
+  await scrollContainer.evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+    el.dispatchEvent(new Event('scroll'));
+  });
+
+  // Check both checkboxes
+  const termsCheckbox = page.getByTestId('modal-legal-terms-checkbox');
+  const privacyCheckbox = page.getByTestId('modal-legal-privacy-checkbox');
+  await expect(termsCheckbox).toBeEnabled();
+  await expect(privacyCheckbox).toBeEnabled();
+
+  await termsCheckbox.click();
+  await privacyCheckbox.click();
+}
 
 test.describe('PSU Official Email Domain & OTP Verification Flow', () => {
   test('should reject non-PSU emails and enforce @psu.palawan.edu.ph strictly', async ({ page }) => {
@@ -16,12 +45,9 @@ test.describe('PSU Official Email Domain & OTP Verification Flow', () => {
     await passwordInputs.nth(1).fill('PsuChampion2026!');
 
     // Accept mandatory terms via modal
-    await page.getByRole('checkbox').click();
-    const modalTerms = page.locator('label').filter({ hasText: /Terms and Conditions of Palawan State University/i });
-    const modalPrivacy = page.locator('label').filter({ hasText: /Privacy Policy in accordance with Philippine RA 10173/i });
-    await modalTerms.click();
-    await modalPrivacy.click();
-    await page.getByRole('button', { name: /Accept & Continue Registration/i }).click();
+    await page.getByTestId('register-terms-checkbox').click();
+    await scrollLegalModalToAcceptance(page);
+    await page.getByTestId('modal-legal-accept-btn').click();
 
     // 1. Test Gmail
     await emailInput.fill('juan.delacruz@gmail.com');
@@ -84,10 +110,9 @@ test.describe('PSU Official Email Domain & OTP Verification Flow', () => {
     await passwordInputs.nth(1).fill('PsuChampion2026!');
     // Click submit and accept mandatory legal modal
     await page.getByRole('button', { name: /complete registration/i }).click();
-    const acceptBtn = page.getByRole('button', { name: /Accept & Continue Registration/i });
+    const acceptBtn = page.getByTestId('modal-legal-accept-btn');
     await expect(acceptBtn).toBeVisible();
-    await page.locator('label').filter({ hasText: /Terms and Conditions of Palawan State University/i }).click();
-    await page.locator('label').filter({ hasText: /Privacy Policy in accordance with Philippine RA 10173/i }).click();
+    await scrollLegalModalToAcceptance(page);
     await acceptBtn.click();
 
     // Verify OTP Verification view appears
