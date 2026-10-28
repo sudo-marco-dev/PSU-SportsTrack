@@ -95,7 +95,7 @@ export const MatchCenterHeader: React.FC<MatchCenterHeaderProps> = ({
       </div>
 
       {/* PRIMARY NAVIGATION: SPORT DISCIPLINE RAIL */}
-      <div className="bg-slate-900/5 dark:bg-slate-950/40 border border-slate-200/70 dark:border-slate-800 p-2.5 sm:p-3.5 rounded-2xl md:rounded-[2rem] shadow-sm w-full min-w-0 overflow-hidden">
+      <div className="bg-slate-900/5 dark:bg-slate-950/60 border border-slate-300 dark:border-white/15 p-2.5 sm:p-3.5 rounded-2xl md:rounded-[2rem] shadow-sm w-full min-w-0 overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 mb-2.5 px-1">
           <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 min-w-0">
             <Trophy className="size-3.5 text-orange-500 shrink-0" />
@@ -128,7 +128,7 @@ export const MatchCenterHeader: React.FC<MatchCenterHeaderProps> = ({
             className={`px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-black uppercase italic tracking-tight transition-all duration-150 cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 border ${
               selectedSport === 'all'
                 ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20 ring-1 ring-orange-400 relative z-10'
-                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-orange-500/40'
+                : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-white/15 text-slate-700 dark:text-slate-200 hover:border-orange-500/40'
             }`}
           >
             <Globe className="size-3.5 shrink-0" />
@@ -159,7 +159,7 @@ export const MatchCenterHeader: React.FC<MatchCenterHeaderProps> = ({
                 className={`px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-black uppercase italic tracking-tight transition-all duration-150 cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 border ${
                   isSelected
                     ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20 ring-1 ring-orange-400 relative z-10'
-                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-orange-500/40'
+                    : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-white/15 text-slate-700 dark:text-slate-200 hover:border-orange-500/40'
                 }`}
               >
                 <SportIcon className="size-3.5 shrink-0" />

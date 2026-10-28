@@ -1729,7 +1729,7 @@ export const TeamManagement = () => {
             <DialogTitle className="text-2xl sm:text-3xl font-black italic uppercase tracking-tighter break-words leading-tight text-slate-900 dark:text-white">Manage <span className="text-orange-500">Roster</span></DialogTitle>
             <DialogDescription className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-widest mt-1">View and manage players invited to this team.</DialogDescription>
           </DialogHeader>
-          <div className="py-4 max-h-[60vh] overflow-y-auto overflow-x-hidden pr-1 scrollbar-hide min-w-0 flex-1">
+          <div className="py-4 max-h-[60dvh] overflow-y-auto overflow-x-hidden pr-1 scrollbar-hide min-w-0 flex-1">
             {isLoadingRoster ? (
               <p className="text-center py-8 text-slate-400 font-bold uppercase tracking-widest text-xs animate-pulse">Retrieving Roster...</p>
             ) : rosterMembers.length === 0 ? (

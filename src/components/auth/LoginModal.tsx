@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import {
   Eye,
@@ -33,6 +33,7 @@ import { toast } from 'sonner';
 import { PasswordPolicyMeter } from '@/components/auth/PasswordPolicyMeter';
 import { LegalModal } from '@/components/legal/LegalModal';
 import { OtpVerificationStep } from '@/components/auth/OtpVerificationStep';
+import { LEGAL_ACCEPTANCE_STORAGE_KEY, REGISTER_DRAFT_STORAGE_KEY } from '@/pages/Legal';
 
 const PSU_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@psu\.palawan\.edu\.ph$/i;
 
@@ -89,7 +90,7 @@ const getAuthErrorMessage = (rawMessage: string): string => {
 const getLockoutKey = (email: string) => `psu_lockout_${email.trim().toLowerCase()}`;
 
 export const LoginModal = () => {
-  const { isLoginModalOpen, closeLoginModal } = useAuth();
+  const { isLoginModalOpen, openLoginModal, closeLoginModal } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [authMode, setAuthMode] = useState<'login' | 'register' | 'otp'>('login');
@@ -104,7 +105,10 @@ export const LoginModal = () => {
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<'privacy' | 'terms'>('terms');
   const [isMandatoryLegalModal, setIsMandatoryLegalModal] = useState(false);
+  const [shouldAutoSubmitAfterModal, setShouldAutoSubmitAfterModal] = useState(false);
   const [termsAcceptedAt, setTermsAcceptedAt] = useState<string | null>(null);
+  const isRestoringFromLegalRef = useRef(false);
+  const hasVisitedLegalRouteRef = useRef(false);
 
   // Login Form
   const loginForm = useForm<z.infer<typeof loginSchema>>({
@@ -147,17 +151,149 @@ export const LoginModal = () => {
     localStorage.removeItem('login_attempts');
   }, []);
 
-  // Whenever the login modal is opened or closed, always reset authMode to 'login' and clear form fields
+  // Detect return from /legal when initiated from LoginModal Sign-Up view (both in-page actions & native browser Back button)
+  useEffect(() => {
+    if (location.pathname === '/legal') {
+      hasVisitedLegalRouteRef.current = true;
+      try {
+        const rawDraft = sessionStorage.getItem(REGISTER_DRAFT_STORAGE_KEY);
+        if (rawDraft) {
+          const parsedDraft = JSON.parse(rawDraft);
+          if (parsedDraft.source === 'login-modal' && parsedDraft.awaitingLegalReturn) {
+            sessionStorage.setItem(
+              REGISTER_DRAFT_STORAGE_KEY,
+              JSON.stringify({
+                ...parsedDraft,
+                visitedLegalPage: true,
+              })
+            );
+          }
+        }
+      } catch {
+        // ignore storage error
+      }
+      return;
+    }
+
+    try {
+      const rawAcceptance = sessionStorage.getItem(LEGAL_ACCEPTANCE_STORAGE_KEY);
+      const rawDraft = sessionStorage.getItem(REGISTER_DRAFT_STORAGE_KEY);
+
+      let result: any = null;
+      if (rawAcceptance) {
+        const parsedAcceptance = JSON.parse(rawAcceptance);
+        if (parsedAcceptance.from === 'login-modal') {
+          result = parsedAcceptance;
+          sessionStorage.removeItem(LEGAL_ACCEPTANCE_STORAGE_KEY);
+        }
+      }
+
+      let draft: any = null;
+      if (rawDraft) {
+        const parsedDraft = JSON.parse(rawDraft);
+        if (parsedDraft.source === 'login-modal') {
+          draft = parsedDraft;
+        }
+      }
+
+      const shouldRestoreFromBackOrAction =
+        Boolean(result) ||
+        (Boolean(draft?.awaitingLegalReturn) && (hasVisitedLegalRouteRef.current || Boolean(draft?.visitedLegalPage)));
+      if (!shouldRestoreFromBackOrAction) return;
+
+      hasVisitedLegalRouteRef.current = false;
+      isRestoringFromLegalRef.current = true;
+
+      if (draft) {
+        const acceptedFlag = result ? (result.accepted ? true : result.closedOnly ? Boolean(draft.termsAccepted) : false) : Boolean(draft.termsAccepted);
+        const acceptedTs = result ? (result.accepted ? result.timestamp || new Date().toISOString() : result.closedOnly ? draft.termsAcceptedAt ?? null : null) : draft.termsAcceptedAt ?? null;
+
+        registerForm.reset({
+          lastName: draft.lastName ?? '',
+          firstName: draft.firstName ?? '',
+          email: draft.email ?? '',
+          password: draft.password ?? '',
+          confirmPassword: draft.confirmPassword ?? '',
+          role: draft.role ?? 'player_student',
+          collegeId: draft.collegeId ?? '',
+          employeeId: draft.employeeId ?? '',
+          department: draft.department ?? '',
+          termsAccepted: acceptedFlag,
+        });
+        setTermsAcceptedAt(acceptedTs);
+
+        sessionStorage.setItem(
+          REGISTER_DRAFT_STORAGE_KEY,
+          JSON.stringify({
+            ...draft,
+            termsAccepted: acceptedFlag,
+            termsAcceptedAt: acceptedTs,
+            awaitingLegalReturn: false,
+            visitedLegalPage: false,
+          })
+        );
+      }
+
+      if (result?.accepted) {
+        const ts = result.timestamp || new Date().toISOString();
+        setTermsAcceptedAt(ts);
+        registerForm.setValue('termsAccepted', true, { shouldValidate: true });
+        toast.success('Terms & Conditions and Privacy Policy accepted.');
+      } else if (result && !result.closedOnly) {
+        setTermsAcceptedAt(null);
+        registerForm.setValue('termsAccepted', false, { shouldValidate: false });
+      }
+
+      setAuthMode('register');
+      openLoginModal();
+    } catch {
+      // ignore storage errors
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  const handleSaveModalDraftAndNavigateToLegal = (tab: 'terms' | 'privacy') => {
+    const currentReturnTo = `${location.pathname}${location.search}`;
+    hasVisitedLegalRouteRef.current = false;
+    try {
+      const currentValues = registerForm.getValues();
+      sessionStorage.setItem(
+        REGISTER_DRAFT_STORAGE_KEY,
+        JSON.stringify({
+          ...currentValues,
+          termsAcceptedAt,
+          source: 'login-modal',
+          returnTo: currentReturnTo,
+          awaitingLegalReturn: true,
+          visitedLegalPage: false,
+        })
+      );
+    } catch {
+      // ignore storage error
+    }
+    isRestoringFromLegalRef.current = true;
+    closeLoginModal();
+    navigate(`/legal?mode=accept&from=login-modal&tab=${tab}&returnTo=${encodeURIComponent(currentReturnTo)}`);
+  };
+
+  // Whenever the login modal is opened or closed, reset unless restoring from /legal
   useEffect(() => {
     if (isLoginModalOpen) {
-      setAuthMode('login');
+      if (isRestoringFromLegalRef.current) {
+        setAuthMode('register');
+        isRestoringFromLegalRef.current = false;
+      } else {
+        setAuthMode('login');
+      }
     } else {
-      setAuthMode('login');
-      setShowPassword(false);
-      setShowRegisterPassword(false);
-      setShowRegisterConfirmPassword(false);
-      loginForm.reset();
-      registerForm.reset();
+      if (!isRestoringFromLegalRef.current) {
+        setAuthMode('login');
+        setShowPassword(false);
+        setShowRegisterPassword(false);
+        setShowRegisterConfirmPassword(false);
+        loginForm.reset();
+        registerForm.reset();
+      }
     }
   }, [isLoginModalOpen]);
 
@@ -363,6 +499,8 @@ export const LoginModal = () => {
       }
 
       if (authData.user) {
+        sessionStorage.removeItem(REGISTER_DRAFT_STORAGE_KEY);
+        sessionStorage.removeItem(LEGAL_ACCEPTANCE_STORAGE_KEY);
         if (!authData.session) {
           setPendingOtpEmail(cleanEmail);
           setPendingRole(values.role);
@@ -413,6 +551,7 @@ export const LoginModal = () => {
         'collegeId',
       ]);
       if (!isFieldsValid) return;
+      setShouldAutoSubmitAfterModal(true);
       setIsMandatoryLegalModal(true);
       setShowLegalModal(true);
       return;
@@ -431,7 +570,7 @@ export const LoginModal = () => {
           }
         }}
       >
-        <DialogContent className="w-full max-w-[94vw] sm:max-w-md md:max-w-lg p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-white/10 shadow-2xl bg-slate-950 text-white relative max-h-[92vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-[95vw] sm:max-w-md md:max-w-lg p-4 xs:p-6 sm:p-8 rounded-2xl xs:rounded-[2rem] sm:rounded-[2.5rem] border border-white/15 shadow-2xl bg-slate-950 text-white relative max-h-[92dvh] short:max-h-[95dvh] overflow-y-auto">
           <div>
             {/* Header Badge */}
             <div className="flex items-center mb-5 sm:mb-6">
@@ -840,31 +979,46 @@ export const LoginModal = () => {
                     name="termsAccepted"
                     render={({ field }) => (
                       <FormItem className="space-y-1 pt-1.5">
-                        <div className="flex items-start gap-2.5">
+                        <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-white/[0.03] border border-white/15">
                           <FormControl>
                             <Checkbox
+                              data-testid="modal-register-terms-checkbox"
                               checked={field.value}
                               onCheckedChange={(checked) => {
                                 if (checked) {
-                                  setIsMandatoryLegalModal(true);
-                                  setShowLegalModal(true);
+                                  handleSaveModalDraftAndNavigateToLegal('terms');
                                 } else {
                                   field.onChange(false);
                                   setTermsAcceptedAt(null);
+                                  try {
+                                    const rawDraft = sessionStorage.getItem(REGISTER_DRAFT_STORAGE_KEY);
+                                    if (rawDraft) {
+                                      const parsed = JSON.parse(rawDraft);
+                                      sessionStorage.setItem(
+                                        REGISTER_DRAFT_STORAGE_KEY,
+                                        JSON.stringify({
+                                          ...parsed,
+                                          termsAccepted: false,
+                                          termsAcceptedAt: null,
+                                        })
+                                      );
+                                    }
+                                  } catch {
+                                    // ignore storage error
+                                  }
                                 }
                               }}
+                              className="mt-0.5"
                             />
                           </FormControl>
                           <div className="space-y-1 leading-none">
-                            <FormLabel className="text-[11px] font-normal text-slate-300 cursor-pointer leading-relaxed block">
+                            <FormLabel className="text-[11px] font-normal text-slate-200 cursor-pointer leading-relaxed block">
                               I agree to the{' '}
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.preventDefault();
-                                  setLegalModalTab('terms');
-                                  setIsMandatoryLegalModal(true);
-                                  setShowLegalModal(true);
+                                  handleSaveModalDraftAndNavigateToLegal('terms');
                                 }}
                                 className="text-orange-400 hover:text-orange-300 underline font-semibold transition-colors cursor-pointer"
                               >
@@ -875,9 +1029,7 @@ export const LoginModal = () => {
                                 type="button"
                                 onClick={(e) => {
                                   e.preventDefault();
-                                  setLegalModalTab('privacy');
-                                  setIsMandatoryLegalModal(true);
-                                  setShowLegalModal(true);
+                                  handleSaveModalDraftAndNavigateToLegal('privacy');
                                 }}
                                 className="text-orange-400 hover:text-orange-300 underline font-semibold transition-colors cursor-pointer"
                               >
@@ -990,19 +1142,30 @@ export const LoginModal = () => {
         open={showLegalModal}
         onOpenChange={(open) => {
           setShowLegalModal(open);
-          if (!open) setIsMandatoryLegalModal(false);
+          if (!open) {
+            setIsMandatoryLegalModal(false);
+            setShouldAutoSubmitAfterModal(false);
+          }
         }}
         defaultTab={legalModalTab}
         mandatoryAcceptance={isMandatoryLegalModal}
+        onReadFullPage={(tab) => {
+          setShowLegalModal(false);
+          handleSaveModalDraftAndNavigateToLegal(tab);
+        }}
         onAccept={(timestamp) => {
           setTermsAcceptedAt(timestamp);
           registerForm.setValue('termsAccepted', true, { shouldValidate: true });
           setIsMandatoryLegalModal(false);
-          const currentValues = registerForm.getValues();
-          void onRegisterSubmit(currentValues, timestamp);
+          if (shouldAutoSubmitAfterModal) {
+            setShouldAutoSubmitAfterModal(false);
+            const currentValues = registerForm.getValues();
+            void onRegisterSubmit(currentValues, timestamp);
+          }
         }}
         onDecline={() => {
           setIsMandatoryLegalModal(false);
+          setShouldAutoSubmitAfterModal(false);
           toast.info('You must accept the Terms & Conditions and Privacy Policy to register.');
         }}
       />

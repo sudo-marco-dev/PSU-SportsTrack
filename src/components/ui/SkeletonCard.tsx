@@ -205,7 +205,7 @@ export const SkeletonCard: React.FC<SkeletonCardProps> = ({
   // 5. Kiosk Skeleton (Facilitator Kiosk)
   if (variant === 'kiosk') {
     return (
-      <div className={`min-h-screen p-4 sm:p-6 bg-slate-950 flex flex-col justify-between space-y-6 ${className}`}>
+      <div className={`min-h-dvh p-4 sm:p-6 bg-slate-950 flex flex-col justify-between space-y-6 ${className}`}>
         <div className="flex items-center justify-between border-b border-white/10 pb-4 animate-shimmer">
           <div className="h-6 w-36 bg-slate-800 rounded-lg" />
           <div className="h-8 w-28 bg-orange-500/20 rounded-xl" />
@@ -445,7 +445,7 @@ export const SkeletonCard: React.FC<SkeletonCardProps> = ({
   // 12. Stadium Jumbotron Skeleton
   if (variant === 'stadium') {
     return (
-      <div className={`min-h-screen bg-slate-950 p-6 md:p-12 flex flex-col justify-between text-white space-y-8 animate-in fade-in duration-300 ${className}`}>
+      <div className={`min-h-dvh bg-slate-950 p-6 md:p-12 flex flex-col justify-between text-white space-y-8 animate-in fade-in duration-300 ${className}`}>
         {/* Top Header Pill */}
         <div className="flex items-center justify-between border-b border-white/10 pb-6 animate-shimmer">
           <div className="flex items-center gap-3">

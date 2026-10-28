@@ -2370,7 +2370,7 @@ export const LiveMatch = () => {
           setShowCustomJersey(false);
         }
       }}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col bg-slate-950 border-slate-800 text-white p-0 overflow-hidden shadow-2xl">
+        <DialogContent className="sm:max-w-lg max-h-[90dvh] flex flex-col bg-slate-950 border-slate-800 text-white p-0 overflow-hidden shadow-2xl">
           <div className="p-5 pr-14 border-b border-white/10 bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900">
             <div className="flex items-center gap-2 flex-wrap mb-1.5">
               <Badge className="bg-orange-500 text-slate-950 font-black text-xs px-2.5 py-0.5 shadow-md">

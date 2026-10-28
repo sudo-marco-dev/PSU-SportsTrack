@@ -889,7 +889,7 @@ export const Ranking = () => {
 
       {/* Standings View Format Selector: Balanced Centered Control */}
       <div className="flex justify-center w-full">
-        <div className="w-full sm:w-auto p-1.5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 rounded-2xl shadow-sm">
+        <div className="w-full sm:w-auto p-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 rounded-2xl shadow-sm">
           <div className="flex items-center gap-1.5 sm:gap-2">
             {standingTabs.map((tab) => {
               const isActive = standingView === tab.id;
@@ -899,18 +899,18 @@ export const Ranking = () => {
                   key={tab.id}
                   type="button"
                   onClick={() => setStandingView(tab.id as any)}
-                  className={`flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm uppercase tracking-tight italic transition-all cursor-pointer min-w-0 ${
+                  className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 xs:px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl font-black text-xs sm:text-sm uppercase tracking-tight italic transition-all cursor-pointer min-w-0 ${
                     isActive
                       ? 'flex-1 sm:flex-initial bg-orange-500 text-white shadow-md shadow-orange-500/25'
-                      : 'shrink-0 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
+                      : 'shrink-0 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10'
                   }`}
                 >
-                  <Icon className={`size-4 sm:size-4.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <Icon className={`size-4 sm:size-4.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
                   <span className={`truncate ${isActive ? 'inline' : 'hidden sm:inline'}`}>{tab.shortLabel || tab.label}</span>
                   {tab.count !== undefined && (
                     <span
                       className={`text-[9px] sm:text-[10px] font-mono font-black px-1.5 py-0.5 rounded-md shrink-0 ${
-                        isActive ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-white/10 text-slate-500'
+                        isActive ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-300'
                       }`}
                     >
                       {tab.count}
@@ -924,7 +924,7 @@ export const Ranking = () => {
       </div>
 
       {/* Filter Control Section: Collapsible Drawer on Mobile */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden transition-all">
+      <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 rounded-2xl shadow-sm overflow-hidden transition-all">
         {/* Main Filter Action Bar */}
         <div className="p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between gap-2 bg-slate-50/50 dark:bg-slate-900/50">
           {/* Quick Search */}
@@ -934,7 +934,7 @@ export const Ranking = () => {
               placeholder={standingView === 'college' ? 'Search college or code...' : standingView === 'cluster' ? 'Search tribe or campus...' : 'Search squad name...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 pl-8 text-xs rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus-visible:ring-1 focus-visible:ring-orange-500 w-full font-medium"
+              className="h-9 pl-8 text-xs rounded-xl border-slate-300 dark:border-white/15 bg-white dark:bg-slate-900 focus-visible:ring-1 focus-visible:ring-orange-500 w-full font-medium"
             />
           </div>
 
@@ -946,7 +946,7 @@ export const Ranking = () => {
               className={`h-9 px-3 rounded-xl text-xs font-bold gap-1.5 cursor-pointer transition-all ${
                 isFiltersExpanded || activeFiltersCount > 0
                   ? 'border-orange-500 text-orange-600 dark:text-orange-400 bg-orange-500/10'
-                  : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+                  : 'border-slate-300 dark:border-white/15 text-slate-700 dark:text-slate-300'
               }`}
             >
               <SlidersHorizontal className="size-3.5 text-orange-500" />
@@ -1008,7 +1008,7 @@ export const Ranking = () => {
 
         {/* Collapsible Filter Dropdowns (Visible when expanded or on lg: screens) */}
         <div className={`p-3.5 sm:p-5 ${isFiltersExpanded ? 'block' : 'hidden lg:block'} transition-all duration-300 border-t border-slate-100 dark:border-slate-800`}>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* 1. Tournament Type */}
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">

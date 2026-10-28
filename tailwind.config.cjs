@@ -17,6 +17,17 @@ module.exports = {
       },
     },
     extend: {
+      screens: {
+        xs: "375px",
+        short: { raw: "(max-height: 680px)" },
+      },
+      data: {
+        checked: "checked",
+        unchecked: "unchecked",
+        active: "active",
+        open: "open",
+        closed: "closed",
+      },
       fontFamily: {
         sans: ['"Geist Variable"', 'Inter', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
       },

@@ -38,18 +38,18 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
   onCategoryFilterChange
 }) => {
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl md:rounded-[2rem] p-3 sm:p-4 shadow-sm space-y-3 w-full min-w-0 max-w-full overflow-hidden">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-w-0">
+    <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 rounded-2xl md:rounded-[2rem] p-2.5 xs:p-3 sm:p-4 shadow-sm space-y-3 w-full min-w-0 max-w-full overflow-hidden">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 sm:gap-3 min-w-0">
         {/* Left: Division Filter + Tournament Dropdown + Search Input */}
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-2.5 flex-1 min-w-0">
+        <div className="flex flex-wrap md:flex-nowrap items-center gap-2 sm:gap-2.5 flex-1 min-w-0">
           {/* Division Selector */}
           {onCategoryFilterChange && (
-            <div className="w-[48%] sm:w-40 md:w-44 shrink-0 min-w-0">
+            <div className="w-full xs:w-[calc(50%-0.25rem)] sm:w-44 md:w-44 shrink-0 min-w-0">
               <Select
                 value={categoryFilter || 'all'}
                 onValueChange={(val: string | null) => onCategoryFilterChange(val || 'all')}
               >
-                <SelectTrigger className="h-10 sm:h-11 rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800/80 font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                <SelectTrigger className="h-10 sm:h-11 rounded-xl border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-slate-800/90 font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200">
                   <SelectValue placeholder="All Divisions">
                     {categoryFilter === 'friendly'
                       ? 'Friendly Games'
@@ -71,12 +71,12 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
           )}
 
           {/* Tournament Selector */}
-          <div className="w-[48%] sm:w-60 md:w-68 shrink-0 min-w-0">
+          <div className="w-full xs:w-[calc(50%-0.25rem)] sm:w-60 md:w-64 shrink-0 min-w-0">
             <Select
               value={selectedTournamentId}
               onValueChange={(val: string | null) => onSelectTournament(val || 'all')}
             >
-              <SelectTrigger className="h-10 sm:h-11 rounded-xl border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800/80 font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200">
+              <SelectTrigger className="h-10 sm:h-11 rounded-xl border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-slate-800/90 font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200">
                 <SelectValue placeholder="All Tournaments">
                   {selectedTournamentId === 'all'
                     ? `All Tournaments (${tournaments.length})`
@@ -97,13 +97,13 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
           </div>
 
           {/* Quick Search Input */}
-          <div className="relative flex-1 w-full min-w-0">
+          <div className="relative flex-1 w-full min-w-[180px]">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
             <Input
               placeholder="Search squads, colleges, court venue..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-9 h-10 sm:h-11 rounded-xl bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-white/10 font-medium text-xs text-slate-800 dark:text-white focus:bg-white dark:focus:bg-slate-800 transition-all w-full"
+              className="pl-10 pr-9 h-10 sm:h-11 rounded-xl bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-white/15 font-medium text-xs text-slate-800 dark:text-white focus:bg-white dark:focus:bg-slate-800 transition-all w-full"
             />
             {searchQuery && (
               <button
@@ -119,7 +119,7 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
         </div>
 
         {/* Right: Explicit Phase Switcher (Phase 1 Elimination vs Phase 2 Playoff Bracket) */}
-        <div className="grid grid-cols-2 lg:flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 bg-slate-950 text-white rounded-xl border border-white/10 shadow-md w-full lg:w-auto min-w-0">
+        <div className="grid grid-cols-2 lg:flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 bg-slate-950 text-white rounded-xl border border-white/15 shadow-md w-full lg:w-auto min-w-0">
           {/* Phase 1: Elimination Stage */}
           <button
             type="button"

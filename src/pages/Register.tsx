@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { PasswordPolicyMeter } from '@/components/auth/PasswordPolicyMeter';
 import { LegalModal } from '@/components/legal/LegalModal';
 import { OtpVerificationStep } from '@/components/auth/OtpVerificationStep';
+import { LEGAL_ACCEPTANCE_STORAGE_KEY, REGISTER_DRAFT_STORAGE_KEY } from '@/pages/Legal';
 
 const PSU_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@psu\.palawan\.edu\.ph$/i;
 
@@ -65,8 +66,9 @@ export const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [colleges, setColleges] = useState<{ id: string; college_name: string }[]>([]);
   const [showLegalModal, setShowLegalModal] = useState(false);
-  const [legalModalTab, setLegalModalTab] = useState<'privacy' | 'terms'>('terms');
+  const [legalModalTab] = useState<'privacy' | 'terms'>('terms');
   const [isMandatoryLegalModal, setIsMandatoryLegalModal] = useState(false);
+  const [shouldAutoSubmitAfterModal, setShouldAutoSubmitAfterModal] = useState(false);
   const [termsAcceptedAt, setTermsAcceptedAt] = useState<string | null>(null);
   const [pendingVerification, setPendingVerification] = useState<{
     email: string;
@@ -94,6 +96,70 @@ export const Register = () => {
       termsAccepted: false,
     },
   });
+
+  // Restore saved registration form draft & legal acceptance result when returning from /legal
+  useEffect(() => {
+    try {
+      const rawDraft = sessionStorage.getItem(REGISTER_DRAFT_STORAGE_KEY);
+      if (rawDraft) {
+        const draft = JSON.parse(rawDraft);
+        if (!draft.source || draft.source === 'register') {
+          form.reset({
+            lastName: draft.lastName ?? '',
+            firstName: draft.firstName ?? '',
+            email: draft.email ?? '',
+            password: draft.password ?? '',
+            confirmPassword: draft.confirmPassword ?? '',
+            role: draft.role ?? 'player_student',
+            collegeId: draft.collegeId ?? '',
+            employeeId: draft.employeeId ?? '',
+            department: draft.department ?? '',
+            termsAccepted: Boolean(draft.termsAccepted),
+          });
+          if (draft.termsAcceptedAt) {
+            setTermsAcceptedAt(draft.termsAcceptedAt);
+          }
+        }
+      }
+
+      const rawAcceptance = sessionStorage.getItem(LEGAL_ACCEPTANCE_STORAGE_KEY);
+      if (rawAcceptance) {
+        const result = JSON.parse(rawAcceptance);
+        if (!result.from || result.from === 'register') {
+          sessionStorage.removeItem(LEGAL_ACCEPTANCE_STORAGE_KEY);
+          if (result.accepted) {
+            const ts = result.timestamp || new Date().toISOString();
+            setTermsAcceptedAt(ts);
+            form.setValue('termsAccepted', true, { shouldValidate: true });
+            toast.success('Terms & Conditions and Privacy Policy accepted.');
+          } else if (!result.closedOnly) {
+            setTermsAcceptedAt(null);
+            form.setValue('termsAccepted', false, { shouldValidate: false });
+          }
+        }
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, [form]);
+
+  const handleSaveDraftAndNavigateToLegal = (tab: 'terms' | 'privacy') => {
+    try {
+      const currentValues = form.getValues();
+      sessionStorage.setItem(
+        REGISTER_DRAFT_STORAGE_KEY,
+        JSON.stringify({
+          ...currentValues,
+          termsAcceptedAt,
+          source: 'register',
+          returnTo: '/register',
+        })
+      );
+    } catch {
+      // ignore storage error
+    }
+    navigate(`/legal?mode=accept&from=register&tab=${tab}`);
+  };
 
   const watchedPassword = form.watch('password');
   const watchedConfirmPassword = form.watch('confirmPassword');
@@ -130,6 +196,8 @@ export const Register = () => {
       }
 
       if (authData.user) {
+        sessionStorage.removeItem(REGISTER_DRAFT_STORAGE_KEY);
+        sessionStorage.removeItem(LEGAL_ACCEPTANCE_STORAGE_KEY);
         // If email confirmation is required, authData.session is null
         if (!authData.session) {
           setPendingVerification({
@@ -180,6 +248,7 @@ export const Register = () => {
         'collegeId',
       ]);
       if (!isFieldsValid) return;
+      setShouldAutoSubmitAfterModal(true);
       setIsMandatoryLegalModal(true);
       setShowLegalModal(true);
       return;
@@ -188,16 +257,16 @@ export const Register = () => {
   };
 
   return (
-    <div className="flex min-h-dvh items-center justify-center p-4 bg-slate-900 relative overflow-hidden">
+    <div className="flex min-h-dvh items-center justify-center p-3 xs:p-4 bg-slate-900 relative overflow-hidden">
       {/* Decorative Background Elements */}
       <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-600/20 blur-[120px] rounded-full animate-pulse" />
       <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-600/10 blur-[120px] rounded-full" />
 
-      <Card className="w-full max-w-lg bg-white/5 backdrop-blur-xl border-white/10 shadow-2xl relative z-10 overflow-hidden">
+      <Card className="w-full max-w-lg bg-white/5 backdrop-blur-xl border-white/15 shadow-2xl relative z-10 overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-orange-500" />
 
         {pendingVerification ? (
-          <CardContent className="p-6 sm:p-8 pt-8">
+          <CardContent className="p-5 xs:p-6 sm:p-8 pt-7">
             <OtpVerificationStep
               email={pendingVerification.email}
               role={pendingVerification.role}
@@ -210,15 +279,15 @@ export const Register = () => {
           </CardContent>
         ) : (
           <>
-            <CardHeader className="space-y-1.5 text-center pb-4 pt-7">
-              <CardTitle className="text-3xl sm:text-4xl font-black tracking-tight text-white uppercase italic">
+            <CardHeader className="space-y-1.5 text-center pb-3 pt-5 sm:pt-7 px-4 sm:px-6">
+              <CardTitle className="text-2xl xs:text-3xl sm:text-4xl font-black tracking-tight text-white uppercase italic">
                 CREATE AN <span className="text-orange-500">ACCOUNT</span>
               </CardTitle>
-              <CardDescription className="text-slate-400 font-medium uppercase text-[10px] tracking-[0.25em]">
+              <CardDescription className="text-slate-400 font-medium uppercase text-[10px] tracking-[0.2em] sm:tracking-[0.25em]">
                 Register your official PSU Student, Coach, or Faculty profile
               </CardDescription>
             </CardHeader>
-            <CardContent className="px-6 sm:px-8">
+            <CardContent className="px-4 xs:px-6 sm:px-8">
               <Form {...form}>
                 <form onSubmit={handleAttemptSubmit} className="space-y-3.5">
                   {/* Last Name & First Name Inputs */}
@@ -235,7 +304,7 @@ export const Register = () => {
                             <Input
                               placeholder="Dela Cruz"
                               {...field}
-                              className="h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
+                              className="h-11 bg-white/5 border-white/15 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
                             />
                           </FormControl>
                           <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
@@ -255,7 +324,7 @@ export const Register = () => {
                             <Input
                               placeholder="Juan"
                               {...field}
-                              className="h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
+                              className="h-11 bg-white/5 border-white/15 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
                             />
                           </FormControl>
                           <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
@@ -281,7 +350,7 @@ export const Register = () => {
                             autoComplete="email"
                             placeholder="202381234@psu.palawan.edu.ph"
                             {...field}
-                            className="h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
+                            className="h-11 bg-white/5 border-white/15 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
                           />
                         </FormControl>
                         <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
@@ -303,7 +372,7 @@ export const Register = () => {
                               spellCheck={false}
                               autoComplete="new-password"
                               {...field}
-                              className="h-11 bg-white/5 border-white/10 text-white focus:ring-orange-500 rounded-xl pr-10"
+                              className="h-11 bg-white/5 border-white/15 text-white focus:ring-orange-500 rounded-xl pr-10"
                             />
                             <button
                               type="button"
@@ -334,7 +403,7 @@ export const Register = () => {
                               spellCheck={false}
                               autoComplete="new-password"
                               {...field}
-                              className="h-11 bg-white/5 border-white/10 text-white focus:ring-orange-500 rounded-xl pr-10"
+                              className="h-11 bg-white/5 border-white/15 text-white focus:ring-orange-500 rounded-xl pr-10"
                             />
                             <button
                               type="button"
@@ -367,7 +436,7 @@ export const Register = () => {
                           <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Role</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                              <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white rounded-xl">
+                              <SelectTrigger className="h-11 bg-white/5 border-white/15 text-white rounded-xl">
                                 <SelectValue placeholder="Select Role">
                                   {field.value === 'player_faculty'
                                     ? 'Faculty Athlete'
@@ -379,7 +448,7 @@ export const Register = () => {
                                 </SelectValue>
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent className="bg-slate-800 border-white/10 text-white">
+                            <SelectContent className="bg-slate-800 border-white/15 text-white">
                               <SelectItem value="player_student">Student Athlete</SelectItem>
                               <SelectItem value="player_faculty">Faculty Athlete</SelectItem>
                               <SelectItem value="player_staff">Staff Athlete</SelectItem>
@@ -399,13 +468,13 @@ export const Register = () => {
                           <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Department</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                              <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white rounded-xl">
+                              <SelectTrigger className="h-11 bg-white/5 border-white/15 text-white rounded-xl">
                                 <SelectValue placeholder="College">
                                   {field.value && colleges.find((c) => c.id === field.value)?.college_name}
                                 </SelectValue>
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent className="bg-slate-800 border-white/10 text-white">
+                            <SelectContent className="bg-slate-800 border-white/15 text-white">
                               {colleges.map((c) => (
                                 <SelectItem key={c.id} value={c.id}>{c.college_name}</SelectItem>
                               ))}
@@ -431,7 +500,7 @@ export const Register = () => {
                               <Input
                                 placeholder="e.g. EMP-2024-0123"
                                 {...field}
-                                className="h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
+                                className="h-11 bg-white/5 border-white/15 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
                               />
                             </FormControl>
                             <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
@@ -451,7 +520,7 @@ export const Register = () => {
                               <Input
                                 placeholder="e.g. HR, Registrar, ICTD"
                                 {...field}
-                                className="h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
+                                className="h-11 bg-white/5 border-white/15 text-white placeholder:text-slate-500 focus:ring-orange-500 rounded-xl"
                               />
                             </FormControl>
                             <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
@@ -467,31 +536,46 @@ export const Register = () => {
                     name="termsAccepted"
                     render={({ field }) => (
                       <FormItem className="space-y-1 pt-1">
-                        <div className="flex items-start gap-2.5">
+                        <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-white/[0.03] border border-white/15">
                           <FormControl>
                             <Checkbox
+                              data-testid="register-terms-checkbox"
                               checked={field.value}
                               onCheckedChange={(checked) => {
                                 if (checked) {
-                                  setIsMandatoryLegalModal(true);
-                                  setShowLegalModal(true);
+                                  handleSaveDraftAndNavigateToLegal('terms');
                                 } else {
                                   field.onChange(false);
                                   setTermsAcceptedAt(null);
+                                  try {
+                                    const rawDraft = sessionStorage.getItem(REGISTER_DRAFT_STORAGE_KEY);
+                                    if (rawDraft) {
+                                      const parsed = JSON.parse(rawDraft);
+                                      sessionStorage.setItem(
+                                        REGISTER_DRAFT_STORAGE_KEY,
+                                        JSON.stringify({
+                                          ...parsed,
+                                          termsAccepted: false,
+                                          termsAcceptedAt: null,
+                                        })
+                                      );
+                                    }
+                                  } catch {
+                                    // ignore storage error
+                                  }
                                 }
                               }}
+                              className="mt-0.5"
                             />
                           </FormControl>
                           <div className="space-y-1 leading-none">
-                            <FormLabel className="text-[11px] sm:text-xs font-normal text-slate-300 cursor-pointer leading-relaxed block">
+                            <FormLabel className="text-[11px] sm:text-xs font-normal text-slate-200 cursor-pointer leading-relaxed block">
                               I agree to the{' '}
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.preventDefault();
-                                  setLegalModalTab('terms');
-                                  setIsMandatoryLegalModal(true);
-                                  setShowLegalModal(true);
+                                  handleSaveDraftAndNavigateToLegal('terms');
                                 }}
                                 className="text-orange-400 hover:text-orange-300 underline font-semibold transition-colors cursor-pointer"
                               >
@@ -502,9 +586,7 @@ export const Register = () => {
                                 type="button"
                                 onClick={(e) => {
                                   e.preventDefault();
-                                  setLegalModalTab('privacy');
-                                  setIsMandatoryLegalModal(true);
-                                  setShowLegalModal(true);
+                                  handleSaveDraftAndNavigateToLegal('privacy');
                                 }}
                                 className="text-orange-400 hover:text-orange-300 underline font-semibold transition-colors cursor-pointer"
                               >
@@ -548,19 +630,30 @@ export const Register = () => {
         open={showLegalModal}
         onOpenChange={(open) => {
           setShowLegalModal(open);
-          if (!open) setIsMandatoryLegalModal(false);
+          if (!open) {
+            setIsMandatoryLegalModal(false);
+            setShouldAutoSubmitAfterModal(false);
+          }
         }}
         defaultTab={legalModalTab}
         mandatoryAcceptance={isMandatoryLegalModal}
+        onReadFullPage={(tab) => {
+          setShowLegalModal(false);
+          handleSaveDraftAndNavigateToLegal(tab);
+        }}
         onAccept={(timestamp) => {
           setTermsAcceptedAt(timestamp);
           form.setValue('termsAccepted', true, { shouldValidate: true });
           setIsMandatoryLegalModal(false);
-          const currentValues = form.getValues();
-          void onSubmit(currentValues, timestamp);
+          if (shouldAutoSubmitAfterModal) {
+            setShouldAutoSubmitAfterModal(false);
+            const currentValues = form.getValues();
+            void onSubmit(currentValues, timestamp);
+          }
         }}
         onDecline={() => {
           setIsMandatoryLegalModal(false);
+          setShouldAutoSubmitAfterModal(false);
           toast.info('You must accept the Terms & Conditions and Privacy Policy to register.');
         }}
       />

@@ -1111,7 +1111,7 @@ export const SystemVerifications = () => {
           }
         }}
       >
-        <DialogContent className="max-w-6xl w-[96vw] h-[92vh] max-h-[92vh] p-0 rounded-3xl overflow-hidden flex flex-col bg-slate-950 text-white border border-white/10 shadow-2xl">
+        <DialogContent className="max-w-6xl w-[96vw] h-[92dvh] max-h-[92dvh] p-0 rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col bg-slate-950 text-white border border-white/10 shadow-2xl">
           {previewDoc && (
             <>
               {/* Header */}

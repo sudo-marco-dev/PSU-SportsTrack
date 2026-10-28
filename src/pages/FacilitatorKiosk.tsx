@@ -241,11 +241,12 @@ export const FacilitatorKiosk = () => {
 
   const isPhysicalLandscape = windowDimensions.width > windowDimensions.height;
   const isMobileWidth = windowDimensions.width < 768;
-  const isShortScreen = windowDimensions.height <= 480;
+  const isTabletOrSmallerWidth = windowDimensions.width < 1024;
+  const isShortScreen = windowDimensions.height <= 680;
 
-  // Effective layout mode: landscape vs portrait
+  // Effective layout mode: landscape vs portrait (portrait tablets <1024px use portrait layout in auto mode)
   const isLandscapeMode =
-    orientationMode === 'landscape' || (orientationMode === 'auto' && (isPhysicalLandscape || !isMobileWidth));
+    orientationMode === 'landscape' || (orientationMode === 'auto' && (isPhysicalLandscape || !isTabletOrSmallerWidth));
 
   // Mobile View Tab in Portrait Mode: 'split' | 'team_a' | 'team_b' | 'clock'
   const [mobileTab, setMobileTab] = useState<'split' | 'team_a' | 'team_b' | 'clock'>('split');
@@ -1331,7 +1332,7 @@ export const FacilitatorKiosk = () => {
 
   if (!match) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white p-6 text-center">
+      <div className="min-h-dvh bg-slate-950 flex flex-col items-center justify-center text-white p-6 text-center">
         <h2 className="text-3xl font-black uppercase tracking-tight text-red-400 mb-2">Match Not Found</h2>
         <Button onClick={() => navigate('/explorer')} className="bg-orange-500 font-black">
           Return to Explorer
@@ -1354,7 +1355,7 @@ export const FacilitatorKiosk = () => {
   const isTeamBLeading = match.team_b_score > match.team_a_score;
 
   // Determine if compact mode should be applied to cards
-  const isCompactMode = isShortScreen || isMobileWidth || !isLandscapeMode;
+  const isCompactMode = isShortScreen || isMobileWidth || isTabletOrSmallerWidth || !isLandscapeMode;
 
   // Render Column A Component
   const renderColumnA = (compact = isCompactMode) => (

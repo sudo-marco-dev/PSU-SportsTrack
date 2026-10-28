@@ -508,7 +508,7 @@ export const StadiumDisplay = () => {
 
   if (!match) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white p-6 text-center">
+      <div className="min-h-dvh bg-slate-950 flex flex-col items-center justify-center text-white p-6 text-center">
         <h2 className="text-3xl font-black uppercase tracking-tight text-red-400 mb-2">Match Not Found</h2>
         <p className="text-slate-400 text-sm max-w-md mb-6">
           The requested match display feed could not be located or has concluded.
@@ -527,7 +527,7 @@ export const StadiumDisplay = () => {
   return (
     <div
       onDoubleClick={toggleFullscreen}
-      className="min-h-screen w-screen bg-[#020617] text-white flex flex-col justify-between overflow-hidden select-none relative"
+      className="min-h-dvh w-screen bg-[#020617] text-white flex flex-col justify-between overflow-hidden select-none relative"
       style={{
         backgroundImage: `
           radial-gradient(circle at 50% 0%, rgba(249, 115, 22, 0.15) 0%, transparent 60%),

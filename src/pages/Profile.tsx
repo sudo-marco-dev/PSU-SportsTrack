@@ -1239,48 +1239,48 @@ export const Profile = () => {
                       </div>
                     </Card>
 
-                    {/* Mobile Telemetry Ribbon (< md) — Single 76px dense row replacing 5 stacked cards */}
-                    <div className="md:hidden grid grid-cols-5 divide-x divide-slate-100 dark:divide-white/10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl p-2.5 shadow-sm">
-                      <div className="text-center px-1">
-                        <p className="text-[9px] font-black uppercase text-slate-400 truncate">GP</p>
-                        <p className="text-base font-black text-slate-900 dark:text-white mt-0.5 tabular-nums leading-none">
+                    {/* Mobile & Tablet Telemetry Ribbon (< md) — Adaptive multi-device grid */}
+                    <div className="md:hidden grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-5 gap-2 bg-slate-100/90 dark:bg-slate-950/90 border border-slate-300/80 dark:border-white/15 rounded-2xl p-2.5 shadow-sm">
+                      <div className="text-center p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10">
+                        <p className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 truncate">GP</p>
+                        <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5 tabular-nums leading-none">
                           {displayGamesPlayed}
                         </p>
-                        <p className="text-[9px] font-bold text-emerald-500 truncate mt-1">
+                        <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 truncate mt-1">
                           {displayWins}W-{displayLosses}L
                         </p>
                       </div>
-                      <div className="text-center px-1">
-                        <p className="text-[9px] font-black uppercase text-slate-400 truncate">{pointUnitLabel}</p>
-                        <p className="text-base font-black text-orange-500 mt-0.5 tabular-nums leading-none">
+                      <div className="text-center p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10">
+                        <p className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 truncate">{pointUnitLabel}</p>
+                        <p className="text-base sm:text-lg font-black text-orange-500 mt-0.5 tabular-nums leading-none">
                           {displayTotalPoints}
                         </p>
-                        <p className="text-[9px] font-bold text-slate-400 truncate mt-1">Total</p>
+                        <p className="text-[10px] font-bold text-slate-400 truncate mt-1">Total</p>
                       </div>
-                      <div className="text-center px-1">
-                        <p className="text-[9px] font-black uppercase text-slate-400 truncate">AVG</p>
-                        <p className="text-base font-black text-cyan-600 dark:text-cyan-400 mt-0.5 tabular-nums leading-none">
+                      <div className="text-center p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10">
+                        <p className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 truncate">AVG</p>
+                        <p className="text-base sm:text-lg font-black text-cyan-600 dark:text-cyan-400 mt-0.5 tabular-nums leading-none">
                           {displayPpg}
                         </p>
-                        <p className="text-[9px] font-bold text-slate-400 truncate mt-1">/ Game</p>
+                        <p className="text-[10px] font-bold text-slate-400 truncate mt-1">/ Game</p>
                       </div>
-                      <div className="text-center px-1">
-                        <p className="text-[9px] font-black uppercase text-slate-400 truncate" title={topHighlightAction.label}>
+                      <div className="text-center p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10">
+                        <p className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 truncate" title={topHighlightAction.label}>
                           {topHighlightAction.label.split(' ')[0]}
                         </p>
-                        <p className="text-base font-black text-amber-500 mt-0.5 tabular-nums leading-none">
+                        <p className="text-base sm:text-lg font-black text-amber-500 mt-0.5 tabular-nums leading-none">
                           {topHighlightAction.count}
                         </p>
-                        <p className="text-[9px] font-bold text-slate-400 truncate mt-1">
+                        <p className="text-[10px] font-bold text-slate-400 truncate mt-1">
                           +{topHighlightAction.totalPoints}
                         </p>
                       </div>
-                      <div className="text-center px-1">
-                        <p className="text-[9px] font-black uppercase text-slate-400 truncate">Squads</p>
-                        <p className="text-base font-black text-slate-900 dark:text-white mt-0.5 tabular-nums leading-none">
+                      <div className="col-span-2 xs:col-span-2 sm:col-span-1 text-center p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10">
+                        <p className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 truncate">Squads</p>
+                        <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5 tabular-nums leading-none">
                           {telemetry?.activeSquads.filter((s) => s.rosterStatus === 'Approved').length ?? 0}
                         </p>
-                        <p className="text-[9px] font-bold text-orange-500 truncate mt-1">
+                        <p className="text-[10px] font-bold text-orange-500 truncate mt-1">
                           {primaryPosition ? primaryPosition.split(' ')[0] : 'Athlete'}
                         </p>
                       </div>

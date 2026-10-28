@@ -379,7 +379,7 @@ export const CanvasPdfViewer = ({ storagePath, signedUrl }: CanvasPdfViewerProps
                 src={imageUrl}
                 alt="Clearance Document"
                 style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}
-                className="rounded-lg max-h-[70vh] object-contain transition-transform"
+                className="rounded-lg max-h-[70dvh] object-contain transition-transform"
               />
             </div>
           ) : (

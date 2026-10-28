@@ -96,7 +96,7 @@ export const KioskScoreColumn = ({
     <div
       className={`flex flex-col justify-between ${
         compact ? 'p-2 sm:p-2.5 rounded-2xl' : 'p-4 sm:p-6 rounded-3xl'
-      } border-2 transition-all duration-300 relative overflow-hidden ${colorStyles.bg} ${colorStyles.border} select-none h-full`}
+      } border-2 transition-all duration-300 relative overflow-x-hidden overflow-y-auto scrollbar-hide min-h-0 ${colorStyles.bg} ${colorStyles.border} select-none h-full`}
     >
       {/* Column Header & Team Identity */}
       <div className={`flex items-center justify-between ${compact ? 'pb-1.5' : 'pb-3'} border-b border-white/10 gap-2 shrink-0`}>

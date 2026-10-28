@@ -31,7 +31,7 @@ function DialogOverlay({
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-slate-950/75 backdrop-blur-md duration-200 ease-out data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 isolate z-50 bg-slate-950/75 backdrop-blur-md duration-200 ease-out data-[open]:animate-in data-[open]:fade-in-0 data-[closed]:animate-out data-[closed]:fade-out-0",
         className
       )}
       {...props}
@@ -50,11 +50,11 @@ function DialogContent({
   return (
     <DialogPortal>
       <DialogOverlay />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-8 pointer-events-none">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 xs:p-4 sm:p-6 md:p-8 pointer-events-none">
         <DialogPrimitive.Popup
           data-slot="dialog-content"
           className={cn(
-            "pointer-events-auto relative grid w-full max-w-lg min-w-0 gap-4 rounded-3xl bg-white dark:bg-slate-950 p-6 text-sm text-slate-900 dark:text-white shadow-2xl duration-200 ease-out outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 max-h-[92vh] overflow-y-auto overflow-x-hidden",
+            "pointer-events-auto relative grid w-full max-w-lg min-w-0 gap-3.5 sm:gap-4 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-950 p-4 xs:p-5 sm:p-6 text-sm text-slate-900 dark:text-white shadow-2xl duration-200 ease-out outline-none data-[open]:animate-in data-[open]:fade-in-0 data-[open]:zoom-in-95 data-[closed]:animate-out data-[closed]:fade-out-0 data-[closed]:zoom-out-95 max-h-[92dvh] overflow-y-auto overflow-x-hidden",
             className
           )}
           {...props}
@@ -66,7 +66,7 @@ function DialogContent({
               render={
                 <Button
                   variant="ghost"
-                  className="absolute top-4 right-4 z-50 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-full size-9 p-0 hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95 transition-all duration-150"
+                  className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 z-50 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-full size-8 sm:size-9 p-0 hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95 transition-all duration-150"
                   size="icon-sm"
                 />
               }

@@ -106,7 +106,7 @@ export const KioskCenterConsole = ({
     <div
       className={`flex flex-col justify-between ${
         compact ? 'p-2 sm:p-2.5 rounded-2xl space-y-1.5' : 'p-4 sm:p-5 rounded-3xl space-y-4'
-      } bg-slate-950/90 border border-white/10 shadow-2xl relative overflow-hidden select-none h-full`}
+      } bg-slate-950/90 border border-white/10 shadow-2xl relative overflow-x-hidden overflow-y-auto scrollbar-hide min-h-0 select-none h-full`}
     >
       {/* Active Timeout Emergency Stopwatch Overlay */}
       {activeTimeoutSeconds > 0 && (

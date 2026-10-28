@@ -200,8 +200,8 @@ export const AppLayout = () => {
       {/* Layout Content Wrapper — lg:pl-64 accommodates the fixed desktop sidebar */}
       <div className="flex-1 min-w-0 w-full max-w-full flex flex-col relative lg:pl-64">
         {/* Mobile Topbar */}
-        <header className="lg:hidden sticky top-0 flex h-16 items-center justify-between bg-slate-900 text-white px-4 shadow-lg z-30 border-b border-white/5">
-          <Link to={getDashboardHref()} className="flex items-center gap-2 font-black text-xl">
+        <header className="lg:hidden sticky top-0 flex h-12 xs:h-14 sm:h-16 short:h-12 items-center justify-between bg-slate-900 text-white px-3.5 sm:px-6 shadow-lg z-30 border-b border-white/10">
+          <Link to={getDashboardHref()} className="flex items-center gap-2 font-black text-lg xs:text-xl">
             <span className="text-orange-500 italic">PSU</span>
             <span className="text-white">SportsTrack</span>
           </Link>
@@ -299,7 +299,7 @@ export const AppLayout = () => {
 
         {/* Active Impersonation Strip (Dev Mode Persona Switcher) */}
         {isImpersonating && impersonatedPersona && (
-          <div className="bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-purple-500/15 border-b border-orange-500/30 px-3.5 sm:px-6 py-2.5 backdrop-blur-md sticky top-16 lg:top-0 z-20 flex flex-wrap items-center justify-between gap-2 shadow-sm text-xs">
+          <div className="bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-purple-500/15 border-b border-orange-500/30 px-3.5 sm:px-6 py-2 backdrop-blur-md sticky top-12 xs:top-14 sm:top-16 short:top-12 lg:top-0 z-20 flex flex-wrap items-center justify-between gap-2 shadow-sm text-xs">
             <div className="flex items-center gap-2 flex-wrap min-w-0">
               <span className="flex items-center gap-1.5 font-black uppercase text-[10px] tracking-widest text-orange-600 dark:text-orange-400 shrink-0">
                 <span className="size-2 rounded-full bg-orange-500 animate-ping inline-block" />
@@ -346,18 +346,19 @@ export const AppLayout = () => {
         )}
 
         {/* Main Routed Content Area */}
-        <main className="flex-1 min-w-0 px-3.5 sm:px-6 py-5 lg:px-10 lg:py-10 pb-24 lg:pb-10 max-w-7xl mx-auto w-full overflow-x-hidden">
+        <main className="flex-1 min-w-0 px-3 xs:px-3.5 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8 lg:px-10 lg:py-10 pb-20 sm:pb-24 lg:pb-10 max-w-7xl mx-auto w-full overflow-x-hidden">
           <ErrorBoundary>
             <Outlet />
           </ErrorBoundary>
         </main>
 
-        {/* Mobile Bottom Navigation Rail — Always Fixed & Visible Across All Views */}
+        {/* Mobile Bottom Navigation Rail — Hidden on /legal which renders its own dedicated sticky bottom bar */}
+        {location.pathname !== '/legal' && (
         <nav
           aria-label="Mobile Navigation"
-          className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-slate-900/95 backdrop-blur-md border-t border-white/10 pb-safe w-full max-w-[100vw] overflow-hidden shadow-2xl [isolation:isolate]"
+          className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-slate-900/95 backdrop-blur-md border-t border-white/15 pb-safe w-full max-w-[100vw] overflow-hidden shadow-2xl [isolation:isolate]"
         >
-          <div className="flex items-center justify-around h-16 w-full px-0.5">
+          <div className="flex items-center justify-around h-13 xs:h-14 sm:h-16 short:h-12 max-w-2xl mx-auto w-full px-0.5 sm:px-4">
             {/* 1. Home / Mission Command */}
             <Link
               to={getDashboardHref()}
@@ -486,6 +487,7 @@ export const AppLayout = () => {
             </button>
           </div>
         </nav>
+        )}
       </div>
 
       {/* Global Sign Out Confirmation Dialog */}
