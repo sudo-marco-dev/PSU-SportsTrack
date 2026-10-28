@@ -153,104 +153,128 @@ export const LoginModal = () => {
 
   // Detect return from /legal when initiated from LoginModal Sign-Up view (both in-page actions & native browser Back button)
   useEffect(() => {
-    if (location.pathname === '/legal') {
-      hasVisitedLegalRouteRef.current = true;
+    const checkAndRestoreFromLegal = () => {
+      const currentPath = window.location.pathname;
+      if (location.pathname === '/legal' || currentPath === '/legal') {
+        hasVisitedLegalRouteRef.current = true;
+        try {
+          const rawDraft = sessionStorage.getItem(REGISTER_DRAFT_STORAGE_KEY);
+          if (rawDraft) {
+            const parsedDraft = JSON.parse(rawDraft);
+            if (parsedDraft.source === 'login-modal' && parsedDraft.awaitingLegalReturn) {
+              sessionStorage.setItem(
+                REGISTER_DRAFT_STORAGE_KEY,
+                JSON.stringify({
+                  ...parsedDraft,
+                  visitedLegalPage: true,
+                })
+              );
+            }
+          }
+        } catch {
+          // ignore storage error
+        }
+        return;
+      }
+
       try {
+        const rawAcceptance = sessionStorage.getItem(LEGAL_ACCEPTANCE_STORAGE_KEY);
         const rawDraft = sessionStorage.getItem(REGISTER_DRAFT_STORAGE_KEY);
-        if (rawDraft) {
-          const parsedDraft = JSON.parse(rawDraft);
-          if (parsedDraft.source === 'login-modal' && parsedDraft.awaitingLegalReturn) {
-            sessionStorage.setItem(
-              REGISTER_DRAFT_STORAGE_KEY,
-              JSON.stringify({
-                ...parsedDraft,
-                visitedLegalPage: true,
-              })
-            );
+
+        let result: any = null;
+        if (rawAcceptance) {
+          const parsedAcceptance = JSON.parse(rawAcceptance);
+          if (parsedAcceptance.from === 'login-modal') {
+            result = parsedAcceptance;
+            sessionStorage.removeItem(LEGAL_ACCEPTANCE_STORAGE_KEY);
           }
         }
-      } catch {
-        // ignore storage error
-      }
-      return;
-    }
 
-    try {
-      const rawAcceptance = sessionStorage.getItem(LEGAL_ACCEPTANCE_STORAGE_KEY);
-      const rawDraft = sessionStorage.getItem(REGISTER_DRAFT_STORAGE_KEY);
-
-      let result: any = null;
-      if (rawAcceptance) {
-        const parsedAcceptance = JSON.parse(rawAcceptance);
-        if (parsedAcceptance.from === 'login-modal') {
-          result = parsedAcceptance;
-          sessionStorage.removeItem(LEGAL_ACCEPTANCE_STORAGE_KEY);
+        let draft: any = null;
+        if (rawDraft) {
+          const parsedDraft = JSON.parse(rawDraft);
+          if (parsedDraft.source === 'login-modal') {
+            draft = parsedDraft;
+          }
         }
-      }
 
-      let draft: any = null;
-      if (rawDraft) {
-        const parsedDraft = JSON.parse(rawDraft);
-        if (parsedDraft.source === 'login-modal') {
-          draft = parsedDraft;
-        }
-      }
+        const shouldRestoreFromBackOrAction =
+          Boolean(result) || Boolean(draft?.awaitingLegalReturn);
+        if (!shouldRestoreFromBackOrAction) return;
 
-      const shouldRestoreFromBackOrAction =
-        Boolean(result) ||
-        (Boolean(draft?.awaitingLegalReturn) && (hasVisitedLegalRouteRef.current || Boolean(draft?.visitedLegalPage)));
-      if (!shouldRestoreFromBackOrAction) return;
+        hasVisitedLegalRouteRef.current = false;
+        isRestoringFromLegalRef.current = true;
 
-      hasVisitedLegalRouteRef.current = false;
-      isRestoringFromLegalRef.current = true;
+        if (draft) {
+          const acceptedFlag = result
+            ? result.accepted
+              ? true
+              : result.closedOnly
+              ? Boolean(draft.termsAccepted)
+              : false
+            : Boolean(draft.termsAccepted);
+          const acceptedTs = result
+            ? result.accepted
+              ? result.timestamp || new Date().toISOString()
+              : result.closedOnly
+              ? draft.termsAcceptedAt ?? null
+              : null
+            : draft.termsAcceptedAt ?? null;
 
-      if (draft) {
-        const acceptedFlag = result ? (result.accepted ? true : result.closedOnly ? Boolean(draft.termsAccepted) : false) : Boolean(draft.termsAccepted);
-        const acceptedTs = result ? (result.accepted ? result.timestamp || new Date().toISOString() : result.closedOnly ? draft.termsAcceptedAt ?? null : null) : draft.termsAcceptedAt ?? null;
-
-        registerForm.reset({
-          lastName: draft.lastName ?? '',
-          firstName: draft.firstName ?? '',
-          email: draft.email ?? '',
-          password: draft.password ?? '',
-          confirmPassword: draft.confirmPassword ?? '',
-          role: draft.role ?? 'player_student',
-          collegeId: draft.collegeId ?? '',
-          employeeId: draft.employeeId ?? '',
-          department: draft.department ?? '',
-          termsAccepted: acceptedFlag,
-        });
-        setTermsAcceptedAt(acceptedTs);
-
-        sessionStorage.setItem(
-          REGISTER_DRAFT_STORAGE_KEY,
-          JSON.stringify({
-            ...draft,
+          registerForm.reset({
+            lastName: draft.lastName ?? '',
+            firstName: draft.firstName ?? '',
+            email: draft.email ?? '',
+            password: draft.password ?? '',
+            confirmPassword: draft.confirmPassword ?? '',
+            role: draft.role ?? 'player_student',
+            collegeId: draft.collegeId ?? '',
+            employeeId: draft.employeeId ?? '',
+            department: draft.department ?? '',
             termsAccepted: acceptedFlag,
-            termsAcceptedAt: acceptedTs,
-            awaitingLegalReturn: false,
-            visitedLegalPage: false,
-          })
-        );
-      }
+          });
+          setTermsAcceptedAt(acceptedTs);
 
-      if (result?.accepted) {
-        const ts = result.timestamp || new Date().toISOString();
-        setTermsAcceptedAt(ts);
-        registerForm.setValue('termsAccepted', true, { shouldValidate: true });
-        toast.success('Terms & Conditions and Privacy Policy accepted.');
-      } else if (result && !result.closedOnly) {
-        setTermsAcceptedAt(null);
-        registerForm.setValue('termsAccepted', false, { shouldValidate: false });
-      }
+          sessionStorage.setItem(
+            REGISTER_DRAFT_STORAGE_KEY,
+            JSON.stringify({
+              ...draft,
+              termsAccepted: acceptedFlag,
+              termsAcceptedAt: acceptedTs,
+              awaitingLegalReturn: false,
+              visitedLegalPage: false,
+            })
+          );
+        }
 
-      setAuthMode('register');
-      openLoginModal();
-    } catch {
-      // ignore storage errors
-    }
+        if (result?.accepted) {
+          const ts = result.timestamp || new Date().toISOString();
+          setTermsAcceptedAt(ts);
+          registerForm.setValue('termsAccepted', true, { shouldValidate: true });
+          toast.success('Terms & Conditions and Privacy Policy accepted.');
+        } else if (result && !result.closedOnly) {
+          setTermsAcceptedAt(null);
+          registerForm.setValue('termsAccepted', false, { shouldValidate: false });
+        }
+
+        setAuthMode('register');
+        openLoginModal();
+      } catch {
+        // ignore storage errors
+      }
+    };
+
+    checkAndRestoreFromLegal();
+
+    const handlePopState = () => {
+      setTimeout(checkAndRestoreFromLegal, 0);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
+  }, [location.pathname, location.key, isLoginModalOpen]);
 
   const handleSaveModalDraftAndNavigateToLegal = (tab: 'terms' | 'privacy') => {
     const currentReturnTo = `${location.pathname}${location.search}`;

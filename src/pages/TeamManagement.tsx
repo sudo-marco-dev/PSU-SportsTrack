@@ -505,23 +505,23 @@ export const TeamManagement = () => {
 
   return (
     <div className="space-y-6 relative pb-6">
-      <div className="bg-slate-950 text-white py-6 md:py-8 px-6 md:px-10 rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden group">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Users className="w-5 h-5 text-orange-500" />
-              <span className="text-orange-500 font-bold text-xs tracking-[0.2em] uppercase">
+      <div className="bg-slate-950 text-white py-3.5 sm:py-5 md:py-7 px-4 sm:px-6 md:px-10 rounded-2xl sm:rounded-[2rem] shadow-xl border border-white/5 relative overflow-hidden group">
+        <div className="relative z-10 flex flex-row items-center justify-between gap-3 sm:gap-6">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500 shrink-0" />
+              <span className="text-orange-500 font-bold text-[10px] sm:text-xs tracking-[0.2em] uppercase">
                 Team Management
               </span>
             </div>
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
-              ROSTER & <span className="text-orange-500">RECRUITMENT</span>
+            <h1 className="text-xl sm:text-3xl md:text-4xl font-black italic tracking-tighter uppercase leading-none">
+              ROSTER &amp; <span className="text-orange-500">RECRUITMENT</span>
             </h1>
-            <p className="text-slate-400 font-medium text-sm tracking-wide mt-2 max-w-2xl opacity-80">
+            <p className="hidden sm:block text-slate-400 font-medium text-xs sm:text-sm tracking-wide mt-1.5 max-w-2xl opacity-80">
               Form your elite squad, manage rosters, and recruit verified university talent.
             </p>
           </div>
-          <div className="flex gap-4 relative z-10">
+          <div className="flex gap-2 sm:gap-4 relative z-10 shrink-0">
             <Dialog
               open={isCreateOpen}
               onOpenChange={(open) => {
@@ -541,7 +541,7 @@ export const TeamManagement = () => {
                       toast.error('Coach verification required to register new teams. Please submit your Coach ID for clearance.');
                     }
                   }}
-                  className={`h-12 sm:h-14 font-black gap-2 px-6 sm:px-8 rounded-xl shadow-xl uppercase italic tracking-wider transition-all hover:scale-[1.02] active:scale-95 group ${
+                  className={`h-10 sm:h-12 font-black gap-1.5 sm:gap-2 px-3.5 sm:px-6 rounded-xl shadow-lg uppercase italic tracking-wider transition-all hover:scale-[1.02] active:scale-95 group ${
                     isVerified
                       ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-orange-500/20'
                       : 'bg-slate-800 text-slate-300 border border-white/10'
@@ -549,13 +549,13 @@ export const TeamManagement = () => {
                 >
                   {isVerified ? (
                     <>
-                      <UserPlus className="size-5 group-hover:rotate-12 transition-transform duration-300" />
-                      <span className="text-sm sm:text-base">New Team</span>
+                      <UserPlus className="size-4 sm:size-5 group-hover:rotate-12 transition-transform duration-300" />
+                      <span className="text-xs sm:text-sm">New Team</span>
                     </>
                   ) : (
                     <>
-                      <Lock className="size-4 text-orange-400" />
-                      <span className="text-sm sm:text-base">Verification Required</span>
+                      <Lock className="size-3.5 sm:size-4 text-orange-400" />
+                      <span className="text-xs sm:text-sm">Verify ID</span>
                     </>
                   )}
                 </Button>
@@ -776,7 +776,7 @@ export const TeamManagement = () => {
             }`}
           >
             <Users className="size-4 shrink-0" />
-            <span className="truncate">
+            <span className="min-w-0 whitespace-nowrap">
               <span className="sm:hidden">Teams</span>
               <span className="hidden sm:inline">My Teams</span>
             </span>
@@ -797,7 +797,7 @@ export const TeamManagement = () => {
             }`}
           >
             <ClipboardList className="size-4 shrink-0" />
-            <span className="truncate">
+            <span className="min-w-0 whitespace-nowrap">
               <span className="sm:hidden">Players</span>
               <span className="hidden sm:inline">Player Directory</span>
             </span>

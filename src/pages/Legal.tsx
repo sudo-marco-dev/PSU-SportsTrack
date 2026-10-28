@@ -294,26 +294,30 @@ export const Legal: React.FC = () => {
   return (
     <div className="min-h-dvh w-full py-3 xs:py-4 sm:py-8 px-3 xs:px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-4 sm:space-y-6 animate-in fade-in duration-300 pb-28 sm:pb-32">
       {/* Compact Hero Showcase Header */}
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-[2rem] bg-slate-950 border border-white/15 p-4 xs:p-5 sm:p-8 text-white shadow-2xl">
+      <div
+        data-testid="legal-page-header"
+        className="relative overflow-hidden rounded-xl sm:rounded-[2rem] bg-slate-950 border border-white/15 p-2.5 sm:p-6 md:p-8 text-white shadow-2xl"
+      >
         <div className="absolute top-0 left-0 right-0 h-1 bg-orange-500" />
 
-        <div className="relative z-10 space-y-2.5 sm:space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/25 text-orange-400 text-[10px] sm:text-xs font-black uppercase tracking-widest">
-              <Building className="size-3.5 shrink-0" />
-              <span>Palawan State University • Sports Department</span>
+        <div className="relative z-10 space-y-1.5 sm:space-y-3">
+          <div className="flex items-center justify-between gap-1.5 sm:gap-2 min-w-0">
+            <div className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-orange-500/10 border border-orange-500/25 text-orange-400 text-[9px] xs:text-[10px] sm:text-xs font-black uppercase tracking-wider min-w-0 shrink">
+              <Building className="size-3 sm:size-3.5 shrink-0" />
+              <span className="truncate">Palawan State University • Sports Department</span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               {isAcceptanceMode && (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
+                  aria-label="Back to Registration"
                   onClick={handleCloseOrReturn}
-                  className="h-8 px-3 rounded-xl border-white/15 bg-white/5 hover:bg-white/10 text-slate-200 text-[11px] font-bold gap-1.5 cursor-pointer"
+                  className="h-8 min-h-[32px] px-2.5 sm:px-3 rounded-lg sm:rounded-xl border-white/15 bg-white/5 hover:bg-white/10 text-slate-200 text-[10px] sm:text-[11px] font-bold gap-1 sm:gap-1.5 cursor-pointer shrink-0"
                 >
-                  <ArrowLeft className="size-3.5" />
+                  <ArrowLeft className="size-3 sm:size-3.5 shrink-0" />
                   <span>Back to Registration</span>
                 </Button>
               )}
@@ -323,52 +327,57 @@ export const Legal: React.FC = () => {
                 size="sm"
                 aria-label="Close"
                 onClick={handleCloseOrReturn}
-                className="h-8 px-2.5 rounded-xl border border-white/15 bg-white/5 hover:bg-orange-500 hover:border-orange-500 text-slate-200 hover:text-white text-[11px] font-bold gap-1 cursor-pointer"
+                className="h-8 min-h-[32px] px-2.5 rounded-lg sm:rounded-xl border border-white/15 bg-white/5 hover:bg-orange-500 hover:border-orange-500 text-slate-200 hover:text-white text-[10px] sm:text-[11px] font-bold gap-1 cursor-pointer shrink-0"
               >
-                <X className="size-3.5" />
+                <X className="size-3 sm:size-3.5 shrink-0" />
                 <span>Close</span>
               </Button>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-1 sm:gap-2">
             <div>
-              <h1 className="text-xl xs:text-2xl sm:text-3xl md:text-4xl font-black italic uppercase tracking-tight text-white leading-tight">
+              <h1 className="text-xs sm:text-2xl md:text-3xl font-black italic uppercase tracking-tight text-white leading-tight">
                 Official Legal &amp; <span className="text-orange-500">Governance Policies</span>
               </h1>
               {/* Explicit active section heading for screen readers & tests */}
-              <h2 className="text-sm sm:text-base font-black uppercase tracking-wider text-orange-400 mt-1 flex items-center gap-1.5">
+              <h2 className="text-xs sm:text-sm font-black uppercase tracking-wider text-orange-400 mt-0.5 sm:mt-1 flex items-center gap-1 sm:gap-1.5">
                 {activeTab === 'terms' ? (
                   <>
-                    <FileText className="size-4 shrink-0" />
+                    <FileText className="size-3 sm:size-4 shrink-0" />
                     <span>Terms and Conditions</span>
                   </>
                 ) : (
                   <>
-                    <ShieldCheck className="size-4 shrink-0" />
+                    <ShieldCheck className="size-3 sm:size-4 shrink-0" />
                     <span>Privacy Policy</span>
                   </>
                 )}
               </h2>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 text-[11px] sm:text-xs text-slate-400">
-              <div className="flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-emerald-500" />
+            <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-slate-400 min-w-0">
+              <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                <span className="size-1.5 sm:size-2 rounded-full bg-emerald-500 shrink-0" />
                 <span>
                   Effective: <strong>School Year 2026-2027</strong>
                 </span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <Mail className="size-3.5 text-orange-400" />
-                <span>
-                  Contact: <strong>Janice G.</strong> (janiceno@psu.palawan.edu.ph)
+              <span className="text-white/20 shrink-0 hidden xs:inline">•</span>
+              <div className="flex items-center gap-1 sm:gap-1.5 min-w-0 truncate">
+                <Mail className="size-3 sm:size-3.5 text-orange-400 shrink-0" />
+                <span className="truncate">
+                  <span className="hidden sm:inline">Contact: <strong>Janice G.</strong> (</span>
+                  <a href="mailto:janiceno@psu.palawan.edu.ph" className="hover:underline text-slate-300">
+                    janiceno@psu.palawan.edu.ph
+                  </a>
+                  <span className="hidden sm:inline">)</span>
                 </span>
               </div>
             </div>
           </div>
 
-          <p className="text-slate-300 font-medium text-xs sm:text-sm leading-relaxed max-w-3xl short:hidden">
+          <p className="hidden sm:block text-slate-300 font-medium text-xs sm:text-sm leading-relaxed max-w-3xl">
             Review the official terms of service, acceptable use policies, and Philippine Data Privacy Act (RA 10173) compliance standards governing PSU SportsTrack.
           </p>
         </div>
@@ -377,13 +386,15 @@ export const Legal: React.FC = () => {
       {/* Tabs Switcher & Sequential Reading Container */}
       <div className="space-y-4">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 max-w-lg mx-auto bg-slate-200 dark:bg-slate-900 border border-slate-300 dark:border-white/15 p-1 rounded-2xl h-11 sm:h-12 shadow-sm">
+          <TabsList className="grid w-full grid-cols-2 max-w-lg mx-auto bg-slate-200 dark:bg-slate-900 border border-slate-300 dark:border-white/15 p-1 rounded-2xl h-auto min-h-11 sm:min-h-12 shadow-sm">
             <TabsTrigger
               value="terms"
-              className="rounded-xl text-[11px] xs:text-xs sm:text-sm font-black uppercase italic tracking-wider data-[active]:bg-orange-500 data-[active]:text-white data-[state=active]:bg-orange-500 data-[state=active]:text-white transition-all gap-1.5"
+              className="rounded-xl text-[10px] xs:text-[11px] sm:text-xs font-black uppercase italic tracking-normal sm:tracking-wider flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 px-1 sm:px-2.5 py-1 sm:py-1.5 h-auto min-h-[38px] sm:min-h-10 data-[active]:bg-orange-500 data-[active]:text-white data-[state=active]:bg-orange-500 data-[state=active]:text-white transition-all cursor-pointer"
             >
-              <FileText className="size-3.5 sm:size-4 shrink-0" />
-              <span className="truncate">Terms &amp; Conditions</span>
+              <span className="inline-flex items-center gap-1 shrink-0">
+                <FileText className="size-3.5 sm:size-4 shrink-0" />
+                <span>Terms &amp; Conditions</span>
+              </span>
               <span
                 className={`text-[9px] font-mono px-1.5 py-0.5 rounded-md shrink-0 ${
                   hasReadTerms
@@ -396,10 +407,12 @@ export const Legal: React.FC = () => {
             </TabsTrigger>
             <TabsTrigger
               value="privacy"
-              className="rounded-xl text-[11px] xs:text-xs sm:text-sm font-black uppercase italic tracking-wider data-[active]:bg-orange-500 data-[active]:text-white data-[state=active]:bg-orange-500 data-[state=active]:text-white transition-all gap-1.5"
+              className="rounded-xl text-[10px] xs:text-[11px] sm:text-xs font-black uppercase italic tracking-normal sm:tracking-wider flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 px-1 sm:px-2.5 py-1 sm:py-1.5 h-auto min-h-[38px] sm:min-h-10 data-[active]:bg-orange-500 data-[active]:text-white data-[state=active]:bg-orange-500 data-[state=active]:text-white transition-all cursor-pointer"
             >
-              <ShieldCheck className="size-3.5 sm:size-4 shrink-0" />
-              <span className="truncate">Privacy Policy</span>
+              <span className="inline-flex items-center gap-1 shrink-0">
+                <ShieldCheck className="size-3.5 sm:size-4 shrink-0" />
+                <span>Privacy Policy</span>
+              </span>
               <span
                 className={`text-[9px] font-mono px-1.5 py-0.5 rounded-md shrink-0 ${
                   hasReadPrivacy

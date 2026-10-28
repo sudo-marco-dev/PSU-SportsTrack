@@ -867,30 +867,30 @@ export const Ranking = () => {
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-10 w-full min-w-0 max-w-full overflow-x-hidden animate-in fade-in duration-500">
-      {/* Header Banner */}
-      <div className="bg-slate-950 text-white py-5 md:py-8 px-5 md:px-10 rounded-2xl md:rounded-[2.5rem] shadow-2xl border border-white/5 relative overflow-hidden group">
+      {/* Compact Header Banner */}
+      <div className="bg-slate-950 text-white py-3.5 sm:py-5 md:py-7 px-4 sm:px-6 md:px-10 rounded-2xl md:rounded-[2rem] shadow-xl border border-white/5 relative overflow-hidden group">
         <div className="relative z-10 max-w-3xl">
-          <div className="flex items-center gap-2 mb-2 md:mb-3">
-            <Medal className="w-4 h-4 md:w-5 md:h-5 text-orange-500" />
+          <div className="flex items-center gap-1.5 mb-1">
+            <Medal className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-500" />
             <span className="text-orange-500 font-bold text-[10px] md:text-xs tracking-[0.2em] uppercase">
-              Official Leaderboard & Standings
+              Official Leaderboard &amp; Standings
             </span>
           </div>
-          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none mb-2 md:mb-3">
-            LEADERBOARD <span className="text-orange-500">& RANKINGS</span>
+          <h1 className="text-xl sm:text-3xl md:text-4xl font-black italic tracking-tighter uppercase leading-none">
+            LEADERBOARD <span className="text-orange-500">&amp; RANKINGS</span>
           </h1>
-          <p className="text-slate-400 font-medium text-xs md:text-sm leading-relaxed max-w-2xl opacity-90">
+          <p className="hidden sm:block text-slate-400 font-medium text-xs md:text-sm leading-relaxed max-w-2xl opacity-90 mt-1.5">
             Institutional sports performance standings, championship tier lists, and authentic Palawan State University Binturungan festival leaderboards.
           </p>
         </div>
         <div className="absolute -right-16 -top-16 size-80 bg-orange-500/10 rounded-full blur-[100px] group-hover:bg-orange-500/20 transition-all duration-1000" />
-        <Trophy className="absolute -bottom-10 -right-8 size-52 text-white/5 rotate-12 group-hover:rotate-6 transition-all duration-700 pointer-events-none" />
+        <Trophy className="absolute -bottom-10 -right-8 size-44 text-white/5 rotate-12 group-hover:rotate-6 transition-all duration-700 pointer-events-none" />
       </div>
 
       {/* Standings View Format Selector: Balanced Centered Control */}
       <div className="flex justify-center w-full">
-        <div className="w-full sm:w-auto p-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 rounded-2xl shadow-sm">
-          <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="w-full sm:w-auto p-1 sm:p-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 rounded-2xl shadow-sm">
+          <div className="flex items-center gap-1 sm:gap-2">
             {standingTabs.map((tab) => {
               const isActive = standingView === tab.id;
               const Icon = tab.icon;
@@ -899,14 +899,14 @@ export const Ranking = () => {
                   key={tab.id}
                   type="button"
                   onClick={() => setStandingView(tab.id as any)}
-                  className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 xs:px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl font-black text-xs sm:text-sm uppercase tracking-tight italic transition-all cursor-pointer min-w-0 ${
+                  className={`flex-1 sm:flex-initial min-h-[38px] flex items-center justify-center gap-1 sm:gap-2 px-2 xs:px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl font-black text-[11px] xs:text-xs sm:text-sm uppercase tracking-tight italic transition-colors cursor-pointer min-w-0 ${
                     isActive
-                      ? 'flex-1 sm:flex-initial bg-orange-500 text-white shadow-md shadow-orange-500/25'
-                      : 'shrink-0 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10'
+                      ? 'bg-orange-500 text-white shadow-md shadow-orange-500/25'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10'
                   }`}
                 >
-                  <Icon className={`size-4 sm:size-4.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
-                  <span className={`truncate ${isActive ? 'inline' : 'hidden sm:inline'}`}>{tab.shortLabel || tab.label}</span>
+                  <Icon className={`size-3.5 sm:size-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+                  <span className="min-w-0 whitespace-nowrap inline-block">{tab.shortLabel || tab.label}</span>
                   {tab.count !== undefined && (
                     <span
                       className={`text-[9px] sm:text-[10px] font-mono font-black px-1.5 py-0.5 rounded-md shrink-0 ${

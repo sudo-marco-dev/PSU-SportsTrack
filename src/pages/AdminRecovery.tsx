@@ -597,34 +597,34 @@ export const AdminRecovery = () => {
       </div>
 
       {/* Hero Header Banner — Athletic Nocturnal Arena Aesthetic */}
-      <div className="bg-slate-950 text-white p-6 sm:p-8 rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden group">
+      <div className="bg-slate-950 text-white py-3.5 sm:py-5 md:py-7 px-4 sm:px-6 md:px-8 rounded-2xl sm:rounded-[2rem] shadow-xl border border-white/5 relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-orange-500/15 via-rose-500/10 to-transparent blur-3xl rounded-full pointer-events-none -mr-20 -mt-20 group-hover:from-orange-500/25 transition-all duration-700" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-500/5 blur-2xl rounded-full pointer-events-none -ml-10 -mb-10" />
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-black uppercase tracking-widest">
-              <RotateCcw className="size-3.5 animate-pulse" />
+        <div className="relative z-10 flex flex-row items-center justify-between gap-3 sm:gap-6">
+          <div className="space-y-1 sm:space-y-1.5 min-w-0">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-[10px] sm:text-xs font-black uppercase tracking-widest">
+              <RotateCcw className="size-3 sm:size-3.5 animate-pulse" />
               Institutional Recovery Center
             </div>
-            <h1 className="text-3xl sm:text-4xl font-black italic uppercase tracking-tight">
-              Data <span className="text-orange-500">Recovery</span> & Vault
+            <h1 className="text-xl sm:text-3xl md:text-4xl font-black italic uppercase tracking-tight leading-none">
+              Data <span className="text-orange-500">Recovery</span> &amp; Vault
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400 max-w-2xl font-medium leading-relaxed">
+            <p className="hidden sm:block text-xs sm:text-sm text-slate-400 max-w-2xl font-medium leading-relaxed">
               Soft-deleted tournaments, squads, and records are isolated from public brackets and student explorers,
               safely preserved here. Restore any event with a single click or permanently purge when necessary.
             </p>
           </div>
 
           {/* Quick Stat Pill */}
-          <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-4 shrink-0 backdrop-blur-md">
-            <div className="size-12 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400 font-black text-xl">
+          <div className="flex items-center gap-2 sm:gap-3 bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl p-2 sm:p-3.5 shrink-0 backdrop-blur-md">
+            <div className="size-9 sm:size-11 rounded-lg sm:rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400 font-black text-base sm:text-xl">
               {totalRecoverableCount}
             </div>
-            <div>
-              <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Recoverable Items</p>
-              <p className="text-sm font-black text-white">
-                {tournaments.length} Events • {teams.length} Squads
+            <div className="hidden xs:block">
+              <p className="text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-400 font-bold">Recoverable</p>
+              <p className="text-xs sm:text-sm font-black text-white whitespace-nowrap">
+                {tournaments.length} Evt • {teams.length} Sqd
               </p>
             </div>
           </div>

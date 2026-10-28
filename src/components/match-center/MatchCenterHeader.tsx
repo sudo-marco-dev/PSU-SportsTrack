@@ -31,11 +31,11 @@ export const MatchCenterHeader: React.FC<MatchCenterHeaderProps> = ({
 }) => {
   return (
     <div className="space-y-4 w-full min-w-0 max-w-full overflow-hidden">
-      {/* Sleek Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl md:rounded-[2.5rem] bg-slate-950 text-white py-5 sm:py-6 md:py-7 px-4 sm:px-6 md:px-8 shadow-2xl border border-white/5">
+      {/* Sleek Compact Hero Banner */}
+      <div className="relative overflow-hidden rounded-2xl md:rounded-[2rem] bg-slate-950 text-white py-3.5 sm:py-5 md:py-6 px-4 sm:px-6 md:px-8 shadow-xl border border-white/5">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 size-64 sm:size-80 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 space-y-3">
+        <div className="relative z-10 space-y-1.5 sm:space-y-2.5">
           {/* Breadcrumb Trail */}
           <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400">
             <button
@@ -61,10 +61,10 @@ export const MatchCenterHeader: React.FC<MatchCenterHeaderProps> = ({
           </div>
 
           {/* Main Title Row */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4">
-            <div>
-              <div className="flex items-center gap-2.5 mb-1">
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black italic tracking-tighter uppercase leading-none">
+          <div className="flex flex-row items-center md:items-end justify-between gap-2.5 sm:gap-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 sm:gap-2.5">
+                <h1 className="text-xl sm:text-3xl md:text-4xl font-black italic tracking-tighter uppercase leading-none">
                   MATCH <span className="text-orange-500">CENTER</span>
                 </h1>
                 {liveMatchesCount > 0 && (
@@ -74,7 +74,7 @@ export const MatchCenterHeader: React.FC<MatchCenterHeaderProps> = ({
                   </span>
                 )}
               </div>
-              <p className="text-slate-400 font-medium text-xs md:text-sm tracking-wide max-w-2xl opacity-90 leading-relaxed">
+              <p className="hidden sm:block text-slate-400 font-medium text-xs md:text-sm tracking-wide max-w-2xl opacity-90 leading-relaxed mt-1">
                 Palawan State University official athletic tournament hub. Select your sport discipline to follow fixtures, real-time courtside scores, and knockout playoff brackets.
               </p>
             </div>
@@ -84,10 +84,10 @@ export const MatchCenterHeader: React.FC<MatchCenterHeaderProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={onResetFilters}
-                className="self-start md:self-auto bg-white/5 border-white/10 hover:bg-orange-500 hover:border-orange-500 text-white font-bold uppercase text-[10px] tracking-widest h-8 sm:h-9 px-3.5 rounded-xl transition-all cursor-pointer shrink-0"
+                className="self-center md:self-auto bg-white/5 border-white/10 hover:bg-orange-500 hover:border-orange-500 text-white font-bold uppercase text-[10px] tracking-widest h-8 sm:h-9 px-3 rounded-xl transition-all cursor-pointer shrink-0"
               >
-                <RotateCcw className="size-3.5 mr-1.5" />
-                Reset Filters
+                <RotateCcw className="size-3.5 mr-1" />
+                Reset
               </Button>
             )}
           </div>

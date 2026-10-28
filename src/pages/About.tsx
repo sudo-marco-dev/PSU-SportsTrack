@@ -23,34 +23,35 @@ export const About: React.FC = () => {
 
   return (
     <div className="min-h-full w-full py-6 sm:py-10 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-8 sm:space-y-12 animate-in fade-in duration-300">
-      {/* Hero Showcase Header */}
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-[2.5rem] bg-slate-950 border border-white/10 p-6 sm:p-10 lg:p-12 text-white shadow-2xl">
+      {/* Compact Hero Showcase Header */}
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-[2rem] bg-slate-950 border border-white/10 p-3.5 sm:p-7 lg:p-10 text-white shadow-xl">
         <div className="absolute top-0 left-0 right-0 h-1 bg-orange-500" />
 
-        <div className="relative z-10 max-w-2xl space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-[10px] sm:text-xs font-black uppercase tracking-widest">
-            <School className="size-3.5" />
-            <span>Palawan State University • Official Athletic Platform</span>
+        <div className="relative z-10 max-w-2xl space-y-2 sm:space-y-3.5">
+          <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-0.5 sm:py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-[9px] sm:text-xs font-black uppercase tracking-widest">
+            <School className="size-3 sm:size-3.5 shrink-0" />
+            <span className="sm:hidden">PSU • Official Athletic Platform</span>
+            <span className="hidden sm:inline">Palawan State University • Official Athletic Platform</span>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black italic uppercase tracking-tight text-white leading-tight">
+          <h1 className="text-base xs:text-lg sm:text-3xl lg:text-4xl font-black italic uppercase tracking-tight text-white leading-tight">
             Digital Arena for <span className="text-orange-500">PSU Athletics</span> &amp; Competitions
           </h1>
 
-          <p className="text-slate-300 font-medium text-xs sm:text-sm lg:text-base leading-relaxed">
+          <p className="hidden sm:block text-slate-300 font-medium text-xs sm:text-sm leading-relaxed">
             PSU SportsTrack connects student-athletes, coaches, and university athletic administrators in an integrated digital hub for campus sports, live scores, and official tournament records.
           </p>
 
-          <div className="pt-2 flex flex-wrap items-center gap-3">
+          <div className="pt-0.5 sm:pt-1 flex flex-wrap items-center gap-1.5 sm:gap-2.5">
             <Link to="/explorer">
-              <Button className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-wider text-xs h-11 px-5 rounded-xl shadow-lg shadow-orange-500/20">
-                Explore Matches <ArrowRight className="size-4 ml-1.5" />
+              <Button className="bg-orange-500 hover:bg-orange-600 text-white font-black uppercase italic tracking-tight sm:tracking-wider text-[10px] xs:text-[11px] sm:text-xs h-8 sm:h-11 px-2.5 xs:px-3 sm:px-5 rounded-xl shadow-lg shadow-orange-500/20">
+                Explore Matches <ArrowRight className="size-3 sm:size-4 ml-1" />
               </Button>
             </Link>
             {!user && (
               <Button 
                 onClick={openLoginModal}
-                className="bg-slate-900 hover:bg-slate-800 text-white border border-white/15 font-bold uppercase text-xs h-11 px-5 rounded-xl transition-all shadow-sm"
+                className="bg-slate-900 hover:bg-slate-800 text-white border border-white/15 font-bold uppercase text-[10px] xs:text-[11px] sm:text-xs h-8 sm:h-11 px-2.5 xs:px-3 sm:px-5 rounded-xl transition-all shadow-sm"
               >
                 Sign In to Portal
               </Button>

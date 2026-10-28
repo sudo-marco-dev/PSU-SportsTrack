@@ -544,26 +544,26 @@ export const SystemVerifications = () => {
 
   return (
     <div className="space-y-6 relative max-w-[1600px] mx-auto px-4 pb-6">
-      {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-950 text-white py-6 md:py-8 px-6 md:px-10 rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden group">
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-2">
-            <ShieldCheck className="w-5 h-5 text-orange-500" />
-            <span className="text-orange-500 font-bold text-xs tracking-[0.2em] uppercase">
+      {/* Compact Header Banner */}
+      <div className="flex flex-row items-center justify-between gap-3 sm:gap-6 bg-slate-950 text-white py-3.5 sm:py-5 md:py-7 px-4 sm:px-6 md:px-10 rounded-2xl sm:rounded-[2rem] shadow-xl border border-white/5 relative overflow-hidden group">
+        <div className="relative z-10 min-w-0">
+          <div className="flex items-center gap-1.5 mb-1">
+            <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500 shrink-0" />
+            <span className="text-orange-500 font-bold text-[10px] sm:text-xs tracking-[0.2em] uppercase">
               Eligibility Command Center
             </span>
           </div>
-          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
+          <h1 className="text-xl sm:text-3xl md:text-4xl font-black italic tracking-tighter uppercase leading-none">
             COR CLEARANCE <span className="text-orange-500">SYSTEM</span>
           </h1>
-          <p className="text-slate-400 font-medium text-sm tracking-wide mt-2 max-w-2xl opacity-80">
+          <p className="hidden sm:block text-slate-400 font-medium text-xs sm:text-sm tracking-wide mt-1.5 max-w-2xl opacity-80">
             Automated Certificate of Registration verification with confidence matching and in-screen document preview.
           </p>
         </div>
-        <div className="relative z-10 flex flex-col items-end gap-3">
-          <div className="px-5 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl text-right group-hover:border-orange-500/30 transition-all duration-500">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Pending Requests</p>
-            <p className="text-3xl font-black text-orange-500 tabular-nums tracking-tighter leading-none">
+        <div className="relative z-10 flex flex-col items-end shrink-0">
+          <div className="px-3 sm:px-5 py-1.5 sm:py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl sm:rounded-2xl text-right group-hover:border-orange-500/30 transition-all duration-500">
+            <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Pending</p>
+            <p className="text-xl sm:text-3xl font-black text-orange-500 tabular-nums tracking-tighter leading-none">
               {documents.filter((d) => d.status === 'Pending').length}
             </p>
           </div>

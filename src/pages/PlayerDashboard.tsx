@@ -483,32 +483,32 @@ export const PlayerDashboard = () => {
 
   return (
     <div className="space-y-12">
-      {/* Hero Banner */}
-      <div className="bg-slate-950 py-5 md:py-8 px-5 md:px-10 rounded-2xl md:rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <User className="w-4 h-4 md:w-5 md:h-5 text-orange-500" />
-              <span className="text-orange-500 font-bold text-xs tracking-[0.2em] uppercase">
+      {/* Compact Hero Banner */}
+      <div className="bg-slate-950 py-3.5 sm:py-5 md:py-7 px-4 sm:px-6 md:px-10 rounded-2xl md:rounded-[2rem] shadow-xl border border-white/5 relative overflow-hidden">
+        <div className="relative z-10 flex flex-row items-center justify-between gap-3 sm:gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 mb-1">
+              <User className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-500 shrink-0" />
+              <span className="text-orange-500 font-bold text-[10px] md:text-xs tracking-[0.2em] uppercase">
                 {user ? 'Athlete Hub' : 'Official Portal'}
               </span>
             </div>
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-white">
+            <h1 className="text-xl sm:text-3xl md:text-4xl font-black italic tracking-tighter uppercase leading-none text-white">
               {user ? 'PLAYER ' : 'SPORTS '}<span className="text-orange-500">HUB</span>
             </h1>
-            <p className="text-slate-400 text-xs md:text-sm font-medium mt-2 max-w-md">
+            <p className="hidden sm:block text-slate-400 text-xs md:text-sm font-medium mt-1.5 max-w-md">
               {user 
                 ? 'Track your progress, accept team invitations, and follow live university matches.'
                 : 'Explore live university matches, upcoming tournaments, and official PSU sports action.'}
             </p>
           </div>
           {user && (
-            <div className="flex items-center gap-3">
-              <div className="px-3.5 py-2 bg-white/5 rounded-xl md:rounded-2xl border border-white/10 backdrop-blur-md">
-                <p className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Stars</p>
-                <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <div className="px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white/5 rounded-xl md:rounded-2xl border border-white/10 backdrop-blur-md">
+                <p className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Stars</p>
+                <div className="flex items-center gap-1">
                   <Star className="size-3 text-orange-500 fill-orange-500" />
-                  <p className="text-lg md:text-xl font-black tabular-nums text-white leading-none">{stars.length}</p>
+                  <p className="text-base sm:text-xl font-black tabular-nums text-white leading-none">{stars.length}</p>
                 </div>
               </div>
             </div>

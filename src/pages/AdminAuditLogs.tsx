@@ -94,19 +94,19 @@ export const AdminAuditLogs = () => {
       {/* Grain Texture */}
       <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.015] mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/p6.png')]" />
 
-      {/* Header */}
-      <div className="bg-slate-950 text-white py-6 md:py-8 px-6 md:px-10 rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden group">
+      {/* Compact Header */}
+      <div className="bg-slate-950 text-white py-3.5 sm:py-5 md:py-7 px-4 sm:px-6 md:px-10 rounded-2xl sm:rounded-[2rem] shadow-xl border border-white/5 relative overflow-hidden group">
         <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-2">
-            <ClipboardList className="w-5 h-5 text-orange-500" />
-            <span className="text-orange-500 font-bold text-xs tracking-[0.2em] uppercase">
+          <div className="flex items-center gap-1.5 mb-1">
+            <ClipboardList className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500" />
+            <span className="text-orange-500 font-bold text-[10px] sm:text-xs tracking-[0.2em] uppercase">
               Administrative Audit
             </span>
           </div>
-          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
+          <h1 className="text-xl sm:text-3xl md:text-4xl font-black italic tracking-tighter uppercase leading-none">
             SYSTEM <span className="text-orange-500">AUDIT TRAIL</span>
           </h1>
-          <p className="text-slate-400 font-medium text-sm tracking-wide mt-2 max-w-2xl opacity-80">
+          <p className="hidden sm:block text-slate-400 font-medium text-xs sm:text-sm tracking-wide mt-1.5 max-w-2xl opacity-80">
             Real-time tracking of administrative actions, entity modifications, and security events for full institutional accountability.
           </p>
         </div>

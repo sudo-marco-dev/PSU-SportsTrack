@@ -151,21 +151,21 @@ export const CoachDashboard = () => {
 
   return (
     <div className="space-y-8 pb-4">
-      {/* Header Section */}
-      <div className="bg-slate-950 text-white py-5 md:py-8 px-5 md:px-10 rounded-2xl md:rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden group">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
-          <div className="flex items-center gap-4 md:gap-6">
-            <div className="p-3 md:p-4 bg-orange-500 rounded-xl md:rounded-2xl shadow-lg shadow-orange-500/20 group-hover:rotate-6 transition-transform duration-500 shrink-0">
-              <TrendingUp className="size-6 md:size-8 text-white" />
+      {/* Compact Header Section */}
+      <div className="bg-slate-950 text-white py-3.5 sm:py-5 md:py-7 px-4 sm:px-6 md:px-10 rounded-2xl md:rounded-[2rem] shadow-xl border border-white/5 relative overflow-hidden group">
+        <div className="relative z-10 flex flex-row items-center justify-between gap-3 md:gap-6">
+          <div className="flex items-center gap-3 sm:gap-4 md:gap-6 min-w-0">
+            <div className="p-2 sm:p-3 bg-orange-500 rounded-xl shadow-lg shadow-orange-500/20 group-hover:rotate-6 transition-transform duration-500 shrink-0">
+              <TrendingUp className="size-5 sm:size-6 md:size-7 text-white" />
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2 mb-1 md:mb-2">
-                <Activity className="w-4 h-4 md:w-5 md:h-5 text-orange-500" />
+              <div className="flex items-center gap-1.5 mb-0.5 sm:mb-1">
+                <Activity className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-500" />
                 <span className="text-orange-500 font-bold text-[10px] md:text-xs tracking-[0.2em] uppercase">
                   Coach Analytics
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
+              <h1 className="text-xl sm:text-3xl md:text-4xl font-black italic tracking-tighter uppercase leading-none">
                 PERFORMANCE <span className="text-orange-500">OVERVIEW</span>
               </h1>
             </div>

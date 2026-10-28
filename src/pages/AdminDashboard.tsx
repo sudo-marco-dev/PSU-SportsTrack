@@ -183,33 +183,33 @@ export const AdminDashboard = () => {
       {/* Subtle Grain Texture Overlay */}
       <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.01] mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/p6.png')]" />
 
-      {/* Header - Simplified & Production Ready */}
-      <div className="bg-slate-950 text-white py-5 md:py-8 px-5 md:px-12 rounded-2xl md:rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden group flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Compact Header - Simplified & Production Ready */}
+      <div className="bg-slate-950 text-white py-3.5 sm:py-5 md:py-7 px-4 sm:px-6 md:px-10 rounded-2xl md:rounded-[2rem] shadow-xl border border-white/5 relative overflow-hidden group flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-4">
         <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-2">
-            <LayoutDashboard className="w-5 h-5 text-orange-500" />
-            <span className="text-orange-500 font-bold text-xs tracking-[0.2em] uppercase">
+          <div className="flex items-center gap-1.5 mb-1">
+            <LayoutDashboard className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500" />
+            <span className="text-orange-500 font-bold text-[10px] sm:text-xs tracking-[0.2em] uppercase">
               Command Center
             </span>
           </div>
-          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
+          <h1 className="text-xl sm:text-3xl md:text-4xl font-black italic tracking-tighter uppercase leading-none">
             SYSTEM <span className="text-orange-500">OVERVIEW</span>
           </h1>
-          <p className="text-slate-400 font-medium text-sm tracking-wide mt-2 max-w-2xl">
+          <p className="hidden sm:block text-slate-400 font-medium text-xs sm:text-sm tracking-wide mt-1.5 max-w-2xl">
             Institutional Orchestration Hub. Monitor tournament lifecycle, user eligibility, and live match execution.
           </p>
         </div>
 
-        <div className="relative z-10 shrink-0 flex items-center gap-2.5 flex-wrap">
+        <div className="relative z-10 shrink-0 flex items-center gap-2 flex-wrap">
           <Button
             onClick={() => setIsFacilitatorModalOpen(true)}
             variant="ghost"
-            className="h-11 border border-white/15 hover:border-orange-500/60 bg-white/5 hover:bg-orange-500/20 text-white hover:text-white font-bold gap-2 px-5 rounded-xl text-xs uppercase tracking-wider group cursor-pointer"
+            className="h-9 sm:h-10 border border-white/15 hover:border-orange-500/60 bg-white/5 hover:bg-orange-500/20 text-white hover:text-white font-bold gap-1.5 sm:gap-2 px-3 sm:px-4 rounded-xl text-[11px] sm:text-xs uppercase tracking-wider group cursor-pointer"
           >
-            <ShieldCheck className="size-4 text-orange-400 group-hover:scale-110 transition-transform" />
+            <ShieldCheck className="size-3.5 sm:size-4 text-orange-400 group-hover:scale-110 transition-transform" />
             <span className="text-white group-hover:text-white">Match Facilitators</span>
             {facilitatorsCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-orange-500 text-white text-[10px] font-black shadow-sm">
+              <span className="px-1.5 py-0.5 rounded-full bg-orange-500 text-white text-[9px] sm:text-[10px] font-black shadow-sm">
                 {facilitatorsCount}
               </span>
             )}
@@ -218,12 +218,12 @@ export const AdminDashboard = () => {
           <Button
             onClick={() => navigate('/admin/recovery')}
             variant="ghost"
-            className="h-11 border border-white/15 hover:border-orange-500/60 bg-white/5 hover:bg-orange-500/20 text-white hover:text-white font-bold gap-2 px-5 rounded-xl text-xs uppercase tracking-wider group cursor-pointer"
+            className="h-9 sm:h-10 border border-white/15 hover:border-orange-500/60 bg-white/5 hover:bg-orange-500/20 text-white hover:text-white font-bold gap-1.5 sm:gap-2 px-3 sm:px-4 rounded-xl text-[11px] sm:text-xs uppercase tracking-wider group cursor-pointer"
           >
-            <RotateCcw className="size-4 text-orange-400 group-hover:rotate-[-45deg] transition-transform" />
+            <RotateCcw className="size-3.5 sm:size-4 text-orange-400 group-hover:rotate-[-45deg] transition-transform" />
             <span className="text-white group-hover:text-white">Recovery Center</span>
             {recoverableCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-orange-500 text-white text-[10px] font-black shadow-sm">
+              <span className="px-1.5 py-0.5 rounded-full bg-orange-500 text-white text-[9px] sm:text-[10px] font-black shadow-sm">
                 {recoverableCount}
               </span>
             )}

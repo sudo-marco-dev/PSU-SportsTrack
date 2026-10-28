@@ -139,13 +139,13 @@ export const DevSandbox = () => {
 
   // Expandable Icon Tabs Config (Rule #2 Guardrail Compliant)
   const devTabs: ExpandableTabItem[] = useMemo(() => [
-    { id: 'scenarios', label: 'Demo Scenarios', icon: Sparkles },
-    { id: 'impersonate', label: '1-Tap Impersonate', icon: UserCheck, count: PRESET_PERSONAS.length },
-    { id: 'hosting', label: 'Rapid Hosting', icon: Zap },
-    { id: 'faker', label: 'Faker & Clearance', icon: Users },
-    { id: 'bot', label: 'Score Simulator', icon: Bot },
-    { id: 'metrics', label: 'Health & Dual Wipe', icon: Database },
-    { id: 'checklist', label: 'Defense Script', icon: Activity },
+    { id: 'scenarios', label: 'Demo Scenarios', shortLabel: 'Scenarios', icon: Sparkles },
+    { id: 'impersonate', label: '1-Tap Impersonate', shortLabel: 'Impersonate', icon: UserCheck, count: PRESET_PERSONAS.length },
+    { id: 'hosting', label: 'Rapid Hosting', shortLabel: 'Hosting', icon: Zap },
+    { id: 'faker', label: 'Faker & Clearance', shortLabel: 'Faker', icon: Users },
+    { id: 'bot', label: 'Score Simulator', shortLabel: 'Simulator', icon: Bot },
+    { id: 'metrics', label: 'Health & Dual Wipe', shortLabel: 'Health', icon: Database },
+    { id: 'checklist', label: 'Defense Script', shortLabel: 'Defense', icon: Activity },
   ], []);
 
   // Loading States
@@ -664,6 +664,7 @@ export const DevSandbox = () => {
             onChange={handleTabChange}
             ariaLabel="Developer Workbench Tabs"
             className="w-full sm:w-auto"
+            fullWidthOnMobile={false}
           />
         </div>
 

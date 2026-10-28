@@ -78,11 +78,18 @@ export const ExpandableIconTabs: React.FC<ExpandableIconTabsProps> = ({
             <span
               className={cn(
                 textSizeClass,
-                'truncate font-black whitespace-nowrap transition-all duration-200 pr-0.5',
+                'min-w-0 font-black whitespace-nowrap transition-all duration-200 pr-0.5',
                 isActive ? 'inline-block' : 'hidden sm:inline-block'
               )}
             >
-              {tab.shortLabel && !isActive ? tab.shortLabel : tab.label}
+              {tab.shortLabel ? (
+                <>
+                  <span className="inline-block sm:hidden">{tab.shortLabel}</span>
+                  <span className="hidden sm:inline-block">{tab.label}</span>
+                </>
+              ) : (
+                tab.label
+              )}
             </span>
 
             {/* Badge Indicator */}

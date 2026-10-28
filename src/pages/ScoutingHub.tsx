@@ -651,40 +651,40 @@ export const ScoutingHub = () => {
 
   return (
     <div className="space-y-6 pb-8 w-full min-w-0 max-w-full overflow-x-hidden">
-      {/* Hero Banner */}
-      <div className="bg-slate-950 text-white py-5 sm:py-6 md:py-8 px-4 sm:px-6 md:px-10 rounded-2xl sm:rounded-[2rem] shadow-2xl border border-white/5 relative overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+      {/* Compact Hero Banner */}
+      <div className="bg-slate-950 text-white py-3.5 sm:py-5 md:py-7 px-4 sm:px-6 md:px-10 rounded-2xl sm:rounded-[2rem] shadow-xl border border-white/5 relative overflow-hidden">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-5">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Search className="size-4 text-orange-500" />
-              <span className="text-orange-500 font-black text-xs tracking-[0.2em] uppercase">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Search className="size-3.5 sm:size-4 text-orange-500" />
+              <span className="text-orange-500 font-black text-[10px] sm:text-xs tracking-[0.2em] uppercase">
                 Official PSU Athletics Directory
               </span>
             </div>
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
+            <h1 className="text-xl sm:text-3xl md:text-4xl font-black italic tracking-tighter uppercase leading-none">
               ATHLETICS <span className="text-orange-500">HUB</span>
             </h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-medium mt-2 max-w-2xl">
+            <p className="hidden sm:block text-slate-400 text-xs sm:text-sm font-medium mt-1.5 max-w-2xl">
               Official Palawan State University Athlete Directory, Coach Roster &amp; Match Statistics Archive.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0">
-            <div className="px-3.5 py-2.5 rounded-2xl bg-white/5 border border-white/10 text-center">
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Athletes</p>
-              <p className="text-xl font-black text-white tabular-nums">{players.length}</p>
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-2.5 shrink-0">
+            <div className="px-2 sm:px-3.5 py-1.5 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 text-center">
+              <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider sm:tracking-widest text-slate-400">Athletes</p>
+              <p className="text-sm sm:text-xl font-black text-white tabular-nums leading-tight">{players.length}</p>
             </div>
-            <div className="px-3.5 py-2.5 rounded-2xl bg-white/5 border border-white/10 text-center">
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Coaches</p>
-              <p className="text-xl font-black text-orange-400 tabular-nums">{coaches.length}</p>
+            <div className="px-2 sm:px-3.5 py-1.5 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 text-center">
+              <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider sm:tracking-widest text-slate-400">Coaches</p>
+              <p className="text-sm sm:text-xl font-black text-orange-400 tabular-nums leading-tight">{coaches.length}</p>
             </div>
-            <div className="px-3.5 py-2.5 rounded-2xl bg-white/5 border border-white/10 text-center">
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Squads</p>
-              <p className="text-xl font-black text-cyan-400 tabular-nums">{teams.length}</p>
+            <div className="px-2 sm:px-3.5 py-1.5 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 text-center">
+              <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider sm:tracking-widest text-slate-400">Squads</p>
+              <p className="text-sm sm:text-xl font-black text-cyan-400 tabular-nums leading-tight">{teams.length}</p>
             </div>
-            <div className="px-3.5 py-2.5 rounded-2xl bg-white/5 border border-white/10 text-center">
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Matches</p>
-              <p className="text-xl font-black text-emerald-400 tabular-nums">{matches.length}</p>
+            <div className="px-2 sm:px-3.5 py-1.5 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 text-center">
+              <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider sm:tracking-widest text-slate-400">Matches</p>
+              <p className="text-sm sm:text-xl font-black text-emerald-400 tabular-nums leading-tight">{matches.length}</p>
             </div>
           </div>
         </div>
@@ -882,10 +882,10 @@ export const ScoutingHub = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6 min-w-0">
         <ExpandableIconTabs
           tabs={[
-            { id: 'players', label: 'Players', icon: Users, count: filteredPlayers.length },
-            { id: 'coaches', label: 'Coaches', icon: UserCheck, count: filteredCoaches.length },
-            { id: 'teams', label: 'Teams', icon: ShieldCheck, count: filteredTeams.length },
-            { id: 'matches', label: 'Matches', icon: Trophy, count: filteredMatches.length },
+            { id: 'players', label: 'Players', shortLabel: 'Players', icon: Users, count: filteredPlayers.length },
+            { id: 'coaches', label: 'Coaches', shortLabel: 'Coaches', icon: UserCheck, count: filteredCoaches.length },
+            { id: 'teams', label: 'Teams', shortLabel: 'Teams', icon: ShieldCheck, count: filteredTeams.length },
+            { id: 'matches', label: 'Matches', shortLabel: 'Matches', icon: Trophy, count: filteredMatches.length },
           ]}
           activeTab={activeTab}
           onChange={setActiveTab}

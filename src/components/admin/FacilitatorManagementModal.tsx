@@ -217,17 +217,17 @@ export const FacilitatorManagementModal = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full sm:max-w-2xl max-w-[95vw] rounded-3xl border-slate-200 dark:border-white/10 p-6 shadow-2xl bg-white dark:bg-slate-950 overflow-hidden">
-        <DialogHeader className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-xl border border-orange-500/20">
+      <DialogContent className="w-full sm:max-w-2xl max-w-[95vw] rounded-3xl border-slate-200 dark:border-white/10 p-3.5 xs:p-4 sm:p-6 shadow-2xl bg-white dark:bg-slate-950 overflow-hidden">
+        <DialogHeader className="space-y-1 min-w-0 pr-7">
+          <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+            <div className="p-2 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-xl border border-orange-500/20 shrink-0">
               <ShieldCheck className="size-5" />
             </div>
-            <div>
-              <DialogTitle className="text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="text-base xs:text-lg sm:text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white flex items-center gap-2 leading-tight break-words">
                 Match Facilitator Governance
               </DialogTitle>
-              <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
+              <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 break-words">
                 Authorize official table scorekeepers and referees court-side without writing database queries.
               </DialogDescription>
             </div>
@@ -235,36 +235,48 @@ export const FacilitatorManagementModal = ({
         </DialogHeader>
 
         {/* Tab Toggle */}
-        <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl mt-4 border border-slate-200/50 dark:border-white/5">
+        <div
+          role="tablist"
+          aria-label="Facilitator Management Sections"
+          className="flex items-center gap-1 sm:gap-2 p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl mt-3 sm:mt-4 border border-slate-200/50 dark:border-white/5 min-w-0 w-full"
+        >
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'roster'}
+            aria-label={`Appointed Officials (${facilitators.length})`}
             onClick={() => setActiveTab('roster')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-1 min-h-[36px] py-2 px-1.5 xs:px-2.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-tight sm:tracking-wider transition-colors flex items-center justify-center gap-1 sm:gap-2 cursor-pointer min-w-0 ${
               activeTab === 'roster'
                 ? 'bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 shadow-sm'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <Activity className="size-3.5" />
-            Appointed Officials ({facilitators.length})
+            <Activity className="size-3.5 shrink-0" />
+            <span className="min-w-0 whitespace-nowrap sm:hidden">Officials ({facilitators.length})</span>
+            <span className="min-w-0 whitespace-nowrap hidden sm:inline">Appointed Officials ({facilitators.length})</span>
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'appoint'}
+            aria-label="Appoint New Official"
             onClick={() => setActiveTab('appoint')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-1 min-h-[36px] py-2 px-1.5 xs:px-2.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-tight sm:tracking-wider transition-colors flex items-center justify-center gap-1 sm:gap-2 cursor-pointer min-w-0 ${
               activeTab === 'appoint'
                 ? 'bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 shadow-sm'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <Sparkles className="size-3.5" />
-            Appoint New Official
+            <Sparkles className="size-3.5 shrink-0" />
+            <span className="min-w-0 whitespace-nowrap sm:hidden">Appoint New</span>
+            <span className="min-w-0 whitespace-nowrap hidden sm:inline">Appoint New Official</span>
           </button>
         </div>
 
         {/* TAB 1: CURRENT FACILITATORS ROSTER */}
         {activeTab === 'roster' && (
-          <div className="mt-4 space-y-3">
+          <div className="mt-3 sm:mt-4 space-y-3 min-w-0 w-full">
             {isLoading ? (
               <div className="py-12 flex flex-col items-center justify-center gap-2 text-slate-400">
                 <Loader2 className="size-6 animate-spin text-orange-500" />
@@ -289,19 +301,19 @@ export const FacilitatorManagementModal = ({
                 </Button>
               </div>
             ) : (
-              <div className="max-h-[380px] overflow-y-auto space-y-2.5 pr-1">
+              <div className="max-h-[380px] overflow-y-auto space-y-2.5 pr-1 min-w-0 w-full">
                 {facilitators.map((faci) => (
                   <div
                     key={faci.id}
-                    className="p-3.5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/80 flex items-center justify-between gap-3 shadow-sm hover:border-orange-500/30 transition-all"
+                    className="p-3 sm:p-3.5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/80 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 sm:gap-3 shadow-sm hover:border-orange-500/30 transition-all min-w-0 w-full"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="size-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-md shadow-orange-500/20">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                      <div className="size-9 sm:size-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-md shadow-orange-500/20">
                         {faci.full_name?.charAt(0).toUpperCase() || 'F'}
                       </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                          <h4 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
                             {faci.full_name}
                           </h4>
                           <Badge className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 text-[9px] font-black uppercase">
@@ -319,7 +331,7 @@ export const FacilitatorManagementModal = ({
                       size="sm"
                       onClick={() => handleInitiateRevoke(faci)}
                       disabled={isUpdatingId === faci.id}
-                      className="h-8 text-[11px] font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl shrink-0"
+                      className="h-8 text-[11px] font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl shrink-0 ml-auto"
                     >
                       {isUpdatingId === faci.id ? (
                         <Loader2 className="size-3.5 animate-spin" />
@@ -337,9 +349,9 @@ export const FacilitatorManagementModal = ({
 
         {/* TAB 2: APPOINT NEW FACILITATOR */}
         {activeTab === 'appoint' && (
-          <div className="mt-4 space-y-3">
+          <div className="mt-3 sm:mt-4 space-y-3 min-w-0 w-full">
             {/* Search Input */}
-            <div className="relative">
+            <div className="relative min-w-0">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
               <Input
                 placeholder="Search registered user by name..."
@@ -350,7 +362,7 @@ export const FacilitatorManagementModal = ({
             </div>
 
             {/* Candidate List */}
-            <div className="max-h-[340px] overflow-y-auto space-y-2 pr-1">
+            <div className="max-h-[340px] overflow-y-auto space-y-2 pr-1 min-w-0 w-full">
               {candidates.length === 0 ? (
                 <div className="p-8 text-center text-xs text-slate-400">
                   {searchQuery ? 'No matching registered users found.' : 'Type a name to search registered members.'}
@@ -359,14 +371,14 @@ export const FacilitatorManagementModal = ({
                 candidates.map((cand) => (
                   <div
                     key={cand.id}
-                    className="p-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/60 flex items-center justify-between gap-3 hover:border-slate-300 dark:hover:border-white/20 transition-all"
+                    className="p-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/60 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 sm:gap-3 hover:border-slate-300 dark:hover:border-white/20 transition-all min-w-0 w-full"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                       <div className="size-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center font-bold text-xs shrink-0">
                         {cand.full_name?.charAt(0).toUpperCase() || 'U'}
                       </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                           <h4 className="font-bold text-xs text-slate-900 dark:text-white truncate">
                             {cand.full_name}
                           </h4>
@@ -384,7 +396,7 @@ export const FacilitatorManagementModal = ({
                       size="sm"
                       onClick={() => handleAppointFacilitator(cand)}
                       disabled={isUpdatingId === cand.id}
-                      className="h-8 bg-orange-500 hover:bg-orange-600 text-white font-black text-[11px] uppercase tracking-wider rounded-xl gap-1 shrink-0 shadow-sm shadow-orange-500/20"
+                      className="h-8 bg-orange-500 hover:bg-orange-600 text-white font-black text-[11px] uppercase tracking-wider rounded-xl gap-1 shrink-0 shadow-sm shadow-orange-500/20 ml-auto"
                     >
                       {isUpdatingId === cand.id ? (
                         <Loader2 className="size-3.5 animate-spin" />
@@ -401,16 +413,16 @@ export const FacilitatorManagementModal = ({
         )}
 
         {/* Footer info note */}
-        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[11px] text-slate-400">
-          <div className="flex items-center gap-1.5">
-            <CheckCircle2 className="size-3.5 text-emerald-500" />
-            <span>Facilitators bypass athlete document verification.</span>
+        <div className="mt-3 sm:mt-4 pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between gap-2 text-[11px] text-slate-400 min-w-0 w-full">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
+            <span className="truncate">Facilitators bypass athlete document verification.</span>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => onOpenChange(false)}
-            className="h-7 text-xs font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-lg"
+            className="h-7 text-xs font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-lg shrink-0"
           >
             Close
           </Button>

@@ -201,27 +201,31 @@ export const LegalModal: React.FC<LegalModalProps> = ({
             onValueChange={(val) => setActiveTab(val as 'privacy' | 'terms')}
             className="w-full pt-0.5"
           >
-            <TabsList className="grid w-full grid-cols-2 bg-slate-900 border border-white/15 p-1 rounded-xl h-9 sm:h-10">
+            <TabsList className="grid w-full grid-cols-2 bg-slate-900 border border-white/15 p-1 rounded-xl h-auto min-h-10 sm:min-h-11">
               <TabsTrigger
                 value="terms"
-                className="rounded-lg text-[11px] sm:text-xs font-bold text-slate-300 data-[active]:bg-orange-500 data-[active]:text-white data-[state=active]:bg-orange-500 data-[state=active]:text-white transition-all gap-1.5"
+                className="rounded-lg text-[10px] xs:text-[11px] sm:text-xs font-bold text-slate-300 data-[active]:bg-orange-500 data-[active]:text-white data-[state=active]:bg-orange-500 data-[state=active]:text-white transition-all flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 px-1 xs:px-1.5 sm:px-2.5 py-1 sm:py-1.5 h-auto min-h-[36px] sm:min-h-[40px] leading-tight whitespace-normal sm:whitespace-nowrap cursor-pointer"
               >
-                <FileText className="size-3.5 shrink-0" />
-                <span className="truncate">Terms &amp; Conditions</span>
+                <div className="flex items-center justify-center gap-1 sm:gap-1.5 min-w-0">
+                  <FileText className="size-3.5 shrink-0" />
+                  <span className="whitespace-normal sm:whitespace-nowrap text-center">Terms &amp; Conditions</span>
+                </div>
                 {mandatoryAcceptance && (
-                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-black/30 text-white/90 shrink-0">
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/30 text-white/90 shrink-0">
                     {hasReadTerms ? '100%' : `${termsProgress}%`}
                   </span>
                 )}
               </TabsTrigger>
               <TabsTrigger
                 value="privacy"
-                className="rounded-lg text-[11px] sm:text-xs font-bold text-slate-300 data-[active]:bg-orange-500 data-[active]:text-white data-[state=active]:bg-orange-500 data-[state=active]:text-white transition-all gap-1.5"
+                className="rounded-lg text-[10px] xs:text-[11px] sm:text-xs font-bold text-slate-300 data-[active]:bg-orange-500 data-[active]:text-white data-[state=active]:bg-orange-500 data-[state=active]:text-white transition-all flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 px-1 xs:px-1.5 sm:px-2.5 py-1 sm:py-1.5 h-auto min-h-[36px] sm:min-h-[40px] leading-tight whitespace-normal sm:whitespace-nowrap cursor-pointer"
               >
-                <ShieldCheck className="size-3.5 shrink-0" />
-                <span className="truncate">Privacy Policy</span>
+                <div className="flex items-center justify-center gap-1 sm:gap-1.5 min-w-0">
+                  <ShieldCheck className="size-3.5 shrink-0" />
+                  <span className="whitespace-normal sm:whitespace-nowrap text-center">Privacy Policy</span>
+                </div>
                 {mandatoryAcceptance && (
-                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-black/30 text-white/90 shrink-0">
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/30 text-white/90 shrink-0">
                     {hasReadPrivacy ? '100%' : `${privacyProgress}%`}
                   </span>
                 )}

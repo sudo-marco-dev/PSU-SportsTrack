@@ -119,22 +119,29 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
         </div>
 
         {/* Right: Explicit Phase Switcher (Phase 1 Elimination vs Phase 2 Playoff Bracket) */}
-        <div className="grid grid-cols-2 lg:flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 bg-slate-950 text-white rounded-xl border border-white/15 shadow-md w-full lg:w-auto min-w-0">
+        <div
+          role="tablist"
+          aria-label="Tournament Phase Selector"
+          className="grid grid-cols-2 lg:flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 bg-slate-950 text-white rounded-xl border border-white/15 shadow-md w-full lg:w-auto min-w-0"
+        >
           {/* Phase 1: Elimination Stage */}
           <button
             type="button"
+            role="tab"
+            aria-selected={activePhase === 'elimination'}
+            aria-label="Phase 1 Elimination Stage"
             onClick={() => setActivePhase('elimination')}
-            className={`py-2 sm:py-2.5 px-2 sm:px-3.5 rounded-lg font-black uppercase italic tracking-tight text-[11px] sm:text-xs transition-all duration-150 cursor-pointer active:scale-95 flex items-center justify-center gap-1 sm:gap-1.5 min-w-0 w-full lg:w-auto ${
+            className={`py-2 sm:py-2.5 px-1.5 xs:px-2.5 sm:px-3.5 rounded-lg font-black uppercase italic tracking-tight text-[10px] xs:text-[11px] sm:text-xs transition-all duration-150 cursor-pointer active:scale-95 flex items-center justify-center gap-1 sm:gap-1.5 min-w-0 w-full lg:w-auto ${
               activePhase === 'elimination'
                 ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
                 : 'text-slate-400 hover:text-white hover:bg-white/5'
             }`}
           >
             <Layers className="size-3.5 shrink-0" />
-            <span className="truncate sm:hidden">Phase 1</span>
-            <span className="truncate hidden sm:inline">Phase 1 • Elimination</span>
+            <span className="min-w-0 whitespace-nowrap sm:hidden">Phase 1</span>
+            <span className="min-w-0 whitespace-nowrap hidden sm:inline">Phase 1 • Elimination</span>
             <span
-              className={`px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 leading-none ${
+              className={`px-1 xs:px-1.5 py-0.5 rounded text-[8px] xs:text-[9px] font-bold shrink-0 leading-none ${
                 activePhase === 'elimination' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-300'
               }`}
             >
@@ -150,8 +157,11 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
           {/* Phase 2: Playoff Bracket */}
           <button
             type="button"
+            role="tab"
+            aria-selected={activePhase === 'playoffs'}
+            aria-label="Phase 2 Playoff Bracket"
             onClick={() => setActivePhase('playoffs')}
-            className={`py-2 sm:py-2.5 px-2 sm:px-3.5 rounded-lg font-black uppercase italic tracking-tight text-[11px] sm:text-xs transition-all duration-150 cursor-pointer active:scale-95 flex items-center justify-center gap-1 sm:gap-1.5 min-w-0 w-full lg:w-auto ${
+            className={`py-2 sm:py-2.5 px-1.5 xs:px-2.5 sm:px-3.5 rounded-lg font-black uppercase italic tracking-tight text-[10px] xs:text-[11px] sm:text-xs transition-all duration-150 cursor-pointer active:scale-95 flex items-center justify-center gap-1 sm:gap-1.5 min-w-0 w-full lg:w-auto ${
               activePhase === 'playoffs'
                 ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
                 : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -162,18 +172,18 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
             ) : (
               <Lock className="size-3.5 text-slate-500 shrink-0" />
             )}
-            <span className="truncate sm:hidden">Playoffs</span>
-            <span className="truncate hidden sm:inline">Phase 2 • Playoff Bracket</span>
+            <span className="min-w-0 whitespace-nowrap sm:hidden">Playoffs</span>
+            <span className="min-w-0 whitespace-nowrap hidden sm:inline">Phase 2 • Playoff Bracket</span>
             {hasPlayoffs ? (
               <span
-                className={`px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 leading-none ${
+                className={`px-1 xs:px-1.5 py-0.5 rounded text-[8px] xs:text-[9px] font-bold shrink-0 leading-none ${
                   activePhase === 'playoffs' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-300'
                 }`}
               >
                 {playoffMatchesCount}
               </span>
             ) : (
-              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[8px] font-black uppercase border border-slate-700 shrink-0 leading-none">
+              <span className="px-1 xs:px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[8px] font-black uppercase border border-slate-700 shrink-0 leading-none">
                 Locked
               </span>
             )}

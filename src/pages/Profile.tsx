@@ -888,79 +888,79 @@ export const Profile = () => {
         /* 3. PLAYER / ATHLETE ROLE PROFILE VIEW (DEFAULT) */
         /* ========================================================================= */
         <div className="space-y-5">
-          {/* Player Hero Header */}
-          <div className="bg-slate-950 py-5 sm:py-6 px-4 sm:px-8 rounded-2xl shadow-xl border border-white/5 relative overflow-hidden">
-            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-5">
-              <div className="flex items-start sm:items-center gap-3.5 sm:gap-5 min-w-0 flex-1">
-                <div className="size-12 sm:size-16 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-xl sm:text-2xl shadow-lg shadow-orange-500/20 shrink-0">
+          {/* Compact Player Hero Header */}
+          <div className="bg-slate-950 py-3 sm:py-5 px-3.5 sm:px-6 rounded-2xl shadow-xl border border-white/5 relative overflow-hidden">
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 sm:gap-4">
+              <div className="flex items-start sm:items-center gap-2.5 sm:gap-4 min-w-0 flex-1">
+                <div className="size-10 sm:size-14 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-base sm:text-2xl shadow-lg shadow-orange-500/20 shrink-0">
                   {user?.email?.charAt(0).toUpperCase() || 'U'}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                    <Badge className="bg-orange-500/20 text-orange-400 hover:bg-orange-500/20 border-orange-500/30 font-bold uppercase text-[10px] tracking-wider">
+                  <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 mb-1">
+                    <Badge className="bg-orange-500/20 text-orange-400 hover:bg-orange-500/20 border-orange-500/30 font-bold uppercase text-[9px] sm:text-[10px] tracking-wider py-0 px-2">
                       {isFacultyAthlete ? 'FACULTY ATHLETE' : 'STUDENT ATHLETE'}
                     </Badge>
-                    <Badge className="py-1 px-2.5 h-auto rounded-lg bg-white/10 text-slate-200 border-white/10 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1.5 max-w-full whitespace-normal text-left leading-snug">
-                      <GraduationCap className="size-3.5 text-orange-400 shrink-0" />
+                    <Badge className="py-0.5 px-2 h-auto rounded-lg bg-white/10 text-slate-200 border-white/10 font-medium uppercase text-[9px] sm:text-[10px] tracking-wider flex items-center gap-1 max-w-full whitespace-normal text-left leading-snug">
+                      <GraduationCap className="size-3 text-orange-400 shrink-0" />
                       <span className="break-words">{profile?.college_name || 'Unassigned College'}</span>
                     </Badge>
                     {isVerified ? (
-                      <Badge className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/30 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1">
+                      <Badge className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/30 font-medium uppercase text-[9px] sm:text-[10px] tracking-wider flex items-center gap-1 py-0 px-2">
                         <CheckCircle2 className="size-3 shrink-0" /> Verified Athlete
                       </Badge>
                     ) : hasPendingDoc ? (
-                      <Badge className="bg-amber-500/20 text-amber-400 hover:bg-amber-500/20 border-amber-500/30 font-medium uppercase text-[10px] tracking-wider flex items-center gap-1">
+                      <Badge className="bg-amber-500/20 text-amber-400 hover:bg-amber-500/20 border-amber-500/30 font-medium uppercase text-[9px] sm:text-[10px] tracking-wider flex items-center gap-1 py-0 px-2">
                         <Clock className="size-3 shrink-0" /> Review Pending
                       </Badge>
                     ) : null}
                   </div>
-                  <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black italic tracking-tight uppercase text-white leading-tight break-words">
+                  <h1 className="text-lg sm:text-2xl md:text-3xl font-black italic tracking-tight uppercase text-white leading-tight break-words">
                     {profile?.full_name || user?.email?.split('@')[0]}
                   </h1>
-                  <p className="text-slate-400 font-normal text-xs mt-0.5 flex items-center gap-1.5 truncate">
+                  <p className="text-slate-400 font-normal text-[11px] sm:text-xs mt-0.5 flex items-center gap-1.5 truncate">
                     <Mail className="size-3 text-slate-500 shrink-0" /> <span className="truncate">{user?.email}</span>
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-2">
-                <div className="px-2.5 sm:px-3 py-1.5 bg-white/5 rounded-xl border border-white/10 backdrop-blur-md">
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">Career Score</p>
+              <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-1.5 sm:gap-2">
+                <div className="px-2 sm:px-3 py-1 sm:py-1.5 bg-white/5 rounded-xl border border-white/10 backdrop-blur-md">
+                  <p className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">Career Score</p>
                   <div className="flex items-center gap-1 mt-0.5">
-                    <Activity className="size-3.5 text-orange-400 shrink-0" />
-                    <span className="text-sm sm:text-lg font-black text-white tabular-nums">
+                    <Activity className="size-3 text-orange-400 shrink-0" />
+                    <span className="text-xs sm:text-lg font-black text-white tabular-nums">
                       {telemetry?.totalPoints ?? 0}
                     </span>
                   </div>
                 </div>
-                <div className="px-2.5 sm:px-3 py-1.5 bg-white/5 rounded-xl border border-white/10 backdrop-blur-md">
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">Games</p>
+                <div className="px-2 sm:px-3 py-1 sm:py-1.5 bg-white/5 rounded-xl border border-white/10 backdrop-blur-md">
+                  <p className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">Games</p>
                   <div className="flex items-center gap-1 mt-0.5">
-                    <span className="text-sm sm:text-lg font-black text-emerald-400 tabular-nums">
+                    <span className="text-xs sm:text-lg font-black text-emerald-400 tabular-nums">
                       {telemetry?.gamesPlayed ?? 0}
                     </span>
                   </div>
                 </div>
-                <div className="px-2.5 sm:px-3 py-1.5 bg-white/5 rounded-xl border border-white/10 backdrop-blur-md">
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">MVP Stars</p>
+                <div className="px-2 sm:px-3 py-1 sm:py-1.5 bg-white/5 rounded-xl border border-white/10 backdrop-blur-md">
+                  <p className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">MVP Stars</p>
                   <div className="flex items-center gap-1 mt-0.5">
-                    <Star className="size-3.5 text-orange-500 fill-orange-500 shrink-0" />
-                    <span className="text-sm sm:text-lg font-bold text-white tabular-nums">{stars.length}</span>
+                    <Star className="size-3 text-orange-500 fill-orange-500 shrink-0" />
+                    <span className="text-xs sm:text-lg font-bold text-white tabular-nums">{stars.length}</span>
                   </div>
                 </div>
                 <Button
                   onClick={() => navigate('/athletics')}
-                  className="col-span-2 sm:col-span-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs h-10 px-3.5 rounded-xl shadow-md shadow-orange-500/20"
+                  className="col-span-2 sm:col-span-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs h-8 sm:h-10 px-3 sm:px-3.5 rounded-xl shadow-md shadow-orange-500/20"
                 >
-                  <Search className="size-3.5 mr-1.5 shrink-0" />
+                  <Search className="size-3.5 mr-1 shrink-0" />
                   Athletics Hub
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => setShowSignOutPrompt(true)}
-                  className="col-span-1 border-white/10 bg-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 text-slate-300 font-semibold text-xs h-10 px-3 rounded-xl transition-all"
+                  className="col-span-1 border-white/10 bg-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 text-slate-300 font-semibold text-xs h-8 sm:h-10 px-2.5 sm:px-3 rounded-xl transition-all"
                 >
-                  <LogOut className="size-3.5 mr-1.5 shrink-0" />
+                  <LogOut className="size-3.5 mr-1 shrink-0" />
                   Sign Out
                 </Button>
               </div>
@@ -1035,16 +1035,17 @@ export const Profile = () => {
           <Tabs value={activeProfileTab} onValueChange={setActiveProfileTab} className="w-full flex flex-col space-y-4 min-w-0">
             <ExpandableIconTabs
               tabs={[
-                { id: 'career', label: 'Career & Games', icon: Activity, count: telemetry?.gamesPlayed ?? 0 },
-                { id: 'achievements', label: 'Achievements', icon: Trophy, count: stars.length },
+                { id: 'career', label: 'Career & Games', shortLabel: 'Career', icon: Activity, count: telemetry?.gamesPlayed ?? 0 },
+                { id: 'achievements', label: 'Achievements', shortLabel: 'Awards', icon: Trophy, count: stars.length },
                 {
                   id: 'invitations',
                   label: 'Invites',
+                  shortLabel: 'Invites',
                   icon: Users,
                   count: invitations.length,
                   badgeTone: invitations.length > 0 ? 'warning' : 'muted',
                 },
-                { id: 'account', label: 'Account & Prefs', icon: User },
+                { id: 'account', label: 'Account & Prefs', shortLabel: 'Account', icon: User },
               ]}
               activeTab={activeProfileTab}
               onChange={setActiveProfileTab}
