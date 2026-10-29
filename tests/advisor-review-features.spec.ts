@@ -268,16 +268,30 @@ test.describe('Advisor Review Features & Light Mode Legal Suite', () => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockNotifications) });
     });
 
+    // Set desktop viewport
+    await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/');
 
-    const bellBtn = page.getByRole('button', { name: /View notifications/i }).first();
-    await expect(bellBtn).toBeVisible({ timeout: 10000 });
+    const desktopBellBtn = page.locator('aside').getByRole('button', { name: /View notifications/i });
+    await expect(desktopBellBtn).toBeVisible({ timeout: 10000 });
 
-    // Open notifications popover
-    await bellBtn.click();
+    // Open notifications popover in desktop sidebar
+    await desktopBellBtn.click();
 
     // Verify notifications popover content
+    const popoverHeading = page.getByText('Notifications', { exact: true });
+    await expect(popoverHeading).toBeVisible();
     await expect(page.getByText('New Squad Recruitment Invite: CEAT Red Scorpions')).toBeVisible();
     await expect(page.getByText('Athletic Credential Verification Approved!')).toBeVisible();
+
+    // Verify popover is NOT cut off to the left (bounding box x must be >= 0)
+    const popoverContainer = page.locator('aside div.z-50');
+    await expect(popoverContainer).toBeVisible();
+    const box = await popoverContainer.boundingBox();
+    expect(box).not.toBeNull();
+    if (box) {
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(1280);
+    }
   });
 });

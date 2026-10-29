@@ -25,11 +25,12 @@ export interface InAppNotification {
  */
 function renderEmailHtml(payload: { title: string; message: string; link?: string; type: string }): string {
   const { title, message, link } = payload;
+  const siteUrl = ((import.meta as unknown as { env: Record<string, string> }).env?.VITE_SITE_URL || 'https://psusportstrack.tech').replace(/\/$/, '');
   const actionUrl = link
     ? link.startsWith('http')
       ? link
-      : `https://psu-sportstrack.edu.ph${link}`
-    : 'https://psu-sportstrack.edu.ph';
+      : `${siteUrl}${link.startsWith('/') ? link : `/${link}`}`
+    : siteUrl;
 
   return `
     <!DOCTYPE html>
@@ -63,7 +64,8 @@ function renderEmailHtml(payload: { title: string; message: string; link?: strin
           </div>
           <div class="footer">
             Palawan State University • Sports &amp; Athletics Department<br/>
-            This is an automated notification from the PSU SportsTrack collegiate sports platform.
+            This is an automated notification from the PSU SportsTrack collegiate sports platform.<br/>
+            Sent by &lt;noreply@psusportstrack.tech&gt;
           </div>
         </div>
       </body>
@@ -100,7 +102,9 @@ export async function sendNotification(payload: NotificationPayload): Promise<{ 
 
   // 2. Dispatch email notification if recipient email and Resend API key are available
   if (payload.recipientEmail) {
-    const resendApiKey = (import.meta as unknown as { env: Record<string, string> }).env?.VITE_RESEND_API_KEY;
+    const env = (import.meta as unknown as { env: Record<string, string> }).env;
+    const resendApiKey = env?.VITE_RESEND_API_KEY;
+    const fromAddress = env?.VITE_EMAIL_FROM || 'PSU SportsTrack <noreply@psusportstrack.tech>';
 
     if (resendApiKey) {
       try {
@@ -111,7 +115,7 @@ export async function sendNotification(payload: NotificationPayload): Promise<{ 
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            from: 'PSU SportsTrack <notifications@psu.palawan.edu.ph>',
+            from: fromAddress,
             to: [payload.recipientEmail],
             subject: payload.title,
             html: renderEmailHtml(payload),
@@ -130,6 +134,7 @@ export async function sendNotification(payload: NotificationPayload): Promise<{ 
     } else {
       // In development or when Resend key is not configured, log email payload cleanly
       console.info('[Notifications] Email dispatched (dev preview / no Resend key):', {
+        from: fromAddress,
         to: payload.recipientEmail,
         subject: payload.title,
         message: payload.message,
