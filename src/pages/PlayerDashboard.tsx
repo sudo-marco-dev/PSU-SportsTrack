@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { toast } from 'sonner';
 import { Activity, Trophy, Clock, Star, User, CalendarDays, Dumbbell, Swords, MapPin, XCircle, CheckCircle2, Zap, ArrowRight, Layers, Sparkles, ShieldCheck, Users, Mail, ChevronRight } from 'lucide-react';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
-import { getSportIcon } from '@/lib/sportIcons';
+import { getSportIcon, resolveSportName } from '@/lib/sportIcons';
 import { formatYearLevel } from '@/lib/formatYearLevel';
 
 type RosterInvite = {
@@ -1029,10 +1029,16 @@ export const PlayerDashboard = () => {
                     className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 hover:border-orange-500 hover:shadow-lg transition-all duration-300 cursor-pointer group relative overflow-hidden shadow-sm"
                   >
                     <div className="flex items-center justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className="px-2 py-0.5 rounded-md bg-orange-500 text-white font-bold text-[9px] uppercase tracking-wider">
-                          {t.sport}
-                        </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {t.sport && (() => {
+                          const DraftSportIcon = getSportIcon(t.sport);
+                          return (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-500 text-white font-bold text-[9px] uppercase tracking-wider shadow-sm">
+                              <DraftSportIcon className="size-3 text-white shrink-0" />
+                              <span>{t.sport}</span>
+                            </span>
+                          );
+                        })()}
                         <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider ${
                           isFriendly 
                             ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20' 
@@ -1041,7 +1047,7 @@ export const PlayerDashboard = () => {
                           {isFriendly ? 'Faculty & Staff Friendly' : (t.type || 'Binturungan')}
                         </span>
                       </div>
-                      <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest bg-orange-500/10 px-2 py-0.5 rounded-full">
+                      <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest bg-orange-500/10 px-2 py-0.5 rounded-full shrink-0">
                         Coming Soon
                       </span>
                     </div>
@@ -1080,6 +1086,8 @@ export const PlayerDashboard = () => {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {sortedLiveMatches.map((match, index) => {
               const isMatchFriendly = isFriendlyTourn(match.tournament);
+              const sportName = resolveSportName(match.tournament?.sport, match.tournament?.name);
+              const SportIcon = getSportIcon(sportName || match.tournament?.name);
               return (
               <Card 
                 key={match.id} 
@@ -1089,7 +1097,7 @@ export const PlayerDashboard = () => {
                 style={{ animationDelay: `${index * 75}ms` }}
               >
                 <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start mb-2">
+                  <div className="flex justify-between items-start mb-2 gap-2">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <Badge 
                         variant={match.status === 'Ongoing' ? 'destructive' : 'secondary'} 
@@ -1103,6 +1111,12 @@ export const PlayerDashboard = () => {
                         )}
                         {match.status === 'Ongoing' ? 'LIVE NOW' : match.status}
                       </Badge>
+                      {sportName && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-orange-500 text-white font-bold text-[9px] uppercase tracking-wider shadow-sm shrink-0">
+                          <SportIcon className="size-3 text-white shrink-0" />
+                          <span>{sportName}</span>
+                        </span>
+                      )}
                       {match.tournament?.type && (
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
                           isMatchFriendly
@@ -1113,7 +1127,7 @@ export const PlayerDashboard = () => {
                         </span>
                       )}
                     </div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic pr-1.5">{match.round}</span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic shrink-0 pr-1.5">{match.round}</span>
                   </div>
                   <CardTitle className="text-base sm:text-lg mt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 font-black uppercase italic tracking-tight text-slate-900 dark:text-white pr-2">
                     <span className="break-words line-clamp-2 leading-snug pr-1">{match.team_a?.name || 'TBD'}</span>
