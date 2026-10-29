@@ -27,6 +27,7 @@ import {
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ThemeToggle } from './ui/ThemeToggle';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { toast } from 'sonner';
 
@@ -129,10 +130,13 @@ export const AppLayout = () => {
       {/* Desktop Sidebar — Permanently anchored to viewport left, eliminating floating detachment on scroll */}
       <aside className="hidden lg:flex flex-col w-64 bg-slate-900 text-white fixed top-0 bottom-0 left-0 h-dvh shadow-xl border-r border-white/5 z-30">
         <div className="p-6">
-          <Link to={getDashboardHref()} className="flex items-center gap-2 font-black text-2xl tracking-tighter">
-            <span className="text-orange-500 italic">PSU</span>
-            <span className="text-white">SportsTrack</span>
-          </Link>
+          <div className="flex items-center justify-between">
+            <Link to={getDashboardHref()} className="flex items-center gap-2 font-black text-2xl tracking-tighter">
+              <span className="text-orange-500 italic">PSU</span>
+              <span className="text-white">SportsTrack</span>
+            </Link>
+            {user && <NotificationBell />}
+          </div>
           <div className="flex items-center gap-2 mt-1">
             <div className="h-[2px] w-8 bg-orange-500" />
             <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-black">Official Hub</p>
@@ -205,6 +209,9 @@ export const AppLayout = () => {
             <span className="text-orange-500 italic">PSU</span>
             <span className="text-white">SportsTrack</span>
           </Link>
+          <div className="flex items-center gap-1.5">
+            {user && <NotificationBell />}
+          </div>
         </header>
 
         {/* Mobile Navigation Drawer */}

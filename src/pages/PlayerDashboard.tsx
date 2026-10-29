@@ -1159,7 +1159,7 @@ export const PlayerDashboard = () => {
                     variant={match.status === 'Ongoing' ? 'default' : 'outline'}
                     onClick={() => navigate(`/match/${match.id}`)}
                   >
-                    Watch Live Tracker
+                    Track Live Scores
                   </Button>
                 </CardContent>
               </Card>
@@ -1245,15 +1245,25 @@ export const PlayerDashboard = () => {
                 )}
               </div>
 
-              <DialogFooter>
+              <DialogFooter className="flex flex-col gap-2">
+                {selectedTournament.status?.toLowerCase() === 'draft' && (
+                  <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-wider">
+                    Match arena and fixtures will unlock once the recruitment phase concludes.
+                  </p>
+                )}
                 <Button
                   className="w-full font-black uppercase italic tracking-widest h-11 rounded-xl"
+                  disabled={selectedTournament.status?.toLowerCase() === 'draft'}
+                  variant={selectedTournament.status?.toLowerCase() === 'draft' ? 'outline' : 'default'}
                   onClick={() => {
+                    const tId = selectedTournament.id;
                     setSelectedTournament(null);
-                    navigate('/matches');
+                    navigate(`/explorer?tournament=${tId}`);
                   }}
                 >
-                  Go to Match Arena
+                  {selectedTournament.status?.toLowerCase() === 'draft'
+                    ? 'Match Arena Unavailable (Tournament in Draft)'
+                    : 'Go to Tournament Arena'}
                 </Button>
               </DialogFooter>
             </>

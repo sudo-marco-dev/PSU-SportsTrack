@@ -13,6 +13,7 @@ import { Users, UserPlus, ClipboardList, Star, AlertTriangle, Zap, Circle, Gradu
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { notifyCoachInvite } from '@/lib/notifications';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import {
   fetchBatchPlayerSummaries,
@@ -100,7 +101,7 @@ type RosterMember = {
 };
 
 export const TeamManagement = () => {
-  const { user, isVerified } = useAuth();
+  const { user, profile, isVerified } = useAuth();
   const [teams, setTeams] = useState<Team[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -346,6 +347,24 @@ export const TeamManagement = () => {
       toast.error('Error inviting player: ' + error.message);
     } else {
       toast.success('Player invited successfully.');
+
+      // Dispatch in-app notification & email to the invited athlete
+      const selectedTeam = teams.find(t => t.id === selectedTeamToInvite);
+      supabase
+        .from('users')
+        .select('email, full_name')
+        .eq('id', invitePlayerId)
+        .single()
+        .then(({ data: userData }) => {
+          notifyCoachInvite(
+            invitePlayerId,
+            userData?.email,
+            selectedTeam?.name || 'Squad',
+            selectedTeam?.tournaments?.sport || 'Athletics',
+            profile?.full_name || 'Coach'
+          );
+        });
+
       setInvitePlayerId(null);
       setSelectedTeamToInvite('');
     }

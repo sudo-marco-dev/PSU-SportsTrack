@@ -191,7 +191,7 @@ export const Legal: React.FC = () => {
           <div
             ref={scrollContainerRef}
             data-testid="legal-scroll-container"
-            className="rounded-2xl sm:rounded-3xl bg-slate-900/60 dark:bg-slate-900/80 border border-slate-200 dark:border-white/15 shadow-xl backdrop-blur-sm overflow-hidden"
+            className="rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-white/15 shadow-xl backdrop-blur-sm overflow-hidden"
           >
             {/* Terms and Conditions Content */}
             <TabsContent value="terms" className="m-0">

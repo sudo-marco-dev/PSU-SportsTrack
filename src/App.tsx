@@ -92,6 +92,7 @@ function AppRoutes() {
           {/* Public Views Accessible to Everyone */}
           <Route path="/" element={<PlayerDashboard />} />
           <Route path="/explorer" element={<TournamentExplorer />} />
+          <Route path="/matches" element={<Navigate to="/explorer" replace />} />
           <Route path="/ranking" element={<Ranking />} />
           <Route path="/athletics" element={<ScoutingHub />} />
           <Route path="/scouting" element={<Navigate to="/athletics" replace />} />
