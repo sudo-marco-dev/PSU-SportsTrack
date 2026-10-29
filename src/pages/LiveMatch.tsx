@@ -26,6 +26,7 @@ import {
   MinusCircle,
   AlertTriangle,
   Users,
+  UserCheck,
   Maximize2,
   PictureInPicture2,
   Volume2,
@@ -47,6 +48,7 @@ import { getSportScoringProfile } from '@/lib/sportScoringRules';
 import { getSportIcon } from '@/lib/sportIcons';
 import { pipScoreboard } from '@/lib/pipScoreboard';
 import { FloatingScoreWidget } from '@/components/scoreboard/FloatingScoreWidget';
+import { formatRole } from '@/lib/utils';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { getFriendlyErrorMessage } from '@/lib/friendlyErrors';
 import {
@@ -87,6 +89,8 @@ type Match = {
   next_match_slot?: 'team_a' | 'team_b' | null;
   loser_next_match_id?: string | null;
   loser_next_match_slot?: 'team_a' | 'team_b' | null;
+  designated_facilitator_id?: string | null;
+  designated_facilitator?: { full_name: string } | null;
   active_scorekeeper_id?: string | null;
   lease_expires_at?: string | null;
   official_scorekeeper_id?: string | null;
@@ -152,6 +156,8 @@ export const LiveMatch = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [conflictPrompt, setConflictPrompt] = useState<{ isOpen: boolean; reason: string }>({ isOpen: false, reason: '' });
   const [shortageReason, setShortageReason] = useState('');
+  const [isAssignOfficialOpen, setIsAssignOfficialOpen] = useState(false);
+  const [availableOfficials, setAvailableOfficials] = useState<{ id: string; full_name: string; role: string; is_facilitator?: boolean }[]>([]);
   const [customEvent, setCustomEvent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [eligiblePlayers, setEligiblePlayers] = useState<EligiblePlayer[]>([]);
@@ -457,6 +463,38 @@ export const LiveMatch = () => {
   // Strict Governance: ONLY Facilitators, Officials, and Admins can score games. Coaches are strictly read-only!
   const isAuthorizedScorekeeper = Boolean(isFacilitator || isAdmin || isOfficial);
   const isAuthorized = isAuthorizedScorekeeper && (isHoldingLease || isAdmin);
+  const isDesignatedLocked = Boolean(match?.designated_facilitator_id && match.designated_facilitator_id !== user?.id && !isAdmin);
+  const isDesignatedForMe = Boolean(match?.designated_facilitator_id && match.designated_facilitator_id === user?.id);
+
+  const fetchAvailableOfficials = async () => {
+    try {
+      const { data } = await supabase
+        .from('users')
+        .select('id, full_name, role, is_facilitator')
+        .or('is_facilitator.eq.true,role.eq.facilitator')
+        .neq('account_status', 'soft_deleted')
+        .order('full_name', { ascending: true });
+      setAvailableOfficials(data || []);
+    } catch (err) {
+      console.warn('Failed to fetch available officials:', err);
+    }
+  };
+
+  const handleDesignateOfficial = async (officialId: string | null) => {
+    if (!matchId) return;
+    try {
+      const { error } = await supabase
+        .from('matches')
+        .update({ designated_facilitator_id: officialId })
+        .eq('id', matchId);
+      if (error) throw error;
+      toast.success(officialId ? 'Designated match official assigned.' : 'Match reservation released to open pool.');
+      fetchInitialData();
+      setIsAssignOfficialOpen(false);
+    } catch (err: any) {
+      toast.error('Failed to update match official: ' + err.message);
+    }
+  };
 
   useEffect(() => {
     if (!matchId) {
@@ -673,7 +711,7 @@ export const LiveMatch = () => {
       const [matchRes, eventsRes, starRes] = await Promise.all([
         supabase
           .from('matches')
-          .select('*, team_a:team_a_id(name), team_b:team_b_id(name), tournament:tournament_id(name, sport)')
+          .select('*, team_a:team_a_id(name), team_b:team_b_id(name), tournament:tournament_id(name, sport), designated_facilitator:designated_facilitator_id(full_name)')
           .eq('id', matchId)
           .single(),
         supabase
@@ -1837,22 +1875,61 @@ export const LiveMatch = () => {
                 </div>
               </div>
 
+              {/* Designated Official Status Badge */}
+              {match.designated_facilitator_id && (
+                <div className="w-full pb-1 flex items-center gap-2">
+                  {isDesignatedForMe ? (
+                    <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold">
+                      ⭐ You are the designated match official
+                    </Badge>
+                  ) : isDesignatedLocked ? (
+                    <Badge className="bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[10px] font-bold">
+                      🔒 Reserved for {match.designated_facilitator?.full_name || 'Designated Official'}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-slate-400 border-white/10 text-[10px]">
+                      Designated Official: {match.designated_facilitator?.full_name || 'Assigned'}
+                    </Badge>
+                  )}
+                </div>
+              )}
+
               <div className="flex items-center gap-2 flex-wrap">
                 {isAdmin && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs font-bold border-orange-500/40 text-orange-400 hover:bg-orange-500/10 gap-1.5"
-                    onClick={() => setIsFacilitatorModalOpen(true)}
-                  >
-                    <ShieldCheck className="size-3.5 text-orange-400" />
-                    Appoint Facilitators
-                  </Button>
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs font-bold border-white/20 text-slate-300 hover:text-white hover:bg-white/10 gap-1.5"
+                      onClick={() => {
+                        fetchAvailableOfficials();
+                        setIsAssignOfficialOpen(true);
+                      }}
+                    >
+                      <UserCheck className="size-3.5 text-orange-400" />
+                      {match.designated_facilitator_id ? `Official: ${match.designated_facilitator?.full_name || 'Assigned'}` : 'Assign Official'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs font-bold border-orange-500/40 text-orange-400 hover:bg-orange-500/10 gap-1.5"
+                      onClick={() => setIsFacilitatorModalOpen(true)}
+                    >
+                      <ShieldCheck className="size-3.5 text-orange-400" />
+                      Roster
+                    </Button>
+                  </>
                 )}
                 {!isHoldingLease && (!match.active_scorekeeper_id || (match.lease_expires_at && new Date(match.lease_expires_at) < new Date())) && (
-                  <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white font-bold h-7 text-xs" onClick={() => handleClaimLease(false)}>
-                    Claim Scoring Console
-                  </Button>
+                  isDesignatedLocked ? (
+                    <Button size="sm" disabled className="bg-slate-800 text-slate-500 font-bold h-7 text-xs cursor-not-allowed" title={`Reserved for ${match.designated_facilitator?.full_name || 'designated official'}`}>
+                      Reserved for Official
+                    </Button>
+                  ) : (
+                    <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white font-bold h-7 text-xs" onClick={() => handleClaimLease(false)}>
+                      Claim Scoring Console
+                    </Button>
+                  )
                 )}
                 {!isHoldingLease && match.active_scorekeeper_id && (!match.lease_expires_at || new Date(match.lease_expires_at) >= new Date()) && (
                   <>
@@ -2752,37 +2829,140 @@ export const LiveMatch = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 py-2 text-xs">
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-200 text-[11px] leading-relaxed">
-              <strong>Facilitator Shortage Policy:</strong> If no other neutral facilitator or official is available courtside, you may proceed to score this match under the shortage exception. Your official name and this override will be permanently attached to the certified box score audit log.
-            </div>
+          {isAdmin ? (
+            <>
+              <div className="space-y-3 py-2 text-xs">
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-200 text-[11px] leading-relaxed">
+                  <strong>Administrator Shortage Policy Override:</strong> As an administrator, you may override this collegiate conflict if no other neutral official is available courtside. This override will be recorded in the security audit logs.
+                </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                Shortage Justification Note (Optional)
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    Shortage Justification Note (Required for Admin Override)
+                  </label>
+                  <Input
+                    placeholder="e.g., Sole assigned scorekeeper on court 2"
+                    value={shortageReason}
+                    onChange={(e) => setShortageReason(e.target.value)}
+                    className="bg-slate-900 border-white/10 text-white text-xs h-9"
+                  />
+                </div>
+              </div>
+
+              <DialogFooter className="gap-2 sm:gap-0 mt-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setConflictPrompt({ isOpen: false, reason: '' })}
+                  className="text-slate-400 hover:text-white text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => handleClaimLease(true, shortageReason.trim() || undefined)}
+                  className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs"
+                >
+                  Admin Override & Claim Console
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <div className="p-3.5 my-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-200 text-xs leading-relaxed space-y-2">
+                <p>
+                  <strong>Strict Anti-Conflict Guardrail:</strong> You are registered with or affiliated with one of the competing teams. Student officials cannot score matches involving their own college or team.
+                </p>
+                <p className="text-[11px] text-rose-300">
+                  If there is a courtside shortage, please ask a <strong>Tournament Administrator</strong> to assign another official or authorize an administrative override.
+                </p>
+              </div>
+
+              <DialogFooter className="mt-2">
+                <Button
+                  onClick={() => setConflictPrompt({ isOpen: false, reason: '' })}
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold"
+                >
+                  Understood, Return
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Match Official Dialog (Admin Only) */}
+      <Dialog open={isAssignOfficialOpen} onOpenChange={setIsAssignOfficialOpen}>
+        <DialogContent className="max-w-md bg-slate-950 border-white/10 text-white p-6 rounded-2xl shadow-2xl">
+          <DialogHeader className="space-y-1.5">
+            <DialogTitle className="text-lg font-black uppercase tracking-tight flex items-center gap-2">
+              <UserCheck className="size-5 text-orange-500" />
+              Designate Match Official
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-400">
+              Assign an accredited facilitator to officiate this match exclusively, or release it to the open officiating pool.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 my-3">
+            {match?.designated_facilitator_id && (
+              <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-between text-xs">
+                <div>
+                  <span className="text-[10px] text-orange-400 uppercase font-black block">Currently Assigned</span>
+                  <span className="font-bold text-white">{match.designated_facilitator?.full_name || 'Assigned Official'}</span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleDesignateOfficial(null)}
+                  className="h-7 text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 font-bold"
+                >
+                  Release Reservation
+                </Button>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Select Accredited Official
               </label>
-              <Input
-                placeholder="e.g., Sole assigned scorekeeper on court 2"
-                value={shortageReason}
-                onChange={(e) => setShortageReason(e.target.value)}
-                className="bg-slate-900 border-white/10 text-white text-xs h-9"
-              />
+              <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1">
+                {availableOfficials.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic py-2">No accredited officials found in roster.</p>
+                ) : (
+                  availableOfficials.map((off) => (
+                    <div
+                      key={off.id}
+                      className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 text-xs transition-colors ${
+                        match?.designated_facilitator_id === off.id
+                          ? 'border-orange-500/50 bg-orange-500/10'
+                          : 'border-white/5 bg-slate-900/60 hover:border-white/20'
+                      }`}
+                    >
+                      <div>
+                        <p className="font-bold text-white">{off.full_name}</p>
+                        <p className="text-[10px] text-slate-400">{formatRole(off.role)}</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        disabled={match?.designated_facilitator_id === off.id}
+                        onClick={() => handleDesignateOfficial(off.id)}
+                        className="h-7 text-xs font-bold bg-orange-500 hover:bg-orange-600 text-white rounded-lg"
+                      >
+                        {match?.designated_facilitator_id === off.id ? 'Assigned' : 'Designate'}
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0 mt-2">
+          <DialogFooter>
             <Button
               variant="ghost"
-              onClick={() => setConflictPrompt({ isOpen: false, reason: '' })}
-              className="text-slate-400 hover:text-white text-xs"
+              onClick={() => setIsAssignOfficialOpen(false)}
+              className="text-xs text-slate-400 hover:text-white"
             >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => handleClaimLease(true, shortageReason.trim() || undefined)}
-              className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs"
-            >
-              Override & Claim Console
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

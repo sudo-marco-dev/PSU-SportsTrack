@@ -36,6 +36,7 @@ type UserProfile = {
   id: string;
   full_name: string;
   role: string;
+  is_facilitator?: boolean;
   previous_role?: string | null;
   account_status?: string;
   college_id?: string;
@@ -73,7 +74,7 @@ export const FacilitatorManagementModal = ({
       const { data, error } = await supabase
         .from('users')
         .select('*, colleges(college_name)')
-        .eq('role', 'facilitator')
+        .or('is_facilitator.eq.true,role.eq.facilitator')
         .neq('account_status', 'soft_deleted')
         .order('full_name', { ascending: true });
 
@@ -95,6 +96,7 @@ export const FacilitatorManagementModal = ({
       let queryBuilder = supabase
         .from('users')
         .select('*, colleges(college_name)')
+        .neq('is_facilitator', true)
         .neq('role', 'facilitator')
         .neq('role', 'admin')
         .neq('role', 'super_admin')
@@ -135,14 +137,14 @@ export const FacilitatorManagementModal = ({
   }, [searchQuery, activeTab, open]);
 
   // Appoint User to Facilitator
-  // Appoint User to Facilitator (preserving their previous role)
+  // Appoint User to Facilitator (preserving their base identity & adding officiating capability)
   const handleAppointFacilitator = async (targetUser: UserProfile) => {
     setIsUpdatingId(targetUser.id);
     try {
       const { error } = await supabase
         .from('users')
         .update({
-          role: 'facilitator',
+          is_facilitator: true,
           previous_role: targetUser.role
         })
         .eq('id', targetUser.id);
@@ -153,15 +155,15 @@ export const FacilitatorManagementModal = ({
         action: 'APPOINT_FACILITATOR',
         entity_type: 'users',
         entity_id: targetUser.id,
-        details: `Appointed "${targetUser.full_name}" (formerly ${targetUser.role}) as official Match Facilitator`
+        details: `Certified "${targetUser.full_name}" (${formatRole(targetUser.role)}) as Dual-Role Match Facilitator`
       });
 
-      toast.success(`"${targetUser.full_name}" is now an Official Match Facilitator!`, {
-        description: 'Authorized to preside court-side, update scores, and award Match MVPs.'
+      toast.success(`"${targetUser.full_name}" is now certified as a Match Official!`, {
+        description: 'Retains their player identity while authorized to score matches and preside courtside.'
       });
 
       // Update lists
-      setFacilitators(prev => [...prev, { ...targetUser, role: 'facilitator', previous_role: targetUser.role }]);
+      setFacilitators(prev => [...prev, { ...targetUser, is_facilitator: true, previous_role: targetUser.role }]);
       setCandidates(prev => prev.filter(c => c.id !== targetUser.id));
       setActiveTab('roster');
       if (onUpdated) onUpdated();
@@ -183,10 +185,12 @@ export const FacilitatorManagementModal = ({
   const handleConfirmRevoke = async (targetUser: UserProfile, newRole: string) => {
     setIsUpdatingId(targetUser.id);
     try {
+      const targetRole = targetUser.role === 'facilitator' ? newRole : targetUser.role;
       const { error } = await supabase
         .from('users')
         .update({
-          role: newRole,
+          is_facilitator: false,
+          role: targetRole,
           previous_role: null
         })
         .eq('id', targetUser.id);
@@ -197,10 +201,10 @@ export const FacilitatorManagementModal = ({
         action: 'REVOKE_FACILITATOR',
         entity_type: 'users',
         entity_id: targetUser.id,
-        details: `Revoked facilitator authority from "${targetUser.full_name}" (restored to ${newRole})`
+        details: `Revoked facilitator authority from "${targetUser.full_name}" (restored to ${formatRole(targetRole)})`
       });
 
-      toast.info(`Facilitator appointment revoked. "${targetUser.full_name}" restored as ${newRole}.`);
+      toast.info(`Facilitator privileges revoked for "${targetUser.full_name}".`);
 
       // Update lists
       setFacilitators(prev => prev.filter(f => f.id !== targetUser.id));
@@ -319,6 +323,11 @@ export const FacilitatorManagementModal = ({
                           <Badge className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 text-[9px] font-black uppercase">
                             Official Facilitator
                           </Badge>
+                          {faci.role && faci.role !== 'facilitator' && (
+                            <Badge variant="outline" className="text-[9px] font-bold text-slate-500 dark:text-slate-400 border-slate-300 dark:border-white/10 uppercase">
+                              {formatRole(faci.role)}
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                           {faci.colleges?.college_name || 'Institutional Staff'}

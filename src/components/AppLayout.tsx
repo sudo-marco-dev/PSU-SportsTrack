@@ -51,6 +51,14 @@ export const AppLayout = () => {
     return r;
   };
 
+  const getRoleBadgeLabel = () => {
+    const base = formatRole(role);
+    if (isFacilitator && !isAdmin && role !== 'facilitator') {
+      return `${base} • Official`;
+    }
+    return base;
+  };
+
   const getDashboardHref = () => {
     if (!user) return '/';
     if (isDev) return '/dev';
@@ -177,7 +185,7 @@ export const AppLayout = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold truncate text-slate-200 group-hover:text-white transition-colors">{user?.email?.split('@')[0]}</p>
-                  <p className="text-[10px] text-orange-500/90 uppercase font-black tracking-widest">{formatRole(role)}</p>
+                  <p className="text-[10px] text-orange-500/90 uppercase font-black tracking-widest">{getRoleBadgeLabel()}</p>
                 </div>
               </button>
               <Button
@@ -272,7 +280,7 @@ export const AppLayout = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold truncate text-slate-200">{user?.email?.split('@')[0]}</p>
-                        <p className="text-[10px] text-orange-500 uppercase font-black tracking-widest">{formatRole(role)}</p>
+                        <p className="text-[10px] text-orange-500 uppercase font-black tracking-widest">{getRoleBadgeLabel()}</p>
                       </div>
                     </button>
                     <Button

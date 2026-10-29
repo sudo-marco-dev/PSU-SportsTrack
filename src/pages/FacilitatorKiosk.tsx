@@ -76,6 +76,8 @@ type Match = {
     sport: string;
     enforce_conflict_of_interest?: boolean;
   } | null;
+  designated_facilitator_id?: string | null;
+  designated_facilitator?: { full_name: string } | null;
   active_scorekeeper_id?: string | null;
   active_scorekeeper?: { full_name: string } | null;
   official_scorekeeper_id?: string | null;
@@ -263,6 +265,8 @@ export const FacilitatorKiosk = () => {
   // User must be authenticated to satisfy Postgres Row Level Security (RLS) policies
   const isAuthorizedScorekeeper = Boolean(user && (isFacilitator || isAdmin || isOfficial));
   const isAuthorized = Boolean(user && (isHoldingLease || isAdmin || isFacilitator || isOfficial));
+  const isDesignatedLocked = Boolean(match?.designated_facilitator_id && match.designated_facilitator_id !== user?.id && !isAdmin);
+  const isDesignatedForMe = Boolean(match?.designated_facilitator_id && match.designated_facilitator_id === user?.id);
 
   // Broadcast Master Clock State to Arena Screens & Connected Clients
   const broadcastClockState = useCallback(
@@ -463,6 +467,7 @@ export const FacilitatorKiosk = () => {
           m.official_scorekeeper_id,
           m.finalized_by,
           m.active_scorekeeper_id,
+          m.designated_facilitator_id,
         ].filter(Boolean) as string[];
 
         if (userIdsToFetch.length > 0) {
@@ -481,6 +486,9 @@ export const FacilitatorKiosk = () => {
             }
             if (m.active_scorekeeper_id && userMap.has(m.active_scorekeeper_id)) {
               m.active_scorekeeper = { full_name: userMap.get(m.active_scorekeeper_id)! };
+            }
+            if (m.designated_facilitator_id && userMap.has(m.designated_facilitator_id)) {
+              m.designated_facilitator = { full_name: userMap.get(m.designated_facilitator_id)! };
             }
           }
         }
@@ -1578,14 +1586,30 @@ export const FacilitatorKiosk = () => {
           )}
 
           {user && !isHoldingLease && isAuthorizedScorekeeper && (
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => handleClaimLease()}
-              className="bg-orange-500 hover:bg-orange-600 text-slate-950 font-black text-[10px] uppercase h-6 sm:h-7 px-2.5 rounded-lg shadow-md active:scale-95 transition-all"
-            >
-              Claim
-            </Button>
+            isDesignatedLocked ? (
+              <Badge 
+                className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-[9px] font-black uppercase h-6 px-1.5"
+                title={`Reserved for ${match?.designated_facilitator?.full_name || 'Designated Official'}`}
+              >
+                Reserved
+              </Badge>
+            ) : (
+              <div className="flex items-center gap-1">
+                {isDesignatedForMe && (
+                  <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px] font-black uppercase h-6 px-1.5">
+                    Assigned
+                  </Badge>
+                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => handleClaimLease()}
+                  className="bg-orange-500 hover:bg-orange-600 text-slate-950 font-black text-[10px] uppercase h-6 sm:h-7 px-2.5 rounded-lg shadow-md active:scale-95 transition-all"
+                >
+                  Claim
+                </Button>
+              </div>
+            )
           )}
 
           {user && isHoldingLease && (
@@ -1764,47 +1788,73 @@ export const FacilitatorKiosk = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 py-2 text-xs">
-            <div className="p-3 rounded-lg bg-amber-950/40 border border-amber-500/30 text-amber-200">
-              <p className="font-semibold text-amber-300 mb-1">Palawan State University Athletic Policy:</p>
-              Facilitators with active team affiliation may only preside if an official Facilitator Shortage is declared by tournament commissioners.
-            </div>
+          {isAdmin ? (
+            <>
+              <div className="space-y-3 py-2 text-xs">
+                <div className="p-3 rounded-lg bg-amber-950/40 border border-amber-500/30 text-amber-200">
+                  <p className="font-semibold text-amber-300 mb-1">Palawan State University Athletic Policy:</p>
+                  As an Administrator, you may authorize a Facilitator Shortage Exception if no other neutral official is available courtside. This will be recorded in security audit logs.
+                </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-slate-300">
-                Shortage Override Justification <span className="text-amber-400">*</span>
-              </label>
-              <Input
-                placeholder="e.g., Shortage override authorized by tournament commissioner"
-                value={overrideReasonInput}
-                onChange={(e) => setOverrideReasonInput(e.target.value)}
-                className="bg-slate-950/80 border-white/20 text-white text-xs h-9"
-              />
-            </div>
-          </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-300">
+                    Shortage Override Justification <span className="text-amber-400">*</span>
+                  </label>
+                  <Input
+                    placeholder="e.g., Shortage override authorized by tournament commissioner"
+                    value={overrideReasonInput}
+                    onChange={(e) => setOverrideReasonInput(e.target.value)}
+                    className="bg-slate-950/80 border-white/20 text-white text-xs h-9"
+                  />
+                </div>
+              </div>
 
-          <DialogFooter className="flex sm:justify-between gap-2 mt-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setConflictPrompt({ isOpen: false, reason: '' })}
-              className="border-white/10 text-slate-300 hover:bg-white/5 text-xs"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => {
-                const reason = overrideReasonInput.trim() || 'Courtside facilitator shortage override invoked';
-                handleClaimLease(true, reason);
-              }}
-              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs uppercase"
-            >
-              Invoke Shortage Policy Override
-            </Button>
-          </DialogFooter>
+              <DialogFooter className="flex sm:justify-between gap-2 mt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setConflictPrompt({ isOpen: false, reason: '' })}
+                  className="border-white/10 text-slate-300 hover:bg-white/5 text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    const reason = overrideReasonInput.trim() || 'Courtside facilitator shortage override invoked';
+                    handleClaimLease(true, reason);
+                  }}
+                  className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs uppercase"
+                >
+                  Admin Shortage Override
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <div className="p-3.5 my-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-200 text-xs leading-relaxed space-y-2">
+                <p>
+                  <strong>Strict Anti-Conflict Guardrail:</strong> You are registered with or affiliated with one of the competing teams. Student officials cannot score matches involving their own college or team.
+                </p>
+                <p className="text-[11px] text-rose-300">
+                  If there is a courtside shortage, please ask a <strong>Tournament Administrator</strong> to assign another official or authorize an administrative override.
+                </p>
+              </div>
+
+              <DialogFooter className="mt-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setConflictPrompt({ isOpen: false, reason: '' })}
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold"
+                >
+                  Understood, Return
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

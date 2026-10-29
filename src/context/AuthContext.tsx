@@ -38,6 +38,7 @@ interface AuthContextType {
   profile: {
     full_name: string | null;
     role: UserRole | null;
+    is_facilitator?: boolean | null;
     college_id?: string | null;
     college_name?: string | null;
     cluster_id?: string | null;
@@ -177,6 +178,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setProfile({
           full_name: data.full_name,
           role: userRole,
+          is_facilitator: Boolean(data.is_facilitator),
           college_id: data.college_id,
           college_name: collegeName,
           cluster_id: data.cluster_id || null,
@@ -267,6 +269,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     ? {
         full_name: impersonatedPersona.full_name,
         role: impersonatedPersona.role,
+        is_facilitator: impersonatedPersona.role === 'facilitator',
         college_id: impersonatedPersona.college_id || null,
         college_name: impersonatedPersona.college_name || null,
         cluster_id: impersonatedPersona.cluster_id || null,
@@ -283,13 +286,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     : profile;
 
-  // Derived role permission flags computed from effective role
+  // Derived role permission flags computed from effective role and dual-role flags
   const isImpersonating = Boolean(impersonatedPersona);
   const isDev = effectiveRole === 'dev';
   const isAdmin = effectiveRole === 'admin' || effectiveRole === 'super_admin' || effectiveRole === 'dev';
   const isSuperAdmin = isAdmin;
-  const isFacilitator = effectiveRole === 'facilitator' || isAdmin;
-  const isOfficial = effectiveRole === 'official' || isAdmin;
+  const isFacilitator = Boolean(effectiveProfile?.is_facilitator) || effectiveRole === 'facilitator' || isAdmin;
+  const isOfficial = Boolean(effectiveProfile?.is_facilitator) || effectiveRole === 'official' || isAdmin;
   const isCoach = effectiveRole === 'coach';
   const isPlayer = effectiveRole === 'player_student' || effectiveRole === 'player_faculty' || effectiveRole === 'player_staff';
   const isFacultyAthlete = effectiveRole === 'player_faculty';
