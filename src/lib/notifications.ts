@@ -126,9 +126,9 @@ export async function sendNotification(payload: NotificationPayload): Promise<{ 
       console.warn('[Notifications] Exception calling send-email edge function:', edgeErr);
     }
 
-    // Secondary fallback: Direct Resend API invocation if key is available in environment
+    // Secondary fallback: Direct Resend API invocation if custom key is in environment
     if (!emailSent) {
-      const resendApiKey = env?.VITE_RESEND_API_KEY || 're_omMwtBMB_BSjpwfJVYgi19VReEvnrdgBb';
+      const resendApiKey = env?.VITE_RESEND_API_KEY;
       if (resendApiKey) {
         try {
           const response = await fetch('https://api.resend.com/emails', {
