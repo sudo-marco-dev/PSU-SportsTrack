@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { extractTextFromPdf, parsePsuCor, type ParsedPsuCor } from '@/lib/corParser';
-import { CheckCircle2, AlertTriangle, Info, Loader2, Upload, ExternalLink } from 'lucide-react';
+import { compressImage } from '@/lib/imageCompression';
+import { CheckCircle2, AlertTriangle, Info, Loader2, Upload, ExternalLink, Sparkles } from 'lucide-react';
 
 export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () => void }) => {
   const { user, profile } = useAuth();
@@ -17,6 +18,7 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
   const [isParsing, setIsParsing] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedPsuCor | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [compressionInfo, setCompressionInfo] = useState<{ originalMb: string; compressedMb: string; reduction: number } | null>(null);
 
   const isStaff = profile?.role === 'player_staff';
   const isFaculty = profile?.role === 'player_faculty';
@@ -24,7 +26,9 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
   const isStaffOrFaculty = isStaff || isFaculty;
   const isIdPhotoRole = isStaff || isFaculty || isCoach;
 
-  const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB maximum limit to prevent storage bucket overflow
+  const MAX_PDF_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB limit for digital PDF COR documents
+  const MAX_RAW_IMAGE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB forgiving limit for high-res phone camera photos
+  const MAX_STORAGE_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB target ceiling for storage bucket
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -32,17 +36,7 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
       setCorFile(null);
       setImagePreviewUrl(null);
       setParsedData(null);
-      return;
-    }
-
-    // 1. Strict File Size Validation (Max 5MB)
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-      toast.error(`File exceeds 5MB limit (${sizeMb} MB). Please select a compressed document or image under 5MB to prevent storage overflow.`);
-      e.target.value = '';
-      setCorFile(null);
-      setImagePreviewUrl(null);
-      setParsedData(null);
+      setCompressionInfo(null);
       return;
     }
 
@@ -61,8 +55,45 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
         setCorFile(null);
         setImagePreviewUrl(null);
         setParsedData(null);
+        setCompressionInfo(null);
         return;
       }
+
+      // Check against generous 20MB phone capture limit
+      if (file.size > MAX_RAW_IMAGE_SIZE_BYTES) {
+        const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+        toast.error(`Image exceeds 20MB limit (${sizeMb} MB). Please choose or take a photo under 20MB.`);
+        e.target.value = '';
+        setCorFile(null);
+        setImagePreviewUrl(null);
+        setParsedData(null);
+        setCompressionInfo(null);
+        return;
+      }
+
+      // Automatic client-side compression to < 1.5MB at 85% quality
+      const compResult = await compressImage(file, {
+        maxDimension: 1920,
+        quality: 0.85,
+        maxTargetBytes: 1.5 * 1024 * 1024,
+      });
+
+      const processedFile = compResult.compressedFile;
+      setCorFile(processedFile);
+
+      if (compResult.wasCompressed) {
+        const origMb = (compResult.originalSize / (1024 * 1024)).toFixed(1);
+        const compMb = (compResult.compressedSize / (1024 * 1024)).toFixed(1);
+        setCompressionInfo({ originalMb: origMb, compressedMb: compMb, reduction: compResult.reductionPercentage });
+        toast.success(`Photo auto-optimized: ${origMb}MB ➔ ${compMb}MB (${compResult.reductionPercentage}% smaller)`);
+      } else {
+        setCompressionInfo(null);
+      }
+
+      const preview = URL.createObjectURL(processedFile);
+      setImagePreviewUrl(preview);
+      setParsedData(null);
+      return;
     } else {
       if (!isPdf) {
         toast.error('Invalid file format. Certificate of Registration (COR) verification strictly accepts official digital PDF documents (.pdf) only for automated parsing.');
@@ -70,21 +101,25 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
         setCorFile(null);
         setImagePreviewUrl(null);
         setParsedData(null);
+        setCompressionInfo(null);
         return;
       }
+
+      if (file.size > MAX_PDF_SIZE_BYTES) {
+        const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+        toast.error(`PDF document exceeds 10MB limit (${sizeMb} MB). Please upload an official digital COR under 10MB.`);
+        e.target.value = '';
+        setCorFile(null);
+        setImagePreviewUrl(null);
+        setParsedData(null);
+        setCompressionInfo(null);
+        return;
+      }
+
+      setCompressionInfo(null);
+      setCorFile(file);
+      setImagePreviewUrl(null);
     }
-
-    setCorFile(file);
-
-    if (isImage) {
-      const preview = URL.createObjectURL(file);
-      setImagePreviewUrl(preview);
-      setParsedData(null);
-      toast.info('ID photo loaded. Ready to submit for sports administration review.');
-      return;
-    }
-
-    setImagePreviewUrl(null);
 
     if (isPdf) {
       setIsParsing(true);
@@ -124,7 +159,7 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
       return;
     }
 
-    if (corFile.size > MAX_FILE_SIZE_BYTES) {
+    if (corFile.size > MAX_STORAGE_FILE_SIZE_BYTES) {
       toast.error('Selected file exceeds the 5MB storage quota. Please upload an optimized file under 5MB.');
       return;
     }
@@ -325,7 +360,9 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
             />
             <div className="flex items-center justify-between px-1 text-[10px] text-slate-400 font-medium">
               <span>Formats: {isIdPhotoRole ? 'PNG, JPG, WEBP' : 'Official PDF (.pdf)'}</span>
-              <span className="font-bold text-orange-500">Max 5 MB</span>
+              <span className="font-bold text-orange-500">
+                {isIdPhotoRole ? 'Up to 20 MB (Auto-optimized)' : 'Max 10 MB PDF'}
+              </span>
             </div>
           </div>
         </div>
@@ -341,6 +378,12 @@ export const VerificationUpload = ({ onUploadSuccess }: { onUploadSuccess?: () =
               </span>
               <span className="text-[10px] text-slate-400 font-normal truncate max-w-[200px]">{corFile?.name}</span>
             </div>
+            {compressionInfo && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                <Sparkles className="size-3 shrink-0" />
+                <span>Auto-optimized: {compressionInfo.originalMb}MB ➔ {compressionInfo.compressedMb}MB ({compressionInfo.reduction}% smaller)</span>
+              </div>
+            )}
             <div className="relative rounded-xl overflow-hidden max-h-52 flex items-center justify-center bg-black/5 dark:bg-black/30 border border-slate-200 dark:border-white/10 p-1">
               <img
                 src={imagePreviewUrl}

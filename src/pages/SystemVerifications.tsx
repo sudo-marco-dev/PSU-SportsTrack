@@ -19,6 +19,7 @@ import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { formatYearLevel, parseYearLevelInt } from '@/lib/formatYearLevel';
+import { notifyVerificationApproved, notifyVerificationRejected } from '@/lib/notifications';
 import {
   ShieldCheck,
   FileText,
@@ -215,6 +216,14 @@ export const SystemVerifications = () => {
       const roleLabel = isCoach ? 'Coach' : isStaffOrFaculty ? 'Staff/Faculty' : 'Athlete';
       toast.success(`Clearance approved for ${doc.users?.full_name || roleLabel}. Profile updated.`);
 
+      // Dispatch in-app notification & email
+      notifyVerificationApproved(
+        doc.user_id,
+        doc.users?.email || undefined,
+        doc.users?.full_name || roleLabel,
+        doc.users?.role || (isCoach ? 'coach' : isStaffOrFaculty ? 'player_staff' : 'player_student')
+      );
+
       // Audit Log
       logAudit({
         action: 'APPROVE_DOCUMENT',
@@ -270,6 +279,15 @@ export const SystemVerifications = () => {
         ? 'Staff/Faculty'
         : 'Player';
       toast.info(`Clearance rejected. ${roleText} has been notified with rejection feedback.`);
+
+      // Dispatch in-app notification & email
+      notifyVerificationRejected(
+        rejectDoc.user_id,
+        rejectDoc.users?.email || undefined,
+        rejectDoc.users?.full_name || roleText,
+        rejectDoc.users?.role || 'player_student',
+        fullReason
+      );
 
       // Audit Log
       logAudit({
