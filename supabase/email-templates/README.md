@@ -6,14 +6,19 @@ Production-ready, bulletproof HTML email templates designed for **PSU SportsTrac
 
 ## 📋 Template Catalog
 
-| Template File | Supabase Dashboard Setting | Recommended Subject Line | Primary Variables |
+### Active in Production
+| Template File | Supabase Dashboard Setting | Purpose & Flow | Primary Variables |
 | :--- | :--- | :--- | :--- |
-| [`confirm-signup.html`](./confirm-signup.html) | **Confirm signup** | `Verify your PSU SportsTrack Account (OTP: {{ .Token }})` | `{{ .Token }}`, `{{ .ConfirmationURL }}` |
-| [`reset-password.html`](./reset-password.html) | **Reset password** | `Reset Your PSU SportsTrack Password (Code: {{ .Token }})` | `{{ .Token }}`, `{{ .ConfirmationURL }}` |
-| [`magic-link.html`](./magic-link.html) | **Magic Link** | `Your PSU SportsTrack Sign-In Link (Code: {{ .Token }})` | `{{ .Token }}`, `{{ .ConfirmationURL }}` |
-| [`invite-user.html`](./invite-user.html) | **Invite user** | `You've Been Invited to Join PSU SportsTrack` | `{{ .ConfirmationURL }}` |
-| [`change-email.html`](./change-email.html) | **Change email address** | `Confirm Your New PSU Email Address (Code: {{ .Token }})` | `{{ .Token }}`, `{{ .NewEmail }}`, `{{ .ConfirmationURL }}` |
-| [`reauthentication.html`](./reauthentication.html) | **Reauthentication** | `Security Verification Code: {{ .Token }}` | `{{ .Token }}` |
+| [`confirm-signup.html`](./confirm-signup.html) | **Confirm signup** | **OTP Account Activation** (Includes OTP token + direct confirmation URL for initial sign-up) | `{{ .Token }}`, `{{ .ConfirmationURL }}` |
+| [`reset-password.html`](./reset-password.html) | **Reset password** | **Password Recovery** (OTP code + reset link for password retrieval) | `{{ .Token }}`, `{{ .ConfirmationURL }}` |
+
+### Inactive / Not In Use
+| Template File | Status | Reason |
+| :--- | :--- | :--- |
+| [`magic-link.html`](./magic-link.html) | *Disabled* | Standalone passwordless magic link sign-in is not used (activation is handled exclusively during registration). |
+| [`invite-user.html`](./invite-user.html) | *Disabled* | No facilitator/official invite flow; users register directly using their university institutional email. |
+| [`change-email.html`](./change-email.html) | *Disabled* | University emails (`@psu.palawan.edu.ph`) are immutable and permanent once assigned; email changing is not supported. |
+| [`reauthentication.html`](./reauthentication.html) | *Disabled* | Secondary reauthentication challenge emails are not configured. |
 
 ---
 
