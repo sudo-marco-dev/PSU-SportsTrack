@@ -75,7 +75,7 @@ export const detectMomentumRun = (
   let runPoints = 0;
 
   for (const evt of events) {
-    const desc = evt.description.toLowerCase();
+    const desc = evt?.description?.toLowerCase() || '';
 
     // Check if event is a score event (e.g., "scored 3 points", "scored 1 GOAL", etc.)
     const scoreMatch = desc.match(/scored\s+(\d+)/);

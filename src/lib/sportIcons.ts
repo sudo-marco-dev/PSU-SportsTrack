@@ -32,3 +32,13 @@ export const getSportIcon = (sportName?: string | null): IconType => {
   }
   return Trophy as unknown as IconType;
 };
+
+export const resolveSportName = (sport?: string | null, fallbackTournamentName?: string | null): string | null => {
+  if (sport && sport.trim() && sport.toLowerCase() !== 'general') return sport.trim();
+  if (!fallbackTournamentName) return sport || null;
+  const norm = fallbackTournamentName.toLowerCase();
+  for (const key of Object.keys(SPORT_ICONS)) {
+    if (norm.includes(key.toLowerCase())) return key;
+  }
+  return sport || null;
+};

@@ -418,7 +418,7 @@ export const LiveMatch = () => {
       .select('id, full_name')
       .in('id', idsToFetch)
       .then(({ data }) => {
-        if (!isMounted || !data) return;
+        if (!isMounted || !data || !Array.isArray(data)) return;
         const map = new Map(data.map((u) => [u.id, u.full_name]));
         if (match?.official_scorekeeper_id && map.has(match.official_scorekeeper_id)) {
           setOfficialScorekeeperName(map.get(match.official_scorekeeper_id)!);
@@ -1419,6 +1419,15 @@ export const LiveMatch = () => {
       updatePayload.is_finalized = true;
       updatePayload.is_clock_running = false;
       updatePayload.active_scorekeeper_id = null;
+
+      // Compute and record the decisive winner_team_id
+      if ((match.team_a_score || 0) > (match.team_b_score || 0)) {
+        updatePayload.winner_team_id = match.team_a_id;
+      } else if ((match.team_b_score || 0) > (match.team_a_score || 0)) {
+        updatePayload.winner_team_id = match.team_b_id;
+      } else if (match.winner_team_id) {
+        updatePayload.winner_team_id = match.winner_team_id;
+      }
     }
 
     const { error } = await supabase
@@ -1429,11 +1438,20 @@ export const LiveMatch = () => {
     if (error) {
       toast.error(getFriendlyErrorMessage(error, 'Failed to update match status. Please try again.'));
     } else {
+      const computedWinnerId = updatePayload.winner_team_id || (
+        (match.team_a_score || 0) > (match.team_b_score || 0)
+          ? match.team_a_id
+          : (match.team_b_score || 0) > (match.team_a_score || 0)
+          ? match.team_b_id
+          : match.winner_team_id
+      );
+
       setMatch(prev => prev ? {
         ...prev,
         status: newStatus as Match['status'],
         finalized_by: newStatus === 'Completed' ? (user?.id || null) : prev.finalized_by,
         finalized_at: newStatus === 'Completed' ? updatePayload.finalized_at : prev.finalized_at,
+        winner_team_id: newStatus === 'Completed' ? computedWinnerId : prev.winner_team_id,
       } : prev);
 
       // Automated Postgres trigger handles bracket advancement (trg_advance_bracket_on_match_completed)
