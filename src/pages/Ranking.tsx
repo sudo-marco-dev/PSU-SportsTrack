@@ -1161,7 +1161,7 @@ export const Ranking = () => {
               <span className="px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[8px] font-black uppercase">
                 #2 Silver
               </span>
-              <h5 className="font-black italic uppercase text-xs text-slate-900 dark:text-white truncate mt-1 leading-tight" title={silverEntity?.name}>
+              <h5 className="font-black italic uppercase text-xs text-slate-900 dark:text-white truncate pr-1.5 mt-1 leading-tight" title={silverEntity?.name}>
                 {silverEntity?.code || silverEntity?.name || 'Silver'}
               </h5>
               <p className="text-[9px] text-slate-400 truncate mt-0.5">
@@ -1184,7 +1184,7 @@ export const Ranking = () => {
               <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-500 text-[8px] font-black uppercase">
                 #3 Bronze
               </span>
-              <h5 className="font-black italic uppercase text-xs text-slate-900 dark:text-white truncate mt-1 leading-tight" title={bronzeEntity?.name}>
+              <h5 className="font-black italic uppercase text-xs text-slate-900 dark:text-white truncate pr-1.5 mt-1 leading-tight" title={bronzeEntity?.name}>
                 {bronzeEntity?.code || bronzeEntity?.name || 'Bronze'}
               </h5>
               <p className="text-[9px] text-slate-400 truncate mt-0.5">
@@ -1215,7 +1215,7 @@ export const Ranking = () => {
               Silver Tier • Runner-Up
             </Badge>
           </div>
-          <h4 className="font-black italic uppercase tracking-tight text-xl text-slate-900 dark:text-white truncate">
+          <h4 className="font-black italic uppercase tracking-tight text-xl text-slate-900 dark:text-white truncate pr-2">
             {silverEntity?.name || 'Silver Spot Open'}
           </h4>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 truncate">
@@ -1251,7 +1251,7 @@ export const Ranking = () => {
               {standingView === 'college' ? 'Top Seed • College Champion' : standingView === 'cluster' ? 'Top Seed • Binturungan Tribe Champion' : 'Top Seed • Official Squad Champion'}
             </Badge>
           </div>
-          <h4 className="font-black italic uppercase tracking-tight text-2xl md:text-3xl text-slate-900 dark:text-white truncate">
+          <h4 className="font-black italic uppercase tracking-tight text-2xl md:text-3xl text-slate-900 dark:text-white truncate pr-2">
             {championEntity?.name || 'Champion Tier'}
           </h4>
           <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mt-0.5 truncate">
@@ -1312,7 +1312,7 @@ export const Ranking = () => {
               Bronze Tier • 3rd Place
             </Badge>
           </div>
-          <h4 className="font-black italic uppercase tracking-tight text-xl text-slate-900 dark:text-white truncate">
+          <h4 className="font-black italic uppercase tracking-tight text-xl text-slate-900 dark:text-white truncate pr-2">
             {bronzeEntity?.name || (rankedEntities.length <= 2 && rankedEntities.length > 0 ? 'Spot Open' : 'Bronze Spot Open')}
           </h4>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 truncate">

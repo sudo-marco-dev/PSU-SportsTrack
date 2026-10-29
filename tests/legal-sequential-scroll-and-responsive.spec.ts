@@ -23,7 +23,11 @@ test.describe('Sequential Legal Scroll Verification, In-Modal Acceptance & Multi
     // 3. Must NOT redirect to /legal — stays directly on /register with pop-up modal
     await expect(page).toHaveURL(/\/register$/);
 
-    // 4. In-context LegalModal is visible
+    // 4. In-context LegalModal is visible (on mobile, expand collapsed checkboxes drawer if checking early)
+    const toggleBtn = page.getByTestId('modal-legal-toggle-footer-btn');
+    await expect(toggleBtn).toBeVisible();
+    await toggleBtn.click();
+
     const acceptBtn = page.getByTestId('modal-legal-accept-btn');
     await expect(acceptBtn).toBeVisible();
     await expect(acceptBtn).toBeDisabled();

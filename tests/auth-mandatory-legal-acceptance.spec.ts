@@ -267,4 +267,62 @@ test.describe('Mandatory Terms & Privacy Policy Pop-up on Account Creation', () 
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByTestId('modal-register-terms-checkbox')).toHaveAttribute('data-checked', '');
   });
+
+  test('should default checkboxes to collapsed on mobile (<640px) and auto-expand upon 100% reading progress', async ({ page }) => {
+    // Set viewport to mobile phone width (390x844)
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/register');
+    await page.waitForLoadState('networkidle');
+
+    // Trigger legal modal via Complete Registration
+    await page.locator('input[placeholder="Dela Cruz"]').fill('Mobile');
+    await page.locator('input[placeholder="Juan"]').fill('Tester');
+    await page.locator('input[type="email"]').fill('mobile.test@psu.palawan.edu.ph');
+    const passwordInputs = page.locator('input[autocomplete="new-password"]');
+    await passwordInputs.first().fill('PsuSports#2026!');
+    await passwordInputs.nth(1).fill('PsuSports#2026!');
+    await page.getByRole('button', { name: /Complete Registration/i }).click();
+
+    // Verify modal is open
+    const toggleBtn = page.getByTestId('modal-legal-toggle-footer-btn');
+    await expect(toggleBtn).toBeVisible();
+    await expect(toggleBtn).toContainText(/Expand/i);
+
+    // Verify checkboxes container is collapsed (hidden) initially to maximize reading space
+    const termsCheckbox = page.getByTestId('modal-legal-terms-checkbox');
+    await expect(termsCheckbox).not.toBeVisible();
+
+    // Scroll Terms to 100%
+    const scrollContainer = page.getByTestId('modal-legal-scroll-container');
+    await scrollContainer.evaluate((el) => {
+      el.scrollTop = el.scrollHeight;
+      el.dispatchEvent(new Event('scroll'));
+    });
+
+    // Still collapsed while only terms is read
+    await expect(termsCheckbox).not.toBeVisible();
+
+    // Advance to Privacy tab
+    const nextBtn = page.getByTestId('modal-next-read-privacy-btn');
+    await expect(nextBtn).toBeVisible();
+    await nextBtn.click();
+
+    // Scroll Privacy to 100%
+    await scrollContainer.evaluate((el) => {
+      el.scrollTop = el.scrollHeight;
+      el.dispatchEvent(new Event('scroll'));
+    });
+
+    // Checkboxes should auto-expand once both reach 100%
+    await expect(termsCheckbox).toBeVisible({ timeout: 5000 });
+    const privacyCheckbox = page.getByTestId('modal-legal-privacy-checkbox');
+    await expect(privacyCheckbox).toBeVisible();
+    await expect(toggleBtn).toContainText(/Collapse/i);
+
+    // Can manually toggle collapsed/expanded
+    await toggleBtn.click();
+    await expect(termsCheckbox).not.toBeVisible();
+    await toggleBtn.click();
+    await expect(termsCheckbox).toBeVisible();
+  });
 });

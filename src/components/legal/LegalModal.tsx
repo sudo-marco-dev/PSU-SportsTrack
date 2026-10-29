@@ -41,7 +41,13 @@ export const LegalModal: React.FC<LegalModalProps> = ({
   const [privacyProgress, setPrivacyProgress] = useState(0);
   const [hasReadTerms, setHasReadTerms] = useState(false);
   const [hasReadPrivacy, setHasReadPrivacy] = useState(false);
-  const [isFooterExpanded, setIsFooterExpanded] = useState(true);
+  const [isFooterExpanded, setIsFooterExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 640;
+    }
+    return true;
+  });
+  const hasAutoExpandedRef = useRef(false);
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -89,10 +95,20 @@ export const LegalModal: React.FC<LegalModalProps> = ({
         setPrivacyProgress(0);
         setHasReadTerms(false);
         setHasReadPrivacy(false);
-        setIsFooterExpanded(true);
+        hasAutoExpandedRef.current = false;
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+        setIsFooterExpanded(!isMobile);
       }
     }
   }, [open, defaultTab, mandatoryAcceptance]);
+
+  // Auto-expand checkboxes once both documents are 100% read
+  useEffect(() => {
+    if (mandatoryAcceptance && hasReadTerms && hasReadPrivacy && !hasAutoExpandedRef.current) {
+      hasAutoExpandedRef.current = true;
+      setIsFooterExpanded(true);
+    }
+  }, [mandatoryAcceptance, hasReadTerms, hasReadPrivacy]);
 
   useEffect(() => {
     if (!open) return;
@@ -367,13 +383,19 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                     ? 'Both documents read — check boxes below to accept'
                     : 'Scroll to bottom to unlock'}
                 </span>
+                {!isFooterExpanded && (
+                  <span className="text-[10px] sm:hidden font-medium text-orange-400/90 truncate">
+                    {hasReadTerms && hasReadPrivacy ? 'Ready to accept' : 'Collapsed for reading'}
+                  </span>
+                )}
               </div>
               <button
                 type="button"
+                data-testid="modal-legal-toggle-footer-btn"
                 onClick={() => setIsFooterExpanded((prev) => !prev)}
-                className="inline-flex items-center gap-1 text-[10px] font-bold text-orange-400 hover:text-orange-300 cursor-pointer shrink-0"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 text-[10px] font-bold text-orange-400 hover:text-orange-300 cursor-pointer shrink-0 transition-colors"
               >
-                <span>{isFooterExpanded ? 'Compact' : 'Expand'}</span>
+                <span>{isFooterExpanded ? 'Collapse' : 'Expand'}</span>
                 {isFooterExpanded ? <ChevronDown className="size-3.5" /> : <ChevronUp className="size-3.5" />}
               </button>
             </div>

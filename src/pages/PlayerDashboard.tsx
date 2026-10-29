@@ -518,7 +518,7 @@ export const PlayerDashboard = () => {
                     </span>
                   )}
                 </div>
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black italic tracking-tighter uppercase leading-none text-white truncate">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black italic tracking-tighter uppercase leading-none text-white pr-3 break-words">
                   {profile?.full_name || (user ? 'COLLEGIATE ATHLETE' : 'PSU SPORTS HUB')}
                 </h1>
                 <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1 text-slate-400 font-medium text-xs">
@@ -785,7 +785,7 @@ export const PlayerDashboard = () => {
                         )}
                       </div>
 
-                      <CardTitle className="font-black uppercase italic tracking-tight text-xl group-hover:text-orange-500 transition-colors text-slate-900 dark:text-white truncate">
+                      <CardTitle className="font-black uppercase italic tracking-tight text-xl group-hover:text-orange-500 transition-colors text-slate-900 dark:text-white truncate pr-2">
                         {team?.name ?? 'Unknown Team'}
                       </CardTitle>
                       <CardDescription className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate">
@@ -920,7 +920,7 @@ export const PlayerDashboard = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
             <div className="flex items-center gap-2">
               <span className="flex h-2 w-2 rounded-full bg-orange-500 animate-ping" />
-              <h2 className="text-lg md:text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+              <h2 className="text-lg md:text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white flex items-center gap-2 pr-2">
                 <Clock className="size-4 md:size-5 text-orange-500" /> Coming Soon • Upcoming Events
               </h2>
             </div>
@@ -1052,7 +1052,7 @@ export const PlayerDashboard = () => {
 
       {/* Live & Upcoming Games Section */}
       <section className="space-y-4">
-        <h2 className="text-lg md:text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+        <h2 className="text-lg md:text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white flex items-center gap-2 pr-2">
           <Activity className="size-5 text-primary" /> Live & Upcoming Games
         </h2>
         {sortedLiveMatches.length === 0 ? (
@@ -1100,12 +1100,12 @@ export const PlayerDashboard = () => {
                         </span>
                       )}
                     </div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">{match.round}</span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic pr-1.5">{match.round}</span>
                   </div>
-                  <CardTitle className="text-base sm:text-lg mt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
-                    <span className="break-words line-clamp-2 leading-snug">{match.team_a?.name || 'TBD'}</span>
-                    <span className="text-slate-400 dark:text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider self-center sm:self-auto shrink-0 py-0.5 sm:py-0">VS</span>
-                    <span className="break-words line-clamp-2 leading-snug text-left sm:text-right">{match.team_b?.name || 'BYE'}</span>
+                  <CardTitle className="text-base sm:text-lg mt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 font-black uppercase italic tracking-tight text-slate-900 dark:text-white pr-2">
+                    <span className="break-words line-clamp-2 leading-snug pr-1">{match.team_a?.name || 'TBD'}</span>
+                    <span className="text-slate-400 dark:text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider self-center sm:self-auto shrink-0 py-0.5 sm:py-0 px-1">VS</span>
+                    <span className="break-words line-clamp-2 leading-snug text-left sm:text-right pr-1">{match.team_b?.name || 'BYE'}</span>
                   </CardTitle>
                   {match.venue && (
                     <div className="flex items-center gap-1 mt-2 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider min-w-0">

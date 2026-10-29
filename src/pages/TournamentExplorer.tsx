@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Clock, Trophy, Crown, ArrowLeft, Lock, ListOrdered, Filter, X, Layers } from 'lucide-react';
+import { Clock, Trophy, Crown, ArrowLeft, Lock, ListOrdered, Filter, X, Layers, ChevronLeft, ChevronRight, LayoutGrid } from 'lucide-react';
 import { SPORT_ICONS, getSportIcon } from '@/lib/sportIcons';
 import { MatchCenterHeader } from '@/components/match-center/MatchCenterHeader';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
@@ -70,6 +70,20 @@ export const TournamentExplorer = () => {
   const [elimTab, setElimTab] = useState<'live' | 'history'>('live');
   const [mobilePlayoffStage, setMobilePlayoffStage] = useState<'all' | 'quarters' | 'semis' | 'finals'>('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [isKnockoutGridExpanded, setIsKnockoutGridExpanded] = useState(false);
+  const knockoutRailRef = useRef<HTMLDivElement>(null);
+
+  const scrollKnockoutRail = (direction: 'left' | 'right') => {
+    if (knockoutRailRef.current) {
+      const scrollAmount = direction === 'left' ? -220 : 220;
+      knockoutRailRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  const handleKnockoutTournSelect = (e: React.MouseEvent<HTMLButtonElement>, tourId: string) => {
+    setSelectedBracketTournId(tourId);
+    e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  };
 
   useEffect(() => {
     if (isStaffOrFaculty) {
@@ -800,32 +814,116 @@ export const TournamentExplorer = () => {
             <div className="space-y-6 sm:space-y-8">
               {/* Multi-tournament bracket switcher (if sport has multiple bracket tournaments) */}
               {bracketEligibleTournaments.length > 1 && (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-900 border border-white/10 shadow-lg">
-                  <div className="flex items-center gap-2">
-                    <Trophy className="size-4 text-orange-500 shrink-0" />
-                    <span className="text-xs font-black uppercase tracking-widest text-white">
-                      Knockout Tournament:
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
-                    {bracketEligibleTournaments.map((t) => {
-                      const isCurrent = activeBracketTournamentId === t.id;
-                      return (
+                <div className="p-3 sm:p-4 rounded-2xl bg-slate-900 border border-white/10 shadow-lg space-y-2.5">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Trophy className="size-4 text-orange-500 shrink-0" />
+                      <span className="text-xs font-black uppercase tracking-widest text-white whitespace-nowrap">
+                        Knockout Tournament:
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap">
+                        ({bracketEligibleTournaments.length} Brackets)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {bracketEligibleTournaments.length > 2 && (
                         <button
-                          key={t.id}
                           type="button"
-                          onClick={() => setSelectedBracketTournId(t.id)}
-                          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                            isCurrent
-                              ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25 scale-[1.02]'
-                              : 'bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/5'
-                          }`}
+                          onClick={() => setIsKnockoutGridExpanded((prev) => !prev)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-orange-400 hover:text-orange-300 text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer border border-white/5"
+                          title={isKnockoutGridExpanded ? 'Switch to single-line horizontal scroll rail' : 'Expand all tournaments in a grid list'}
                         >
-                          {t.name}
+                          <LayoutGrid className="size-3" />
+                          <span>{isKnockoutGridExpanded ? 'Compact Rail' : 'View All'}</span>
                         </button>
-                      );
-                    })}
+                      )}
+
+                      {!isKnockoutGridExpanded && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => scrollKnockoutRail('left')}
+                            aria-label="Scroll tournaments left"
+                            title="Scroll left"
+                            className="size-7 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-orange-400 flex items-center justify-center transition-colors cursor-pointer active:scale-95"
+                          >
+                            <ChevronLeft className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => scrollKnockoutRail('right')}
+                            aria-label="Scroll tournaments right"
+                            title="Scroll right"
+                            className="size-7 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-orange-400 flex items-center justify-center transition-colors cursor-pointer active:scale-95"
+                          >
+                            <ChevronRight className="size-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Body: Expandable Grid vs Horizontal Scroll Rail */}
+                  {isKnockoutGridExpanded ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-1 animate-in fade-in duration-200">
+                      {bracketEligibleTournaments.map((t) => {
+                        const isCurrent = activeBracketTournamentId === t.id;
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={(e) => handleKnockoutTournSelect(e, t.id)}
+                            className={`p-3 rounded-xl text-left transition-all cursor-pointer border ${
+                              isCurrent
+                                ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/25 ring-1 ring-orange-400'
+                                : 'bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border-white/5'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-1.5 mb-1">
+                              <span className="text-[9px] font-black uppercase tracking-widest opacity-80">
+                                {t.sport || 'Ballgame'}
+                              </span>
+                              {t.type && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-black/20">
+                                  {t.type}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs font-black uppercase leading-tight line-clamp-2 block">
+                              {t.name}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div
+                      ref={knockoutRailRef}
+                      tabIndex={0}
+                      aria-label="Knockout tournaments horizontal rail"
+                      className="flex items-center gap-2 overflow-x-auto pb-1.5 pt-0.5 px-0.5 scroll-smooth rounded-xl focus:outline-none focus-visible:ring-1 focus-visible:ring-orange-500"
+                      style={{ scrollbarWidth: 'thin' }}
+                    >
+                      {bracketEligibleTournaments.map((t) => {
+                        const isCurrent = activeBracketTournamentId === t.id;
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={(e) => handleKnockoutTournSelect(e, t.id)}
+                            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
+                              isCurrent
+                                ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/25 ring-1 ring-orange-400'
+                                : 'bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border-white/5'
+                            }`}
+                          >
+                            {t.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -841,7 +939,7 @@ export const TournamentExplorer = () => {
                         ? 'Official Binturungan Tribe Champion'
                         : 'Official Collegiate Champion • Gold Medalist'}
                     </span>
-                    <h2 className="text-xl sm:text-3xl md:text-5xl font-black italic tracking-tight uppercase leading-tight drop-shadow-md break-words max-w-full">
+                    <h2 className="text-xl sm:text-3xl md:text-5xl font-black italic tracking-tight uppercase leading-tight drop-shadow-md break-words max-w-full pr-3">
                       {championDetails.title}
                     </h2>
                     <p className="text-white/90 font-bold uppercase tracking-widest text-[10px] sm:text-xs mt-0.5 inline-flex flex-wrap items-center justify-center gap-1.5">
