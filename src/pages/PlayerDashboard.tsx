@@ -1245,9 +1245,9 @@ export const PlayerDashboard = () => {
                 )}
               </div>
 
-              <DialogFooter className="flex flex-col gap-2">
+              <DialogFooter className="flex flex-col sm:flex-col sm:items-stretch sm:justify-start gap-2.5 pt-2 w-full">
                 {selectedTournament.status?.toLowerCase() === 'draft' && (
-                  <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-wider">
+                  <p className="w-full text-center text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider px-2">
                     Match arena and fixtures will unlock once the recruitment phase concludes.
                   </p>
                 )}
