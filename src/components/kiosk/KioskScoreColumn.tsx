@@ -104,7 +104,7 @@ export const KioskScoreColumn = ({
           <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] ${colorStyles.text} block`}>
             TEAM {team.toUpperCase()}
           </span>
-          <h2 className={`${compact ? 'text-sm sm:text-base md:text-lg' : 'text-xl sm:text-2xl md:text-3xl'} font-black uppercase italic tracking-tighter text-white truncate drop-shadow-sm`}>
+          <h2 className={`${compact ? (teamName.length > 20 ? 'text-xs sm:text-sm' : 'text-sm sm:text-base') : (teamName.length > 24 ? 'text-base sm:text-xl' : 'text-xl sm:text-2xl md:text-3xl')} font-black uppercase italic tracking-tighter text-white line-clamp-2 break-words leading-tight pr-2 drop-shadow-sm`}>
             {teamName}
           </h2>
         </div>

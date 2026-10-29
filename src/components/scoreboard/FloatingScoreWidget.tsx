@@ -101,7 +101,7 @@ export const FloatingScoreWidget = ({
           <div className="flex items-center justify-between gap-3 px-1 py-0.5">
             {/* Team A */}
             <div className="flex-1 text-center min-w-0">
-              <span className="text-xs font-black uppercase tracking-tight text-slate-300 truncate block">
+              <span className="text-[11px] sm:text-xs font-black uppercase tracking-tight text-slate-300 line-clamp-2 break-words leading-tight block h-[2.75rem] px-1 text-center" title={teamAName}>
                 {teamAName}
               </span>
               <div className="text-2xl sm:text-3xl font-black tabular-nums text-white leading-none mt-1">
@@ -121,7 +121,7 @@ export const FloatingScoreWidget = ({
 
             {/* Team B */}
             <div className="flex-1 text-center min-w-0">
-              <span className="text-xs font-black uppercase tracking-tight text-slate-300 truncate block">
+              <span className="text-[11px] sm:text-xs font-black uppercase tracking-tight text-slate-300 line-clamp-2 break-words leading-tight block h-[2.75rem] px-1 text-center" title={teamBName}>
                 {teamBName}
               </span>
               <div className="text-2xl sm:text-3xl font-black tabular-nums text-white leading-none mt-1">

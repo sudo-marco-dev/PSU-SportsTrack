@@ -1,4 +1,4 @@
-﻿export interface PasswordPolicyCriteria {
+export interface PasswordPolicyCriteria {
   id: string;
   label: string;
   passed: boolean;
@@ -55,7 +55,7 @@ export function checkPasswordPolicy(password: string): PasswordPolicyResult {
   const hasUppercase = /[A-Z]/.test(password);
   const hasLowercase = /[a-z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
-  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?~`]/.test(password);
+  const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~`]/.test(password);
 
   const criteria: PasswordPolicyCriteria[] = [
     { id: 'length', label: 'At least 8 characters', passed: hasLength },

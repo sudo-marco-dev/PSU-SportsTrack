@@ -71,6 +71,19 @@ type MatchEvent = {
   created_at: string;
 };
 
+/**
+ * Resolves dynamic responsive font size classes based on team name character length.
+ * Prevents horizontal overflow while maintaining colossal jumbotron sizing for short names.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function getScoreboardTeamFontClass(name?: string | null): string {
+  const len = name?.trim().length || 0;
+  if (len <= 14) return 'text-2xl sm:text-4xl md:text-5xl';
+  if (len <= 24) return 'text-xl sm:text-3xl md:text-4xl';
+  if (len <= 36) return 'text-lg sm:text-2xl md:text-3xl';
+  return 'text-base sm:text-xl md:text-2xl';
+}
+
 export const StadiumDisplay = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
@@ -565,7 +578,7 @@ export const StadiumDisplay = () => {
                 </>
               )}
             </div>
-            <h1 className="text-sm sm:text-lg md:text-xl font-black uppercase italic tracking-tight text-slate-100 truncate max-w-xs sm:max-w-md md:max-w-xl">
+            <h1 className="text-xs sm:text-base md:text-xl font-black uppercase italic tracking-tight text-slate-100 line-clamp-2 break-words leading-tight pr-2 max-w-sm sm:max-w-lg md:max-w-2xl">
               {match.tournament?.name || 'PSU Collegiate Games'}
             </h1>
           </div>
@@ -657,7 +670,7 @@ export const StadiumDisplay = () => {
               <span className="text-xs sm:text-sm font-black uppercase tracking-[0.3em] text-orange-400 block mb-1">
                 TEAM A
               </span>
-              <h2 className="text-2xl sm:text-4xl md:text-5xl font-black uppercase italic tracking-tighter text-white drop-shadow-md truncate max-w-full">
+              <h2 className={`${getScoreboardTeamFontClass(match.team_a?.name)} font-black uppercase italic tracking-tighter text-white drop-shadow-md line-clamp-2 break-words leading-tight pr-2 sm:pr-3 max-w-full`}>
                 {match.team_a?.name || 'Team A'}
               </h2>
             </div>
@@ -745,7 +758,7 @@ export const StadiumDisplay = () => {
               <span className="text-xs sm:text-sm font-black uppercase tracking-[0.3em] text-cyan-400 block mb-1">
                 TEAM B
               </span>
-              <h2 className="text-2xl sm:text-4xl md:text-5xl font-black uppercase italic tracking-tighter text-white drop-shadow-md truncate max-w-full">
+              <h2 className={`${getScoreboardTeamFontClass(match.team_b?.name)} font-black uppercase italic tracking-tighter text-white drop-shadow-md line-clamp-2 break-words leading-tight pr-2 sm:pr-3 max-w-full`}>
                 {match.team_b?.name || 'BYE'}
               </h2>
             </div>
@@ -788,7 +801,7 @@ export const StadiumDisplay = () => {
         {/* Post-Game Banner if Completed */}
         {match.status === 'Completed' && (
           <div className="mt-6 p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border border-orange-500/40 text-center animate-in fade-in zoom-in duration-500">
-            <div className="inline-flex items-center gap-2 text-sm sm:text-lg font-black uppercase italic tracking-wide text-orange-300">
+            <div className="inline-flex items-center gap-2 text-sm sm:text-lg font-black uppercase italic tracking-wide text-orange-300 break-words line-clamp-2 pr-2">
               <Trophy className="size-5 text-yellow-400" />
               <span>
                 Final Match Concluded • Winner:{' '}

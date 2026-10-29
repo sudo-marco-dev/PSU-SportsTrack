@@ -28,7 +28,7 @@ export const LeadChangeBanner = ({ alert, onDismiss, className = '' }: LeadChang
                 {alert.scoreA} - {alert.scoreB}
               </span>
             </div>
-            <h4 className="text-sm sm:text-base md:text-lg font-black uppercase italic tracking-tight text-white truncate drop-shadow-sm">
+            <h4 className="text-sm sm:text-base md:text-lg font-black uppercase italic tracking-tight text-white break-words line-clamp-2 leading-tight pr-2 drop-shadow-sm">
               <span className="text-orange-300">{alert.teamName}</span> takes the lead!
             </h4>
           </div>

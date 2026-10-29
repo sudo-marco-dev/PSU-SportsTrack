@@ -1480,7 +1480,7 @@ export const FacilitatorKiosk = () => {
                 KIOSK
               </Badge>
             </div>
-            <h1 className="text-[11px] sm:text-sm font-black uppercase italic tracking-tight text-white truncate max-w-[120px] sm:max-w-xs hidden xs:block">
+            <h1 className="text-[11px] sm:text-sm font-black uppercase italic tracking-tight text-white line-clamp-1 break-words pr-1.5 max-w-[160px] sm:max-w-sm hidden xs:block">
               {match.tournament?.name || 'PSU Collegiate Games'}
             </h1>
           </div>
