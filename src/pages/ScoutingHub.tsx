@@ -35,6 +35,7 @@ import {
 import { toast } from 'sonner';
 import { ExpandableIconTabs } from '@/components/ui/expandable-icon-tabs';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { formatYearLevel } from '@/lib/formatYearLevel';
 import {
   fetchBatchPlayerSummaries,
   getPrimarySportStatPill,
@@ -53,7 +54,7 @@ type ScoutPlayer = {
   is_verified: boolean;
   college_id: string | null;
   program: string | null;
-  year_level: string | null;
+  year_level: number | string | null;
   preferred_sports: string[] | null;
   primary_position: string | null;
   colleges: { college_name: string } | null;
@@ -934,7 +935,7 @@ export const ScoutingHub = () => {
                                 </CardTitle>
                                 <CardDescription className="text-[10px] font-bold uppercase tracking-wider text-orange-500 break-words line-clamp-2 leading-snug mt-0.5">
                                   {p.primary_position || sum?.positions[0] || 'Verified Athlete'}
-                                  {p.year_level ? ` • ${p.year_level}` : ''}
+                                  {p.year_level ? ` • ${formatYearLevel(p.year_level)}` : ''}
                                 </CardDescription>
                               </div>
                             </div>
@@ -1546,7 +1547,12 @@ export const ScoutingHub = () => {
                 </label>
                 <Select value={selectedCoachTeamId} onValueChange={(val) => setSelectedCoachTeamId(val || '')}>
                   <SelectTrigger className="w-full h-11 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 font-bold text-xs">
-                    <SelectValue placeholder="Choose one of your teams" />
+                    <SelectValue placeholder="Choose one of your teams">
+                      {selectedCoachTeamId && (() => {
+                        const ct = coachTeams.find((t) => t.id === selectedCoachTeamId);
+                        return ct ? `${ct.name} (${ct.sport})` : selectedCoachTeamId;
+                      })()}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900">
                     {coachTeams.map((ct) => (

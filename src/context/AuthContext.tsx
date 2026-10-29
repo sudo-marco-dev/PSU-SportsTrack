@@ -46,7 +46,7 @@ interface AuthContextType {
     employee_id?: string | null;
     department?: string | null;
     program?: string | null;
-    year_level?: string | null;
+    year_level?: number | string | null;
     age?: number | null;
     preferred_sports?: string[] | null;
     primary_position?: string | null;

@@ -290,8 +290,6 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
                         ? 'Friendly Match'
                         : singleType === 'Faculty and Staff Friendly Games'
                         ? 'Faculty & Staff Friendly Games'
-                        : singleType === 'STRASUC'
-                        ? 'STRASUC Regional Meet'
                         : singleType}
                     </SelectValue>
                   </SelectTrigger>
@@ -300,7 +298,6 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
                     <SelectItem value="Inter-Collegiate">Inter-Collegiate League</SelectItem>
                     <SelectItem value="Friendly">Friendly Match</SelectItem>
                     <SelectItem value="Faculty and Staff Friendly Games">Faculty & Staff Friendly Games</SelectItem>
-                    <SelectItem value="STRASUC">STRASUC Regional Meet</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

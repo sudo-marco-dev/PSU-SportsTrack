@@ -14,7 +14,7 @@ export interface DevPersona {
   employee_id?: string | null;
   department?: string | null;
   program?: string | null;
-  year_level?: string | null;
+  year_level?: number | string | null;
   preferred_sports?: string[];
   primary_position?: string | null;
   account_status?: 'active' | 'inactive' | 'archived' | 'soft_deleted';

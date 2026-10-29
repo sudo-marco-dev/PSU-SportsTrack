@@ -54,6 +54,7 @@ import { getSportScoringProfile } from '@/lib/sportScoringRules';
 import { MatchBoxScoreModal } from '@/components/scouting/MatchBoxScoreModal';
 import { ExpandableIconTabs } from '@/components/ui/expandable-icon-tabs';
 import { formatCoachName } from '@/lib/utils';
+import { formatYearLevel, parseYearLevelInt, YEAR_LEVEL_OPTIONS } from '@/lib/formatYearLevel';
 
 type PlayerStar = {
   id: string;
@@ -159,7 +160,7 @@ export const Profile = () => {
       setAcademicProfile({
         studentNumber: profile.student_number || '',
         program: profile.program || '',
-        yearLevel: profile.year_level || '',
+        yearLevel: profile.year_level ? String(profile.year_level) : '',
         age: profile.age ? String(profile.age) : '',
       });
       setPreferredSports(Array.isArray(profile.preferred_sports) ? profile.preferred_sports : []);
@@ -263,7 +264,7 @@ export const Profile = () => {
         .update({
           student_number: academicProfile.studentNumber || null,
           program: academicProfile.program || null,
-          year_level: academicProfile.yearLevel || null,
+          year_level: parseYearLevelInt(academicProfile.yearLevel),
           age: academicProfile.age ? parseInt(academicProfile.age, 10) : null,
         })
         .eq('id', user.id);
@@ -2046,14 +2047,16 @@ export const Profile = () => {
                         onValueChange={(val) => setAcademicProfile((prev) => ({ ...prev, yearLevel: val || '' }))}
                       >
                         <SelectTrigger className="h-11 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold">
-                          <SelectValue placeholder="Select Year Level" />
+                          <SelectValue placeholder="Select Year Level">
+                            {formatYearLevel(academicProfile.yearLevel)}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent className="rounded-xl">
-                          <SelectItem value="First Year">First Year</SelectItem>
-                          <SelectItem value="Second Year">Second Year</SelectItem>
-                          <SelectItem value="Third Year">Third Year</SelectItem>
-                          <SelectItem value="Fourth Year">Fourth Year</SelectItem>
-                          <SelectItem value="Fifth Year / Irregular">Fifth Year / Irregular</SelectItem>
+                          {YEAR_LEVEL_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={String(opt.value)}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>

@@ -48,6 +48,7 @@ import { getSportIcon } from '@/lib/sportIcons';
 import { pipScoreboard } from '@/lib/pipScoreboard';
 import { FloatingScoreWidget } from '@/components/scoreboard/FloatingScoreWidget';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { getFriendlyErrorMessage } from '@/lib/friendlyErrors';
 import {
   type FloatingDelta,
   type LeadChangeAlert,
@@ -823,7 +824,7 @@ export const LiveMatch = () => {
       });
 
       if (error) {
-        toast.error('Failed to claim scoring console: ' + error.message);
+        toast.error(getFriendlyErrorMessage(error, 'Failed to claim scoring console.'));
         return;
       }
 
@@ -905,7 +906,7 @@ export const LiveMatch = () => {
         .eq('id', matchId);
 
       if (error) {
-        toast.error('Failed to transfer console lease: ' + error.message);
+        toast.error(getFriendlyErrorMessage(error, 'Failed to transfer console lease.'));
         setIsSubmitting(false);
         return;
       }
@@ -1116,7 +1117,7 @@ export const LiveMatch = () => {
       .eq('id', match.id);
 
     if (updateError) {
-      toast.error('Failed to update score: ' + updateError.message);
+      toast.error(getFriendlyErrorMessage(updateError, 'Failed to update score. Please try again.'));
       setIsSubmitting(false);
       return;
     }
@@ -1299,7 +1300,7 @@ export const LiveMatch = () => {
       .eq('id', match.id);
 
     if (updateError) {
-      toast.error('Failed to deduct score: ' + updateError.message);
+      toast.error(getFriendlyErrorMessage(updateError, 'Failed to deduct score. Please try again.'));
       setIsSubmitting(false);
       return;
     }
@@ -1415,7 +1416,9 @@ export const LiveMatch = () => {
     if (newStatus === 'Completed') {
       updatePayload.finalized_by = user?.id || null;
       updatePayload.finalized_at = new Date().toISOString();
-      updatePayload.is_live = false;
+      updatePayload.is_finalized = true;
+      updatePayload.is_clock_running = false;
+      updatePayload.active_scorekeeper_id = null;
     }
 
     const { error } = await supabase
@@ -1424,7 +1427,7 @@ export const LiveMatch = () => {
       .eq('id', match.id);
 
     if (error) {
-      toast.error('Failed to update status: ' + error.message);
+      toast.error(getFriendlyErrorMessage(error, 'Failed to update match status. Please try again.'));
     } else {
       setMatch(prev => prev ? {
         ...prev,
@@ -1481,7 +1484,7 @@ export const LiveMatch = () => {
     }).select().single();
 
     if (error) {
-      toast.error('Failed to log event: ' + error.message);
+      toast.error(getFriendlyErrorMessage(error, 'Failed to log event. Please try again.'));
     } else {
       setCustomEvent('');
       if (eventData) {
@@ -1517,7 +1520,7 @@ export const LiveMatch = () => {
         // Re-fetch to lock UI
         fetchInitialData();
       } else {
-        toast.error('Failed to award MVP: ' + error.message);
+        toast.error(getFriendlyErrorMessage(error, 'Failed to award MVP. Please try again.'));
       }
       setIsAwarding(false);
     } else {
@@ -2613,7 +2616,17 @@ export const LiveMatch = () => {
               </label>
               <Select value={deductPlayerId || 'uncredited'} onValueChange={(val) => setDeductPlayerId(!val || val === 'uncredited' ? '' : val)}>
                 <SelectTrigger className="w-full bg-slate-900 border-white/10 text-white">
-                  <SelectValue placeholder="Team / Uncredited (Do not deduct player stats)" />
+                  <SelectValue placeholder="Team / Uncredited (Do not deduct player stats)">
+                    {deductPlayerId ? (() => {
+                      const p = rosterPlayers.find((rp) => rp.player_id === deductPlayerId);
+                      if (!p) return deductPlayerId;
+                      const users = p.users as any;
+                      const name = Array.isArray(users) ? users[0]?.full_name : users?.full_name;
+                      const jersey = p.jersey_number !== null && p.jersey_number !== undefined ? `#${p.jersey_number} ` : '';
+                      const pts = playerPointsMap[p.player_id] || 0;
+                      return `${jersey}${name || 'Player'} (${pts} PTS)`;
+                    })() : 'Team / Uncredited (Do not deduct player stats)'}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="bg-slate-900 border-slate-800 text-white">
                   <SelectItem value="uncredited">Team / Uncredited (Do not deduct player stats)</SelectItem>
@@ -2624,9 +2637,10 @@ export const LiveMatch = () => {
                       const name = Array.isArray(users) ? users[0]?.full_name : users?.full_name;
                       const jersey = p.jersey_number !== null && p.jersey_number !== undefined ? `#${p.jersey_number} ` : '';
                       const pts = playerPointsMap[p.player_id] || 0;
+                      const label = `${jersey}${name || 'Player'} (${pts} PTS)`;
                       return (
                         <SelectItem key={p.player_id} value={p.player_id}>
-                          {jersey}{name || 'Player'} ({pts} PTS)
+                          {label}
                         </SelectItem>
                       );
                     })}

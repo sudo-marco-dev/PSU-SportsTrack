@@ -442,11 +442,20 @@ export const TournamentExplorer = () => {
     });
   }, [eliminationMatches, selectedRound, searchQuery]);
 
-  // Live / Scheduled vs History
+  // Live / Scheduled vs History (Ongoing live games pinned at top, then upcoming chronological)
   const elimLiveAndUpcoming = useMemo(() => {
-    return filteredEliminationMatches.filter(
-      (m) => m.status === 'Scheduled' || m.status === 'Ongoing'
-    );
+    return filteredEliminationMatches
+      .filter((m) => m.status === 'Scheduled' || m.status === 'Ongoing')
+      .sort((a, b) => {
+        // 1. Ongoing live matches always come first
+        if (a.status === 'Ongoing' && b.status !== 'Ongoing') return -1;
+        if (b.status === 'Ongoing' && a.status !== 'Ongoing') return 1;
+
+        // 2. Upcoming matches sorted by scheduled time ascending (earliest first)
+        const timeA = a.match_time ? new Date(a.match_time).getTime() : Infinity;
+        const timeB = b.match_time ? new Date(b.match_time).getTime() : Infinity;
+        return timeA - timeB;
+      });
   }, [filteredEliminationMatches]);
 
   const elimHistory = useMemo(() => {

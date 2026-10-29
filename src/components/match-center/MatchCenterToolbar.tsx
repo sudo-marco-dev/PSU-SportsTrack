@@ -38,18 +38,19 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
   onCategoryFilterChange
 }) => {
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 rounded-2xl md:rounded-[2rem] p-2.5 xs:p-3 sm:p-4 shadow-sm space-y-3 w-full min-w-0 max-w-full overflow-hidden">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 sm:gap-3 min-w-0">
-        {/* Left: Division Filter + Tournament Dropdown + Search Input */}
-        <div className="flex flex-wrap md:flex-nowrap items-center gap-2 sm:gap-2.5 flex-1 min-w-0">
+    <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 rounded-2xl md:rounded-[2rem] p-3 sm:p-4 shadow-sm space-y-3 w-full min-w-0 max-w-full">
+      {/* Upper Row: Dropdown Selectors and Phase Switcher */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-w-0">
+        {/* Left: Division Filter + Tournament Dropdown */}
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
           {/* Division Selector */}
           {onCategoryFilterChange && (
-            <div className="w-full xs:w-[calc(50%-0.25rem)] sm:w-44 md:w-44 shrink-0 min-w-0">
+            <div className="w-full sm:w-44 md:w-48 shrink-0 min-w-0">
               <Select
                 value={categoryFilter || 'all'}
                 onValueChange={(val: string | null) => onCategoryFilterChange(val || 'all')}
               >
-                <SelectTrigger className="h-10 sm:h-11 rounded-xl border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-slate-800/90 font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                <SelectTrigger className="h-10 sm:h-11 rounded-xl border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-slate-800/90 font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200 w-full">
                   <SelectValue placeholder="All Divisions">
                     {categoryFilter === 'friendly'
                       ? 'Friendly Games'
@@ -71,19 +72,19 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
           )}
 
           {/* Tournament Selector */}
-          <div className="w-full xs:w-[calc(50%-0.25rem)] sm:w-60 md:w-64 shrink-0 min-w-0">
+          <div className="w-full sm:w-60 md:w-68 shrink-0 min-w-0">
             <Select
               value={selectedTournamentId}
               onValueChange={(val: string | null) => onSelectTournament(val || 'all')}
             >
-              <SelectTrigger className="h-10 sm:h-11 rounded-xl border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-slate-800/90 font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200">
+              <SelectTrigger className="h-10 sm:h-11 rounded-xl border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-slate-800/90 font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200 w-full">
                 <SelectValue placeholder="All Tournaments">
                   {selectedTournamentId === 'all'
                     ? `All Tournaments (${tournaments.length})`
                     : tournaments.find((t) => t.id === selectedTournamentId)?.name || 'Tournament'}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="rounded-xl font-bold uppercase text-xs">
+              <SelectContent className="rounded-xl font-bold uppercase text-xs max-h-72">
                 <SelectItem value="all">
                   All Tournaments ({tournaments.length})
                 </SelectItem>
@@ -94,27 +95,6 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          {/* Quick Search Input */}
-          <div className="relative flex-1 w-full min-w-[180px]">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
-            <Input
-              placeholder="Search squads, colleges, court venue..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-9 h-10 sm:h-11 rounded-xl bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-white/15 font-medium text-xs text-slate-800 dark:text-white focus:bg-white dark:focus:bg-slate-800 transition-all w-full"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 size-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300 flex items-center justify-center hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors cursor-pointer"
-                title="Clear search"
-              >
-                <X className="size-3" />
-              </button>
-            )}
           </div>
         </div>
 
@@ -189,6 +169,27 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
             )}
           </button>
         </div>
+      </div>
+
+      {/* Lower Row: Quick Search Input (Always dedicated full width, preventing collision with buttons) */}
+      <div className="relative w-full min-w-0">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
+        <Input
+          placeholder="Search squads, colleges, court venue..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10 pr-9 h-10 sm:h-11 rounded-xl bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-white/15 font-medium text-xs text-slate-800 dark:text-white focus:bg-white dark:focus:bg-slate-800 transition-all w-full"
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 size-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300 flex items-center justify-center hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors cursor-pointer"
+            title="Clear search"
+          >
+            <X className="size-3" />
+          </button>
+        )}
       </div>
     </div>
   );

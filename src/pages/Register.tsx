@@ -24,6 +24,7 @@ import { PasswordPolicyMeter } from '@/components/auth/PasswordPolicyMeter';
 import { LegalModal } from '@/components/legal/LegalModal';
 import { OtpVerificationStep } from '@/components/auth/OtpVerificationStep';
 import { LEGAL_ACCEPTANCE_STORAGE_KEY, REGISTER_DRAFT_STORAGE_KEY } from '@/pages/Legal';
+import { getFriendlyErrorMessage } from '@/lib/friendlyErrors';
 
 const PSU_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@psu\.palawan\.edu\.ph$/i;
 
@@ -83,6 +84,8 @@ export const Register = () => {
 
   const form = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
     defaultValues: {
       lastName: '',
       firstName: '',
@@ -173,7 +176,7 @@ export const Register = () => {
       });
 
       if (authError) {
-        toast.error(authError.message);
+        toast.error(getFriendlyErrorMessage(authError));
         return;
       }
 
@@ -210,8 +213,8 @@ export const Register = () => {
         const rolePath = values.role === 'coach' ? '/coach' : '/player';
         navigate(rolePath, { replace: true });
       }
-    } catch {
-      toast.error('An unexpected error occurred during registration. Please try again.');
+    } catch (err: any) {
+      toast.error(getFriendlyErrorMessage(err, 'An unexpected error occurred during registration. Please try again.'));
     } finally {
       setIsLoading(false);
     }

@@ -130,12 +130,10 @@ export const AuthConfirm = () => {
         setState('success');
 
         const next = searchParams.get('next') || searchParams.get('redirect_to');
-        const role = verifiedUser?.user_metadata?.role;
-        const defaultPath = role === 'coach' ? '/coach' : '/player';
 
         setTimeout(() => {
           if (isMounted) {
-            navigate(next || defaultPath, { replace: true });
+            navigate(next || '/', { replace: true });
           }
         }, 1800);
       } catch (err: any) {
@@ -211,7 +209,7 @@ export const AuthConfirm = () => {
                 PSU Email <span className="text-emerald-400">Verified!</span>
               </h1>
               <p className="text-slate-300 font-medium text-sm mb-6">
-                Your official Palawan State University account is now active. Redirecting you to your dashboard...
+                Account Confirmed! Your official Palawan State University account is now active. Redirecting you to the platform...
               </p>
               <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
                 <div className="h-full bg-emerald-500 rounded-full animate-[progress_1.8s_ease-in-out]" style={{ width: '100%' }} />

@@ -173,46 +173,48 @@ export const TeamApprovalsTab: React.FC<TeamApprovalsTabProps> = ({
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {teams.map((team, idx) => (
-        <Card key={team.id} className="group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl rounded-3xl overflow-hidden border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: `${idx * 50}ms` }}>
-          <CardHeader className="p-8 pb-4">
-            <div className="flex justify-between items-start mb-4">
-              <div className="size-12 rounded-2xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center">
-                <Users className="size-6 text-orange-500" />
+        <Card key={team.id} className="group hover:border-orange-500/50 transition-all duration-300 shadow-sm hover:shadow-xl rounded-2xl md:rounded-3xl overflow-hidden border border-slate-200/80 dark:border-white/10 bg-white dark:bg-slate-900 animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: `${idx * 50}ms` }}>
+          <CardHeader className="p-5 pb-3">
+            <div className="flex justify-between items-start mb-3">
+              <div className="size-10 rounded-xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center">
+                <Users className="size-5 text-orange-500" />
               </div>
-              <Badge className="bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest py-1 px-3 rounded-full border-none shadow-none">
+              <Badge className="bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest py-0.5 px-2.5 rounded-full border-none shadow-none">
                 Pending
               </Badge>
             </div>
-            <CardTitle className="text-2xl font-black italic uppercase tracking-tighter group-hover:text-orange-500 transition-colors">{team.name}</CardTitle>
-            <CardDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-1">
+            <CardTitle className="text-xl font-black italic uppercase tracking-tighter group-hover:text-orange-500 transition-colors">{team.name}</CardTitle>
+            <CardDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-0.5">
               {Array.isArray(team.tournaments) ? team.tournaments[0]?.name : team.tournaments?.name || 'N/A'}
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-8 pt-4">
-            <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-white/5 rounded-2xl mb-8">
-              <div className="size-10 rounded-full bg-white dark:bg-slate-900 flex items-center justify-center text-xs font-black text-orange-500 border border-slate-100 dark:border-white/5">
+          <CardContent className="p-5 pt-0 space-y-4">
+            <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/5">
+              <div className="size-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-xs font-black text-orange-500 border border-slate-100 dark:border-white/5 shrink-0">
                 {((Array.isArray(team.users) ? team.users[0]?.full_name : team.users?.full_name) || 'NA')[0]}
               </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Team Coach</span>
-                <span className="font-black text-sm uppercase italic tracking-tighter">
+              <div className="flex flex-col min-w-0">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Team Coach</span>
+                <span className="font-black text-xs uppercase italic tracking-tighter truncate text-slate-800 dark:text-slate-200">
                   {Array.isArray(team.users) ? team.users[0]?.full_name : team.users?.full_name || 'N/A'}
                 </span>
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 dark:border-white/5">
               <Button 
-                className="flex-1 h-12 bg-slate-900 hover:bg-green-600 text-white font-black uppercase italic tracking-widest text-[10px] rounded-xl shadow-lg transition-all cursor-pointer"
+                size="sm"
+                className="h-9 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black uppercase italic tracking-wider text-[10px] rounded-xl shadow-xs gap-1.5 cursor-pointer transition-all"
                 onClick={() => onApprove(team.id)}
               >
-                Approve
+                <CheckCircle2 className="size-3.5" /> Approve
               </Button>
               <Button 
-                variant="ghost"
-                className="h-12 px-5 text-destructive font-black uppercase italic tracking-widest text-[10px] rounded-xl hover:bg-destructive/10 cursor-pointer"
+                variant="outline"
+                size="sm"
+                className="h-9 font-black uppercase italic tracking-wider text-[10px] rounded-xl text-red-500 border-red-500/30 hover:bg-red-500/10 active:scale-95 gap-1.5 cursor-pointer transition-all"
                 onClick={() => onReject(team.id)}
               >
-                Reject
+                <XCircle className="size-3.5" /> Reject
               </Button>
             </div>
           </CardContent>

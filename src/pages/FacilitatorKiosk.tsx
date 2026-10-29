@@ -31,6 +31,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { LoginModal } from '@/components/auth/LoginModal';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { getFriendlyErrorMessage } from '@/lib/friendlyErrors';
 import { getSportScoringProfile } from '@/lib/sportScoringRules';
 import { getSportIcon } from '@/lib/sportIcons';
 import { offlineQueue } from '@/lib/offlineQueue';
@@ -805,7 +806,7 @@ export const FacilitatorKiosk = () => {
       .select('id');
 
     if (error) {
-      toast.error('Failed to update score: ' + error.message);
+      toast.error(getFriendlyErrorMessage(error, 'Failed to update score. Please try again.'));
       return;
     }
 
@@ -924,7 +925,7 @@ export const FacilitatorKiosk = () => {
       .select('id');
 
     if (error) {
-      toast.error('Failed to undo action: ' + error.message);
+      toast.error(getFriendlyErrorMessage(error, 'Failed to undo action. Please try again.'));
       return;
     }
 
@@ -1023,7 +1024,7 @@ export const FacilitatorKiosk = () => {
       .select('id');
 
     if (error) {
-      toast.error('Failed to deduct score: ' + error.message);
+      toast.error(getFriendlyErrorMessage(error, 'Failed to deduct score. Please try again.'));
       return;
     }
 
@@ -1259,7 +1260,7 @@ export const FacilitatorKiosk = () => {
       });
 
       if (error) {
-        toast.error('Failed to claim console: ' + error.message);
+        toast.error(getFriendlyErrorMessage(error, 'Failed to claim console. Please try again.'));
         return;
       }
 
@@ -1308,19 +1309,21 @@ export const FacilitatorKiosk = () => {
           finalized_by: user.id,
           finalized_at: new Date().toISOString(),
           scorer_notes: concludeNotes ? concludeNotes.trim() : null,
-          is_live: false,
+          is_finalized: true,
+          is_clock_running: false,
+          active_scorekeeper_id: null,
         })
         .eq('id', matchId);
 
       if (error) {
-        toast.error('Failed to conclude match: ' + error.message);
+        toast.error(getFriendlyErrorMessage(error, 'Failed to conclude match. Please try again.'));
       } else {
         toast.success('Match successfully concluded and certified!');
         setIsConcludeModalOpen(false);
         fetchMatchData();
       }
     } catch (err: any) {
-      toast.error('Error finalizing match: ' + (err?.message || 'Unknown error'));
+      toast.error(getFriendlyErrorMessage(err, 'Error finalizing match. Please check connection and try again.'));
     } finally {
       setIsConcluding(false);
     }

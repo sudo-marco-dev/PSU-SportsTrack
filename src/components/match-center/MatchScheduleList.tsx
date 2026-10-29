@@ -117,37 +117,56 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
                       onNavigateMatch(match.id);
                     }
                   }}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl sm:rounded-2xl p-4 hover:shadow-md hover:border-orange-500/50 transition-all active:scale-[0.98] cursor-pointer group space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both"
+                  className={`bg-white dark:bg-slate-900 border rounded-xl sm:rounded-2xl p-4 hover:shadow-lg transition-all active:scale-[0.98] cursor-pointer group space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both relative overflow-hidden ${
+                    match.status === 'Ongoing'
+                      ? 'border-orange-500 shadow-md shadow-orange-500/10 ring-1 ring-orange-500/30'
+                      : 'border-slate-200 dark:border-white/10 hover:border-orange-500/50'
+                  }`}
                 >
-                  {/* Top Bar: Sport and Match Status */}
-                  <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-white/5 pb-2">
-                    <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
-                      <SportIcon className="size-3 text-orange-500" />
-                      <span>{sportName}</span>
+                  {/* Subtle top indicator bar for live matches */}
+                  {match.status === 'Ongoing' && (
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 via-rose-500 to-amber-500 animate-pulse" />
+                  )}
+
+                  {/* Top Bar: Prominent Sport Header and Match Status */}
+                  <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-white/5 pb-2.5">
+                    {/* Sport Badge Header */}
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 text-[10px] font-black uppercase tracking-wider shrink-0">
+                        <SportIcon className="size-3.5 text-orange-500 shrink-0" />
+                        <span>{sportName}</span>
+                      </span>
                       {match.round && (
-                        <span className="text-slate-400 font-medium lowercase">
+                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight truncate">
                           • {match.round}
                         </span>
                       )}
-                    </span>
+                    </div>
+
+                    {/* Status Pill */}
                     {match.status === 'Ongoing' ? (
-                      <span className="text-rose-500 font-black flex items-center gap-1.5">
+                      <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-500 border border-rose-500/30 text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 shrink-0 shadow-xs">
                         <span className="relative flex size-2">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
                           <span className="relative inline-flex rounded-full size-2 bg-rose-500" />
                         </span>
-                        LIVE
+                        LIVE NOW
                       </span>
                     ) : match.status === 'Completed' ? (
-                      <span className="text-emerald-500 font-black">FINAL</span>
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[9px] font-black tracking-wider shrink-0">
+                        FINAL
+                      </span>
                     ) : (
-                      <span className="text-slate-400 font-medium">
-                        {match.match_time
-                          ? new Date(match.match_time).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })
-                          : 'TBD'}
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 shrink-0">
+                        <Clock className="size-3 text-slate-400" />
+                        <span>
+                          {match.match_time
+                            ? new Date(match.match_time).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })
+                            : 'TBD'}
+                        </span>
                       </span>
                     )}
                   </div>

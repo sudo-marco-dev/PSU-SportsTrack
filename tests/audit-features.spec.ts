@@ -183,7 +183,7 @@ test.describe('PSU SportsTrack Comprehensive Feature & Audit Suite', () => {
     await page.waitForLoadState('networkidle');
 
     // Click Filters button to expand filters
-    const filterBtn = page.getByRole('button', { name: /Filters/i });
+    const filterBtn = page.getByRole('button', { name: /^Filters/i }).first();
     if (await filterBtn.isVisible()) {
       await filterBtn.click();
     }
@@ -198,7 +198,7 @@ test.describe('PSU SportsTrack Comprehensive Feature & Audit Suite', () => {
     await expect(page.getByRole('option', { name: 'All Competitions' })).toBeVisible();
     await expect(page.getByRole('option', { name: 'Binturungan' })).toBeVisible();
     await expect(page.getByRole('option', { name: 'Inter-Collegiate League' })).toBeVisible();
-    await expect(page.getByRole('option', { name: 'STRASUC' })).toBeVisible();
+    await expect(page.getByRole('option', { name: 'STRASUC' })).toHaveCount(0);
     await expect(page.getByRole('option', { name: 'Friendly Match' })).toBeVisible();
     await expect(page.getByRole('option', { name: 'Faculty & Staff Friendly Games' })).toBeVisible();
 
@@ -366,7 +366,7 @@ test.describe('PSU SportsTrack Comprehensive Feature & Audit Suite', () => {
     await expect(page.getByRole('option', { name: /Inter-Collegiate League/i })).toBeVisible();
     await expect(page.getByRole('option', { name: /Friendly Match/i })).toBeVisible();
     await expect(page.getByRole('option', { name: /Faculty & Staff Friendly Games/i })).toBeVisible();
-    await expect(page.getByRole('option', { name: /STRASUC Regional Meet/i })).toBeVisible();
+    await expect(page.getByRole('option', { name: /STRASUC Regional Meet/i })).toHaveCount(0);
 
     // Select Friendly Match
     await page.getByRole('option', { name: /Friendly Match/i }).click();
