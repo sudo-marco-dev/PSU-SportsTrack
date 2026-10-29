@@ -112,7 +112,7 @@ type ClusterOption = {
 };
 
 export const ScoutingHub = () => {
-  const { user, isVerified, isCoach } = useAuth();
+  const { user, isVerified, isCoach, canAccessFriendlyGames } = useAuth();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('players');
@@ -165,7 +165,7 @@ export const ScoutingHub = () => {
 
   useEffect(() => {
     void fetchArchiveData();
-  }, []);
+  }, [canAccessFriendlyGames]);
 
   // Fetch coach squads for direct recruitment
   useEffect(() => {
@@ -327,7 +327,7 @@ export const ScoutingHub = () => {
           .neq('account_status', 'inactive')
           .neq('account_status', 'soft_deleted')
           .order('full_name'),
-        fetchBatchPlayerSummaries(),
+        fetchBatchPlayerSummaries({ excludeFriendly: !canAccessFriendlyGames }),
         supabase
           .from('users')
           .select('id, full_name, is_verified, college_id, colleges(college_name)')
@@ -348,7 +348,7 @@ export const ScoutingHub = () => {
             college_id,
             cluster_id,
             coach:users!teams_coach_id_fkey(full_name),
-            tournaments(id, name, sport, status, is_deleted),
+            tournaments(id, name, sport, type, status, is_deleted),
             colleges(college_name),
             clusters(name)
           `)
@@ -371,7 +371,7 @@ export const ScoutingHub = () => {
             tournament_id,
             team_a:teams!matches_team_a_id_fkey(id, name),
             team_b:teams!matches_team_b_id_fkey(id, name),
-            tournaments(id, name, sport, is_deleted)
+            tournaments(id, name, sport, type, is_deleted)
           `)
           .in('status', ['Completed', 'Ongoing', 'Scheduled'])
           .order('match_time', { ascending: false }),
@@ -382,6 +382,22 @@ export const ScoutingHub = () => {
           .select('team_id, player_id, jersey_number, position, is_captain, status, users(full_name)')
           .eq('status', 'Approved'),
       ]);
+
+      const isFriendlyTourn = (tourn?: { type?: string | null; name?: string | null } | null): boolean => {
+        if (!tourn) return false;
+        const tType = (tourn.type || '').toLowerCase();
+        const tName = (tourn.name || '').toLowerCase();
+        return (
+          tType.includes('friendly') ||
+          tType.includes('staff') ||
+          tType.includes('faculty') ||
+          tType.includes('scrimmage') ||
+          tName.includes('friendly') ||
+          tName.includes('staff') ||
+          tName.includes('faculty') ||
+          tName.includes('scrimmage')
+        );
+      };
 
       if (playersRes.data) {
         setPlayers(
@@ -411,7 +427,11 @@ export const ScoutingHub = () => {
             colleges: Array.isArray(t.colleges) ? t.colleges[0] : t.colleges,
             clusters: Array.isArray(t.clusters) ? t.clusters[0] : t.clusters,
           }))
-          .filter((t) => !t.tournaments?.is_deleted);
+          .filter(
+            (t) =>
+              !t.tournaments?.is_deleted &&
+              (canAccessFriendlyGames || !isFriendlyTourn(t.tournaments))
+          );
         setTeams(validTeams);
       }
 
@@ -427,7 +447,8 @@ export const ScoutingHub = () => {
             (m) =>
               !m.tournaments?.is_deleted &&
               !String(m.round || '').startsWith('[ARCHIVED]') &&
-              (m.team_a_id || m.team_b_id)
+              (m.team_a_id || m.team_b_id) &&
+              (canAccessFriendlyGames || !isFriendlyTourn(m.tournaments))
           );
         setMatches(validMatches);
       }

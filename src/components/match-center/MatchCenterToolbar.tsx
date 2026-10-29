@@ -2,6 +2,7 @@ import React from 'react';
 import { Search, Trophy, Layers, X, Lock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/context/AuthContext';
 import type { Tournament } from './types';
 
 export type MatchCenterPhase = 'elimination' | 'playoffs';
@@ -37,6 +38,8 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
   categoryFilter,
   onCategoryFilterChange
 }) => {
+  const { canAccessFriendlyGames } = useAuth();
+
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/15 rounded-2xl md:rounded-[2rem] p-3 sm:p-4 shadow-sm space-y-3 w-full min-w-0 max-w-full">
       {/* Upper Row: Dropdown Selectors and Phase Switcher */}
@@ -52,7 +55,7 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
               >
                 <SelectTrigger className="h-10 sm:h-11 rounded-xl border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-slate-800/90 font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200 w-full">
                   <SelectValue placeholder="All Divisions">
-                    {categoryFilter === 'friendly'
+                    {categoryFilter === 'friendly' && canAccessFriendlyGames
                       ? 'Friendly Games'
                       : categoryFilter === 'binturungan'
                       ? 'Binturungan'
@@ -63,7 +66,9 @@ export const MatchCenterToolbar: React.FC<MatchCenterToolbarProps> = ({
                 </SelectTrigger>
                 <SelectContent className="rounded-xl font-bold uppercase text-xs">
                   <SelectItem value="all">All Divisions</SelectItem>
-                  <SelectItem value="friendly">Friendly Games</SelectItem>
+                  {canAccessFriendlyGames && (
+                    <SelectItem value="friendly">Friendly Games</SelectItem>
+                  )}
                   <SelectItem value="binturungan">Binturungan</SelectItem>
                   <SelectItem value="collegiate">Inter-Collegiate</SelectItem>
                 </SelectContent>

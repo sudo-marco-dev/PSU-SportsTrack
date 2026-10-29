@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 const VerificationUpload = lazy(() =>
@@ -57,7 +57,7 @@ type PlayerStar = {
 };
 
 export const PlayerDashboard = () => {
-  const { isVerified, user, isDev, isAdmin, isFacilitator, isCoach, isPlayer, isStaffAthlete, isFacultyAthlete, isStudentAthlete, profile } = useAuth();
+  const { isVerified, user, isDev, isAdmin, isFacilitator, isCoach, isPlayer, isStaffAthlete, isFacultyAthlete, isStudentAthlete, profile, canAccessFriendlyGames } = useAuth();
   const navigate = useNavigate();
   const isStaffOrFaculty = Boolean(isStaffAthlete || isFacultyAthlete || profile?.role === 'player_staff' || profile?.role === 'player_faculty');
   const isStudent = Boolean(isStudentAthlete || profile?.role === 'player_student');
@@ -78,25 +78,38 @@ export const PlayerDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTournament, setSelectedTournament] = useState<any | null>(null);
   const [divisionFilter, setDivisionFilter] = useState<'all' | 'friendly' | 'binturungan' | 'collegiate'>('all');
+  const hasInitializedDivisionRef = useRef(false);
 
   useEffect(() => {
-    if (isStaffOrFaculty) {
+    if (isStaffOrFaculty && !hasInitializedDivisionRef.current) {
+      hasInitializedDivisionRef.current = true;
       setDivisionFilter('friendly');
+    } else if (!canAccessFriendlyGames && divisionFilter === 'friendly') {
+      setDivisionFilter('all');
     }
-  }, [isStaffOrFaculty]);
+  }, [isStaffOrFaculty, canAccessFriendlyGames, divisionFilter]);
 
   const isFriendlyTourn = (tourn?: { type?: string | null; name?: string | null } | null): boolean => {
     if (!tourn) return false;
     const tType = (tourn.type || '').toLowerCase();
     const tName = (tourn.name || '').toLowerCase();
-    return tType.includes('friendly') || tType.includes('staff') || tName.includes('friendly') || tName.includes('staff');
+    return (
+      tType.includes('friendly') ||
+      tType.includes('staff') ||
+      tType.includes('faculty') ||
+      tType.includes('scrimmage') ||
+      tName.includes('friendly') ||
+      tName.includes('staff') ||
+      tName.includes('faculty') ||
+      tName.includes('scrimmage')
+    );
   };
 
   const visibleDraftTournaments = useMemo(() => {
     let list = [...draftTournaments];
 
-    // For students: avoid crowding students with games they cannot be involved in
-    if (isStudent) {
+    // Completely hide friendly tournaments from public visitors, students, and coaches
+    if (!canAccessFriendlyGames) {
       list = list.filter((t) => !isFriendlyTourn(t));
     } else if (divisionFilter === 'friendly') {
       list = list.filter((t) => isFriendlyTourn(t));
@@ -120,11 +133,11 @@ export const PlayerDashboard = () => {
     });
 
     return list;
-  }, [draftTournaments, isStudent, isStaffOrFaculty, divisionFilter]);
+  }, [draftTournaments, isStudent, isStaffOrFaculty, canAccessFriendlyGames, divisionFilter]);
 
   const sortedLiveMatches = useMemo(() => {
     let list = [...liveMatches];
-    if (isStaffOrFaculty) {
+    if (canAccessFriendlyGames) {
       if (divisionFilter === 'friendly') {
         const friendlyMatches = list.filter((m) => isFriendlyTourn(m.tournament));
         if (friendlyMatches.length > 0) list = friendlyMatches;
@@ -133,8 +146,8 @@ export const PlayerDashboard = () => {
       } else if (divisionFilter === 'collegiate') {
         list = list.filter((m) => (m.tournament?.type || '').toLowerCase().includes('colleg') || (m.tournament?.name || '').toLowerCase().includes('colleg'));
       }
-    } else if (isStudent) {
-      // Avoid crowding students with faculty/staff friendly games
+    } else {
+      // Avoid exposing faculty/staff friendly games to students, coaches, or public visitors
       list = list.filter((m) => !isFriendlyTourn(m.tournament));
     }
 
@@ -155,7 +168,7 @@ export const PlayerDashboard = () => {
       return 0;
     });
     return list;
-  }, [liveMatches, isStaffOrFaculty, isStudent, divisionFilter]);
+  }, [liveMatches, isStaffOrFaculty, isStudent, canAccessFriendlyGames, divisionFilter]);
 
   useEffect(() => {
     if (isDev) {
@@ -931,8 +944,8 @@ export const PlayerDashboard = () => {
             </div>
           </div>
 
-          {/* Role-Specific Division Switcher for Staff & Faculty */}
-          {isStaffOrFaculty ? (
+          {/* Role-Specific Division Switcher for Staff, Faculty & Admins */}
+          {canAccessFriendlyGames ? (
             <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200/80 dark:border-white/10">
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2 hidden sm:inline">

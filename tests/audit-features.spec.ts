@@ -152,6 +152,7 @@ test.describe('PSU SportsTrack Comprehensive Feature & Audit Suite', () => {
   });
 
   test('Explorer Division & Category Filter Selection', async ({ page }) => {
+    await setupSuperAdminSession(page);
     await page.goto('/explorer');
     await page.waitForLoadState('networkidle');
 
@@ -179,6 +180,7 @@ test.describe('PSU SportsTrack Comprehensive Feature & Audit Suite', () => {
   });
 
   test('Ranking Page - Tournament Category Options including Friendly Games', async ({ page }) => {
+    await setupSuperAdminSession(page);
     await page.goto('/ranking');
     await page.waitForLoadState('networkidle');
 

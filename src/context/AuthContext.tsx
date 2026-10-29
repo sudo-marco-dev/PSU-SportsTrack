@@ -33,6 +33,7 @@ interface AuthContextType {
   isFacultyAthlete: boolean;
   isStaffAthlete: boolean;
   isStudentAthlete: boolean;
+  canAccessFriendlyGames: boolean;
   accountStatus: AccountStatus;
   profile: {
     full_name: string | null;
@@ -78,6 +79,7 @@ const AuthContext = createContext<AuthContextType>({
   isFacultyAthlete: false,
   isStaffAthlete: false,
   isStudentAthlete: false,
+  canAccessFriendlyGames: false,
   accountStatus: 'active',
   profile: null,
   impersonatedPersona: null,
@@ -293,6 +295,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const isFacultyAthlete = effectiveRole === 'player_faculty';
   const isStaffAthlete = effectiveRole === 'player_staff';
   const isStudentAthlete = effectiveRole === 'player_student';
+  const canAccessFriendlyGames = Boolean(
+    isFacultyAthlete ||
+    isStaffAthlete ||
+    isAdmin ||
+    isFacilitator
+  );
 
   return (
     <AuthContext.Provider value={{
@@ -311,6 +319,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isFacultyAthlete,
       isStaffAthlete,
       isStudentAthlete,
+      canAccessFriendlyGames,
       accountStatus: effectiveAccountStatus,
       profile: effectiveProfile,
       impersonatedPersona,

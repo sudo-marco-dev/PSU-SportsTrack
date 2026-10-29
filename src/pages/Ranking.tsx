@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -52,6 +53,8 @@ interface RankedEntity {
 }
 
 export const Ranking = () => {
+  const { canAccessFriendlyGames } = useAuth();
+
   // Standing View Mode: College vs Cluster vs Squad
   const [standingView, setStandingView] = useState<'college' | 'cluster' | 'squad'>('college');
 
@@ -75,10 +78,35 @@ export const Ranking = () => {
   const [clusters, setClusters] = useState<ClusterEntity[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  const isFriendlyTourn = (t: { type?: string | null; name?: string | null }): boolean => {
+    const tType = (t.type || '').toLowerCase();
+    const tName = (t.name || '').toLowerCase();
+    return (
+      tType.includes('friendly') ||
+      tType.includes('staff') ||
+      tType.includes('faculty') ||
+      tType.includes('scrimmage') ||
+      tName.includes('friendly') ||
+      tName.includes('staff') ||
+      tName.includes('faculty') ||
+      tName.includes('scrimmage')
+    );
+  };
+
+  // Auto-reset category if restricted
+  useEffect(() => {
+    if (!canAccessFriendlyGames) {
+      const lower = tournamentType.toLowerCase();
+      if (lower.includes('friendly') || lower.includes('faculty') || lower.includes('staff')) {
+        setTournamentType('Championship');
+      }
+    }
+  }, [canAccessFriendlyGames, tournamentType]);
+
   // Fetch all relevant athletic datasets
   useEffect(() => {
     fetchRankingDatasets();
-  }, []);
+  }, [canAccessFriendlyGames]);
 
   const fetchRankingDatasets = async () => {
     setIsLoading(true);
@@ -108,7 +136,12 @@ export const Ranking = () => {
           .select('id, name, description, college_codes')
       ]);
 
-      if (tRes.data) setTournaments(tRes.data);
+      if (tRes.data) {
+        const validTournaments = canAccessFriendlyGames
+          ? tRes.data
+          : tRes.data.filter((t: any) => !isFriendlyTourn(t));
+        setTournaments(validTournaments);
+      }
       if (tmRes.data) setTeams(tmRes.data);
       if (mRes.data) {
         setMatches(mRes.data.map(m => ({
@@ -149,6 +182,11 @@ export const Ranking = () => {
   // 1. Filter Tournaments based on active controls
   const filteredTournaments = useMemo(() => {
     return tournaments.filter(t => {
+      // Defense-in-depth: completely exclude friendly tournaments for unauthorized viewers
+      if (!canAccessFriendlyGames && isFriendlyTourn(t)) {
+        return false;
+      }
+
       // Tournament Category filter
       if (tournamentType !== 'all') {
         const tType = (t.type || '').toLowerCase();
@@ -160,6 +198,7 @@ export const Ranking = () => {
             return false;
           }
         } else if (target.includes('friendly') || target.includes('faculty') || target.includes('staff')) {
+          if (!canAccessFriendlyGames) return false;
           if (!tType.includes('friendly') && !tType.includes('staff') && !tName.includes('friendly') && !tName.includes('staff')) {
             return false;
           }
@@ -1035,8 +1074,12 @@ export const Ranking = () => {
                   <SelectItem value="all" className="text-xs font-medium">All Competitions</SelectItem>
                   <SelectItem value="Binturungan" className="text-xs font-medium">Binturungan</SelectItem>
                   <SelectItem value="Inter-Collegiate" className="text-xs font-medium">Inter-Collegiate League</SelectItem>
-                  <SelectItem value="Friendly" className="text-xs font-medium">Friendly Match</SelectItem>
-                  <SelectItem value="Faculty and Staff Friendly Games" className="text-xs font-medium">Faculty & Staff Friendly Games</SelectItem>
+                  {canAccessFriendlyGames && (
+                    <>
+                      <SelectItem value="Friendly" className="text-xs font-medium">Friendly Match</SelectItem>
+                      <SelectItem value="Faculty and Staff Friendly Games" className="text-xs font-medium">Faculty & Staff Friendly Games</SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>

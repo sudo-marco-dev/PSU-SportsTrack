@@ -53,7 +53,7 @@ const isPlayoffRound = (roundName: string): boolean => {
 
 export const TournamentExplorer = () => {
   const navigate = useNavigate();
-  const { isStaffAthlete, isFacultyAthlete, isStudentAthlete, profile } = useAuth();
+  const { isStaffAthlete, isFacultyAthlete, isStudentAthlete, profile, canAccessFriendlyGames } = useAuth();
   const isStaffOrFaculty = Boolean(isStaffAthlete || isFacultyAthlete || profile?.role === 'player_staff' || profile?.role === 'player_faculty');
   const isStudent = Boolean(isStudentAthlete || profile?.role === 'player_student');
 
@@ -72,6 +72,7 @@ export const TournamentExplorer = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isKnockoutGridExpanded, setIsKnockoutGridExpanded] = useState(false);
   const knockoutRailRef = useRef<HTMLDivElement>(null);
+  const hasInitializedCategoryRef = useRef(false);
 
   const scrollKnockoutRail = (direction: 'left' | 'right') => {
     if (knockoutRailRef.current) {
@@ -86,10 +87,23 @@ export const TournamentExplorer = () => {
   };
 
   useEffect(() => {
-    if (isStaffOrFaculty) {
+    if (isStaffOrFaculty && !hasInitializedCategoryRef.current) {
+      hasInitializedCategoryRef.current = true;
       setCategoryFilter('friendly');
+    } else if (!canAccessFriendlyGames && categoryFilter === 'friendly') {
+      setCategoryFilter('all');
     }
-  }, [isStaffOrFaculty]);
+  }, [isStaffOrFaculty, canAccessFriendlyGames, categoryFilter]);
+
+  // Seamless fallback for direct links to restricted friendly tournaments
+  useEffect(() => {
+    if (selectedTournamentId !== 'all' && tournaments.length > 0) {
+      const exists = tournaments.some((t) => t.id === selectedTournamentId);
+      if (!exists) {
+        setSelectedTournamentId('all');
+      }
+    }
+  }, [selectedTournamentId, tournaments]);
 
   const fetchExplorerData = async () => {
     try {
@@ -113,10 +127,16 @@ export const TournamentExplorer = () => {
       if (tournamentsRes.error) throw tournamentsRes.error;
       if (matchesRes.error) throw matchesRes.error;
 
-      const validTournaments = tournamentsRes.data || [];
-      const validMatches = (((matchesRes.data as unknown) as Match[]) || []).filter(
+      let validTournaments = tournamentsRes.data || [];
+      let validMatches = (((matchesRes.data as unknown) as Match[]) || []).filter(
         (m) => !m.tournament?.is_deleted
       );
+
+      // Defense-in-depth: completely exclude friendly tournaments and matches for public and unauthorized roles
+      if (!canAccessFriendlyGames) {
+        validTournaments = validTournaments.filter((t) => !isFriendlyTourn(t));
+        validMatches = validMatches.filter((m) => !isFriendlyTourn(m.tournament));
+      }
 
       const tMap = new Map<string, TeamAffiliation>();
       (teamsRes.data || []).forEach((t: any) => {
@@ -136,7 +156,9 @@ export const TournamentExplorer = () => {
 
   useEffect(() => {
     fetchExplorerData();
+  }, [canAccessFriendlyGames]);
 
+  useEffect(() => {
     // Realtime listener for match scores and updates
     const channel = supabase
       .channel('match-center-realtime')
@@ -207,7 +229,16 @@ export const TournamentExplorer = () => {
     if (!tourn) return false;
     const tType = (tourn.type || '').toLowerCase();
     const tName = (tourn.name || '').toLowerCase();
-    return tType.includes('friendly') || tType.includes('staff') || tName.includes('friendly') || tName.includes('staff');
+    return (
+      tType.includes('friendly') ||
+      tType.includes('staff') ||
+      tType.includes('faculty') ||
+      tType.includes('scrimmage') ||
+      tName.includes('friendly') ||
+      tName.includes('staff') ||
+      tName.includes('faculty') ||
+      tName.includes('scrimmage')
+    );
   };
 
   // Tournaments applicable to the currently selected sport
@@ -225,7 +256,7 @@ export const TournamentExplorer = () => {
     }
 
     if (categoryFilter === 'friendly') {
-      list = list.filter((t) => isFriendlyTourn(t));
+      list = canAccessFriendlyGames ? list.filter((t) => isFriendlyTourn(t)) : [];
     } else if (categoryFilter === 'binturungan') {
       list = list.filter(
         (t) =>
@@ -316,7 +347,7 @@ export const TournamentExplorer = () => {
         if (sportName.toLowerCase() !== selectedSport.toLowerCase()) return false;
       }
       if (categoryFilter === 'friendly') {
-        return isFriendlyTourn(m.tournament);
+        return canAccessFriendlyGames && isFriendlyTourn(m.tournament);
       }
       if (categoryFilter === 'binturungan') {
         return (

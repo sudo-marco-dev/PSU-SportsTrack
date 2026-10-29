@@ -441,10 +441,29 @@ export function evaluateSquadEligibility(
   };
 }
 
+const isFriendlyTourn = (tourn?: { type?: string | null; name?: string | null } | null): boolean => {
+  if (!tourn) return false;
+  const tType = (tourn.type || '').toLowerCase();
+  const tName = (tourn.name || '').toLowerCase();
+  return (
+    tType.includes('friendly') ||
+    tType.includes('staff') ||
+    tType.includes('faculty') ||
+    tType.includes('scrimmage') ||
+    tName.includes('friendly') ||
+    tName.includes('staff') ||
+    tName.includes('faculty') ||
+    tName.includes('scrimmage')
+  );
+};
+
 /**
  * Fetches complete career telemetry, shot/action breakdowns, and recorded game log for a single player.
  */
-export async function fetchPlayerTelemetry(playerId: string): Promise<PlayerTelemetry> {
+export async function fetchPlayerTelemetry(
+  playerId: string,
+  options?: { excludeFriendly?: boolean }
+): Promise<PlayerTelemetry> {
   const [statsRes, scoreEventsRes, rosterRes, starsRes] = await Promise.all([
     supabase
       .from('match_player_stats')
@@ -474,6 +493,7 @@ export async function fetchPlayerTelemetry(playerId: string): Promise<PlayerTele
             id,
             name,
             sport,
+            type,
             status,
             is_deleted
           )
@@ -483,7 +503,7 @@ export async function fetchPlayerTelemetry(playerId: string): Promise<PlayerTele
       .neq('status', 'Rejected'),
     supabase
       .from('player_stars')
-      .select('id, star_type, match_id, tournament_id, created_at, matches(round), tournaments(name)')
+      .select('id, star_type, match_id, tournament_id, created_at, matches(round), tournaments(name, type)')
       .eq('player_id', playerId)
       .order('created_at', { ascending: false }),
   ]);
@@ -503,6 +523,7 @@ export async function fetchPlayerTelemetry(playerId: string): Promise<PlayerTele
     if (!teamObj || teamObj.is_deleted) continue;
     const tourneyObj = Array.isArray(teamObj.tournaments) ? teamObj.tournaments[0] : teamObj.tournaments;
     if (tourneyObj?.is_deleted) continue;
+    if (options?.excludeFriendly && isFriendlyTourn(tourneyObj)) continue;
 
     if (r.status === 'Approved') {
       approvedTeamIds.add(teamObj.id);
@@ -589,13 +610,15 @@ export async function fetchPlayerTelemetry(playerId: string): Promise<PlayerTele
         tournament_id,
         team_a:teams!matches_team_a_id_fkey(id, name),
         team_b:teams!matches_team_b_id_fkey(id, name),
-        tournaments(id, name, sport, is_deleted)
+        tournaments(id, name, sport, type, is_deleted)
       `)
       .in('id', Array.from(matchIdSet));
 
     matchesData = (data || []).filter((m: any) => {
       const tr = Array.isArray(m.tournaments) ? m.tournaments[0] : m.tournaments;
-      return !tr?.is_deleted && !String(m.round || '').startsWith('[ARCHIVED]');
+      if (!tr || tr.is_deleted || String(m.round || '').startsWith('[ARCHIVED]')) return false;
+      if (options?.excludeFriendly && isFriendlyTourn(tr)) return false;
+      return true;
     });
   }
 
@@ -853,7 +876,9 @@ export async function fetchPlayerTelemetry(playerId: string): Promise<PlayerTele
  * Batch-fetches career stat summaries for all players in 1 parallel query roundtrip.
  * Used by Coach Recruitment Directory and Scouting Hub for instant filtering & sorting.
  */
-export async function fetchBatchPlayerSummaries(): Promise<Record<string, PlayerDirectorySummary>> {
+export async function fetchBatchPlayerSummaries(
+  options?: { excludeFriendly?: boolean }
+): Promise<Record<string, PlayerDirectorySummary>> {
   const [statsRes, eventsRes, starsRes, rostersRes] = await Promise.all([
     supabase.from('match_player_stats').select('match_id, player_id, points'),
     supabase
@@ -863,7 +888,7 @@ export async function fetchBatchPlayerSummaries(): Promise<Record<string, Player
     supabase.from('player_stars').select('player_id, star_type'),
     supabase
       .from('team_roster')
-      .select('player_id, position, status, teams(name, is_deleted, status, tournaments(sport, is_deleted))')
+      .select('player_id, position, status, teams(name, is_deleted, status, tournaments(name, sport, type, is_deleted))')
       .eq('status', 'Approved'),
   ]);
 
@@ -948,6 +973,7 @@ export async function fetchBatchPlayerSummaries(): Promise<Record<string, Player
         p.activeTeamNames.push(tObj.name);
       }
       const trObj = Array.isArray(tObj.tournaments) ? tObj.tournaments[0] : tObj.tournaments;
+      if (options?.excludeFriendly && isFriendlyTourn(trObj)) continue;
       if (trObj && !trObj.is_deleted && trObj.sport && !p.activeSports.includes(trObj.sport)) {
         p.activeSports.push(trObj.sport);
       }

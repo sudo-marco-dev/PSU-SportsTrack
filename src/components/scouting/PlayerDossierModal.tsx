@@ -27,6 +27,7 @@ import {
 } from '@/lib/playerStatsEngine';
 import { getSportIcon } from '@/lib/sportIcons';
 import { getSportScoringProfile } from '@/lib/sportScoringRules';
+import { useAuth } from '@/context/AuthContext';
 
 type PlayerDossierModalProps = {
   playerId: string | null;
@@ -62,6 +63,7 @@ export const PlayerDossierModal = ({
   onRecruitPlayer,
   eligibilityBadge,
 }: PlayerDossierModalProps) => {
+  const { canAccessFriendlyGames } = useAuth();
   const [playerInfo, setPlayerInfo] = useState<PlayerProfileInfo | null>(null);
   const [telemetry, setTelemetry] = useState<PlayerTelemetry | null>(null);
   const [selectedSport, setSelectedSport] = useState<string>('All');
@@ -83,7 +85,7 @@ export const PlayerDossierModal = ({
         .select('id, full_name, role, is_verified, program, year_level, age, employee_id, department, preferred_sports, primary_position, colleges(college_name)')
         .eq('id', playerId)
         .maybeSingle(),
-      fetchPlayerTelemetry(playerId),
+      fetchPlayerTelemetry(playerId, { excludeFriendly: !canAccessFriendlyGames }),
     ])
       .then(([userRes, teleRes]) => {
         if (!mounted) return;
