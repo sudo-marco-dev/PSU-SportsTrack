@@ -8,7 +8,8 @@ import {
   Trophy, 
   Users, 
   Plus, 
-  Star 
+  Star,
+  UserCheck 
 } from 'lucide-react';
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
@@ -21,6 +22,7 @@ import { DeleteTournamentModal } from '@/components/tournament-management/Delete
 import { ConcludeTournamentModal } from '@/components/tournament-management/ConcludeTournamentModal';
 import { TournamentListTab } from '@/components/tournament-management/TournamentListTab';
 import { TeamApprovalsTab } from '@/components/tournament-management/TeamApprovalsTab';
+import { FacilitatorsTab } from '@/components/tournament-management/FacilitatorsTab';
 import { TournamentMvpTab } from '@/components/tournament-management/TournamentMvpTab';
 import { BracketGenerationModal } from '@/components/tournament-management/BracketGenerationModal';
 import { ExpandableIconTabs } from '@/components/ui/expandable-icon-tabs';
@@ -31,6 +33,7 @@ export const TournamentManagement: React.FC = () => {
   // Primary Datasets
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [pendingTeams, setPendingTeams] = useState<PendingTeam[]>([]);
+  const [officialsCount, setOfficialsCount] = useState(0);
   const [isLoadingTournaments, setIsLoadingTournaments] = useState(true);
   const [isLoadingTeams, setIsLoadingTeams] = useState(true);
 
@@ -86,9 +89,23 @@ export const TournamentManagement: React.FC = () => {
     setIsLoadingTeams(false);
   };
 
+  const fetchOfficialsCount = async () => {
+    try {
+      const { count } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .or('is_facilitator.eq.true,role.eq.facilitator')
+        .neq('account_status', 'soft_deleted');
+      setOfficialsCount(count || 0);
+    } catch (err) {
+      console.warn('Failed to fetch officials count:', err);
+    }
+  };
+
   useEffect(() => {
     fetchTournaments();
     fetchPendingTeams();
+    fetchOfficialsCount();
   }, []);
 
   // Filtered Datasets
@@ -271,6 +288,13 @@ export const TournamentManagement: React.FC = () => {
               count: pendingTeams.length,
               badgeTone: pendingTeams.length > 0 ? 'warning' : 'muted',
             },
+            {
+              id: 'facilitators',
+              label: 'Match Officials',
+              shortLabel: 'Officials',
+              icon: UserCheck,
+              count: officialsCount,
+            },
             { id: 'mvp', label: 'MVP Hall of Fame', shortLabel: 'Hall of Fame', icon: Star },
           ]}
           activeTab={activeTab}
@@ -279,7 +303,7 @@ export const TournamentManagement: React.FC = () => {
           ariaLabel="Tournament Operations Navigation"
         />
 
-        {activeTab !== 'mvp' && (
+        {activeTab !== 'mvp' && activeTab !== 'facilitators' && (
           <div className="mb-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
             <DataToolbar
               searchQuery={searchQuery}
@@ -323,6 +347,16 @@ export const TournamentManagement: React.FC = () => {
             onApprove={handleApproveTeam}
             onReject={handleRejectTeam}
             onClearSearch={() => setSearchQuery('')}
+          />
+        </TabsContent>
+
+        <TabsContent value="facilitators" className="space-y-6 outline-none">
+          <FacilitatorsTab
+            tournaments={tournaments}
+            onUpdated={() => {
+              fetchTournaments();
+              fetchOfficialsCount();
+            }}
           />
         </TabsContent>
 
