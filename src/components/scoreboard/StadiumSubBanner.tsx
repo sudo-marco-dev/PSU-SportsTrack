@@ -59,7 +59,7 @@ export const StadiumSubBanner: React.FC<StadiumSubBannerProps> = ({
             PLAYER SUBSTITUTION
           </span>
           <span className="text-slate-600">•</span>
-          <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wide text-white truncate max-w-[200px]">
+          <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wide text-white line-clamp-1 break-words pr-1.5 max-w-[280px] sm:max-w-md">
             {alert.teamName}
           </span>
         </div>

@@ -531,7 +531,7 @@ export const PlayerDashboard = () => {
                     </span>
                   )}
                 </div>
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black italic tracking-tighter uppercase leading-none text-white pr-3 break-words">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black italic tracking-tighter uppercase text-white line-clamp-2 break-words leading-tight pr-2">
                   {profile?.full_name || (user ? 'COLLEGIATE ATHLETE' : 'PSU SPORTS HUB')}
                 </h1>
                 <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1 text-slate-400 font-medium text-xs">
@@ -673,7 +673,7 @@ export const PlayerDashboard = () => {
                         Roster Invite
                       </span>
                     </div>
-                    <CardTitle className="font-black uppercase italic tracking-tight text-lg text-slate-900 dark:text-white break-words line-clamp-1">
+                    <CardTitle className="font-black uppercase italic tracking-tight text-lg text-slate-900 dark:text-white break-words line-clamp-1 pr-1.5">
                       {team?.name ?? 'Unknown Squad'}
                     </CardTitle>
                     <CardDescription className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest truncate">
@@ -798,7 +798,7 @@ export const PlayerDashboard = () => {
                         )}
                       </div>
 
-                      <CardTitle className="font-black uppercase italic tracking-tight text-xl group-hover:text-orange-500 transition-colors text-slate-900 dark:text-white truncate pr-2">
+                      <CardTitle className="font-black uppercase italic tracking-tight text-xl group-hover:text-orange-500 transition-colors text-slate-900 dark:text-white line-clamp-2 break-words leading-tight pr-2">
                         {team?.name ?? 'Unknown Team'}
                       </CardTitle>
                       <CardDescription className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate">
@@ -1129,10 +1129,10 @@ export const PlayerDashboard = () => {
                     </div>
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic shrink-0 pr-1.5">{match.round}</span>
                   </div>
-                  <CardTitle className="text-base sm:text-lg mt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 font-black uppercase italic tracking-tight text-slate-900 dark:text-white pr-2">
-                    <span className="break-words line-clamp-2 leading-snug pr-1">{match.team_a?.name || 'TBD'}</span>
-                    <span className="text-slate-400 dark:text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider self-center sm:self-auto shrink-0 py-0.5 sm:py-0 px-1">VS</span>
-                    <span className="break-words line-clamp-2 leading-snug text-left sm:text-right pr-1">{match.team_b?.name || 'BYE'}</span>
+                  <CardTitle className="text-base sm:text-lg mt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
+                    <span className="break-words line-clamp-2 leading-snug pr-2">{match.team_a?.name || 'TBD'}</span>
+                    <span className="text-slate-400 dark:text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider self-center sm:self-auto shrink-0 py-0.5 sm:py-0">VS</span>
+                    <span className="break-words line-clamp-2 leading-snug text-left sm:text-right pr-2">{match.team_b?.name || 'BYE'}</span>
                   </CardTitle>
                   {match.venue && (
                     <div className="flex items-center gap-1 mt-2 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider min-w-0">

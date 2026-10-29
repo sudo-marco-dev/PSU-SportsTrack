@@ -1602,7 +1602,7 @@ export const LiveMatch = () => {
                   {match.tournament?.sport || 'Live Match'} • {match.status === 'Completed' ? 'Post-Game Record' : 'Match Control'}
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
+              <h1 className="text-2xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none pr-2">
                 {match.status === 'Completed' ? (
                   <>POST-GAME <span className="text-orange-500">BOX SCORE</span></>
                 ) : (
@@ -1710,7 +1710,7 @@ export const LiveMatch = () => {
             <div className="flex items-center justify-between p-4 sm:p-6 md:p-8 gap-2">
               <div className="flex-1 min-w-0 text-center relative">
                 <FloatingDeltaBadge deltas={deltasA} />
-                <h2 className="text-sm sm:text-lg md:text-xl font-bold mb-1 uppercase break-words leading-tight">{match.team_a?.name || 'Team A'}</h2>
+                <h2 className={`${(match.team_a?.name?.length || 0) > 24 ? 'text-xs sm:text-base md:text-xl' : 'text-sm sm:text-lg md:text-xl'} font-bold mb-1 uppercase break-words line-clamp-2 leading-tight px-1`}>{match.team_a?.name || 'Team A'}</h2>
                 <div className={`text-4xl sm:text-5xl md:text-7xl font-black tabular-nums transition-transform ${isPoppingA ? 'animate-score-pop' : ''}`}>
                   {match.team_a_score}
                 </div>
@@ -1720,7 +1720,7 @@ export const LiveMatch = () => {
 
               <div className="flex-1 min-w-0 text-center relative">
                 <FloatingDeltaBadge deltas={deltasB} />
-                <h2 className="text-sm sm:text-lg md:text-xl font-bold mb-1 uppercase break-words leading-tight">{match.team_b?.name || 'BYE'}</h2>
+                <h2 className={`${(match.team_b?.name?.length || 0) > 24 ? 'text-xs sm:text-base md:text-xl' : 'text-sm sm:text-lg md:text-xl'} font-bold mb-1 uppercase break-words line-clamp-2 leading-tight px-1`}>{match.team_b?.name || 'BYE'}</h2>
                 <div className={`text-4xl sm:text-5xl md:text-7xl font-black tabular-nums transition-transform ${isPoppingB ? 'animate-score-pop' : ''}`}>
                   {match.team_b_score}
                 </div>

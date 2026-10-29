@@ -1072,7 +1072,7 @@ export const BracketGenerationModal: React.FC<BracketGenerationModalProps> = ({
     const qualified = tournamentStandings.slice(0, topCount);
 
     // Seed #1 vs #4 and #2 vs #3 so they are placed into Match 0 and Match 1
-    let seededTeams: ApprovedTeam[] = [];
+    let seededTeams: ApprovedTeam[];
     if (topCount === 4) {
       // buildSingleEliminationMatches pairs index j with index j + numRound1Matches (j + 2)
       // So Match 0 gets [0] vs [2] (#1 vs #4), Match 1 gets [1] vs [3] (#2 vs #3)
@@ -1111,7 +1111,7 @@ export const BracketGenerationModal: React.FC<BracketGenerationModalProps> = ({
     const baseDate = tournament?.start_date ? new Date(tournament.start_date + 'T09:00') : new Date();
     const defaultVenue = tournament?.sport ? `PSU ${tournament.sport} Court 1` : 'PSU Main Gymnasium';
 
-    let fresh: ProposedMatch[] = [];
+    let fresh: ProposedMatch[];
     if (selectedBracketType === 'single' || isAppendingPhase2) {
       fresh = buildSingleEliminationMatches(shuffled, baseDate, defaultVenue);
     } else if (selectedBracketType === 'double') {

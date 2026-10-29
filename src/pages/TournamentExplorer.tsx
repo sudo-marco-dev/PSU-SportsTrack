@@ -339,7 +339,7 @@ export const TournamentExplorer = () => {
 
   // Elimination / Round Robin matches filtered by sport & selected tournament
   const eliminationMatches = useMemo(() => {
-    let list = matches.filter((m) => {
+    const list = matches.filter((m) => {
       if (isPlayoffRound(m.round) || m.next_match_id) return false;
       if (selectedTournamentId !== 'all' && m.tournament_id !== selectedTournamentId) return false;
       if (selectedSport !== 'all') {
@@ -970,7 +970,7 @@ export const TournamentExplorer = () => {
                         ? 'Official Binturungan Tribe Champion'
                         : 'Official Collegiate Champion • Gold Medalist'}
                     </span>
-                    <h2 className="text-xl sm:text-3xl md:text-5xl font-black italic tracking-tight uppercase leading-tight drop-shadow-md break-words max-w-full pr-3">
+                    <h2 className="text-xl sm:text-3xl md:text-5xl font-black italic tracking-tight uppercase leading-tight drop-shadow-md break-words max-w-full pr-2 sm:pr-3">
                       {championDetails.title}
                     </h2>
                     <p className="text-white/90 font-bold uppercase tracking-widest text-[10px] sm:text-xs mt-0.5 inline-flex flex-wrap items-center justify-center gap-1.5">
@@ -1007,7 +1007,7 @@ export const TournamentExplorer = () => {
                 <span className="px-3 py-1 rounded-full bg-black/20 text-white text-[9px] sm:text-[10px] font-black uppercase tracking-widest max-w-full whitespace-normal leading-snug">
                   Round Robin Official Champion • Ranked #1 by Most Wins ({championDetails.record})
                 </span>
-                <h2 className="text-xl sm:text-3xl md:text-5xl font-black italic tracking-tight uppercase leading-tight drop-shadow-md break-words max-w-full">
+                <h2 className="text-xl sm:text-3xl md:text-5xl font-black italic tracking-tight uppercase leading-tight drop-shadow-md break-words max-w-full pr-2 sm:pr-3">
                   {championDetails.title}
                 </h2>
                 <p className="text-white/90 font-bold uppercase tracking-widest text-[10px] sm:text-xs mt-0.5 inline-flex flex-wrap items-center justify-center gap-1.5">
@@ -1090,7 +1090,7 @@ export const TournamentExplorer = () => {
                           >
                             #{idx + 1}
                           </span>
-                          <span className="font-black italic uppercase text-xs text-slate-900 dark:text-white truncate">
+                          <span className="font-black italic uppercase text-xs text-slate-900 dark:text-white line-clamp-1 break-words pr-1.5">
                             {st.teamName}
                           </span>
                           {idx === 0 && isRoundRobinOnlyTournament && isEliminationComplete && (
@@ -1155,7 +1155,7 @@ export const TournamentExplorer = () => {
                           }
                         >
                           <td className="py-2.5 pr-3 font-black">#{idx + 1}</td>
-                          <td className="py-2.5 px-3 font-black uppercase italic">
+                          <td className="py-2.5 px-3 pr-1.5 font-black uppercase italic">
                             {st.teamName}
                             {idx === 0 && isRoundRobinOnlyTournament && isEliminationComplete && (
                               <Badge className="ml-2 bg-amber-500 text-white text-[8px] font-black uppercase px-1.5 py-0">

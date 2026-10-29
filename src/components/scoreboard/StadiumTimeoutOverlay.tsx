@@ -56,7 +56,7 @@ export const StadiumTimeoutOverlay: React.FC<StadiumTimeoutOverlayProps> = ({
           <span className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.2em] text-slate-400 block mb-1">
             Called By
           </span>
-          <h2 className="text-3xl sm:text-5xl font-black uppercase italic tracking-tight text-white drop-shadow-[0_2px_15px_rgba(6,182,212,0.4)]">
+          <h2 className={`${teamName.length > 25 ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-5xl'} font-black uppercase italic tracking-tight text-white drop-shadow-[0_2px_15px_rgba(6,182,212,0.4)] break-words line-clamp-2 leading-tight px-3`}>
             {teamName}
           </h2>
           {team && (

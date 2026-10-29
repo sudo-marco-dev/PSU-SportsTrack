@@ -101,9 +101,9 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
             : 'bg-white/5 text-slate-300'
         }`}
       >
-        <div className="flex items-center gap-1.5 truncate flex-1 min-w-0 pr-2">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0 pr-2">
           {isTeamAWinner && <Crown className="size-3 text-yellow-400 shrink-0" />}
-          <span className="text-[11px] sm:text-xs uppercase italic font-black truncate">
+          <span className="text-[11px] sm:text-xs uppercase italic font-black line-clamp-1 break-words pr-1.5">
             {match.team_a?.name || 'TBD'}
           </span>
           {affA && (
@@ -132,9 +132,9 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
             : 'bg-white/5 text-slate-300'
         }`}
       >
-        <div className="flex items-center gap-1.5 truncate flex-1 min-w-0 pr-2">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0 pr-2">
           {isTeamBWinner && <Crown className="size-3 text-yellow-400 shrink-0" />}
-          <span className="text-[11px] sm:text-xs uppercase italic font-black truncate">
+          <span className="text-[11px] sm:text-xs uppercase italic font-black line-clamp-1 break-words pr-1.5">
             {match.team_b?.name || 'TBD'}
           </span>
           {affB && (

@@ -62,6 +62,20 @@ export const Ranking = () => {
   const [isFiltersExpanded, setIsFiltersExpanded] = useState<boolean>(false);
   const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null);
 
+  // Viewport breakpoint state: matches Tailwind md: breakpoint (768px)
+  const [isDesktop, setIsDesktop] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return window.matchMedia('(min-width: 768px)').matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(min-width: 768px)');
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
+
   // Filter States
   const [tournamentType, setTournamentType] = useState<string>('Championship');
   const [sportCategory, setSportCategory] = useState<string>('all');
@@ -1155,234 +1169,241 @@ export const Ranking = () => {
       ) : (
         <>
           {/* MOBILE PODIUM (< md): Compact #1 Spotlight + #2 & #3 Side-by-Side (Fits in ~190px total!) */}
-      <div className="md:hidden space-y-2.5">
-        {/* #1 Champion Spotlight Banner */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/10 border-2 border-orange-500 p-3.5 shadow-lg">
-          <div className="flex items-start gap-3">
-            <div className="size-11 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/30">
-              <Trophy className="size-6 text-white" />
+          {!isDesktop && (
+          <div className="md:hidden space-y-2.5">
+            {/* #1 Champion Spotlight Banner */}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/10 border-2 border-orange-500 p-3.5 shadow-lg">
+              <div className="flex items-start gap-3">
+                <div className="size-11 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/30">
+                  <Trophy className="size-6 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="px-2 py-0.5 rounded-md bg-orange-500 text-white text-[8px] font-black uppercase tracking-wider">
+                      #1 Champion
+                    </span>
+                    {championEntity?.code && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-black/10 dark:bg-white/10 text-slate-700 dark:text-slate-300 text-[9px] font-black">
+                        {championEntity.code}
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="font-black italic uppercase tracking-tight text-base sm:text-lg text-slate-900 dark:text-white leading-tight line-clamp-2 break-words pr-2 mt-0.5" title={championEntity?.name}>
+                    {championEntity?.name || 'Champion Tier'}
+                  </h4>
+                  <p className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider line-clamp-2 break-words leading-tight pr-1 mt-0.5">
+                    {championEntity
+                      ? (standingView === 'college' ? `Tribe: ${championEntity.clusterName || 'PSU Binturungan'}` : standingView === 'cluster' ? (championEntity.subtitle || 'Binturungan Tribe') : `${championEntity.sport} • ${championEntity.category}`)
+                      : 'Leaderboard Leader'}
+                  </p>
+                </div>
+              </div>
+              {championEntity && (
+                <div className="mt-2.5 pt-2 border-t border-orange-500/20 flex items-center justify-between text-[10px] font-bold text-slate-700 dark:text-slate-300 flex-wrap gap-1">
+                  <span className="text-orange-600 dark:text-orange-400 font-black">
+                    {championEntity.championships > 0 ? `${championEntity.championships} Gold Title${championEntity.championships > 1 ? 's' : ''}` : `${championEntity.wins}W - ${championEntity.losses}L`}
+                  </span>
+                  <span>{championEntity.winRate.toFixed(0)}% Win</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-black">
+                    {championEntity.pointDiff >= 0 ? `+${championEntity.pointDiff}` : championEntity.pointDiff} Diff
+                  </span>
+                </div>
+              )}
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="px-2 py-0.5 rounded-md bg-orange-500 text-white text-[8px] font-black uppercase tracking-wider">
-                  #1 Champion
-                </span>
-                {championEntity?.code && (
-                  <span className="px-1.5 py-0.5 rounded-md bg-black/10 dark:bg-white/10 text-slate-700 dark:text-slate-300 text-[9px] font-black">
-                    {championEntity.code}
+
+            {/* #2 Silver and #3 Bronze: Side-by-Side in 2-Columns */}
+            <div className="grid grid-cols-2 gap-2.5">
+              {/* #2 Silver Card */}
+              <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 p-2.5 text-center flex flex-col justify-between">
+                <div>
+                  <span className="px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[8px] font-black uppercase">
+                    #2 Silver
+                  </span>
+                  <h5 className="font-black italic uppercase text-xs text-slate-900 dark:text-white line-clamp-1 break-words mt-1 leading-tight pr-1.5" title={silverEntity?.name}>
+                    {silverEntity?.code || silverEntity?.name || 'Silver'}
+                  </h5>
+                  <p className="text-[9px] text-slate-400 line-clamp-2 break-words leading-tight px-1 mt-0.5" title={silverEntity?.name}>
+                    {silverEntity?.name}
+                  </p>
+                </div>
+                {silverEntity && (
+                  <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-white/5 text-[9px] font-bold text-slate-600 dark:text-slate-300 flex items-center justify-around">
+                    <span>{silverEntity.wins}W - {silverEntity.losses}L</span>
+                    <span className={silverEntity.pointDiff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}>
+                      {silverEntity.pointDiff >= 0 ? `+${silverEntity.pointDiff}` : silverEntity.pointDiff}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* #3 Bronze Card */}
+              <div className="rounded-xl border border-amber-700/30 dark:border-amber-500/30 bg-white dark:bg-slate-900 p-2.5 text-center flex flex-col justify-between">
+                <div>
+                  <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-500 text-[8px] font-black uppercase">
+                    #3 Bronze
+                  </span>
+                  <h5 className="font-black italic uppercase text-xs text-slate-900 dark:text-white line-clamp-1 break-words mt-1 leading-tight pr-1.5" title={bronzeEntity?.name}>
+                    {bronzeEntity?.code || bronzeEntity?.name || 'Bronze'}
+                  </h5>
+                  <p className="text-[9px] text-slate-400 line-clamp-2 break-words leading-tight px-1 mt-0.5" title={bronzeEntity?.name}>
+                    {bronzeEntity?.name}
+                  </p>
+                </div>
+                {bronzeEntity && (
+                  <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-white/5 text-[9px] font-bold text-slate-600 dark:text-slate-300 flex items-center justify-around">
+                    <span>{bronzeEntity.wins}W - {bronzeEntity.losses}L</span>
+                    <span className={bronzeEntity.pointDiff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}>
+                      {bronzeEntity.pointDiff >= 0 ? `+${bronzeEntity.pointDiff}` : bronzeEntity.pointDiff}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          )}
+
+          {/* DESKTOP PODIUM (md:grid): Standard 3-column classic podium */}
+          {isDesktop && (
+          <div className="hidden md:grid md:grid-cols-3 gap-6 items-end">
+            {/* Rank 2 - Silver Tier */}
+            <Card className="rounded-[2.5rem] border-2 border-slate-200/80 dark:border-white/10 bg-white dark:bg-slate-900/90 backdrop-blur-sm p-6 text-center relative overflow-hidden order-2 md:order-1 shadow-md hover:border-slate-400 transition-all">
+              <div className="size-16 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center mx-auto mb-4 text-slate-400 font-black tabular-nums text-2xl shadow-inner">
+                2
+              </div>
+              <div className="flex justify-center mb-1">
+                <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest text-slate-500 border-slate-300 dark:border-slate-700 px-2.5 py-0.5">
+                  Silver Tier • Runner-Up
+                </Badge>
+              </div>
+              <h4 className="font-black italic uppercase tracking-tight text-lg lg:text-xl text-slate-900 dark:text-white line-clamp-2 break-words leading-tight px-1.5" title={silverEntity?.name}>
+                {silverEntity?.name || 'Silver Spot Open'}
+              </h4>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 line-clamp-2 break-words leading-tight px-1">
+                {silverEntity
+                  ? (standingView === 'college' ? `Tribe: ${silverEntity.clusterName || 'Affiliated'}` : standingView === 'cluster' ? (silverEntity.subtitle || 'Binturungan Tribe') : `${silverEntity.sport} • ${silverEntity.category}`)
+                  : 'Runner-Up Standings'}
+              </p>
+
+              <div className="mt-5 py-4 border-t border-dashed border-slate-200 dark:border-white/10">
+                {silverEntity ? (
+                  <div className="flex items-center justify-center gap-3 text-xs font-bold text-slate-600 dark:text-slate-300">
+                    <span>{silverEntity.wins}W - {silverEntity.losses}L</span>
+                    <span>•</span>
+                    <span>{silverEntity.winRate.toFixed(0)}% Win</span>
+                    <span>•</span>
+                    <span className={silverEntity.pointDiff >= 0 ? 'text-emerald-500' : 'text-slate-400'}>
+                      {silverEntity.pointDiff >= 0 ? `+${silverEntity.pointDiff}` : silverEntity.pointDiff} Diff
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-xs font-bold text-slate-400 italic">Standings compiling...</span>
+                )}
+              </div>
+            </Card>
+
+            {/* Rank 1 - Champion Tier (Gold) */}
+            <Card className="rounded-2xl md:rounded-[2.5rem] border-2 border-orange-500 bg-white dark:bg-slate-900 p-6 md:px-6 md:py-8 text-center relative overflow-hidden shadow-2xl shadow-orange-500/15 order-1 md:order-2 scale-100 md:scale-105 border-t-4 border-t-orange-500">
+              <div className="size-16 md:size-20 rounded-2xl md:rounded-3xl bg-orange-500 flex items-center justify-center mx-auto mb-4 text-white font-black tabular-nums text-2xl md:text-3xl shadow-xl shadow-orange-500/30">
+                <Trophy className="size-8 md:size-10 text-white" />
+              </div>
+              <div className="flex justify-center mb-2">
+                <Badge className="bg-orange-500 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 shadow-sm">
+                  {standingView === 'college' ? 'Top Seed • College Champion' : standingView === 'cluster' ? 'Top Seed • Binturungan Tribe Champion' : 'Top Seed • Official Squad Champion'}
+                </Badge>
+              </div>
+              <h4
+                className={`font-black italic uppercase tracking-tight ${(championEntity?.name?.length || 0) > 36 ? 'text-base sm:text-lg md:text-lg lg:text-xl xl:text-xl 2xl:text-2xl' : 'text-xl sm:text-2xl md:text-2xl lg:text-3xl'} text-slate-900 dark:text-white line-clamp-2 break-words leading-tight pr-2 pl-1`}
+                title={championEntity?.name}
+              >
+                {championEntity?.name || 'Champion Tier'}
+              </h4>
+              <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mt-1 line-clamp-2 break-words leading-tight px-1">
+                {championEntity
+                  ? (standingView === 'college' ? `Designated Tribe: ${championEntity.clusterName || 'Authentic Binturungan'}` : standingView === 'cluster' ? (championEntity.subtitle || 'Palawan State University Tribe') : `${championEntity.sport} • ${championEntity.category}`)
+                  : 'First Place Leaderboard'}
+              </p>
+
+              <div className="mt-5 py-4 border-t border-dashed border-orange-200 dark:border-orange-500/20">
+                {championEntity ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center gap-2 flex-wrap">
+                      {championEntity.championships > 0 && (
+                        <Badge className="bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5">
+                          <Trophy className="size-3 mr-1 inline" />
+                          {championEntity.championships} {championEntity.championships === 1 ? 'Gold Title' : 'Gold Titles'}
+                        </Badge>
+                      )}
+                      {championEntity.runnerUps > 0 && (
+                        <Badge variant="outline" className="border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-black uppercase tracking-wider px-2 py-0.5">
+                          <Medal className="size-3 mr-1 inline text-slate-400" />
+                          {championEntity.runnerUps} Silver
+                        </Badge>
+                      )}
+                      {championEntity.bronzeFinishes > 0 && (
+                        <Badge variant="outline" className="border-amber-700/30 text-amber-700 dark:text-amber-500 text-[10px] font-black uppercase tracking-wider px-2 py-0.5">
+                          <Medal className="size-3 mr-1 inline text-amber-700" />
+                          {championEntity.bronzeFinishes} Bronze
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="border-orange-500/30 text-orange-600 dark:text-orange-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5">
+                        {championEntity.wins}W - {championEntity.losses}L Record
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-center gap-3 text-xs font-bold text-slate-600 dark:text-slate-300">
+                      <span>{championEntity.winRate.toFixed(0)}% Win Rate</span>
+                      <span>•</span>
+                      <span>{championEntity.pointsFor} PF</span>
+                      <span>•</span>
+                      <span className="text-emerald-600 dark:text-emerald-400">
+                        +{championEntity.pointDiff} Diff
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-xs font-bold text-orange-500/80 italic">Awaiting tournament match dataset</span>
+                )}
+              </div>
+            </Card>
+
+            {/* Rank 3 - Bronze Tier */}
+            <Card className="rounded-[2.5rem] border-2 border-slate-200/80 dark:border-white/10 bg-white dark:bg-slate-900/90 backdrop-blur-sm p-6 text-center relative overflow-hidden order-3 shadow-md hover:border-amber-700/40 transition-all">
+              <div className="size-16 rounded-2xl bg-amber-700/10 dark:bg-amber-500/10 border border-amber-700/20 dark:border-amber-500/20 flex items-center justify-center mx-auto mb-4 text-amber-700 dark:text-amber-500 font-black tabular-nums text-2xl shadow-inner">
+                3
+              </div>
+              <div className="flex justify-center mb-1">
+                <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-500 border-amber-700/30 dark:border-amber-500/30 px-2.5 py-0.5">
+                  Bronze Tier • 3rd Place
+                </Badge>
+              </div>
+              <h4 className="font-black italic uppercase tracking-tight text-lg lg:text-xl text-slate-900 dark:text-white line-clamp-2 break-words leading-tight px-1.5" title={bronzeEntity?.name}>
+                {bronzeEntity?.name || (rankedEntities.length <= 2 && rankedEntities.length > 0 ? 'Spot Open' : 'Bronze Spot Open')}
+              </h4>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 line-clamp-2 break-words leading-tight px-1">
+                {bronzeEntity
+                  ? (standingView === 'college' ? `Tribe: ${bronzeEntity.clusterName || 'Affiliated'}` : standingView === 'cluster' ? (bronzeEntity.subtitle || 'Binturungan Tribe') : `${bronzeEntity.sport} • ${bronzeEntity.category}`)
+                  : '3rd Place Standings'}
+              </p>
+
+              <div className="mt-5 py-4 border-t border-dashed border-slate-200 dark:border-white/10">
+                {bronzeEntity ? (
+                  <div className="flex items-center justify-center gap-3 text-xs font-bold text-slate-600 dark:text-slate-300">
+                    <span>{bronzeEntity.wins}W - {bronzeEntity.losses}L</span>
+                    <span>•</span>
+                    <span>{bronzeEntity.winRate.toFixed(0)}% Win</span>
+                    <span>•</span>
+                    <span className={bronzeEntity.pointDiff >= 0 ? 'text-emerald-500' : 'text-slate-400'}>
+                      {bronzeEntity.pointDiff >= 0 ? `+${bronzeEntity.pointDiff}` : bronzeEntity.pointDiff} Diff
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-xs font-bold text-slate-400 italic">
+                    {rankedEntities.length <= 2 && rankedEntities.length > 0 ? 'Requires 3+ participants' : 'Standings compiling...'}
                   </span>
                 )}
               </div>
-              <h4 className="font-black italic uppercase tracking-tight text-base sm:text-lg text-slate-900 dark:text-white leading-snug break-words mt-0.5">
-                {championEntity?.name || 'Champion Tier'}
-              </h4>
-              <p className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider truncate">
-                {championEntity
-                  ? (standingView === 'college' ? `Tribe: ${championEntity.clusterName || 'PSU Binturungan'}` : standingView === 'cluster' ? (championEntity.subtitle || 'Binturungan Tribe') : `${championEntity.sport} • ${championEntity.category}`)
-                  : 'Leaderboard Leader'}
-              </p>
-            </div>
+            </Card>
           </div>
-          {championEntity && (
-            <div className="mt-2.5 pt-2 border-t border-orange-500/20 flex items-center justify-between text-[10px] font-bold text-slate-700 dark:text-slate-300 flex-wrap gap-1">
-              <span className="text-orange-600 dark:text-orange-400 font-black">
-                {championEntity.championships > 0 ? `${championEntity.championships} Gold Title${championEntity.championships > 1 ? 's' : ''}` : `${championEntity.wins}W - ${championEntity.losses}L`}
-              </span>
-              <span>{championEntity.winRate.toFixed(0)}% Win</span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-black">
-                {championEntity.pointDiff >= 0 ? `+${championEntity.pointDiff}` : championEntity.pointDiff} Diff
-              </span>
-            </div>
           )}
-        </div>
-
-        {/* #2 Silver and #3 Bronze: Side-by-Side in 2-Columns */}
-        <div className="grid grid-cols-2 gap-2.5">
-          {/* #2 Silver Card */}
-          <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 p-2.5 text-center flex flex-col justify-between">
-            <div>
-              <span className="px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[8px] font-black uppercase">
-                #2 Silver
-              </span>
-              <h5 className="font-black italic uppercase text-xs text-slate-900 dark:text-white truncate pr-1.5 mt-1 leading-tight" title={silverEntity?.name}>
-                {silverEntity?.code || silverEntity?.name || 'Silver'}
-              </h5>
-              <p className="text-[9px] text-slate-400 truncate mt-0.5">
-                {silverEntity?.name}
-              </p>
-            </div>
-            {silverEntity && (
-              <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-white/5 text-[9px] font-bold text-slate-600 dark:text-slate-300 flex items-center justify-around">
-                <span>{silverEntity.wins}W - {silverEntity.losses}L</span>
-                <span className={silverEntity.pointDiff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}>
-                  {silverEntity.pointDiff >= 0 ? `+${silverEntity.pointDiff}` : silverEntity.pointDiff}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* #3 Bronze Card */}
-          <div className="rounded-xl border border-amber-700/30 dark:border-amber-500/30 bg-white dark:bg-slate-900 p-2.5 text-center flex flex-col justify-between">
-            <div>
-              <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-500 text-[8px] font-black uppercase">
-                #3 Bronze
-              </span>
-              <h5 className="font-black italic uppercase text-xs text-slate-900 dark:text-white truncate pr-1.5 mt-1 leading-tight" title={bronzeEntity?.name}>
-                {bronzeEntity?.code || bronzeEntity?.name || 'Bronze'}
-              </h5>
-              <p className="text-[9px] text-slate-400 truncate mt-0.5">
-                {bronzeEntity?.name}
-              </p>
-            </div>
-            {bronzeEntity && (
-              <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-white/5 text-[9px] font-bold text-slate-600 dark:text-slate-300 flex items-center justify-around">
-                <span>{bronzeEntity.wins}W - {bronzeEntity.losses}L</span>
-                <span className={bronzeEntity.pointDiff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}>
-                  {bronzeEntity.pointDiff >= 0 ? `+${bronzeEntity.pointDiff}` : bronzeEntity.pointDiff}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* DESKTOP PODIUM (md:grid): Standard 3-column classic podium */}
-      <div className="hidden md:grid md:grid-cols-3 gap-6 items-end">
-        {/* Rank 2 - Silver Tier */}
-        <Card className="rounded-[2.5rem] border-2 border-slate-200/80 dark:border-white/10 bg-white dark:bg-slate-900/90 backdrop-blur-sm p-6 text-center relative overflow-hidden order-2 md:order-1 shadow-md hover:border-slate-400 transition-all">
-          <div className="size-16 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center mx-auto mb-4 text-slate-400 font-black tabular-nums text-2xl shadow-inner">
-            2
-          </div>
-          <div className="flex justify-center mb-1">
-            <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest text-slate-500 border-slate-300 dark:border-slate-700 px-2.5 py-0.5">
-              Silver Tier • Runner-Up
-            </Badge>
-          </div>
-          <h4 className="font-black italic uppercase tracking-tight text-xl text-slate-900 dark:text-white truncate pr-2">
-            {silverEntity?.name || 'Silver Spot Open'}
-          </h4>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 truncate">
-            {silverEntity
-              ? (standingView === 'college' ? `Tribe: ${silverEntity.clusterName || 'Affiliated'}` : standingView === 'cluster' ? (silverEntity.subtitle || 'Binturungan Tribe') : `${silverEntity.sport} • ${silverEntity.category}`)
-              : 'Runner-Up Standings'}
-          </p>
-
-          <div className="mt-5 py-4 border-t border-dashed border-slate-200 dark:border-white/10">
-            {silverEntity ? (
-              <div className="flex items-center justify-center gap-3 text-xs font-bold text-slate-600 dark:text-slate-300">
-                <span>{silverEntity.wins}W - {silverEntity.losses}L</span>
-                <span>•</span>
-                <span>{silverEntity.winRate.toFixed(0)}% Win</span>
-                <span>•</span>
-                <span className={silverEntity.pointDiff >= 0 ? 'text-emerald-500' : 'text-slate-400'}>
-                  {silverEntity.pointDiff >= 0 ? `+${silverEntity.pointDiff}` : silverEntity.pointDiff} Diff
-                </span>
-              </div>
-            ) : (
-              <span className="text-xs font-bold text-slate-400 italic">Standings compiling...</span>
-            )}
-          </div>
-        </Card>
-
-        {/* Rank 1 - Champion Tier (Gold) */}
-        <Card className="rounded-2xl md:rounded-[2.5rem] border-2 border-orange-500 bg-white dark:bg-slate-900 p-6 md:p-8 text-center relative overflow-hidden shadow-2xl shadow-orange-500/15 order-1 md:order-2 scale-100 md:scale-105 border-t-4 border-t-orange-500">
-          <div className="size-16 md:size-20 rounded-2xl md:rounded-3xl bg-orange-500 flex items-center justify-center mx-auto mb-4 text-white font-black tabular-nums text-2xl md:text-3xl shadow-xl shadow-orange-500/30">
-            <Trophy className="size-8 md:size-10 text-white" />
-          </div>
-          <div className="flex justify-center mb-2">
-            <Badge className="bg-orange-500 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 shadow-sm">
-              {standingView === 'college' ? 'Top Seed • College Champion' : standingView === 'cluster' ? 'Top Seed • Binturungan Tribe Champion' : 'Top Seed • Official Squad Champion'}
-            </Badge>
-          </div>
-          <h4 className="font-black italic uppercase tracking-tight text-2xl md:text-3xl text-slate-900 dark:text-white truncate pr-2">
-            {championEntity?.name || 'Champion Tier'}
-          </h4>
-          <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mt-0.5 truncate">
-            {championEntity
-              ? (standingView === 'college' ? `Designated Tribe: ${championEntity.clusterName || 'Authentic Binturungan'}` : standingView === 'cluster' ? (championEntity.subtitle || 'Palawan State University Tribe') : `${championEntity.sport} • ${championEntity.category}`)
-              : 'First Place Leaderboard'}
-          </p>
-
-          <div className="mt-5 py-4 border-t border-dashed border-orange-200 dark:border-orange-500/20">
-            {championEntity ? (
-              <div className="space-y-2">
-                <div className="flex items-center justify-center gap-2 flex-wrap">
-                  {championEntity.championships > 0 && (
-                    <Badge className="bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5">
-                      <Trophy className="size-3 mr-1 inline" />
-                      {championEntity.championships} {championEntity.championships === 1 ? 'Gold Title' : 'Gold Titles'}
-                    </Badge>
-                  )}
-                  {championEntity.runnerUps > 0 && (
-                    <Badge variant="outline" className="border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-black uppercase tracking-wider px-2 py-0.5">
-                      <Medal className="size-3 mr-1 inline text-slate-400" />
-                      {championEntity.runnerUps} Silver
-                    </Badge>
-                  )}
-                  {championEntity.bronzeFinishes > 0 && (
-                    <Badge variant="outline" className="border-amber-700/30 text-amber-700 dark:text-amber-500 text-[10px] font-black uppercase tracking-wider px-2 py-0.5">
-                      <Medal className="size-3 mr-1 inline text-amber-700" />
-                      {championEntity.bronzeFinishes} Bronze
-                    </Badge>
-                  )}
-                  <Badge variant="outline" className="border-orange-500/30 text-orange-600 dark:text-orange-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5">
-                    {championEntity.wins}W - {championEntity.losses}L Record
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-center gap-3 text-xs font-bold text-slate-600 dark:text-slate-300">
-                  <span>{championEntity.winRate.toFixed(0)}% Win Rate</span>
-                  <span>•</span>
-                  <span>{championEntity.pointsFor} PF</span>
-                  <span>•</span>
-                  <span className="text-emerald-600 dark:text-emerald-400">
-                    +{championEntity.pointDiff} Diff
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <span className="text-xs font-bold text-orange-500/80 italic">Awaiting tournament match dataset</span>
-            )}
-          </div>
-        </Card>
-
-        {/* Rank 3 - Bronze Tier */}
-        <Card className="rounded-[2.5rem] border-2 border-slate-200/80 dark:border-white/10 bg-white dark:bg-slate-900/90 backdrop-blur-sm p-6 text-center relative overflow-hidden order-3 shadow-md hover:border-amber-700/40 transition-all">
-          <div className="size-16 rounded-2xl bg-amber-700/10 dark:bg-amber-500/10 border border-amber-700/20 dark:border-amber-500/20 flex items-center justify-center mx-auto mb-4 text-amber-700 dark:text-amber-500 font-black tabular-nums text-2xl shadow-inner">
-            3
-          </div>
-          <div className="flex justify-center mb-1">
-            <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-500 border-amber-700/30 dark:border-amber-500/30 px-2.5 py-0.5">
-              Bronze Tier • 3rd Place
-            </Badge>
-          </div>
-          <h4 className="font-black italic uppercase tracking-tight text-xl text-slate-900 dark:text-white truncate pr-2">
-            {bronzeEntity?.name || (rankedEntities.length <= 2 && rankedEntities.length > 0 ? 'Spot Open' : 'Bronze Spot Open')}
-          </h4>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 truncate">
-            {bronzeEntity
-              ? (standingView === 'college' ? `Tribe: ${bronzeEntity.clusterName || 'Affiliated'}` : standingView === 'cluster' ? (bronzeEntity.subtitle || 'Binturungan Tribe') : `${bronzeEntity.sport} • ${bronzeEntity.category}`)
-              : '3rd Place Standings'}
-          </p>
-
-          <div className="mt-5 py-4 border-t border-dashed border-slate-200 dark:border-white/10">
-            {bronzeEntity ? (
-              <div className="flex items-center justify-center gap-3 text-xs font-bold text-slate-600 dark:text-slate-300">
-                <span>{bronzeEntity.wins}W - {bronzeEntity.losses}L</span>
-                <span>•</span>
-                <span>{bronzeEntity.winRate.toFixed(0)}% Win</span>
-                <span>•</span>
-                <span className={bronzeEntity.pointDiff >= 0 ? 'text-emerald-500' : 'text-slate-400'}>
-                  {bronzeEntity.pointDiff >= 0 ? `+${bronzeEntity.pointDiff}` : bronzeEntity.pointDiff} Diff
-                </span>
-              </div>
-            ) : (
-              <span className="text-xs font-bold text-slate-400 italic">
-                {rankedEntities.length <= 2 && rankedEntities.length > 0 ? 'Requires 3+ participants' : 'Standings compiling...'}
-              </span>
-            )}
-          </div>
-        </Card>
-      </div>
       </>
       )}
 
@@ -1475,7 +1496,7 @@ export const Ranking = () => {
                         {/* Name + Code + Affiliation */}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-black italic uppercase text-xs text-slate-900 dark:text-white truncate">
+                            <span className="font-black italic uppercase text-xs text-slate-900 dark:text-white line-clamp-1 break-words pr-1.5" title={item.name}>
                               {item.name}
                             </span>
                             {item.code && (
@@ -1621,7 +1642,7 @@ export const Ranking = () => {
                             <td className="py-4 px-4">
                               <div className="flex flex-col">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-black italic uppercase tracking-tight text-slate-900 dark:text-white text-sm">
+                                  <span className="font-black italic uppercase tracking-tight text-slate-900 dark:text-white text-sm pr-2" title={item.name}>
                                     {item.name}
                                   </span>
                                   {item.code && (
@@ -1651,7 +1672,7 @@ export const Ranking = () => {
                           <>
                             <td className="py-4 px-4">
                               <div className="flex flex-col">
-                                <span className="font-black italic uppercase tracking-tight text-slate-900 dark:text-white text-sm">
+                                <span className="font-black italic uppercase tracking-tight text-slate-900 dark:text-white text-sm pr-2" title={item.name}>
                                   {item.name}
                                 </span>
                                 <span className="text-[10px] font-medium text-slate-400 truncate max-w-md">
@@ -1682,7 +1703,7 @@ export const Ranking = () => {
                           <>
                             <td className="py-4 px-4">
                               <div className="flex flex-col">
-                                <span className="font-black italic uppercase tracking-tight text-slate-900 dark:text-white text-sm">
+                                <span className="font-black italic uppercase tracking-tight text-slate-900 dark:text-white text-sm pr-2" title={item.name}>
                                   {item.name}
                                 </span>
                                 <span className="text-[10px] font-medium text-slate-400 truncate max-w-[220px]">

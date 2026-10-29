@@ -137,7 +137,7 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
                         <span>{sportName}</span>
                       </span>
                       {match.round && (
-                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight truncate">
+                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight line-clamp-1 break-words pr-1">
                           • {match.round}
                         </span>
                       )}
@@ -190,7 +190,7 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
                             {affA.badge}
                           </span>
                         )}
-                        <span className="font-black italic uppercase text-xs truncate pr-1.5">
+                        <span className="font-black italic uppercase text-xs line-clamp-1 break-words pr-1.5">
                           {match.team_a?.name || 'TBD'}
                         </span>
                         {isTeamAWinner && <Crown className="size-3 text-amber-500 shrink-0" />}
@@ -225,7 +225,7 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
                             {affB.badge}
                           </span>
                         )}
-                        <span className="font-black italic uppercase text-xs truncate pr-1.5">
+                        <span className="font-black italic uppercase text-xs line-clamp-1 break-words pr-1.5">
                           {match.team_b?.name || 'TBD'}
                         </span>
                         {isTeamBWinner && <Crown className="size-3 text-amber-500 shrink-0" />}
@@ -247,7 +247,7 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
                   {/* DESKTOP: Horizontal Matchup (hidden sm:flex) */}
                   <div className="hidden sm:flex items-center justify-between gap-3">
                     <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                      <span className="font-black italic uppercase text-xs sm:text-sm text-slate-900 dark:text-white truncate pr-1.5">
+                      <span className="font-black italic uppercase text-xs sm:text-sm text-slate-900 dark:text-white line-clamp-1 break-words pr-1.5">
                         {match.team_a?.name || 'TBD'}
                       </span>
                       {affA && (
@@ -269,7 +269,7 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
                           {affB.badge}
                         </span>
                       )}
-                      <span className="font-black italic uppercase text-xs sm:text-sm text-slate-900 dark:text-white truncate text-right pr-1.5">
+                      <span className="font-black italic uppercase text-xs sm:text-sm text-slate-900 dark:text-white line-clamp-1 break-words pr-1.5 text-right">
                         {match.team_b?.name || 'TBD'}
                       </span>
                     </div>
