@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import type { InAppNotification } from '@/lib/notifications';
-import { Bell, CheckCheck, UserPlus, CheckCircle2, AlertCircle, ExternalLink, X } from 'lucide-react';
+import { Bell, CheckCheck, UserPlus, CheckCircle2, AlertCircle, ExternalLink, Trash2, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -120,6 +121,27 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ className })
     }
   };
 
+  const clearNotification = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    try {
+      await supabase.from('notifications').delete().eq('id', id);
+    } catch (err) {
+      console.warn('[NotificationBell] Failed to delete notification:', err);
+    }
+  };
+
+  const clearAllNotifications = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setNotifications([]);
+    try {
+      await supabase.from('notifications').delete().eq('user_id', user.id);
+      toast.success('All notifications cleared');
+    } catch (err) {
+      console.warn('[NotificationBell] Failed to clear all notifications:', err);
+    }
+  };
+
   const handleNotificationClick = (n: InAppNotification) => {
     if (!n.is_read) {
       markAsRead(n.id);
@@ -193,14 +215,28 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ className })
                   size="sm"
                   onClick={markAllAsRead}
                   className="h-7 px-2 text-[10px] font-bold text-slate-500 hover:text-orange-500 gap-1 rounded-lg"
+                  title="Mark all as read"
                 >
                   <CheckCheck className="size-3" />
-                  <span>Mark all read</span>
+                  <span className="hidden xs:inline">Mark read</span>
+                </Button>
+              )}
+              {notifications.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearAllNotifications}
+                  className="h-7 px-2 text-[10px] font-bold text-slate-500 hover:text-rose-500 gap-1 rounded-lg"
+                  title="Clear all notifications"
+                >
+                  <Trash2 className="size-3" />
+                  <span className="hidden xs:inline">Clear all</span>
                 </Button>
               )}
               <button
                 onClick={() => setIsOpen(false)}
                 className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                aria-label="Close notifications"
               >
                 <X className="size-3.5" />
               </button>
@@ -250,9 +286,20 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ className })
                       </div>
                     )}
                   </div>
-                  {!n.is_read && (
-                    <span className="size-2 rounded-full bg-orange-500 shrink-0 mt-1.5" />
-                  )}
+                  <div className="flex flex-col items-end gap-1.5 shrink-0 self-start">
+                    {!n.is_read && (
+                      <span className="size-2 rounded-full bg-orange-500 mt-1" />
+                    )}
+                    <button
+                      type="button"
+                      title="Clear notification"
+                      aria-label="Clear notification"
+                      onClick={(e) => clearNotification(n.id, e)}
+                      className="p-1 rounded text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors opacity-70 hover:opacity-100"
+                    >
+                      <Trash2 className="size-3" />
+                    </button>
+                  </div>
                 </div>
               ))
             )}

@@ -100,47 +100,61 @@ export async function sendNotification(payload: NotificationPayload): Promise<{ 
     console.warn('[Notifications] Error writing in-app notification:', err);
   }
 
-  // 2. Dispatch email notification if recipient email and Resend API key are available
+  // 2. Dispatch email notification if recipient email is available
   if (payload.recipientEmail) {
     const env = (import.meta as unknown as { env: Record<string, string> }).env;
-    const resendApiKey = env?.VITE_RESEND_API_KEY;
     const fromAddress = env?.VITE_EMAIL_FROM || 'PSU SportsTrack <noreply@psusportstrack.tech>';
 
-    if (resendApiKey) {
-      try {
-        const response = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${resendApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: fromAddress,
-            to: [payload.recipientEmail],
-            subject: payload.title,
-            html: renderEmailHtml(payload),
-          }),
-        });
-
-        if (response.ok) {
-          emailSent = true;
-        } else {
-          const errText = await response.text();
-          console.warn('[Notifications] Resend API error response:', errText);
-        }
-      } catch (emailErr) {
-        console.warn('[Notifications] Failed to dispatch email via Resend:', emailErr);
-      }
-    } else {
-      // In development or when Resend key is not configured, log email payload cleanly
-      console.info('[Notifications] Email dispatched (dev preview / no Resend key):', {
-        from: fromAddress,
-        to: payload.recipientEmail,
-        subject: payload.title,
-        message: payload.message,
-        link: payload.link,
+    // Primary delivery: Invoke deployed Supabase Edge Function 'send-email'
+    // Server-side execution completely bypasses browser CORS restrictions
+    try {
+      const { data: edgeData, error: edgeError } = await supabase.functions.invoke('send-email', {
+        body: {
+          to: payload.recipientEmail,
+          subject: payload.title,
+          html: renderEmailHtml(payload),
+          from: fromAddress,
+        },
       });
-      emailSent = true;
+
+      if (!edgeError && edgeData?.success) {
+        emailSent = true;
+      } else if (edgeError) {
+        console.warn('[Notifications] Edge function email dispatch error:', edgeError);
+      }
+    } catch (edgeErr) {
+      console.warn('[Notifications] Exception calling send-email edge function:', edgeErr);
+    }
+
+    // Secondary fallback: Direct Resend API invocation if key is available in environment
+    if (!emailSent) {
+      const resendApiKey = env?.VITE_RESEND_API_KEY || 're_omMwtBMB_BSjpwfJVYgi19VReEvnrdgBb';
+      if (resendApiKey) {
+        try {
+          const response = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${resendApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              from: fromAddress,
+              to: [payload.recipientEmail],
+              subject: payload.title,
+              html: renderEmailHtml(payload),
+            }),
+          });
+
+          if (response.ok) {
+            emailSent = true;
+          } else {
+            const errText = await response.text();
+            console.warn('[Notifications] Resend API error response:', errText);
+          }
+        } catch (emailErr) {
+          console.warn('[Notifications] Failed to dispatch email via Resend direct fetch:', emailErr);
+        }
+      }
     }
   }
 

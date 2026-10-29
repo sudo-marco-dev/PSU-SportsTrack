@@ -149,7 +149,7 @@ export const SystemVerifications = () => {
       // Resilient fallback query with core baseline fields if schema cache is ever out of sync
       let fallbackQuery = supabase
         .from('verification_documents')
-        .select('*, users!user_id(full_name, role, account_status, student_number, program, year_level, age, colleges(college_name))')
+        .select('*, users!user_id(full_name, email, role, account_status, student_number, employee_id, department, program, year_level, age, colleges(college_name))')
         .order('created_at', { ascending: false });
 
       if (statusFilter !== 'all') {
@@ -216,10 +216,17 @@ export const SystemVerifications = () => {
       const roleLabel = isCoach ? 'Coach' : isStaffOrFaculty ? 'Staff/Faculty' : 'Athlete';
       toast.success(`Clearance approved for ${doc.users?.full_name || roleLabel}. Profile updated.`);
 
+      // Ensure recipient email is resolved
+      let recipientEmail = doc.users?.email || undefined;
+      if (!recipientEmail && doc.user_id) {
+        const { data: uData } = await supabase.from('users').select('email').eq('id', doc.user_id).maybeSingle();
+        recipientEmail = uData?.email || undefined;
+      }
+
       // Dispatch in-app notification & email
       notifyVerificationApproved(
         doc.user_id,
-        doc.users?.email || undefined,
+        recipientEmail || undefined,
         doc.users?.full_name || roleLabel,
         doc.users?.role || (isCoach ? 'coach' : isStaffOrFaculty ? 'player_staff' : 'player_student')
       );
@@ -280,10 +287,17 @@ export const SystemVerifications = () => {
         : 'Player';
       toast.info(`Clearance rejected. ${roleText} has been notified with rejection feedback.`);
 
+      // Ensure recipient email is resolved
+      let recipientEmail = rejectDoc.users?.email || undefined;
+      if (!recipientEmail && rejectDoc.user_id) {
+        const { data: uData } = await supabase.from('users').select('email').eq('id', rejectDoc.user_id).maybeSingle();
+        recipientEmail = uData?.email || undefined;
+      }
+
       // Dispatch in-app notification & email
       notifyVerificationRejected(
         rejectDoc.user_id,
-        rejectDoc.users?.email || undefined,
+        recipientEmail || undefined,
         rejectDoc.users?.full_name || roleText,
         rejectDoc.users?.role || 'player_student',
         fullReason

@@ -293,5 +293,17 @@ test.describe('Advisor Review Features & Light Mode Legal Suite', () => {
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(1280);
     }
+
+    // Verify individual delete/clear action
+    const clearOneBtn = popoverContainer.getByRole('button', { name: /Clear notification/i }).first();
+    await expect(clearOneBtn).toBeVisible();
+    await clearOneBtn.click();
+    await expect(page.getByText('New Squad Recruitment Invite: CEAT Red Scorpions')).toHaveCount(0);
+
+    // Verify Clear All action
+    const clearAllBtn = popoverContainer.getByRole('button', { name: /Clear all/i });
+    await expect(clearAllBtn).toBeVisible();
+    await clearAllBtn.click();
+    await expect(page.getByText('No notifications yet')).toBeVisible();
   });
 });
