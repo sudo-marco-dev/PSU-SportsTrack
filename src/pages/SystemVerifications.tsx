@@ -214,7 +214,6 @@ export const SystemVerifications = () => {
       if (userError) throw userError;
 
       const roleLabel = isCoach ? 'Coach' : isStaffOrFaculty ? 'Staff/Faculty' : 'Athlete';
-      toast.success(`Clearance approved for ${doc.users?.full_name || roleLabel}. Profile updated.`);
 
       // Ensure recipient email is resolved
       let recipientEmail = doc.users?.email || undefined;
@@ -224,12 +223,18 @@ export const SystemVerifications = () => {
       }
 
       // Dispatch in-app notification & email
-      await notifyVerificationApproved(
+      const notifResult = await notifyVerificationApproved(
         doc.user_id,
         recipientEmail || undefined,
         doc.users?.full_name || roleLabel,
         doc.users?.role || (isCoach ? 'coach' : isStaffOrFaculty ? 'player_staff' : 'player_student')
       );
+
+      if (notifResult?.emailSent && recipientEmail) {
+        toast.success(`Clearance approved for ${doc.users?.full_name || roleLabel}. Notice emailed to ${recipientEmail}.`);
+      } else {
+        toast.success(`Clearance approved for ${doc.users?.full_name || roleLabel}. Profile updated.`);
+      }
 
       // Audit Log
       logAudit({
@@ -285,8 +290,6 @@ export const SystemVerifications = () => {
         : (rejectDoc.document_type === 'STAFF_ID' || rejectDoc.document_type === 'FACULTY_ID')
         ? 'Staff/Faculty'
         : 'Player';
-      toast.info(`Clearance rejected. ${roleText} has been notified with rejection feedback.`);
-
       // Ensure recipient email is resolved
       let recipientEmail = rejectDoc.users?.email || undefined;
       if (!recipientEmail && rejectDoc.user_id) {
@@ -295,13 +298,19 @@ export const SystemVerifications = () => {
       }
 
       // Dispatch in-app notification & email
-      await notifyVerificationRejected(
+      const notifResult = await notifyVerificationRejected(
         rejectDoc.user_id,
         recipientEmail || undefined,
         rejectDoc.users?.full_name || roleText,
         rejectDoc.users?.role || 'player_student',
         fullReason
       );
+
+      if (notifResult?.emailSent && recipientEmail) {
+        toast.success(`Clearance rejected. Notice emailed to ${recipientEmail}.`);
+      } else {
+        toast.info(`Clearance rejected. ${roleText} has been notified with rejection feedback.`);
+      }
 
       // Audit Log
       logAudit({
