@@ -224,7 +224,7 @@ export const SystemVerifications = () => {
       }
 
       // Dispatch in-app notification & email
-      notifyVerificationApproved(
+      await notifyVerificationApproved(
         doc.user_id,
         recipientEmail || undefined,
         doc.users?.full_name || roleLabel,
@@ -295,7 +295,7 @@ export const SystemVerifications = () => {
       }
 
       // Dispatch in-app notification & email
-      notifyVerificationRejected(
+      await notifyVerificationRejected(
         rejectDoc.user_id,
         recipientEmail || undefined,
         rejectDoc.users?.full_name || roleText,
