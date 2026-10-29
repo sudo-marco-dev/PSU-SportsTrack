@@ -21,10 +21,11 @@ export interface InAppNotification {
 }
 
 /**
- * Generates an accessible, branded PSU SportsTrack HTML email template.
+ * Generates an accessible, branded PSU SportsTrack HTML email template,
+ * fully consistent with the official authentication mail templates.
  */
-function renderEmailHtml(payload: { title: string; message: string; link?: string; type: string }): string {
-  const { title, message, link } = payload;
+function renderEmailHtml(payload: { title: string; message: string; link?: string; type: string; recipientEmail?: string }): string {
+  const { title, message, link, recipientEmail } = payload;
   const siteUrl = ((import.meta as unknown as { env: Record<string, string> }).env?.VITE_SITE_URL || 'https://psusportstrack.tech').replace(/\/$/, '');
   const actionUrl = link
     ? link.startsWith('http')
@@ -32,45 +33,107 @@ function renderEmailHtml(payload: { title: string; message: string; link?: strin
       : `${siteUrl}${link.startsWith('/') ? link : `/${link}`}`
     : siteUrl;
 
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 24px; }
-          .container { max-width: 580px; margin: 0 auto; background-color: #1e293b; border-radius: 16px; border: 1px solid #334155; overflow: hidden; }
-          .header { background: linear-gradient(135deg, #ea580c, #c2410c); padding: 24px; text-align: center; }
-          .header h1 { color: #ffffff; margin: 0; font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; }
-          .content { padding: 32px 24px; }
-          .title { font-size: 18px; font-weight: 800; color: #fdba74; margin-top: 0; margin-bottom: 12px; }
-          .message { font-size: 14px; line-height: 1.6; color: #cbd5e1; margin-bottom: 24px; }
-          .button-wrapper { text-align: center; margin-top: 24px; }
-          .btn { display: inline-block; background-color: #ea580c; color: #ffffff !important; font-weight: 800; text-decoration: none; padding: 12px 28px; border-radius: 10px; text-transform: uppercase; font-size: 13px; letter-spacing: 0.05em; }
-          .footer { padding: 20px 24px; background-color: #0f172a; border-top: 1px solid #334155; text-align: center; font-size: 11px; color: #64748b; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>PSU SportsTrack</h1>
-          </div>
-          <div class="content">
-            <h2 class="title">${title}</h2>
-            <p class="message">${message}</p>
-            <div class="button-wrapper">
-              <a href="${actionUrl}" class="btn">View in SportsTrack</a>
-            </div>
-          </div>
-          <div class="footer">
-            Palawan State University • Sports &amp; Athletics Department<br/>
-            This is an automated notification from the PSU SportsTrack collegiate sports platform.<br/>
-            Sent by &lt;noreply@psusportstrack.tech&gt;
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
+  const emailTarget = recipientEmail || 'your registered account';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0b1120; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f8fafc; -webkit-font-smoothing: antialiased;">
+  <!-- Preheader text (hidden in body, visible in inbox preview) -->
+  <div style="display: none; max-height: 0; overflow: hidden; opacity: 0; mso-hide: all;">
+    ${title} — Official athletic notification from Palawan State University SportsTrack.
+  </div>
+
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #0b1120; padding: 36px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Container Card -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 540px; background-color: #0f172a; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 20px; overflow: hidden; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);">
+          <!-- Top Accent Bar -->
+          <tr>
+            <td style="height: 4px; background: linear-gradient(90deg, #ea580c 0%, #f97316 50%, #f59e0b 100%);"></td>
+          </tr>
+
+          <!-- Header / Branding -->
+          <tr>
+            <td style="padding: 32px 32px 20px 32px; text-align: center;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto;">
+                <tr>
+                  <td align="center" style="padding: 10px 18px; background-color: rgba(249, 115, 22, 0.1); border: 1px solid rgba(249, 115, 22, 0.25); border-radius: 9999px;">
+                    <span style="font-size: 11px; font-weight: 800; letter-spacing: 2px; color: #fb923c; text-transform: uppercase;">
+                      Palawan State University
+                    </span>
+                  </td>
+                </tr>
+              </table>
+              <h1 style="margin: 16px 0 4px 0; font-size: 26px; font-weight: 900; font-style: italic; text-transform: uppercase; letter-spacing: -0.5px; color: #ffffff;">
+                PSU <span style="color: #f97316;">SportsTrack</span>
+              </h1>
+              <p style="margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">
+                Official University Athletic Portal
+              </p>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding: 0 32px;">
+              <div style="border-top: 1px solid rgba(255, 255, 255, 0.08);"></div>
+            </td>
+          </tr>
+
+          <!-- Body Content -->
+          <tr>
+            <td style="padding: 28px 32px 32px 32px; text-align: center;">
+              <h2 style="margin: 0 0 12px 0; font-size: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.3px; color: #ffffff;">
+                ${title}
+              </h2>
+              <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.6; color: #cbd5e1; max-width: 440px; margin-left: auto; margin-right: auto;">
+                ${message}
+              </p>
+
+              <!-- One-Click Action Button -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 28px auto 12px auto;">
+                <tr>
+                  <td align="center" style="border-radius: 12px; background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); box-shadow: 0 4px 16px rgba(249, 115, 22, 0.35);">
+                    <a href="${actionUrl}" target="_blank" style="display: inline-block; padding: 15px 36px; font-size: 13px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #ffffff; text-decoration: none; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.15);">
+                      View in SportsTrack
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 24px 0 0 0; font-size: 12px; line-height: 1.5; color: #64748b;">
+                Button not working? Copy and paste this link into your browser:<br>
+                <a href="${actionUrl}" style="color: #fb923c; text-decoration: underline; word-break: break-all; font-size: 11px;">
+                  ${actionUrl}
+                </a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #0b1120; border-top: 1px solid rgba(255, 255, 255, 0.06); padding: 24px 32px; text-align: center;">
+              <p style="margin: 0 0 8px 0; font-size: 11px; line-height: 1.5; color: #64748b;">
+                This email was sent to <strong style="color: #94a3b8;">${emailTarget}</strong>. Registration on PSU SportsTrack is strictly restricted to official Palawan State University accounts (<span style="color: #fb923c;">@psu.palawan.edu.ph</span>).
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #475569;">
+                &copy; Palawan State University Sports Governance Board. All rights reserved.<br/>
+                Sent by &lt;noreply@psusportstrack.tech&gt;
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 }
 
 /**
