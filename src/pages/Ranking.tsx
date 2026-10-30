@@ -52,6 +52,24 @@ interface RankedEntity {
   disciplines?: string[];
 }
 
+/**
+ * Resolves dynamic responsive font size classes based on podium entity name character length.
+ * Prevents truncation (...) on long collegiate names (e.g. CEAT 58 chars) while preserving
+ * colossal athletic jumbotron typography for compact names.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function getPodiumTitleFontClass(name?: string | null, isChampion = false): string {
+  const len = name?.trim().length || 0;
+  if (isChampion) {
+    if (len <= 24) return 'text-xl sm:text-2xl md:text-2xl lg:text-3xl';
+    if (len <= 45) return 'text-base sm:text-lg md:text-xl lg:text-2xl';
+    return 'text-sm sm:text-base md:text-base lg:text-lg xl:text-xl';
+  }
+  if (len <= 24) return 'text-lg sm:text-xl lg:text-2xl';
+  if (len <= 45) return 'text-sm sm:text-base lg:text-lg';
+  return 'text-xs sm:text-sm lg:text-base';
+}
+
 export const Ranking = () => {
   const { canAccessFriendlyGames } = useAuth();
 
@@ -1188,10 +1206,10 @@ export const Ranking = () => {
                       </span>
                     )}
                   </div>
-                  <h4 className="font-black italic uppercase tracking-tight text-base sm:text-lg text-slate-900 dark:text-white leading-tight line-clamp-2 break-words pr-2 mt-0.5" title={championEntity?.name}>
+                  <h4 className="font-black italic uppercase tracking-tight text-sm sm:text-base text-slate-900 dark:text-white leading-tight break-words pr-2 mt-0.5" title={championEntity?.name}>
                     {championEntity?.name || 'Champion Tier'}
                   </h4>
-                  <p className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider line-clamp-2 break-words leading-tight pr-1 mt-0.5">
+                  <p className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider break-words leading-tight pr-1 mt-0.5">
                     {championEntity
                       ? (standingView === 'college' ? `Tribe: ${championEntity.clusterName || 'PSU Binturungan'}` : standingView === 'cluster' ? (championEntity.subtitle || 'Binturungan Tribe') : `${championEntity.sport} • ${championEntity.category}`)
                       : 'Leaderboard Leader'}
@@ -1219,10 +1237,10 @@ export const Ranking = () => {
                   <span className="px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[8px] font-black uppercase">
                     #2 Silver
                   </span>
-                  <h5 className="font-black italic uppercase text-xs text-slate-900 dark:text-white line-clamp-1 break-words mt-1 leading-tight pr-1.5" title={silverEntity?.name}>
+                  <h5 className="font-black italic uppercase text-xs text-slate-900 dark:text-white break-words mt-1 leading-tight pr-1.5" title={silverEntity?.name}>
                     {silverEntity?.code || silverEntity?.name || 'Silver'}
                   </h5>
-                  <p className="text-[9px] text-slate-400 line-clamp-2 break-words leading-tight px-1 mt-0.5" title={silverEntity?.name}>
+                  <p className="text-[9px] text-slate-400 break-words leading-tight px-1 mt-0.5" title={silverEntity?.name}>
                     {silverEntity?.name}
                   </p>
                 </div>
@@ -1242,10 +1260,10 @@ export const Ranking = () => {
                   <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-500 text-[8px] font-black uppercase">
                     #3 Bronze
                   </span>
-                  <h5 className="font-black italic uppercase text-xs text-slate-900 dark:text-white line-clamp-1 break-words mt-1 leading-tight pr-1.5" title={bronzeEntity?.name}>
+                  <h5 className="font-black italic uppercase text-xs text-slate-900 dark:text-white break-words mt-1 leading-tight pr-1.5" title={bronzeEntity?.name}>
                     {bronzeEntity?.code || bronzeEntity?.name || 'Bronze'}
                   </h5>
-                  <p className="text-[9px] text-slate-400 line-clamp-2 break-words leading-tight px-1 mt-0.5" title={bronzeEntity?.name}>
+                  <p className="text-[9px] text-slate-400 break-words leading-tight px-1 mt-0.5" title={bronzeEntity?.name}>
                     {bronzeEntity?.name}
                   </p>
                 </div>
@@ -1275,10 +1293,15 @@ export const Ranking = () => {
                   Silver Tier • Runner-Up
                 </Badge>
               </div>
-              <h4 className="font-black italic uppercase tracking-tight text-lg lg:text-xl text-slate-900 dark:text-white line-clamp-2 break-words leading-tight px-1.5" title={silverEntity?.name}>
-                {silverEntity?.name || 'Silver Spot Open'}
-              </h4>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 line-clamp-2 break-words leading-tight px-1">
+              <div className="min-h-[3.5rem] sm:min-h-[4.25rem] flex items-center justify-center my-1">
+                <h4
+                  className={`font-black italic uppercase tracking-tight ${getPodiumTitleFontClass(silverEntity?.name, false)} text-slate-900 dark:text-white break-words leading-tight px-1 max-w-full`}
+                  title={silverEntity?.name}
+                >
+                  {silverEntity?.name || 'Silver Spot Open'}
+                </h4>
+              </div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 break-words leading-tight px-1">
                 {silverEntity
                   ? (standingView === 'college' ? `Tribe: ${silverEntity.clusterName || 'Affiliated'}` : standingView === 'cluster' ? (silverEntity.subtitle || 'Binturungan Tribe') : `${silverEntity.sport} • ${silverEntity.category}`)
                   : 'Runner-Up Standings'}
@@ -1311,13 +1334,15 @@ export const Ranking = () => {
                   {standingView === 'college' ? 'Top Seed • College Champion' : standingView === 'cluster' ? 'Top Seed • Binturungan Tribe Champion' : 'Top Seed • Official Squad Champion'}
                 </Badge>
               </div>
-              <h4
-                className={`font-black italic uppercase tracking-tight ${(championEntity?.name?.length || 0) > 36 ? 'text-base sm:text-lg md:text-lg lg:text-xl xl:text-xl 2xl:text-2xl' : 'text-xl sm:text-2xl md:text-2xl lg:text-3xl'} text-slate-900 dark:text-white line-clamp-2 break-words leading-tight pr-2 pl-1`}
-                title={championEntity?.name}
-              >
-                {championEntity?.name || 'Champion Tier'}
-              </h4>
-              <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mt-1 line-clamp-2 break-words leading-tight px-1">
+              <div className="min-h-[4rem] sm:min-h-[4.75rem] flex items-center justify-center my-1">
+                <h4
+                  className={`font-black italic uppercase tracking-tight ${getPodiumTitleFontClass(championEntity?.name, true)} text-slate-900 dark:text-white break-words leading-tight px-1 max-w-full`}
+                  title={championEntity?.name}
+                >
+                  {championEntity?.name || 'Champion Tier'}
+                </h4>
+              </div>
+              <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mt-1 break-words leading-tight px-1">
                 {championEntity
                   ? (standingView === 'college' ? `Designated Tribe: ${championEntity.clusterName || 'Authentic Binturungan'}` : standingView === 'cluster' ? (championEntity.subtitle || 'Palawan State University Tribe') : `${championEntity.sport} • ${championEntity.category}`)
                   : 'First Place Leaderboard'}
@@ -1375,10 +1400,15 @@ export const Ranking = () => {
                   Bronze Tier • 3rd Place
                 </Badge>
               </div>
-              <h4 className="font-black italic uppercase tracking-tight text-lg lg:text-xl text-slate-900 dark:text-white line-clamp-2 break-words leading-tight px-1.5" title={bronzeEntity?.name}>
-                {bronzeEntity?.name || (rankedEntities.length <= 2 && rankedEntities.length > 0 ? 'Spot Open' : 'Bronze Spot Open')}
-              </h4>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 line-clamp-2 break-words leading-tight px-1">
+              <div className="min-h-[3.5rem] sm:min-h-[4.25rem] flex items-center justify-center my-1">
+                <h4
+                  className={`font-black italic uppercase tracking-tight ${getPodiumTitleFontClass(bronzeEntity?.name, false)} text-slate-900 dark:text-white break-words leading-tight px-1 max-w-full`}
+                  title={bronzeEntity?.name}
+                >
+                  {bronzeEntity?.name || (rankedEntities.length <= 2 && rankedEntities.length > 0 ? 'Spot Open' : 'Bronze Spot Open')}
+                </h4>
+              </div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 break-words leading-tight px-1">
                 {bronzeEntity
                   ? (standingView === 'college' ? `Tribe: ${bronzeEntity.clusterName || 'Affiliated'}` : standingView === 'cluster' ? (bronzeEntity.subtitle || 'Binturungan Tribe') : `${bronzeEntity.sport} • ${bronzeEntity.category}`)
                   : '3rd Place Standings'}
@@ -1496,7 +1526,7 @@ export const Ranking = () => {
                         {/* Name + Code + Affiliation */}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-black italic uppercase text-xs text-slate-900 dark:text-white line-clamp-1 break-words pr-1.5" title={item.name}>
+                            <span className="font-black italic uppercase text-xs text-slate-900 dark:text-white break-words leading-snug pr-1.5" title={item.name}>
                               {item.name}
                             </span>
                             {item.code && (
@@ -1505,14 +1535,14 @@ export const Ranking = () => {
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                          <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 flex-wrap mt-0.5">
                             {item.clusterName && (
-                              <span className="text-orange-600 dark:text-orange-400 font-bold truncate">
+                              <span className="text-orange-600 dark:text-orange-400 font-bold">
                                 {item.clusterName}
                               </span>
                             )}
                             {item.clusterName && item.sport && <span>•</span>}
-                            {item.sport && <span className="truncate">{item.sport}</span>}
+                            {item.sport && <span>{item.sport}</span>}
                           </div>
                         </div>
                       </div>
@@ -1651,7 +1681,7 @@ export const Ranking = () => {
                                     </Badge>
                                   )}
                                 </div>
-                                <span className="text-[10px] font-medium text-slate-400 truncate max-w-sm">
+                                <span className="text-[10px] font-medium text-slate-400 break-words line-clamp-2 max-w-sm" title={item.tournaments.join(', ')}>
                                   {item.tournaments.join(', ') || 'Palawan State University Sports League'}
                                 </span>
                               </div>
@@ -1675,7 +1705,7 @@ export const Ranking = () => {
                                 <span className="font-black italic uppercase tracking-tight text-slate-900 dark:text-white text-sm pr-2" title={item.name}>
                                   {item.name}
                                 </span>
-                                <span className="text-[10px] font-medium text-slate-400 truncate max-w-md">
+                                <span className="text-[10px] font-medium text-slate-400 break-words line-clamp-2 max-w-md" title={item.subtitle}>
                                   {item.subtitle || 'Palawan State University Binturungan Tribe'}
                                 </span>
                               </div>
@@ -1706,7 +1736,7 @@ export const Ranking = () => {
                                 <span className="font-black italic uppercase tracking-tight text-slate-900 dark:text-white text-sm pr-2" title={item.name}>
                                   {item.name}
                                 </span>
-                                <span className="text-[10px] font-medium text-slate-400 truncate max-w-[220px]">
+                                <span className="text-[10px] font-medium text-slate-400 break-words line-clamp-2 max-w-[260px]" title={item.tournaments.join(', ')}>
                                   {item.tournaments.join(', ') || 'PSU Athletic League'}
                                 </span>
                               </div>

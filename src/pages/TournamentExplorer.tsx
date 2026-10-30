@@ -1090,7 +1090,7 @@ export const TournamentExplorer = () => {
                           >
                             #{idx + 1}
                           </span>
-                          <span className="font-black italic uppercase text-xs text-slate-900 dark:text-white line-clamp-1 break-words pr-1.5">
+                          <span className="font-black italic uppercase text-xs text-slate-900 dark:text-white break-words leading-snug pr-1.5" title={st.teamName}>
                             {st.teamName}
                           </span>
                           {idx === 0 && isRoundRobinOnlyTournament && isEliminationComplete && (

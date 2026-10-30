@@ -144,4 +144,127 @@ test.describe('Typography, Anti-Truncation & College Code Engine Tests', () => {
       }
     }
   });
+
+  test('Rankings Podium: Long college titles (CEAT) are rendered in full without ellipsis (...) truncation', async ({ page }) => {
+    // Mock colleges dataset with long collegiate title
+    await page.route('**/rest/v1/colleges*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          { id: 'col-1', college_name: 'College of Engineering, Architecture and Technology (CEAT)' },
+          { id: 'col-2', college_name: 'College of Business and Accountancy (CBA)' },
+          { id: 'col-3', college_name: 'College of Sciences (CS)' },
+        ]),
+      });
+    });
+
+    await page.route('**/rest/v1/clusters*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          { id: 'cl-1', name: 'Tribo Libulan', description: 'Deity of the Moon', college_codes: ['CEAT'] },
+          { id: 'cl-2', name: 'Tribo Tala', description: 'Deity of Morning Star', college_codes: ['CBA'] },
+          { id: 'cl-3', name: 'Tribo Haliya', description: 'Deity of Moonlight', college_codes: ['CS'] },
+        ]),
+      });
+    });
+
+    await page.route('**/rest/v1/tournaments*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'tourn-1',
+            name: 'PSU Palawan Games 2026',
+            sport: 'Basketball',
+            type: 'Championship',
+            status: 'Completed',
+          },
+        ]),
+      });
+    });
+
+    await page.route('**/rest/v1/teams*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'team-1',
+            name: 'CEAT Red Devils',
+            tournament_id: 'tourn-1',
+            status: 'Approved',
+            college_id: 'col-1',
+            cluster_id: 'cl-1',
+          },
+          {
+            id: 'team-2',
+            name: 'CBA Lady Wolves',
+            tournament_id: 'tourn-1',
+            status: 'Approved',
+            college_id: 'col-2',
+            cluster_id: 'cl-2',
+          },
+          {
+            id: 'team-3',
+            name: 'CS Scorpions',
+            tournament_id: 'tourn-1',
+            status: 'Approved',
+            college_id: 'col-3',
+            cluster_id: 'cl-3',
+          },
+        ]),
+      });
+    });
+
+    await page.route('**/rest/v1/matches*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'm-1',
+            tournament_id: 'tourn-1',
+            round: 'Finals',
+            status: 'Completed',
+            team_a_id: 'team-1',
+            team_b_id: 'team-2',
+            team_a_score: 95,
+            team_b_score: 82,
+          },
+        ]),
+      });
+    });
+
+    await page.route('**/rest/v1/player_stars*', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    });
+
+    // 1. Desktop Test (1440x900)
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/ranking');
+    await page.waitForLoadState('networkidle');
+
+    // Verify Rank 1 Champion displays full name without truncation
+    const championHeading = page.getByRole('heading', { name: /College of Engineering, Architecture and Technology/i }).first();
+    await expect(championHeading).toBeVisible();
+
+    const championText = await championHeading.textContent();
+    expect(championText).not.toContain('...');
+    expect(championText?.toUpperCase()).toContain('TECHNOLOGY');
+
+    // 2. Mobile Test (375x667)
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/ranking');
+    await page.waitForLoadState('networkidle');
+
+    const mobileChampionHeading = page.getByRole('heading', { name: /College of Engineering, Architecture and Technology/i }).first();
+    await expect(mobileChampionHeading).toBeVisible();
+    const mobileText = await mobileChampionHeading.textContent();
+    expect(mobileText).not.toContain('...');
+    expect(mobileText?.toUpperCase()).toContain('TECHNOLOGY');
+  });
 });
