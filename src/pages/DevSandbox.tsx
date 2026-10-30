@@ -31,6 +31,7 @@ import {
   FastForward,
   AlertTriangle,
   CheckCircle2,
+  FileBarChart2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -639,6 +640,14 @@ export const DevSandbox = () => {
           >
             <Medal className="size-4 text-amber-400" />
             <span>Leaderboard</span>
+          </Button>
+          <Button
+            onClick={() => navigate('/admin/reports')}
+            variant="ghost"
+            className="h-11 border border-white/15 hover:border-orange-500/60 bg-white/5 hover:bg-orange-500/20 text-white hover:text-white font-bold gap-2 px-4 rounded-xl text-xs uppercase tracking-wider cursor-pointer"
+          >
+            <FileBarChart2 className="size-4 text-orange-400" />
+            <span>FR-43 Reports</span>
           </Button>
           <Button
             onClick={handleClearLockout}
@@ -1831,6 +1840,13 @@ export const DevSandbox = () => {
                   desc: 'Conclude with university medal leaderboards (Gold, Silver, Bronze tallies), cumulative collegiate points, and per-match Red Stars vs tournament Gold Star honors.',
                   url: '/ranking',
                   btn: 'Open Medal Leaderboard',
+                },
+                {
+                  step: '07',
+                  title: 'FR-43 Institutional Athletic Reports & Exports',
+                  desc: 'Demonstrate institutional compliance reporting across 9 PSU ballgames: winning colleges per sport/year, athlete & squad standings, Gold & Red Star MVP records, event participation summaries, and CSV / PDF downloads.',
+                  url: '/admin/reports',
+                  btn: 'Open Institutional Reports',
                 },
               ].map((s, idx) => (
                 <div

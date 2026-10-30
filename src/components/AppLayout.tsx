@@ -22,7 +22,8 @@ import {
   RotateCcw,
   Terminal,
   Search,
-  FileText
+  FileText,
+  FileBarChart2
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -97,6 +98,7 @@ export const AppLayout = () => {
       { name: 'System Verifications', href: '/admin/verifications', icon: ShieldCheck },
       { name: 'System Audit', href: '/admin/audit-logs', icon: ClipboardList },
       { name: 'Recovery Center', href: '/admin/recovery', icon: RotateCcw },
+      { name: 'Institutional Reports', href: '/admin/reports', icon: FileBarChart2 },
     ] : []),
     ...(isFacilitator && !isAdmin ? [
       { name: 'Live Scorer', href: '/explorer', icon: Activity },
@@ -122,7 +124,7 @@ export const AppLayout = () => {
   const isMoreRouteActive = ['/about', '/legal', '/privacy', '/terms', '/athletics', '/scouting'].includes(location.pathname) || (isDev
     ? ['/dev'].includes(location.pathname)
     : isAdmin
-    ? ['/admin/tournaments', '/admin/verifications', '/admin/audit-logs', '/admin/recovery'].includes(location.pathname)
+    ? ['/admin/tournaments', '/admin/verifications', '/admin/audit-logs', '/admin/recovery', '/admin/reports'].includes(location.pathname)
     : isCoach
     ? ['/coach/teams'].includes(location.pathname)
     : false);
