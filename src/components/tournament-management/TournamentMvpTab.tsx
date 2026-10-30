@@ -18,6 +18,7 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
   const [selectedPlayerForGoldId, setSelectedPlayerForGoldId] = useState<string>('');
   const [tournamentPlayers, setTournamentPlayers] = useState<any[]>([]);
   const [existingGoldWinner, setExistingGoldWinner] = useState<string | null>(null);
+  const [existingGoldStarId, setExistingGoldStarId] = useState<string | null>(null);
   const [isAwardingGold, setIsAwardingGold] = useState<boolean>(false);
 
   useEffect(() => {
@@ -25,6 +26,7 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
       setTournamentPlayers([]);
       setSelectedPlayerForGoldId('');
       setExistingGoldWinner(null);
+      setExistingGoldStarId(null);
       return;
     }
 
@@ -48,8 +50,10 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
         const uObj: any = (existingStar as any).users;
         const name = Array.isArray(uObj) ? uObj[0]?.full_name : uObj?.full_name;
         setExistingGoldWinner(name || 'Awarded Athlete');
+        setExistingGoldStarId(existingStar.id);
       } else {
         setExistingGoldWinner(null);
+        setExistingGoldStarId(null);
       }
 
       if (teamsData && teamsData.length > 0) {
@@ -110,6 +114,30 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
       setSelectedPlayerForGoldId('');
     }
     setIsAwardingGold(false);
+  };
+
+  const handleRevokeGoldStar = async () => {
+    if (!existingGoldStarId) return;
+    const confirm = window.confirm(
+      `Are you sure you want to revoke the Tournament MVP Gold Star from ${existingGoldWinner}? This will return the tournament to an unawarded state.`
+    );
+    if (!confirm) return;
+
+    const { error } = await supabase.from('player_stars').delete().eq('id', existingGoldStarId);
+    if (error) {
+      toast.error('Failed to revoke Gold Star: ' + error.message);
+    } else {
+      toast.success('Gold Star revoked successfully.');
+      logAudit({
+        action: 'REVOKE_STAR',
+        entity_type: 'player_stars',
+        entity_id: existingGoldStarId,
+        details: `Revoked Tournament MVP Gold Star from ${existingGoldWinner} in tournament ${selectedTournamentId}`,
+      });
+      setExistingGoldWinner(null);
+      setExistingGoldStarId(null);
+      setSelectedPlayerForGoldId('');
+    }
   };
 
   return (
@@ -175,11 +203,21 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
                 2. Nominate Top Performer
               </Label>
               {existingGoldWinner && (
-                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3 text-amber-600 dark:text-amber-400">
-                  <Trophy className="size-5 shrink-0" />
-                  <div className="text-xs font-bold">
-                    Official Tournament MVP Already Crowned: <strong className="font-black uppercase underline">{existingGoldWinner}</strong>
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-amber-600 dark:text-amber-400">
+                  <div className="flex items-center gap-3">
+                    <Trophy className="size-5 shrink-0" />
+                    <div className="text-xs font-bold">
+                      Official Tournament MVP: <strong className="font-black uppercase underline">{existingGoldWinner}</strong>
+                    </div>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRevokeGoldStar}
+                    className="text-xs text-red-500 hover:text-red-400 hover:bg-red-500/10 font-bold uppercase h-8 px-3 rounded-lg"
+                  >
+                    Revoke Star
+                  </Button>
                 </div>
               )}
               <Select 

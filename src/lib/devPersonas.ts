@@ -6,6 +6,7 @@ export interface DevPersona {
   email: string;
   role: UserRole;
   is_verified: boolean;
+  is_facilitator?: boolean;
   college_id?: string | null;
   college_name?: string | null;
   cluster_id?: string | null;

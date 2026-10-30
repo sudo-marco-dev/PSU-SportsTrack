@@ -31,8 +31,13 @@ import {
   PictureInPicture2,
   Volume2,
   VolumeX,
-  LayoutGrid
+  LayoutGrid,
+  ArrowRightLeft
 } from 'lucide-react';
+import { logAudit } from '@/lib/audit';
+import { MvpCandidateSelect, type MvpCandidateOption } from '@/components/match/MvpCandidateSelect';
+import { MvpAttestationModal } from '@/components/match/MvpAttestationModal';
+import { AdminMvpOverrideModal } from '@/components/match/AdminMvpOverrideModal';
 
 import {
   Dialog,
@@ -103,13 +108,6 @@ type Match = {
   conflict_notes?: string | null;
 };
 
-type EligiblePlayer = {
-  player_id: string;
-  users: {
-    full_name: string;
-  } | null;
-};
-
 type MatchRosterPlayer = {
   id: string;
   team_id: string;
@@ -160,12 +158,23 @@ export const LiveMatch = () => {
   const [availableOfficials, setAvailableOfficials] = useState<{ id: string; full_name: string; role: string; is_facilitator?: boolean }[]>([]);
   const [customEvent, setCustomEvent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [eligiblePlayers, setEligiblePlayers] = useState<EligiblePlayer[]>([]);
   const [rosterPlayers, setRosterPlayers] = useState<MatchRosterPlayer[]>([]);
   const [playerPointsMap, setPlayerPointsMap] = useState<Record<string, number>>({});
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
   const [isAwarding, setIsAwarding] = useState(false);
   const [awardedMVP, setAwardedMVP] = useState<string | null>(null);
+  const [awardedStarRecord, setAwardedStarRecord] = useState<{
+    id: string;
+    player_id: string;
+    awarded_by?: string;
+    awarder_name?: string;
+    justification?: string;
+    override_reason?: string;
+    overridden_by?: string;
+    created_at?: string;
+  } | null>(null);
+  const [isAttestationOpen, setIsAttestationOpen] = useState(false);
+  const [isAdminOverrideOpen, setIsAdminOverrideOpen] = useState(false);
 
   // Scorer attribution modal state
   const [pendingScore, setPendingScore] = useState<{
@@ -604,6 +613,18 @@ export const LiveMatch = () => {
           setIncomingClaimRequest(prev => prev && prev.requesterId === data.requesterId ? null : prev);
         }
       )
+      .on(
+        'broadcast',
+        { event: 'mvp_update' },
+        (payload) => {
+          if (!isMounted) return;
+          const data = payload?.payload;
+          if (data && 'mvpName' in data) {
+            setAwardedMVP(data.mvpName);
+            fetchInitialData();
+          }
+        }
+      )
       .subscribe((status) => {
         if (import.meta.env.DEV) console.log('[Broadcast] Channel status:', status);
       });
@@ -632,13 +653,13 @@ export const LiveMatch = () => {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'player_stars',
           filter: `match_id=eq.${matchId}`
         },
         (payload) => {
-          if (import.meta.env.DEV) console.log('[Realtime] player_stars INSERT received:', payload);
+          if (import.meta.env.DEV) console.log('[Realtime] player_stars change received:', payload);
           fetchInitialData();
         }
       )
@@ -711,7 +732,7 @@ export const LiveMatch = () => {
       const [matchRes, eventsRes, starRes] = await Promise.all([
         supabase
           .from('matches')
-          .select('*, team_a:team_a_id(name), team_b:team_b_id(name), tournament:tournament_id(name, sport), designated_facilitator:designated_facilitator_id(full_name)')
+          .select('*, team_a:team_a_id(id, name, college_id), team_b:team_b_id(id, name, college_id), tournament:tournament_id(name, sport), designated_facilitator:designated_facilitator_id(full_name)')
           .eq('id', matchId)
           .single(),
         supabase
@@ -721,7 +742,7 @@ export const LiveMatch = () => {
           .order('created_at', { ascending: false }),
         supabase
           .from('player_stars')
-          .select('player_id')
+          .select('id, player_id, star_type, match_id, tournament_id, awarded_by, justification, override_reason, overridden_by, created_at')
           .eq('match_id', matchId)
           .eq('star_type', 'Red')
           .maybeSingle()
@@ -761,13 +782,33 @@ export const LiveMatch = () => {
         if (rosterData) {
           currentRoster = (rosterData as unknown) as MatchRosterPlayer[];
           setRosterPlayers(currentRoster);
-          setEligiblePlayers(currentRoster as any);
         }
       }
 
       // Now resolve the MVP name based on the star data
       if (starRes.data) {
         const star = starRes.data;
+        let awarderName = 'Official Scorekeeper';
+        if (star.awarded_by) {
+          const { data: awarderUser } = await supabase
+            .from('users')
+            .select('full_name')
+            .eq('id', star.awarded_by)
+            .maybeSingle();
+          if (awarderUser?.full_name) awarderName = awarderUser.full_name;
+        }
+
+        setAwardedStarRecord({
+          id: star.id,
+          player_id: star.player_id,
+          awarded_by: star.awarded_by,
+          awarder_name: awarderName,
+          justification: star.justification,
+          override_reason: star.override_reason,
+          overridden_by: star.overridden_by,
+          created_at: star.created_at,
+        });
+
         const playerInRoster = currentRoster.find(p => p.player_id === star.player_id);
 
         if (playerInRoster) {
@@ -780,10 +821,11 @@ export const LiveMatch = () => {
             .from('users')
             .select('full_name')
             .eq('id', star.player_id)
-            .single();
+            .maybeSingle();
           setAwardedMVP(userData?.full_name || 'A Player');
         }
       } else {
+        setAwardedStarRecord(null);
         setAwardedMVP(null);
       }
 
@@ -1558,8 +1600,62 @@ export const LiveMatch = () => {
     setIsSubmitting(false);
   };
 
-  const handleAwardMVP = async () => {
-    if (isAwarding || !isAuthorized || !match || !selectedPlayerId) return;
+  const winningTeamId = useMemo(() => {
+    if (!match) return null;
+    const a = match.team_a_score || 0;
+    const b = match.team_b_score || 0;
+    if (a > b) return match.team_a_id;
+    if (b > a) return match.team_b_id;
+    return null;
+  }, [match?.team_a_score, match?.team_b_score, match?.team_a_id, match?.team_b_id]);
+
+  const maxMatchPoints = useMemo(() => {
+    const pts = Object.values(playerPointsMap);
+    return pts.length > 0 ? Math.max(...pts) : 0;
+  }, [playerPointsMap]);
+
+  const mvpCandidates: MvpCandidateOption[] = useMemo(() => {
+    return (rosterPlayers || []).map((player) => {
+      const u: any = player.users;
+      const pName = Array.isArray(u) ? u[0]?.full_name : u?.full_name;
+      const pts = playerPointsMap[player.player_id] || 0;
+      const isWinning = winningTeamId ? player.team_id === winningTeamId : false;
+      const isTeamA = player.team_id === match?.team_a_id;
+      const tName = isTeamA ? (match?.team_a?.name || 'Team A') : (match?.team_b?.name || 'Team B');
+      const teamCollegeId = isTeamA ? (match?.team_a as any)?.college_id : (match?.team_b as any)?.college_id;
+
+      return {
+        playerId: player.player_id,
+        name: pName || 'Unknown Player',
+        jerseyNumber: player.jersey_number,
+        position: player.position,
+        teamId: player.team_id,
+        teamName: tName,
+        isWinningTeam: isWinning,
+        points: pts,
+        isTopScorer: pts > 0 && pts === maxMatchPoints,
+        isStarter: player.is_starter,
+        collegeId: teamCollegeId,
+      };
+    });
+  }, [rosterPlayers, playerPointsMap, winningTeamId, match?.team_a_id, match?.team_a, match?.team_b, maxMatchPoints]);
+
+  const selectedCandidate = useMemo(() => {
+    return mvpCandidates.find((c) => c.playerId === selectedPlayerId) || null;
+  }, [mvpCandidates, selectedPlayerId]);
+
+  const hasConflict = useMemo(() => {
+    if (!profile?.college_id || !selectedCandidate?.collegeId) return false;
+    return profile.college_id === selectedCandidate.collegeId;
+  }, [profile?.college_id, selectedCandidate?.collegeId]);
+
+  const isLosingTeamOrZeroStats = useMemo(() => {
+    if (!selectedCandidate) return false;
+    return !selectedCandidate.isWinningTeam || selectedCandidate.points === 0;
+  }, [selectedCandidate]);
+
+  const handleConfirmAwardMVP = async (justification?: string) => {
+    if (isAwarding || !isAuthorizedScorekeeper || !match || !selectedPlayerId) return;
     setIsAwarding(true);
 
     const { error } = await supabase.from('player_stars').insert({
@@ -1567,13 +1663,13 @@ export const LiveMatch = () => {
       star_type: 'Red',
       match_id: match.id,
       tournament_id: match.tournament_id,
-      awarded_by: user?.id
+      awarded_by: user?.id,
+      justification: justification || null,
     });
 
     if (error) {
       if (error.code === '23505') {
         toast.error("An MVP has already been awarded for this match!");
-        // Re-fetch to lock UI
         fetchInitialData();
       } else {
         toast.error(getFriendlyErrorMessage(error, 'Failed to award MVP. Please try again.'));
@@ -1581,21 +1677,27 @@ export const LiveMatch = () => {
       setIsAwarding(false);
     } else {
       toast.success('Red Star awarded to player!');
-      const player = (eligiblePlayers || []).find(p => p.player_id === selectedPlayerId);
-      const users = player?.users as any;
-      const selectedPlayerName = Array.isArray(users) ? users[0]?.full_name : users?.full_name;
-      const finalMvpName = selectedPlayerName || 'Unknown Player';
+      const candidateName = selectedCandidate?.name || 'Unknown Player';
 
-      setAwardedMVP(finalMvpName);
+      await logAudit({
+        action: 'AWARD_STAR',
+        entity_type: 'player_stars',
+        entity_id: selectedPlayerId,
+        details: `Awarded Match MVP (Red Star) to ${candidateName} in match ${match.id}${justification ? ` (Justification: ${justification})` : ''}`,
+      });
+
+      setAwardedMVP(candidateName);
+      setIsAttestationOpen(false);
 
       if (broadcastChannelRef.current) {
         await broadcastChannelRef.current.send({
           type: 'broadcast',
           event: 'mvp_update',
-          payload: { mvpName: finalMvpName }
+          payload: { mvpName: candidateName }
         });
       }
 
+      await fetchInitialData();
       setIsAwarding(false);
       setSelectedPlayerId('');
     }
@@ -2030,14 +2132,14 @@ export const LiveMatch = () => {
         {awardedMVP && (
           <Card className="border-primary/50 bg-primary/5 shadow-lg overflow-hidden border-2">
             <CardContent className="p-0">
-              <div className="relative py-12 px-6 text-center overflow-hidden">
+              <div className="relative py-10 px-6 text-center overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-b from-orange-500/10 to-transparent pointer-events-none" />
                 <div className="relative z-10 animate-in zoom-in fade-in duration-700">
-                  <div className="flex justify-center mb-6">
+                  <div className="flex justify-center mb-5">
                     <div className="relative">
                       <div className="absolute inset-0 bg-orange-500 blur-xl opacity-20 animate-pulse" />
-                      <div className="relative inline-flex items-center justify-center p-6 bg-orange-500 rounded-full shadow-2xl shadow-orange-500/50">
-                        <Trophy className="size-16 text-white" />
+                      <div className="relative inline-flex items-center justify-center p-5 bg-orange-500 rounded-full shadow-2xl shadow-orange-500/50">
+                        <Trophy className="size-14 text-white" />
                       </div>
                     </div>
                   </div>
@@ -2047,13 +2149,50 @@ export const LiveMatch = () => {
                       <span className="text-xs font-black uppercase tracking-[0.2em]">Match Recognition</span>
                       <Star className="size-5 fill-orange-600" />
                     </div>
-                    <h3 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">{awardedMVP}</h3>
-                    <div className="inline-block px-4 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full text-xs font-bold uppercase tracking-widest mt-4">
+                    <h3 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">{awardedMVP}</h3>
+                    <div className="inline-block px-4 py-1 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full text-xs font-bold uppercase tracking-widest mt-2">
                       Official Red Star MVP
                     </div>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mt-6 max-w-xs mx-auto">
-                      This player has been officially recognized for their exceptional performance in this match.
-                    </p>
+
+                    {/* Official Award Accreditation Details */}
+                    <div className="pt-2 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                      <span>Awarded by <strong className="text-slate-800 dark:text-slate-200">{awardedStarRecord?.awarder_name || 'Official Scorekeeper'}</strong></span>
+                      {awardedStarRecord?.created_at && (
+                        <span>• {new Date(awardedStarRecord.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })} at {new Date(awardedStarRecord.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      )}
+                    </div>
+
+                    {/* Justification note if present */}
+                    {awardedStarRecord?.justification && (
+                      <div className="mt-2 text-xs text-amber-800 dark:text-amber-200/90 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2 max-w-md mx-auto text-left">
+                        <span className="font-bold text-[10px] uppercase tracking-wider block text-amber-700 dark:text-amber-400 mb-0.5">Officiating Justification</span>
+                        <p className="italic">&ldquo;{awardedStarRecord.justification}&rdquo;</p>
+                      </div>
+                    )}
+
+                    {/* Admin Override Reason if present */}
+                    {awardedStarRecord?.override_reason && (
+                      <div className="mt-2 text-xs text-blue-800 dark:text-blue-200/90 bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-2 max-w-md mx-auto text-left">
+                        <span className="font-bold text-[10px] uppercase tracking-wider block text-blue-700 dark:text-blue-400 mb-0.5">Admin Override Audit</span>
+                        <p>{awardedStarRecord.override_reason}</p>
+                      </div>
+                    )}
+
+                    {/* Admin Governance Actions (Only for Admin / Super Admin / Dev) */}
+                    {(isAdmin || profile?.role === 'super_admin' || profile?.role === 'dev') && awardedStarRecord && (
+                      <div className="pt-4 flex items-center justify-center gap-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          data-testid="admin-open-override-btn"
+                          onClick={() => setIsAdminOverrideOpen(true)}
+                          className="rounded-xl border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10 text-xs font-bold uppercase tracking-wider gap-2 h-9"
+                        >
+                          <ArrowRightLeft className="size-3.5" />
+                          Override / Reassign MVP
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2150,39 +2289,21 @@ export const LiveMatch = () => {
                 <CardContent className="max-w-md mx-auto space-y-4 pb-8 text-center">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block text-left">Select MVP Player</label>
-                    <Select value={selectedPlayerId} onValueChange={(val) => setSelectedPlayerId(val || '')}>
-                      <SelectTrigger className="w-full bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10">
-                        <SelectValue placeholder="Select a player...">
-                          {selectedPlayerId && (() => {
-                            const player = (rosterPlayers || []).find(p => p.player_id === selectedPlayerId);
-                            const users = player?.users as any;
-                            const playerName = Array.isArray(users) ? users[0]?.full_name : users?.full_name;
-                            const jersey = player?.jersey_number !== null && player?.jersey_number !== undefined ? `#${player.jersey_number} ` : '';
-                            return `${jersey}${playerName || 'A Player'}`;
-                          })()}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(rosterPlayers || []).map((player) => {
-                          const users = player.users as any;
-                          const playerName = Array.isArray(users) ? users[0]?.full_name : users?.full_name;
-                          const jersey = player.jersey_number !== null && player.jersey_number !== undefined ? `#${player.jersey_number} ` : '';
-                          return (
-                            <SelectItem key={player.player_id} value={player.player_id}>
-                              {jersey}{playerName || 'Unknown Player'}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
+                    <MvpCandidateSelect
+                      candidates={mvpCandidates}
+                      selectedPlayerId={selectedPlayerId}
+                      onSelectPlayer={(val) => setSelectedPlayerId(val || '')}
+                      disabled={isAwarding}
+                    />
                   </div>
                   <Button
+                    data-testid="btn-review-award-mvp"
                     className="w-full bg-red-500 hover:bg-red-600 text-white font-bold h-12 gap-2"
-                    onClick={handleAwardMVP}
+                    onClick={() => setIsAttestationOpen(true)}
                     disabled={!selectedPlayerId || isAwarding}
                   >
                     <Star className="size-5 fill-white" />
-                    {isAwarding ? 'Awarding...' : 'Award Red Star'}
+                    Review & Award Red Star
                   </Button>
                 </CardContent>
               </Card>
@@ -2967,6 +3088,48 @@ export const LiveMatch = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Post-Game MVP Fair Play Attestation Modal */}
+      <MvpAttestationModal
+        open={isAttestationOpen}
+        onOpenChange={setIsAttestationOpen}
+        candidate={selectedCandidate || null}
+        hasConflict={hasConflict}
+        conflictCollegeName={profile?.college_name || null}
+        isLosingTeamOrZeroStats={isLosingTeamOrZeroStats}
+        onConfirmAward={handleConfirmAwardMVP}
+        isSubmitting={isAwarding}
+      />
+
+      {/* Admin MVP Governance & Override Modal */}
+      {awardedStarRecord && match && (
+        <AdminMvpOverrideModal
+          open={isAdminOverrideOpen}
+          onOpenChange={setIsAdminOverrideOpen}
+          starId={awardedStarRecord.id}
+          matchId={match.id}
+          tournamentId={match.tournament_id}
+          currentMvpName={awardedMVP || 'Current MVP'}
+          currentMvpPlayerId={awardedStarRecord.player_id}
+          candidates={mvpCandidates}
+          onSuccess={(newMvpName) => {
+            if (newMvpName) {
+              setAwardedMVP(newMvpName);
+            } else {
+              setAwardedMVP(null);
+              setAwardedStarRecord(null);
+            }
+            if (broadcastChannelRef.current) {
+              broadcastChannelRef.current.send({
+                type: 'broadcast',
+                event: 'mvp_update',
+                payload: { mvpName: newMvpName }
+              });
+            }
+            fetchInitialData();
+          }}
+        />
+      )}
 
       {/* Floating In-App Score Widget (Pinned when scrolling) */}
       {isScrolledPastScoreboard && match && (

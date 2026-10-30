@@ -271,7 +271,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     ? {
         full_name: impersonatedPersona.full_name,
         role: impersonatedPersona.role,
-        is_facilitator: impersonatedPersona.role === 'facilitator',
+        is_facilitator: Boolean(impersonatedPersona.is_facilitator || impersonatedPersona.role === 'facilitator'),
         college_id: impersonatedPersona.college_id || null,
         college_name: impersonatedPersona.college_name || null,
         cluster_id: impersonatedPersona.cluster_id || null,
