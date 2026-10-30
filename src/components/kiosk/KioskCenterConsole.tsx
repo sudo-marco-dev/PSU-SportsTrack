@@ -160,8 +160,8 @@ export const KioskCenterConsole = ({
           </div>
           <div className="flex items-center gap-1">
             {/* Period Selector */}
-            <Select value={currentPeriod} onValueChange={(val) => onSelectPeriod(val || '')}>
-              <SelectTrigger className={`${compact ? 'h-5 text-[9px] w-20 px-1.5' : 'h-7 text-[10px] sm:text-xs w-32 px-2.5'} font-bold uppercase tracking-wider bg-slate-900 border-white/10 text-orange-400 py-0`}>
+            <Select value={currentPeriod} onValueChange={(val) => !isCompleted && onSelectPeriod(val || '')} disabled={isCompleted}>
+              <SelectTrigger disabled={isCompleted} className={`${compact ? 'h-5 text-[9px] w-20 px-1.5' : 'h-7 text-[10px] sm:text-xs w-32 px-2.5'} font-bold uppercase tracking-wider bg-slate-900 border-white/10 text-orange-400 py-0 disabled:opacity-40 disabled:cursor-not-allowed`}>
                 <SelectValue placeholder="Period" />
               </SelectTrigger>
               <SelectContent className="bg-slate-950 border-white/10 text-white">
@@ -175,9 +175,12 @@ export const KioskCenterConsole = ({
 
             <button
               type="button"
+              disabled={isCompleted}
               onClick={onToggleClockEnabled}
               className={`text-[8px] uppercase font-black ${compact ? 'px-1' : 'px-2'} py-0.5 rounded border transition-colors ${
-                isClockEnabled
+                isCompleted
+                  ? 'bg-white/5 border-white/5 text-slate-600 cursor-not-allowed'
+                  : isClockEnabled
                   ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
                   : 'bg-white/5 border-white/10 text-slate-500'
               }`}
@@ -190,10 +193,21 @@ export const KioskCenterConsole = ({
         {/* Big Digital Readout */}
         {isClockEnabled ? (
           <>
-            <div className={`${compact ? 'my-0' : 'my-1'} flex items-center justify-center`}>
-              <span className={`${compact ? 'text-3xl sm:text-4xl' : 'text-5xl sm:text-6xl md:text-7xl'} font-black font-mono tracking-tighter text-white tabular-nums drop-shadow-md`}>
-                {formattedTime}
-              </span>
+            <div className={`${compact ? 'my-0' : 'my-1'} flex flex-col items-center justify-center`}>
+              {isCompleted ? (
+                <>
+                  <span className={`${compact ? 'text-2xl sm:text-3xl' : 'text-4xl sm:text-5xl md:text-6xl'} font-black font-mono tracking-tight text-amber-400 tabular-nums`}>
+                    FINAL
+                  </span>
+                  <span className="text-[9px] uppercase font-bold text-slate-400 tracking-widest mt-0.5">
+                    Official Match Result ({formattedTime})
+                  </span>
+                </>
+              ) : (
+                <span className={`${compact ? 'text-3xl sm:text-4xl' : 'text-5xl sm:text-6xl md:text-7xl'} font-black font-mono tracking-tighter text-white tabular-nums drop-shadow-md`}>
+                  {formattedTime}
+                </span>
+              )}
             </div>
 
             {/* Main Clock Controls: Start/Stop & Adjust */}
@@ -201,24 +215,29 @@ export const KioskCenterConsole = ({
               <Button
                 type="button"
                 size="sm"
+                disabled={isCompleted}
                 onClick={onToggleClock}
-                className={`${compact ? 'h-7 px-3 text-[10px]' : 'h-10 px-5 text-xs'} rounded-xl font-black uppercase tracking-wider gap-1.5 shadow-lg transition-all active:scale-95 cursor-pointer ${
-                  isClockRunning
-                    ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-amber-500/20'
-                    : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-emerald-500/20'
+                className={`${compact ? 'h-7 px-3 text-[10px]' : 'h-10 px-5 text-xs'} rounded-xl font-black uppercase tracking-wider gap-1.5 shadow-lg transition-all ${
+                  isCompleted
+                    ? 'bg-slate-800 text-slate-500 border border-white/5 cursor-not-allowed opacity-40'
+                    : isClockRunning
+                    ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-amber-500/20 active:scale-95 cursor-pointer'
+                    : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-emerald-500/20 active:scale-95 cursor-pointer'
                 }`}
+                title={isCompleted ? 'Match is concluded. Clock is locked.' : undefined}
               >
                 {isClockRunning ? <Pause className={`${compact ? 'size-3' : 'size-4'}`} /> : <Play className={`${compact ? 'size-3 fill-slate-950' : 'size-4 fill-slate-950'}`} />}
-                <span>{isClockRunning ? 'Pause' : 'Start'}</span>
+                <span>{isCompleted ? 'Locked' : isClockRunning ? 'Pause' : 'Start'}</span>
               </Button>
 
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
+                disabled={isCompleted}
                 onClick={onResetClock}
-                className={`${compact ? 'size-7' : 'size-10'} rounded-xl border-white/10 text-slate-400 hover:text-white hover:bg-white/10 p-0`}
-                title="Reset Clock to Period Default"
+                className={`${compact ? 'size-7' : 'size-10'} rounded-xl border-white/10 text-slate-400 hover:text-white hover:bg-white/10 p-0 disabled:opacity-30 disabled:cursor-not-allowed`}
+                title={isCompleted ? 'Match is concluded. Reset locked.' : 'Reset Clock to Period Default'}
               >
                 <RotateCcw className={`${compact ? 'size-3' : 'size-4'}`} />
               </Button>
@@ -230,8 +249,9 @@ export const KioskCenterConsole = ({
                 type="button"
                 size="sm"
                 variant="ghost"
+                disabled={isCompleted}
                 onClick={() => onAdjustClock(-60)}
-                className={`${compact ? 'h-5 px-1 text-[9px]' : 'h-6 px-2 text-[10px]'} text-slate-400 hover:text-white`}
+                className={`${compact ? 'h-5 px-1 text-[9px]' : 'h-6 px-2 text-[10px]'} text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed`}
               >
                 <Minus className="size-2 mr-0.5" /> 1m
               </Button>
@@ -239,8 +259,9 @@ export const KioskCenterConsole = ({
                 type="button"
                 size="sm"
                 variant="ghost"
+                disabled={isCompleted}
                 onClick={() => onAdjustClock(-10)}
-                className={`${compact ? 'h-5 px-1 text-[9px]' : 'h-6 px-2 text-[10px]'} text-slate-400 hover:text-white`}
+                className={`${compact ? 'h-5 px-1 text-[9px]' : 'h-6 px-2 text-[10px]'} text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed`}
               >
                 <Minus className="size-2 mr-0.5" /> 10s
               </Button>
@@ -249,8 +270,9 @@ export const KioskCenterConsole = ({
                 type="button"
                 size="sm"
                 variant="ghost"
+                disabled={isCompleted}
                 onClick={() => onAdjustClock(10)}
-                className={`${compact ? 'h-5 px-1 text-[9px]' : 'h-6 px-2 text-[10px]'} text-slate-400 hover:text-white`}
+                className={`${compact ? 'h-5 px-1 text-[9px]' : 'h-6 px-2 text-[10px]'} text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed`}
               >
                 <Plus className="size-2 mr-0.5" /> 10s
               </Button>
@@ -258,8 +280,9 @@ export const KioskCenterConsole = ({
                 type="button"
                 size="sm"
                 variant="ghost"
+                disabled={isCompleted}
                 onClick={() => onAdjustClock(60)}
-                className={`${compact ? 'h-5 px-1 text-[9px]' : 'h-6 px-2 text-[10px]'} text-slate-400 hover:text-white`}
+                className={`${compact ? 'h-5 px-1 text-[9px]' : 'h-6 px-2 text-[10px]'} text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed`}
               >
                 <Plus className="size-2 mr-0.5" /> 1m
               </Button>
@@ -370,7 +393,7 @@ export const KioskCenterConsole = ({
 
         <div className="flex items-center gap-1.5">
           {/* Instant Undo Last Score Button */}
-          {canUndo && (
+          {canUndo && !isCompleted && (
             <Button
               type="button"
               size="sm"
@@ -384,8 +407,8 @@ export const KioskCenterConsole = ({
             </Button>
           )}
 
-          {/* Conclude Match Button */}
-          {onConcludeMatch && !isCompleted && (
+          {/* Conclude Match Button / Completed Status */}
+          {onConcludeMatch && !isCompleted ? (
             <Button
               type="button"
               size="sm"
@@ -396,7 +419,12 @@ export const KioskCenterConsole = ({
               <CheckCircle2 className="size-3" />
               <span>Conclude</span>
             </Button>
-          )}
+          ) : isCompleted ? (
+            <div className={`flex items-center gap-1.5 ${compact ? 'h-7 px-2 text-[10px] rounded-lg' : 'h-9 px-3 text-xs rounded-xl'} bg-emerald-950/80 border border-emerald-500/50 text-emerald-400 font-black uppercase tracking-wider`}>
+              <CheckCircle2 className="size-3.5 text-emerald-400" />
+              <span>Concluded</span>
+            </div>
+          ) : null}
         </div>
       </div>
 

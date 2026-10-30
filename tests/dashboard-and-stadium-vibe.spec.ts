@@ -140,4 +140,159 @@ test.describe('Dashboard Order & Stadium Display Vibe Tests', () => {
     expect(tickerText).not.toContain('Defensive Block Poi...');
     expect(tickerText).toContain('Defensive Block Point');
   });
+
+  test('Stadium Display shows FINAL clock, MATCH WINNER badge, and colossal championship banner when match is Completed', async ({ page }) => {
+    const mockMatchId = 'test-stadium-completed-match';
+
+    await page.route(`**/rest/v1/matches*id=eq.${mockMatchId}*`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: mockMatchId,
+          round: 'Finals',
+          status: 'Completed',
+          team_a_score: 31,
+          team_b_score: 54,
+          team_a_id: 'team-a',
+          team_b_id: 'team-b',
+          venue: 'PSU Gymnasium',
+          team_a: { name: 'CBPA Aguila' },
+          team_b: { name: 'CCJE Law Enforcers' },
+          tournament_id: 'tourn-1',
+          tournament: {
+            name: 'PSU Sports Track Live Tournament 2026',
+            sport: 'Basketball',
+          },
+        }),
+      });
+    });
+
+    await page.route(`**/rest/v1/match_events*match_id=eq.${mockMatchId}*`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    });
+
+    await page.goto(`/match/${mockMatchId}/display`);
+
+    // Verify FINAL LED clock text is displayed
+    await expect(page.locator('text=FINAL').first()).toBeVisible();
+
+    // Verify MATCH WINNER badge is displayed for Team B
+    await expect(page.locator('text=MATCH WINNER')).toBeVisible();
+
+    // Verify FINALIST badge is displayed for Team A
+    await expect(page.locator('text=FINALIST')).toBeVisible();
+
+    // Verify colossal championship victory banner
+    await expect(page.locator('text=Official Match Result • Final Score Certified')).toBeVisible();
+    await expect(page.locator('text=Champion:')).toBeVisible();
+
+    // Verify bottom arena ticker displays OFFICIAL FINAL
+    await expect(page.getByRole('contentinfo').getByText('OFFICIAL FINAL')).toBeVisible();
+    await expect(page.locator('text=Final Result:')).toBeVisible();
+  });
+
+  test('Facilitator Kiosk disables all actions when match is Completed', async ({ page }) => {
+    const mockMatchId = 'test-kiosk-completed-match';
+
+    await page.route(`**/rest/v1/matches*id=eq.${mockMatchId}*`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: mockMatchId,
+          round: 'Finals',
+          status: 'Completed',
+          team_a_score: 31,
+          team_b_score: 54,
+          team_a_id: 'team-a',
+          team_b_id: 'team-b',
+          venue: 'PSU Gymnasium',
+          team_a: { name: 'CBPA Aguila' },
+          team_b: { name: 'CCJE Law Enforcers' },
+          tournament_id: 'tourn-1',
+          tournament: {
+            name: 'PSU Sports Track Live Tournament 2026',
+            sport: 'Basketball',
+          },
+        }),
+      });
+    });
+
+    await page.route(`**/rest/v1/team_roster*`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'roster-1',
+            team_id: 'team-a',
+            player_id: 'player-1',
+            jersey_number: 10,
+            status: 'Approved',
+            users: { full_name: 'Dela Cruz, Juan' },
+          },
+          {
+            id: 'roster-2',
+            team_id: 'team-b',
+            player_id: 'player-2',
+            jersey_number: 23,
+            status: 'Approved',
+            users: { full_name: 'Santos, Christian' },
+          },
+        ]),
+      });
+    });
+
+    await page.route(`**/rest/v1/match_events*match_id=eq.${mockMatchId}*`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    });
+
+    await page.goto(`/match/${mockMatchId}/kiosk`);
+
+    // Verify top locked banner is visible
+    await expect(page.locator('text=Official Final • Scoring Console Locked')).toBeVisible();
+
+    // Verify clock displays FINAL and clock button is disabled
+    await expect(page.locator('text=FINAL').first()).toBeVisible();
+    const clockButton = page.getByRole('button', { name: 'Locked' }).first();
+    await expect(clockButton).toBeDisabled();
+
+    // Verify score buttons (+1, +2, +3, etc.) are disabled
+    const pointButtons = page.locator('button:has-text("+1"), button:has-text("+2"), button:has-text("+3")');
+    const pointCount = await pointButtons.count();
+    expect(pointCount).toBeGreaterThan(0);
+    for (let i = 0; i < pointCount; i++) {
+      await expect(pointButtons.nth(i)).toBeDisabled();
+    }
+
+    // Verify Foul buttons are disabled
+    const foulButtons = page.locator('button:has-text("+ Foul"), button:has-text("+1")');
+    const foulCount = await foulButtons.count();
+    for (let i = 0; i < foulCount; i++) {
+      await expect(foulButtons.nth(i)).toBeDisabled();
+    }
+
+    // Verify timeout buttons are disabled
+    const timeoutButtons = page.locator('button:has-text("Call TO"), button:has-text("Call")');
+    const timeoutCount = await timeoutButtons.count();
+    for (let i = 0; i < timeoutCount; i++) {
+      await expect(timeoutButtons.nth(i)).toBeDisabled();
+    }
+
+    // Verify sub buttons are disabled
+    const subButtons = page.locator('button:has-text("Sub")');
+    const subCount = await subButtons.count();
+    for (let i = 0; i < subCount; i++) {
+      await expect(subButtons.nth(i)).toBeDisabled();
+    }
+  });
 });

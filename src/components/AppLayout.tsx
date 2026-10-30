@@ -90,7 +90,7 @@ export const AppLayout = () => {
       href: '/athletics',
       icon: Search
     },
-    ...(isDev || Boolean(import.meta.env.DEV) || isImpersonating ? [
+    ...(isDev || isImpersonating ? [
       { name: 'Dev Sandbox', href: '/dev', icon: Terminal },
     ] : []),
     ...(isAdmin ? [

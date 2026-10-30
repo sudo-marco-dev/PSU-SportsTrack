@@ -6,6 +6,7 @@ import {
   ArrowLeftRight,
   ShieldAlert,
   Timer,
+  Lock,
 } from 'lucide-react';
 import type { SportScoringAction } from '@/lib/sportScoringRules';
 import type { FloatingDelta } from '@/lib/scoreboardAnimations';
@@ -32,6 +33,7 @@ type KioskScoreColumnProps = {
   onOpenSubModal: (team: 'a' | 'b') => void;
   isLeading?: boolean;
   isAuthorized?: boolean;
+  isCompleted?: boolean;
   deltas: FloatingDelta[];
   isPopping?: boolean;
   accentColor?: 'orange' | 'cyan';
@@ -58,6 +60,7 @@ export const KioskScoreColumn = ({
   onOpenSubModal,
   isLeading = false,
   isAuthorized = true,
+  isCompleted = false,
   deltas,
   isPopping = false,
   accentColor = 'orange',
@@ -78,15 +81,15 @@ export const KioskScoreColumn = ({
   const colorStyles =
     accentColor === 'cyan'
       ? {
-          border: isLeading ? 'border-cyan-500/70 shadow-[0_0_35px_rgba(6,182,212,0.25)]' : 'border-white/10',
-          bg: isLeading ? 'bg-slate-900/90' : 'bg-slate-900/60',
+          border: isLeading ? 'border-cyan-500' : 'border-white/10',
+          bg: isLeading ? 'bg-slate-900' : 'bg-slate-900/60',
           badge: 'bg-cyan-500 text-slate-950',
           text: 'text-cyan-400',
           btnHover: 'hover:border-cyan-500/50 hover:bg-cyan-500/10 active:border-cyan-400',
         }
       : {
-          border: isLeading ? 'border-orange-500/70 shadow-[0_0_35px_rgba(249,115,22,0.25)]' : 'border-white/10',
-          bg: isLeading ? 'bg-slate-900/90' : 'bg-slate-900/60',
+          border: isLeading ? 'border-orange-500' : 'border-white/10',
+          bg: isLeading ? 'bg-slate-900' : 'bg-slate-900/60',
           badge: 'bg-orange-500 text-slate-950',
           text: 'text-orange-400',
           btnHover: 'hover:border-orange-500/50 hover:bg-orange-500/10 active:border-orange-400',
@@ -108,11 +111,19 @@ export const KioskScoreColumn = ({
             {teamName}
           </h2>
         </div>
-        {isLeading && (
-          <Badge className={`${colorStyles.badge} font-black ${compact ? 'text-[9px] px-1.5 py-0.2' : 'text-[10px] px-2.5 py-0.5'} uppercase tracking-wider shrink-0 shadow-md`}>
-            <Sparkles className="size-2.5 sm:size-3 mr-1" /> Leading
-          </Badge>
-        )}
+        <div className="flex items-center gap-1 shrink-0">
+          {isCompleted && (
+            <Badge variant="outline" className="border-white/10 bg-white/5 text-slate-300 font-black text-[9px] uppercase px-1.5 py-0.5 gap-1">
+              <Lock className="size-2.5 text-slate-400" />
+              <span>Locked</span>
+            </Badge>
+          )}
+          {isLeading && (
+            <Badge className={`${colorStyles.badge} font-black ${compact ? 'text-[9px] px-1.5 py-0.2' : 'text-[10px] px-2.5 py-0.5'} uppercase tracking-wider shadow-sm`}>
+              <Sparkles className="size-2.5 sm:size-3 mr-1" /> Leading
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Center Tabular Score Display */}
@@ -147,15 +158,26 @@ export const KioskScoreColumn = ({
             <button
               key={idx}
               type="button"
+              disabled={!isAuthorized || isCompleted}
               onClick={() => onScore(team, act.points, act.actionType, act.description)}
               className={`flex flex-col items-center justify-center ${
                 compact
                   ? 'p-1 min-h-[40px] sm:min-h-[46px] rounded-lg'
                   : 'p-3 sm:p-4 min-h-[68px] sm:min-h-[76px] rounded-2xl'
-              } bg-white/5 border border-white/10 active:scale-95 transition-all cursor-pointer ${
-                !isAuthorized ? 'opacity-85 hover:opacity-100' : colorStyles.btnHover
+              } bg-white/5 border border-white/10 transition-all ${
+                isCompleted
+                  ? 'opacity-35 cursor-not-allowed border-white/5'
+                  : !isAuthorized
+                  ? 'opacity-85 hover:opacity-100 cursor-pointer'
+                  : `cursor-pointer active:scale-95 ${colorStyles.btnHover}`
               } shadow-sm`}
-              title={!isAuthorized ? 'Click to log in and claim scoring console' : undefined}
+              title={
+                isCompleted
+                  ? 'Match is concluded and certified. Scoring is locked.'
+                  : !isAuthorized
+                  ? 'Click to log in and claim scoring console'
+                  : undefined
+              }
             >
               <span className={`${compact ? 'text-lg sm:text-xl' : 'text-2xl sm:text-3xl'} font-black tracking-tight text-white leading-none`}>
                 {act.label}
@@ -172,11 +194,12 @@ export const KioskScoreColumn = ({
           <Button
             type="button"
             variant="outline"
-            disabled={!isAuthorized || score <= 0}
+            disabled={!isAuthorized || isCompleted || score <= 0}
             onClick={() => onDeduct(team)}
             className={`w-full ${
               compact ? 'h-5 sm:h-6 text-[9px] rounded-lg' : 'h-8 sm:h-9 text-xs rounded-xl'
-            } font-bold border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 gap-1 transition-colors disabled:opacity-30`}
+            } font-bold border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 gap-1 transition-colors disabled:opacity-30 disabled:cursor-not-allowed`}
+            title={isCompleted ? 'Match is concluded. Score corrections locked.' : undefined}
           >
             <Minus className="size-2.5" />
             <span>Score Correction / Deduct</span>
@@ -201,8 +224,9 @@ export const KioskScoreColumn = ({
               type="button"
               size="sm"
               variant="outline"
+              disabled={!isAuthorized || isCompleted}
               onClick={() => onAddFoul(team)}
-              className="h-4.5 px-1 text-[8px] font-bold border-amber-500/40 text-amber-400 hover:bg-amber-500/10 rounded"
+              className="h-4.5 px-1 text-[8px] font-bold border-amber-500/40 text-amber-400 hover:bg-amber-500/10 rounded disabled:opacity-30 disabled:cursor-not-allowed"
             >
               +1
             </Button>
@@ -219,9 +243,9 @@ export const KioskScoreColumn = ({
               type="button"
               size="sm"
               variant="outline"
-              disabled={timeoutsRemaining <= 0}
+              disabled={!isAuthorized || isCompleted || timeoutsRemaining <= 0}
               onClick={() => onCallTimeout(team)}
-              className="h-4.5 px-1 text-[8px] font-bold border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10 rounded disabled:opacity-30"
+              className="h-4.5 px-1 text-[8px] font-bold border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10 rounded disabled:opacity-30 disabled:cursor-not-allowed"
             >
               Call
             </Button>
@@ -236,7 +260,7 @@ export const KioskScoreColumn = ({
                 <ShieldAlert className="size-3 text-amber-400" /> Fouls
               </span>
               {isBonusActive && (
-                <span className="px-1.5 py-0.5 rounded bg-red-500 text-slate-950 font-black text-[9px] uppercase tracking-widest animate-pulse">
+                <span className="px-1.5 py-0.5 rounded bg-red-500 text-slate-950 font-black text-[9px] uppercase tracking-widest">
                   BONUS
                 </span>
               )}
@@ -249,8 +273,9 @@ export const KioskScoreColumn = ({
                 type="button"
                 size="sm"
                 variant="outline"
+                disabled={!isAuthorized || isCompleted}
                 onClick={() => onAddFoul(team)}
-                className="h-7 px-2.5 text-xs font-bold border-amber-500/40 text-amber-400 hover:bg-amber-500/10 rounded-lg active:scale-95"
+                className="h-7 px-2.5 text-xs font-bold border-amber-500/40 text-amber-400 hover:bg-amber-500/10 rounded-lg active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 + Foul
               </Button>
@@ -270,8 +295,8 @@ export const KioskScoreColumn = ({
                   return (
                     <span
                       key={pipIdx}
-                      className={`size-2 rounded-full transition-all ${
-                        isActive ? 'bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.8)]' : 'bg-slate-700'
+                      className={`h-2 w-5 sm:w-6 rounded-xs transition-colors ${
+                        isActive ? 'bg-cyan-400 border border-cyan-300' : 'bg-slate-800 border border-white/5 opacity-40'
                       }`}
                     />
                   );
@@ -286,9 +311,9 @@ export const KioskScoreColumn = ({
                 type="button"
                 size="sm"
                 variant="outline"
-                disabled={timeoutsRemaining <= 0}
+                disabled={!isAuthorized || isCompleted || timeoutsRemaining <= 0}
                 onClick={() => onCallTimeout(team)}
-                className="h-7 px-2 text-xs font-bold border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10 rounded-lg active:scale-95 disabled:opacity-30"
+                className="h-7 px-2 text-xs font-bold border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10 rounded-lg active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 Call TO
               </Button>
@@ -302,14 +327,15 @@ export const KioskScoreColumn = ({
         <div className="mt-1.5 p-1.5 rounded-xl bg-slate-950/80 border border-white/10 space-y-1 shrink-0">
           <div className="flex items-center justify-between">
             <span className="text-[9px] font-black uppercase tracking-wider text-slate-300">
-              Tap Player to Credit ({activePlayers.length})
+              {isCompleted ? 'Final Match Roster' : `Tap Player to Credit (${activePlayers.length})`}
             </span>
             <Button
               type="button"
               size="sm"
               variant="ghost"
+              disabled={!isAuthorized || isCompleted}
               onClick={() => onOpenSubModal(team)}
-              className="h-5 px-1.5 text-[9px] font-bold text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 gap-1 rounded"
+              className="h-5 px-1.5 text-[9px] font-bold text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 gap-1 rounded disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <ArrowLeftRight className="size-2.5" />
               <span>Sub</span>
@@ -323,13 +349,16 @@ export const KioskScoreColumn = ({
                   <button
                     key={p.id}
                     type="button"
+                    disabled={isCompleted}
                     onClick={() =>
-                      onSelectPlayer && onSelectPlayer(isSelected ? null : p.player_id)
+                      !isCompleted && onSelectPlayer && onSelectPlayer(isSelected ? null : p.player_id)
                     }
-                    className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border text-[9px] font-bold shrink-0 cursor-pointer transition-all ${
-                      isSelected
-                        ? 'bg-orange-500 text-slate-950 border-orange-400 font-black shadow-sm'
-                        : 'bg-white/5 border-white/10 text-slate-200 hover:bg-white/10'
+                    className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border text-[9px] font-bold shrink-0 transition-all ${
+                      isCompleted
+                        ? 'bg-white/5 border-white/5 text-slate-400 cursor-not-allowed opacity-60'
+                        : isSelected
+                        ? 'bg-orange-500 text-slate-950 border-orange-400 font-black shadow-sm cursor-pointer'
+                        : 'bg-white/5 border-white/10 text-slate-200 hover:bg-white/10 cursor-pointer'
                     }`}
                   >
                     <span className="font-mono">{getJersey(p)}</span>
@@ -345,7 +374,9 @@ export const KioskScoreColumn = ({
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/5">
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-300 truncate">
-                {selectedPlayerId
+                {isCompleted
+                  ? 'Certified Final Squad Roster'
+                  : selectedPlayerId
                   ? 'Scoring Credited To Selected Athlete'
                   : `Tap On-Court Player to Credit (${activePlayers.length})`}
               </span>
@@ -354,8 +385,9 @@ export const KioskScoreColumn = ({
               type="button"
               size="sm"
               variant="ghost"
+              disabled={!isAuthorized || isCompleted}
               onClick={() => onOpenSubModal(team)}
-              className="h-6 px-2 text-[10px] font-bold text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 gap-1 rounded-md shrink-0"
+              className="h-6 px-2 text-[10px] font-bold text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 gap-1 rounded-md shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <ArrowLeftRight className="size-3" />
               <span>Sub Player</span>
@@ -373,15 +405,18 @@ export const KioskScoreColumn = ({
                   <button
                     key={p.id}
                     type="button"
+                    disabled={isCompleted}
                     onClick={() =>
-                      onSelectPlayer && onSelectPlayer(isSelected ? null : p.player_id)
+                      !isCompleted && onSelectPlayer && onSelectPlayer(isSelected ? null : p.player_id)
                     }
-                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-bold shrink-0 cursor-pointer transition-all active:scale-95 ${
-                      isSelected
-                        ? 'bg-orange-500 text-slate-950 border-orange-400 font-black ring-2 ring-orange-400/50 shadow-md'
-                        : 'bg-white/5 border-white/10 text-slate-200 hover:bg-white/10'
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-bold shrink-0 transition-all ${
+                      isCompleted
+                        ? 'bg-white/5 border-white/5 text-slate-400 cursor-not-allowed opacity-60'
+                        : isSelected
+                        ? 'bg-orange-500 text-slate-950 border-orange-400 font-black ring-2 ring-orange-400/50 shadow-md cursor-pointer active:scale-95'
+                        : 'bg-white/5 border-white/10 text-slate-200 hover:bg-white/10 cursor-pointer active:scale-95'
                     }`}
-                    title={`Tap to credit points to ${getPlayerName(p)}`}
+                    title={isCompleted ? undefined : `Tap to credit points to ${getPlayerName(p)}`}
                   >
                     <span
                       className={`font-mono text-[10px] ${

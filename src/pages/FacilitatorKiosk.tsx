@@ -19,6 +19,8 @@ import {
   LogIn,
   AlertTriangle,
   CheckCircle2,
+  Trophy,
+  Lock,
 } from 'lucide-react';
 import {
   Dialog,
@@ -303,6 +305,7 @@ export const FacilitatorKiosk = () => {
 
   // Toggle Clock Play/Pause with Audio Cues & Realtime Sync
   const handleToggleClock = useCallback(() => {
+    if (match?.status === 'Completed') return;
     setIsClockRunning((prev) => {
       const next = !prev;
       if (next) {
@@ -313,33 +316,36 @@ export const FacilitatorKiosk = () => {
       broadcastClockState(next, gameTimeSeconds, currentPeriod);
       return next;
     });
-  }, [broadcastClockState, gameTimeSeconds, currentPeriod]);
+  }, [broadcastClockState, gameTimeSeconds, currentPeriod, match?.status]);
 
   // Adjust Clock (+/- Seconds) with Realtime Sync
   const handleAdjustClock = useCallback(
     (delta: number) => {
+      if (match?.status === 'Completed') return;
       setGameTimeSeconds((prev) => {
         const next = Math.max(0, prev + delta);
         broadcastClockState(isClockRunning, next, currentPeriod);
         return next;
       });
     },
-    [broadcastClockState, isClockRunning, currentPeriod]
+    [broadcastClockState, isClockRunning, currentPeriod, match?.status]
   );
 
   // Reset Clock to Period Duration
   const handleResetClock = useCallback(() => {
+    if (match?.status === 'Completed') return;
     const secs = (sportProfile.defaultPeriodMinutes || 10) * 60;
     setIsClockRunning(false);
     setGameTimeSeconds(secs);
     playClockPauseSound();
     broadcastClockState(false, secs, currentPeriod);
     toast.info('Game clock reset to period start.');
-  }, [sportProfile.defaultPeriodMinutes, currentPeriod, broadcastClockState]);
+  }, [sportProfile.defaultPeriodMinutes, currentPeriod, broadcastClockState, match?.status]);
 
   // Select New Match Period
   const handleSelectPeriod = useCallback(
     (period: string) => {
+      if (match?.status === 'Completed') return;
       setCurrentPeriod(period);
       const secs = (sportProfile.defaultPeriodMinutes || 10) * 60;
       setGameTimeSeconds(secs);
@@ -347,11 +353,12 @@ export const FacilitatorKiosk = () => {
       broadcastClockState(false, secs, period);
       toast.info(`Period changed: ${period}. Clock reset.`);
     },
-    [sportProfile.defaultPeriodMinutes, broadcastClockState]
+    [sportProfile.defaultPeriodMinutes, broadcastClockState, match?.status]
   );
 
   // Cancel / End Active Timeout Early
   const handleCancelTimeout = useCallback(() => {
+    if (match?.status === 'Completed') return;
     setActiveTimeoutSeconds(0);
     setActiveTimeoutTeam(null);
     playWhistleSound();
@@ -934,6 +941,10 @@ export const FacilitatorKiosk = () => {
   // 1-Tap Undo Last Score Action
   const handleUndoLastScore = async () => {
     if (!match || !lastScoreActionRef.current) return;
+    if (match.status === 'Completed') {
+      toast.error('Match is already concluded. Scoring actions are locked.');
+      return;
+    }
     if (!user) {
       toast.error('You must log in to undo score actions.');
       openLoginModal();
@@ -1099,6 +1110,10 @@ export const FacilitatorKiosk = () => {
   // Quick Team Foul increment
   const handleAddFoul = async (team: 'a' | 'b') => {
     if (!match) return;
+    if (match.status === 'Completed') {
+      toast.error('Match is already concluded. Foul actions are locked.');
+      return;
+    }
     if (!user) {
       toast.error('You must log in to record match fouls.');
       openLoginModal();
@@ -1145,6 +1160,10 @@ export const FacilitatorKiosk = () => {
   // Call Timeout: Immediately auto-pauses the game clock, plays courtside timeout siren, and broadcasts
   const handleCallTimeout = async (team: 'a' | 'b') => {
     if (!match) return;
+    if (match.status === 'Completed') {
+      toast.error('Match is already concluded. Timeouts are locked.');
+      return;
+    }
     if (!user) {
       toast.error('You must log in to call official timeouts.');
       openLoginModal();
@@ -1218,6 +1237,10 @@ export const FacilitatorKiosk = () => {
     subInPlayer: RosterPlayerItem
   ) => {
     if (!match || !subModalTeam || isSubmittingSub) return;
+    if (match.status === 'Completed') {
+      toast.error('Match is already concluded. Substitutions are locked.');
+      return;
+    }
     if (!user) {
       toast.error('You must log in to execute player substitutions.');
       openLoginModal();
@@ -1427,10 +1450,15 @@ export const FacilitatorKiosk = () => {
       onCallTimeout={handleCallTimeout}
       activePlayers={activePlayersA}
       selectedPlayerId={selectedScorerA}
-      onSelectPlayer={setSelectedScorerA}
-      onOpenSubModal={() => setSubModalTeam('a')}
+      onSelectPlayer={(id) => {
+        if (match.status !== 'Completed') setSelectedScorerA(id);
+      }}
+      onOpenSubModal={() => {
+        if (match.status !== 'Completed') setSubModalTeam('a');
+      }}
       isLeading={isTeamALeading}
       isAuthorized={isAuthorized}
+      isCompleted={match.status === 'Completed'}
       deltas={deltasA}
       isPopping={isPoppingA}
       accentColor="orange"
@@ -1456,10 +1484,15 @@ export const FacilitatorKiosk = () => {
       onCallTimeout={handleCallTimeout}
       activePlayers={activePlayersB}
       selectedPlayerId={selectedScorerB}
-      onSelectPlayer={setSelectedScorerB}
-      onOpenSubModal={() => setSubModalTeam('b')}
+      onSelectPlayer={(id) => {
+        if (match.status !== 'Completed') setSelectedScorerB(id);
+      }}
+      onOpenSubModal={() => {
+        if (match.status !== 'Completed') setSubModalTeam('b');
+      }}
       isLeading={isTeamBLeading}
       isAuthorized={isAuthorized}
+      isCompleted={match.status === 'Completed'}
       deltas={deltasB}
       isPopping={isPoppingB}
       accentColor="cyan"
@@ -1666,6 +1699,21 @@ export const FacilitatorKiosk = () => {
           )}
         </div>
       </header>
+
+      {/* Official Match Final Locked Banner */}
+      {match.status === 'Completed' && (
+        <div className="w-full shrink-0 mb-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2 text-amber-300">
+          <div className="flex items-center gap-2 min-w-0">
+            <Trophy className="size-4 text-amber-400 shrink-0" />
+            <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider truncate">
+              Official Final • Scoring Console Locked ({match.team_a?.name} {match.team_a_score} - {match.team_b_score} {match.team_b?.name})
+            </span>
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/30 text-amber-400 shrink-0 flex items-center gap-1">
+            <Lock className="size-2.5 text-amber-400" /> Certified Result
+          </span>
+        </div>
+      )}
 
       {/* Lead Change Alert Banner */}
       {leadChangeAlert && (

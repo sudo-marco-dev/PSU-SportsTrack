@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Pause, AlertTriangle, Timer } from 'lucide-react';
+import { Pause, AlertTriangle, Timer, CheckCircle2 } from 'lucide-react';
 
 interface StadiumGameClockProps {
   gameTimeSeconds: number;
@@ -7,6 +7,7 @@ interface StadiumGameClockProps {
   currentPeriod: string;
   isClockEnabled: boolean;
   isTimeoutActive?: boolean;
+  isCompleted?: boolean;
 }
 
 export const StadiumGameClock: React.FC<StadiumGameClockProps> = ({
@@ -15,6 +16,7 @@ export const StadiumGameClock: React.FC<StadiumGameClockProps> = ({
   currentPeriod,
   isClockEnabled,
   isTimeoutActive = false,
+  isCompleted = false,
 }) => {
   const formattedTime = useMemo(() => {
     const mins = Math.floor(Math.max(0, gameTimeSeconds) / 60);
@@ -23,6 +25,29 @@ export const StadiumGameClock: React.FC<StadiumGameClockProps> = ({
   }, [gameTimeSeconds]);
 
   const isZero = gameTimeSeconds <= 0;
+
+  if (isCompleted) {
+    return (
+      <div className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl border-2 border-amber-500 transition-colors duration-200 relative overflow-hidden bg-slate-900">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="px-2.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-amber-400">
+            OFFICIAL FINAL
+          </span>
+        </div>
+        <div className="relative my-0.5 flex items-center justify-center">
+          <span className="font-mono text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-amber-400">
+            FINAL
+          </span>
+        </div>
+        <div className="mt-1 flex items-center gap-1.5">
+          <span className="flex items-center gap-1 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-emerald-300 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-500/50">
+            <CheckCircle2 className="size-2.5 sm:size-3 text-emerald-400" />
+            <span>CONCLUDED</span>
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   if (!isClockEnabled) {
     return (

@@ -436,6 +436,10 @@ export const StadiumDisplay = () => {
   const isTeamALeading = (match?.team_a_score ?? 0) > (match?.team_b_score ?? 0);
   const isTeamBLeading = (match?.team_b_score ?? 0) > (match?.team_a_score ?? 0);
   const isTied = (match?.team_a_score ?? 0) === (match?.team_b_score ?? 0) && (match?.team_a_score ?? 0) > 0;
+  const isCompleted = match?.status === 'Completed';
+  const isTeamAWinner = isCompleted && (match?.team_a_score ?? 0) > (match?.team_b_score ?? 0);
+  const isTeamBWinner = isCompleted && (match?.team_b_score ?? 0) > (match?.team_a_score ?? 0);
+  const isCompletedTie = isCompleted && (match?.team_a_score ?? 0) === (match?.team_b_score ?? 0);
 
   // Set document title to Focus View
   useEffect(() => {
@@ -684,7 +688,13 @@ export const StadiumDisplay = () => {
           {/* Team A Card */}
           <div
             className={`lg:col-span-5 p-5 sm:p-7 md:p-9 rounded-2xl border-2 transition-colors duration-200 flex flex-col items-center justify-center text-center relative bg-slate-900 ${
-              isTeamALeading ? 'border-orange-500' : 'border-slate-800'
+              isCompleted
+                ? isTeamAWinner
+                  ? 'border-amber-500 ring-2 ring-amber-500/20'
+                  : 'border-slate-800 opacity-90'
+                : isTeamALeading
+                ? 'border-orange-500'
+                : 'border-slate-800'
             }`}
           >
             {/* Top Dedicated Status Shelf (Fixed height, guaranteed zero collision) */}
@@ -698,10 +708,26 @@ export const StadiumDisplay = () => {
                   </span>
                 )}
               </div>
-              {isTeamALeading && (
-                <span className="flex items-center gap-1 px-2.5 py-0.5 rounded bg-orange-500 text-slate-950 text-[10px] font-black uppercase tracking-widest">
-                  <Sparkles className="size-3" /> LEADING
-                </span>
+              {isCompleted ? (
+                isTeamAWinner ? (
+                  <span className="flex items-center gap-1.5 px-3 py-1 rounded bg-amber-500 text-slate-950 text-xs font-black uppercase tracking-widest shadow-sm">
+                    <Trophy className="size-3.5 fill-slate-950 text-slate-950" /> MATCH WINNER
+                  </span>
+                ) : isCompletedTie ? (
+                  <span className="px-2.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 text-[10px] font-black uppercase tracking-widest">
+                    TIED
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded bg-slate-800/80 border border-slate-700/60 text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                    FINALIST
+                  </span>
+                )
+              ) : (
+                isTeamALeading && (
+                  <span className="flex items-center gap-1 px-2.5 py-0.5 rounded bg-orange-500 text-slate-950 text-[10px] font-black uppercase tracking-widest">
+                    <Sparkles className="size-3" /> LEADING
+                  </span>
+                )
               )}
             </div>
 
@@ -764,23 +790,34 @@ export const StadiumDisplay = () => {
               currentPeriod={currentPeriod}
               isClockEnabled={isClockEnabled}
               isTimeoutActive={activeTimeout?.active ?? false}
+              isCompleted={isCompleted}
             />
 
             <div className="size-11 sm:size-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-base sm:text-lg font-black italic tracking-tighter text-slate-400">
               VS
             </div>
 
-            {isTied && (
+            {isCompleted ? (
+              <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black uppercase tracking-wider whitespace-nowrap">
+                {isCompletedTie ? 'DRAW' : 'FINAL'}
+              </span>
+            ) : isTied ? (
               <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black uppercase tracking-wider whitespace-nowrap">
                 TIED GAME
               </span>
-            )}
+            ) : null}
           </div>
 
           {/* Team B Card */}
           <div
             className={`lg:col-span-5 p-5 sm:p-7 md:p-9 rounded-2xl border-2 transition-colors duration-200 flex flex-col items-center justify-center text-center relative bg-slate-900 ${
-              isTeamBLeading ? 'border-cyan-500' : 'border-slate-800'
+              isCompleted
+                ? isTeamBWinner
+                  ? 'border-amber-500 ring-2 ring-amber-500/20'
+                  : 'border-slate-800 opacity-90'
+                : isTeamBLeading
+                ? 'border-cyan-500'
+                : 'border-slate-800'
             }`}
           >
             {/* Top Dedicated Status Shelf (Fixed height, guaranteed zero collision) */}
@@ -794,10 +831,26 @@ export const StadiumDisplay = () => {
                   </span>
                 )}
               </div>
-              {isTeamBLeading && (
-                <span className="flex items-center gap-1 px-2.5 py-0.5 rounded bg-cyan-500 text-slate-950 text-[10px] font-black uppercase tracking-widest">
-                  <Sparkles className="size-3" /> LEADING
-                </span>
+              {isCompleted ? (
+                isTeamBWinner ? (
+                  <span className="flex items-center gap-1.5 px-3 py-1 rounded bg-amber-500 text-slate-950 text-xs font-black uppercase tracking-widest shadow-sm">
+                    <Trophy className="size-3.5 fill-slate-950 text-slate-950" /> MATCH WINNER
+                  </span>
+                ) : isCompletedTie ? (
+                  <span className="px-2.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 text-[10px] font-black uppercase tracking-widest">
+                    TIED
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded bg-slate-800/80 border border-slate-700/60 text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                    FINALIST
+                  </span>
+                )
+              ) : (
+                isTeamBLeading && (
+                  <span className="flex items-center gap-1 px-2.5 py-0.5 rounded bg-cyan-500 text-slate-950 text-[10px] font-black uppercase tracking-widest">
+                    <Sparkles className="size-3" /> LEADING
+                  </span>
+                )
               )}
             </div>
 
@@ -853,20 +906,39 @@ export const StadiumDisplay = () => {
           </div>
         </div>
 
-        {/* Post-Game Banner if Completed */}
-        {match.status === 'Completed' && (
-          <div className="mt-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-center animate-in fade-in duration-300">
-            <div className="inline-flex items-center gap-2 text-sm sm:text-base font-black uppercase italic tracking-wide text-amber-300 break-words line-clamp-2 pr-2">
-              <Trophy className="size-5 text-yellow-400 shrink-0" />
-              <span>
-                Final Match Concluded • Winner:{' '}
-                {match.team_a_score > match.team_b_score
-                  ? match.team_a?.name
-                  : match.team_b_score > match.team_a_score
-                  ? match.team_b?.name
-                  : 'Draw'}
-              </span>
+        {/* Colossal Official Final Championship Banner */}
+        {isCompleted && (
+          <div className="mt-6 p-5 sm:p-6 rounded-2xl bg-slate-900 border-2 border-amber-500/50 text-center animate-in fade-in zoom-in-95 duration-300 shadow-xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 text-xs font-black uppercase tracking-widest mb-3">
+              <Trophy className="size-3.5 fill-amber-400 text-amber-400 shrink-0" />
+              <span>Official Match Result • Final Score Certified</span>
             </div>
+            <div className="text-xl sm:text-3xl md:text-4xl font-black uppercase italic tracking-tight text-white">
+              {isTeamAWinner ? (
+                <span>
+                  Champion:{' '}
+                  <span className="text-amber-400 underline decoration-amber-500/60 decoration-2 underline-offset-4">
+                    {match.team_a?.name}
+                  </span>{' '}
+                  def. {match.team_b?.name} ({match.team_a_score} - {match.team_b_score})
+                </span>
+              ) : isTeamBWinner ? (
+                <span>
+                  Champion:{' '}
+                  <span className="text-amber-400 underline decoration-amber-500/60 decoration-2 underline-offset-4">
+                    {match.team_b?.name}
+                  </span>{' '}
+                  def. {match.team_a?.name} ({match.team_b_score} - {match.team_a_score})
+                </span>
+              ) : (
+                <span>
+                  Match Drawn: {match.team_a?.name} {match.team_a_score} - {match.team_b_score} {match.team_b?.name}
+                </span>
+              )}
+            </div>
+            <p className="text-xs sm:text-sm font-semibold text-slate-400 mt-2 uppercase tracking-wider">
+              Match concluded by official kiosk scorekeeper. Statistics recorded to tournament leaderboards.
+            </p>
           </div>
         )}
       </main>
@@ -875,12 +947,33 @@ export const StadiumDisplay = () => {
       <footer className="w-full bg-slate-950/95 border-t border-white/10 px-6 py-4 md:px-10 md:py-5 flex flex-col md:flex-row items-center justify-between gap-4 relative z-20">
         {/* Play-by-play ticker bar (Arena Grade High-Contrast Ticker - No Truncation Slop) */}
         <div className="flex-1 flex items-center gap-3 w-full overflow-hidden bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-3">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-500 text-slate-950 text-xs font-black uppercase tracking-wider shrink-0">
-            <Radio className="size-3.5 animate-pulse text-slate-950" />
-            <span>LIVE ACTION</span>
-          </div>
+          {isCompleted ? (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500 text-slate-950 text-xs font-black uppercase tracking-wider shrink-0">
+              <Trophy className="size-3.5 fill-slate-950 text-slate-950" />
+              <span>OFFICIAL FINAL</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-500 text-slate-950 text-xs font-black uppercase tracking-wider shrink-0">
+              <Radio className="size-3.5 animate-pulse text-slate-950" />
+              <span>LIVE ACTION</span>
+            </div>
+          )}
           <div className="flex-1 overflow-x-auto scrollbar-hide py-0.5">
-            {events.length > 0 ? (
+            {isCompleted ? (
+              <div className="flex items-center gap-2 whitespace-nowrap text-sm sm:text-base font-bold text-white">
+                <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 text-xs font-black uppercase tracking-wider border border-amber-500/40 shrink-0">
+                  Final Result:
+                </span>
+                <span className="text-slate-100 font-black tracking-wide">
+                  {match.team_a?.name} ({match.team_a_score}) — ({match.team_b_score}) {match.team_b?.name} •{' '}
+                  {isTeamAWinner
+                    ? `${match.team_a?.name} Victory`
+                    : isTeamBWinner
+                    ? `${match.team_b?.name} Victory`
+                    : 'Tie Game'}
+                </span>
+              </div>
+            ) : events.length > 0 ? (
               <div className="flex items-center gap-2 whitespace-nowrap text-sm sm:text-base font-bold text-white">
                 <span className="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 text-xs font-black uppercase tracking-wider border border-orange-500/20 shrink-0">
                   Latest:
