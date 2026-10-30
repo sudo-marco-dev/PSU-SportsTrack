@@ -402,7 +402,9 @@ export const ScoutingHub = () => {
         );
       };
 
-      if (playersRes.data) {
+      if (playersRes.error) {
+        console.error('Error fetching scouting players:', playersRes.error);
+      } else if (playersRes.data) {
         setPlayers(
           (playersRes.data as any[]).map((p) => ({
             ...p,
@@ -412,7 +414,9 @@ export const ScoutingHub = () => {
       }
       setPlayerSummaries(summaries);
 
-      if (coachesRes.data) {
+      if (coachesRes.error) {
+        console.error('Error fetching scouting coaches:', coachesRes.error);
+      } else if (coachesRes.data) {
         setCoaches(
           (coachesRes.data as any[]).map((c) => ({
             ...c,
