@@ -30,6 +30,7 @@ const StadiumDisplay = React.lazy(() => import('@/pages/StadiumDisplay').then(m 
 const FacilitatorKiosk = React.lazy(() => import('@/pages/FacilitatorKiosk').then(m => ({ default: m.FacilitatorKiosk })));
 const DevSandbox = React.lazy(() => import('@/pages/DevSandbox').then(m => ({ default: m.DevSandbox })));
 const ScoutingHub = React.lazy(() => import('@/pages/ScoutingHub').then(m => ({ default: m.ScoutingHub })));
+const AdminReports = React.lazy(() => import('@/pages/AdminReports').then(m => ({ default: m.AdminReports })));
 
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
@@ -119,6 +120,7 @@ function AppRoutes() {
               <Route path="/admin/verifications" element={<SystemVerifications />} />
               <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
               <Route path="/admin/recovery" element={<AdminRecovery />} />
+              <Route path="/admin/reports" element={<AdminReports />} />
             </Route>
 
             <Route element={<ProtectedRoute requiredRole="coach" />}>

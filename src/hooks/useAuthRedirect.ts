@@ -6,7 +6,6 @@ const REDIRECT_MAP: Record<string, string> = {
   '/coach/events': '/coach',
   '/admin/users': '/admin',
   '/admin/verification': '/admin',
-  '/admin/reports': '/admin',
   '/admin/settings': '/admin',
   // Add more as needed
 };
