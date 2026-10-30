@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   FileBarChart2,
   Download,
-  Printer,
+  FileDown,
+  Loader2,
   ArrowLeft,
   Trophy,
   Star,
@@ -54,6 +55,7 @@ export const AdminReports: React.FC = () => {
   });
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState<boolean>(false);
   const [reportData, setReportData] = useState<InstitutionalReportData | null>(null);
 
   // Section Visibility Toggles
@@ -98,8 +100,29 @@ export const AdminReports: React.FC = () => {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPDF = async () => {
+    if (!reportData) return;
+    setIsGeneratingPDF(true);
+    try {
+      const { generateInstitutionalReportPDF } = await import('@/lib/pdfReportGenerator');
+      const filename = await generateInstitutionalReportPDF(
+        reportData,
+        filters,
+        adminDisplayName,
+        {
+          showWinningColleges,
+          showStandings,
+          showMvpRecords,
+          showParticipation,
+        }
+      );
+      toast.success(`Institutional Report PDF downloaded successfully (${filename}).`);
+    } catch (err: any) {
+      console.error('Error generating PDF report:', err);
+      toast.error('Failed to generate PDF report: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsGeneratingPDF(false);
+    }
   };
 
   const resetFilters = () => {
@@ -167,12 +190,21 @@ export const AdminReports: React.FC = () => {
 
           <Button
             type="button"
-            onClick={handlePrint}
-            disabled={isLoading || !reportData}
-            className="h-9 sm:h-10 px-3 sm:px-4 rounded-xl font-bold text-xs gap-1.5 bg-orange-500 hover:bg-orange-600 text-white cursor-pointer shadow-md shadow-orange-500/25 transition-all"
+            onClick={handleDownloadPDF}
+            disabled={isLoading || !reportData || isGeneratingPDF}
+            className="h-9 sm:h-10 px-3 sm:px-4 rounded-xl font-bold text-xs gap-1.5 bg-orange-500 hover:bg-orange-600 text-white cursor-pointer shadow-md shadow-orange-500/25 transition-all disabled:opacity-60"
           >
-            <Printer className="size-3.5 text-white" />
-            <span>Print / Save as PDF</span>
+            {isGeneratingPDF ? (
+              <>
+                <Loader2 className="size-3.5 text-white animate-spin" />
+                <span>Generating PDF...</span>
+              </>
+            ) : (
+              <>
+                <FileDown className="size-3.5 text-white" />
+                <span>Download PDF</span>
+              </>
+            )}
           </Button>
         </div>
       </div>

@@ -75,9 +75,9 @@ test.describe('FR-43 Institutional Report Generation (/admin/reports)', () => {
 
     // Export Buttons
     const downloadCsvBtn = page.getByRole('button', { name: /Download CSV/i });
-    const printPdfBtn = page.getByRole('button', { name: /Print \/ Save as PDF/i });
+    const downloadPdfBtn = page.getByRole('button', { name: /Download PDF/i });
     await expect(downloadCsvBtn).toBeVisible();
-    await expect(printPdfBtn).toBeVisible();
+    await expect(downloadPdfBtn).toBeVisible();
 
     // Parameter Filter Deck
     await expect(page.getByText(/Report Parameters & Scope/i)).toBeVisible();
@@ -196,4 +196,81 @@ test.describe('FR-43 Institutional Report Generation (/admin/reports)', () => {
     const filename = download.suggestedFilename();
     expect(filename).toMatch(/^psu-sportstrack-institutional-report-.*\.csv$/);
   });
+
+  test('10. PDF Download triggers browser file download with .pdf extension and valid vector structure', async ({ page }) => {
+    await page.addInitScript((persona) => {
+      localStorage.setItem('psu_dev_impersonated_persona', JSON.stringify(persona));
+    }, adminPersona);
+
+    await page.goto('/admin/reports');
+    await page.waitForLoadState('networkidle');
+
+    const downloadPdfBtn = page.getByRole('button', { name: /Download PDF/i });
+    await expect(downloadPdfBtn).toBeEnabled({ timeout: 10000 });
+
+    // Listen for download event
+    const downloadPromise = page.waitForEvent('download');
+    await downloadPdfBtn.click();
+    const download = await downloadPromise;
+
+    // Verify filename format has .pdf extension
+    const filename = download.suggestedFilename();
+    expect(filename).toMatch(/^psu-sportstrack-institutional-report-.*\.pdf$/);
+
+    // Verify downloaded file is a genuine binary vector PDF without font encoding defects
+    const downloadPath = await download.path();
+    if (downloadPath) {
+      const fs = await import('fs');
+      const buffer = fs.readFileSync(downloadPath);
+      expect(buffer.length).toBeGreaterThan(3000);
+      expect(buffer.subarray(0, 5).toString()).toBe('%PDF-');
+
+      // Verify no WinAnsi encoding corruption for MVP stars (e.g. '★' corrupted into '&')
+      const pdfText = buffer.toString('binary');
+      expect(pdfText).not.toContain('★');
+      expect(pdfText).not.toContain('& Gold Star');
+      expect(pdfText).not.toContain('& Red Star');
+    }
+  });
+
+  test('11. PDF Download honors sport discipline filtering in generated filename', async ({ page }) => {
+    await page.addInitScript((persona) => {
+      localStorage.setItem('psu_dev_impersonated_persona', JSON.stringify(persona));
+    }, adminPersona);
+
+    await page.goto('/admin/reports');
+    await page.waitForLoadState('networkidle');
+
+    // Select Basketball sport filter using the Ballgame Discipline container combobox
+    const sportCombobox = page.locator('div').filter({ hasText: /^Ballgame Discipline \(9 Official\)/ }).getByRole('combobox');
+    await expect(sportCombobox).toBeVisible({ timeout: 10000 });
+    await sportCombobox.click();
+
+    const basketballOption = page.getByRole('option', { name: 'Basketball', exact: true });
+    await expect(basketballOption).toBeVisible({ timeout: 5000 });
+    await basketballOption.click();
+
+    // Verify report scope badge updated to Basketball
+    await expect(page.getByText('Report Scope:')).toBeVisible();
+    await expect(page.locator('div').filter({ hasText: /^Report Scope:/ }).locator('[data-slot="badge"]').filter({ hasText: 'Basketball' })).toBeVisible();
+
+    const downloadPdfBtn = page.getByRole('button', { name: /Download PDF/i });
+    await expect(downloadPdfBtn).toBeEnabled({ timeout: 10000 });
+
+    const downloadPromise = page.waitForEvent('download');
+    await downloadPdfBtn.click();
+    const download = await downloadPromise;
+
+    const filename = download.suggestedFilename();
+    expect(filename).toMatch(/^psu-sportstrack-institutional-report-.*-basketball\.pdf$/);
+
+    const downloadPath = await download.path();
+    if (downloadPath) {
+      const fs = await import('fs');
+      const buffer = fs.readFileSync(downloadPath);
+      expect(buffer.length).toBeGreaterThan(1500);
+      expect(buffer.subarray(0, 5).toString()).toBe('%PDF-');
+    }
+  });
 });
+

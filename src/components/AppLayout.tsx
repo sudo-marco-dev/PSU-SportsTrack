@@ -138,7 +138,7 @@ export const AppLayout = () => {
   return (
     <div className="min-h-dvh w-full max-w-[100vw] overflow-x-hidden bg-slate-50 dark:bg-background transition-colors duration-200">
       {/* Desktop Sidebar — Permanently anchored to viewport left, eliminating floating detachment on scroll */}
-      <aside className="hidden lg:flex flex-col w-64 bg-slate-900 text-white fixed top-0 bottom-0 left-0 h-dvh shadow-xl border-r border-white/5 z-30">
+      <aside className="print:hidden hidden lg:flex flex-col w-64 bg-slate-900 text-white fixed top-0 bottom-0 left-0 h-dvh shadow-xl border-r border-white/5 z-30">
         <div className="p-6">
           <div className="flex items-center justify-between">
             <Link to={getDashboardHref()} className="flex items-center gap-2 font-black text-2xl tracking-tighter">
@@ -214,7 +214,7 @@ export const AppLayout = () => {
       {/* Layout Content Wrapper — lg:pl-64 accommodates the fixed desktop sidebar */}
       <div className="flex-1 min-w-0 w-full max-w-full flex flex-col relative lg:pl-64">
         {/* Mobile Topbar */}
-        <header className="lg:hidden sticky top-0 flex h-12 xs:h-14 sm:h-16 short:h-12 items-center justify-between bg-slate-900 text-white px-3.5 sm:px-6 shadow-lg z-30 border-b border-white/10">
+        <header className="print:hidden lg:hidden sticky top-0 flex h-12 xs:h-14 sm:h-16 short:h-12 items-center justify-between bg-slate-900 text-white px-3.5 sm:px-6 shadow-lg z-30 border-b border-white/10">
           <Link to={getDashboardHref()} className="flex items-center gap-2 font-black text-lg xs:text-xl">
             <span className="text-orange-500 italic">PSU</span>
             <span className="text-white">SportsTrack</span>
@@ -316,7 +316,7 @@ export const AppLayout = () => {
 
         {/* Active Impersonation Strip (Dev Mode Persona Switcher) */}
         {isImpersonating && impersonatedPersona && (
-          <div className="bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-purple-500/15 border-b border-orange-500/30 px-3.5 sm:px-6 py-2 backdrop-blur-md sticky top-12 xs:top-14 sm:top-16 short:top-12 lg:top-0 z-20 flex flex-wrap items-center justify-between gap-2 shadow-sm text-xs">
+          <div className="print:hidden bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-purple-500/15 border-b border-orange-500/30 px-3.5 sm:px-6 py-2 backdrop-blur-md sticky top-12 xs:top-14 sm:top-16 short:top-12 lg:top-0 z-20 flex flex-wrap items-center justify-between gap-2 shadow-sm text-xs">
             <div className="flex items-center gap-2 flex-wrap min-w-0">
               <span className="flex items-center gap-1.5 font-black uppercase text-[10px] tracking-widest text-orange-600 dark:text-orange-400 shrink-0">
                 <span className="size-2 rounded-full bg-orange-500 animate-ping inline-block" />
@@ -372,7 +372,7 @@ export const AppLayout = () => {
         {/* Mobile Bottom Navigation Rail */}
         <nav
           aria-label="Mobile Navigation"
-          className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-slate-900/95 backdrop-blur-md border-t border-white/15 pb-safe w-full max-w-[100vw] overflow-hidden shadow-2xl [isolation:isolate]"
+          className="print:hidden lg:hidden fixed bottom-0 inset-x-0 z-50 bg-slate-900/95 backdrop-blur-md border-t border-white/15 pb-safe w-full max-w-[100vw] overflow-hidden shadow-2xl [isolation:isolate]"
         >
           <div className="flex items-center justify-around h-13 xs:h-14 sm:h-16 short:h-12 max-w-2xl mx-auto w-full px-0.5 sm:px-4">
             {/* 1. Home / Mission Command */}
