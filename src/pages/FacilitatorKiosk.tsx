@@ -200,6 +200,7 @@ export const FacilitatorKiosk = () => {
 
   // Substitution Modal State
   const [subModalTeam, setSubModalTeam] = useState<'a' | 'b' | null>(null);
+  const [isSubmittingSub, setIsSubmittingSub] = useState(false);
 
   // Score Animations and Deltas
   const prevScoresRef = useRef<{ a: number; b: number; hasInitialized: boolean }>({
@@ -1187,7 +1188,7 @@ export const FacilitatorKiosk = () => {
     subOutPlayer: RosterPlayerItem,
     subInPlayer: RosterPlayerItem
   ) => {
-    if (!match || !subModalTeam) return;
+    if (!match || !subModalTeam || isSubmittingSub) return;
     if (!user) {
       toast.error('You must log in to execute player substitutions.');
       openLoginModal();
@@ -1198,57 +1199,68 @@ export const FacilitatorKiosk = () => {
       return;
     }
 
-    if (subModalTeam === 'a') {
-      setActivePlayerIdsA((prev) => {
-        const next = new Set(prev);
-        next.delete(subOutPlayer.player_id);
-        next.add(subInPlayer.player_id);
-        return next;
-      });
-    } else {
-      setActivePlayerIdsB((prev) => {
-        const next = new Set(prev);
-        next.delete(subOutPlayer.player_id);
-        next.add(subInPlayer.player_id);
-        return next;
-      });
+    setIsSubmittingSub(true);
+    try {
+      if (subModalTeam === 'a') {
+        setActivePlayerIdsA((prev) => {
+          const next = new Set(prev);
+          next.delete(subOutPlayer.player_id);
+          next.add(subInPlayer.player_id);
+          return next;
+        });
+        if (selectedScorerA === subOutPlayer.player_id) {
+          setSelectedScorerA(null);
+        }
+      } else {
+        setActivePlayerIdsB((prev) => {
+          const next = new Set(prev);
+          next.delete(subOutPlayer.player_id);
+          next.add(subInPlayer.player_id);
+          return next;
+        });
+        if (selectedScorerB === subOutPlayer.player_id) {
+          setSelectedScorerB(null);
+        }
+      }
+
+      playSubHornSound();
+      const teamName = subModalTeam === 'a' ? match.team_a?.name || 'Team A' : match.team_b?.name || 'Team B';
+      const outJersey = subOutPlayer.jersey_number ? `${subOutPlayer.jersey_number}` : '';
+      const inJersey = subInPlayer.jersey_number ? `${subInPlayer.jersey_number}` : '';
+      const resolveName = (u: RosterPlayerItem['users']) => {
+        if (!u) return '';
+        if (Array.isArray(u)) return u[0]?.full_name || '';
+        return u.full_name || '';
+      };
+      const outName = resolveName(subOutPlayer.users) || (outJersey ? `Jersey #${outJersey}` : 'Player');
+      const inName = resolveName(subInPlayer.users) || (inJersey ? `Jersey #${inJersey}` : 'Player');
+      const desc = `[Substitution]: ${outJersey ? '#' + outJersey + ' ' : ''}${outName} Off -> ${inJersey ? '#' + inJersey + ' ' : ''}${inName} On for ${teamName}.`;
+      toast.success(desc);
+
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current
+          .send({
+            type: 'broadcast',
+            event: 'substitution_alert',
+            payload: {
+              id: `sub-${Date.now()}`,
+              match_id: match.id,
+              team: subModalTeam,
+              teamName,
+              outPlayer: outName,
+              inPlayer: inName,
+              outJersey,
+              inJersey,
+              timestamp: Date.now(),
+            },
+          })
+          .catch(() => {});
+      }
+
+      await supabase.from('match_events').insert({ match_id: match.id, description: desc });
+    } finally {
+      setIsSubmittingSub(false);
     }
-
-    playSubHornSound();
-    const teamName = subModalTeam === 'a' ? match.team_a?.name || 'Team A' : match.team_b?.name || 'Team B';
-    const outJersey = subOutPlayer.jersey_number ? `${subOutPlayer.jersey_number}` : '';
-    const inJersey = subInPlayer.jersey_number ? `${subInPlayer.jersey_number}` : '';
-    const resolveName = (u: RosterPlayerItem['users']) => {
-      if (!u) return '';
-      if (Array.isArray(u)) return u[0]?.full_name || '';
-      return u.full_name || '';
-    };
-    const outName = resolveName(subOutPlayer.users) || (outJersey ? `Jersey #${outJersey}` : 'Player');
-    const inName = resolveName(subInPlayer.users) || (inJersey ? `Jersey #${inJersey}` : 'Player');
-    const desc = `[Substitution]: ${outJersey ? '#' + outJersey + ' ' : ''}${outName} Off -> ${inJersey ? '#' + inJersey + ' ' : ''}${inName} On for ${teamName}.`;
-    toast.success(desc);
-
-    if (broadcastChannelRef.current) {
-      broadcastChannelRef.current
-        .send({
-          type: 'broadcast',
-          event: 'substitution_alert',
-          payload: {
-            id: `sub-${Date.now()}`,
-            match_id: match.id,
-            team: subModalTeam,
-            teamName,
-            outPlayer: outName,
-            inPlayer: inName,
-            outJersey,
-            inJersey,
-            timestamp: Date.now(),
-          },
-        })
-        .catch(() => {});
-    }
-
-    await supabase.from('match_events').insert({ match_id: match.id, description: desc });
   };
 
   // Console Lease Claim with Conflict of Interest check and Shortage Policy Override
@@ -1768,6 +1780,7 @@ export const FacilitatorKiosk = () => {
         activePlayers={subModalTeam === 'a' ? activePlayersA : activePlayersB}
         benchPlayers={subModalTeam === 'a' ? benchPlayersA : benchPlayersB}
         onConfirmSub={handleConfirmSub}
+        isSubmitting={isSubmittingSub}
       />
 
       {/* Conflict of Interest Warning & Shortage Policy Override Dialog */}

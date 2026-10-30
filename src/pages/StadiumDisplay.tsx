@@ -112,6 +112,24 @@ export const StadiumDisplay = () => {
 
   // Substitution Alert Banner
   const [subAlert, setSubAlert] = useState<SubstitutionAlertData | null>(null);
+  const subTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSubHornTimeRef = useRef<number>(0);
+
+  const handleDismissSubAlert = useCallback(() => {
+    setSubAlert(null);
+    if (subTimerRef.current) {
+      clearTimeout(subTimerRef.current);
+      subTimerRef.current = null;
+    }
+  }, []);
+
+  const triggerSubHorn = useCallback(() => {
+    const now = Date.now();
+    if (now - lastSubHornTimeRef.current > 3000) {
+      lastSubHornTimeRef.current = now;
+      playSubHornSound();
+    }
+  }, []);
 
   // Team Fouls and Timeouts Counts
   const [teamAFouls, setTeamAFouls] = useState<number>(0);
@@ -328,8 +346,15 @@ export const StadiumDisplay = () => {
       })
       .on('broadcast', { event: 'substitution_alert' }, (payload) => {
         if (!payload.payload) return;
-        playSubHornSound();
-        setSubAlert(payload.payload as SubstitutionAlertData);
+        const subData = payload.payload as SubstitutionAlertData;
+        triggerSubHorn();
+        setSubAlert(subData);
+        if (subTimerRef.current) {
+          clearTimeout(subTimerRef.current);
+        }
+        subTimerRef.current = setTimeout(() => {
+          setSubAlert((prev) => (prev?.id === subData.id ? null : prev));
+        }, 6500);
       })
       .on('broadcast', { event: 'foul_update' }, (payload) => {
         if (!payload.payload) return;
@@ -374,7 +399,7 @@ export const StadiumDisplay = () => {
               };
             });
           } else if (desc.startsWith('[Substitution]:')) {
-            playSubHornSound();
+            triggerSubHorn();
           } else if (desc.startsWith('[Foul Recorded]:')) {
             playWhistleSound();
           }
@@ -382,11 +407,26 @@ export const StadiumDisplay = () => {
       )
       .subscribe();
 
+    const handleCustomSubAlert = (e: Event) => {
+      const customEvent = e as CustomEvent<SubstitutionAlertData>;
+      if (customEvent.detail) {
+        triggerSubHorn();
+        setSubAlert(customEvent.detail);
+        if (subTimerRef.current) clearTimeout(subTimerRef.current);
+        subTimerRef.current = setTimeout(() => {
+          setSubAlert((prev) => (prev?.id === customEvent.detail.id ? null : prev));
+        }, 6500);
+      }
+    };
+    window.addEventListener('psu:substitution_alert', handleCustomSubAlert);
+
     return () => {
+      window.removeEventListener('psu:substitution_alert', handleCustomSubAlert);
+      if (subTimerRef.current) clearTimeout(subTimerRef.current);
       supabase.removeChannel(broadcastChannel);
       supabase.removeChannel(postgresChannel);
     };
-  }, [matchId]);
+  }, [matchId, triggerSubHorn]);
 
   const sportProfile = useMemo(
     () => getSportScoringProfile(match?.tournament?.sport),
@@ -873,7 +913,7 @@ export const StadiumDisplay = () => {
       {/* Courtside Player Substitution Alert Lower-Third Banner */}
       <StadiumSubBanner
         alert={subAlert}
-        onDismiss={() => setSubAlert(null)}
+        onDismiss={handleDismissSubAlert}
       />
     </div>
   );

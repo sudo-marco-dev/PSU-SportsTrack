@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { ArrowLeftRight, ArrowDownRight, ArrowUpRight, X } from 'lucide-react';
 
 export interface SubstitutionAlertData {
@@ -24,23 +24,31 @@ export const StadiumSubBanner: React.FC<StadiumSubBannerProps> = ({
   durationMs = 6000,
 }) => {
   const [progress, setProgress] = useState(100);
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
+  const startTimeRef = useRef<number>(Date.now());
 
   useEffect(() => {
-    if (!alert) return;
+    if (!alert) {
+      setProgress(100);
+      return;
+    }
 
-    const start = Date.now();
+    setProgress(100);
+    // Use local browser clock anchored to alert arrival so parent re-renders never reset countdown
+    startTimeRef.current = Date.now();
     const interval = setInterval(() => {
-      const elapsed = Date.now() - start;
+      const elapsed = Date.now() - startTimeRef.current;
       const remaining = Math.max(0, 100 - (elapsed / durationMs) * 100);
       setProgress(remaining);
       if (remaining <= 0) {
         clearInterval(interval);
-        onDismiss();
+        onDismissRef.current();
       }
     }, 50);
 
     return () => clearInterval(interval);
-  }, [alert, durationMs, onDismiss]);
+  }, [alert?.id, durationMs]);
 
   if (!alert) return null;
 
