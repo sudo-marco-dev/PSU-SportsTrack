@@ -29,6 +29,7 @@ dist-ssr
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+tests/.auth-sessions.json
 
 .env
 .env.*
