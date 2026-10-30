@@ -2286,7 +2286,7 @@ export const LiveMatch = () => {
                   <CardTitle className="text-2xl text-primary font-black uppercase italic">Post-Game: Award MVP</CardTitle>
                   <p className="text-sm text-muted-foreground">Select the standout player of this match to recognize their performance.</p>
                 </CardHeader>
-                <CardContent className="max-w-md mx-auto space-y-4 pb-8 text-center">
+                <CardContent className="w-full max-w-lg sm:max-w-xl mx-auto space-y-4 pb-8 px-3 sm:px-6 text-center">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block text-left">Select MVP Player</label>
                     <MvpCandidateSelect

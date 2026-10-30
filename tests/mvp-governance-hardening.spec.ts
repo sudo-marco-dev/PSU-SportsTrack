@@ -357,4 +357,98 @@ test.describe('Hardened Facilitator MVP Governance & Admin Override Engine', () 
     await page.getByTestId('admin-revoke-reason').fill('Officiating review concluded invalid award nomination.');
     await expect(revokeBtn).toBeEnabled();
   });
+
+  test('Mobile viewport (375x667): candidate list renders full player names without ellipsis truncation for on-the-move scoring', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    await page.route('**/rest/v1/matches*', async (route) => {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: matchId,
+          round: 'Finals',
+          status: 'Completed',
+          team_a_score: 88,
+          team_b_score: 74,
+          team_a_id: 'team-scorpions',
+          team_b_id: 'team-enforcers',
+          team_a: { id: 'team-scorpions', name: 'CEAT Red Scorpions', college_id: 'col-ceat' },
+          team_b: { id: 'team-enforcers', name: 'CCJE Law Enforcers', college_id: 'col-ccje' },
+          tournament_id: 'tourn-1',
+          tournament: { name: 'PSU Palawan Games 2026', sport: 'Basketball' },
+          designated_facilitator_id: 'faci-user-01',
+        }),
+      });
+    });
+
+    await page.route('**/rest/v1/match_events*', async (route) => {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    });
+
+    await page.route('**/rest/v1/match_player_stats*', async (route) => {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          { match_id: matchId, player_id: 'p1', points: 15 },
+          { match_id: matchId, player_id: 'p2', points: 18 },
+        ]),
+      });
+    });
+
+    await page.route('**/rest/v1/team_roster*', async (route) => {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          { id: 'r1', team_id: 'team-scorpions', player_id: 'p1', jersey_number: 1, position: 'Setter (S)', is_starter: true, status: 'Approved', users: { full_name: 'Jiro Mendoza' } },
+          { id: 'r2', team_id: 'team-scorpions', player_id: 'p2', jersey_number: 3, position: 'Outside Hitter 1 (OH)', is_starter: true, status: 'Approved', users: { full_name: 'Dominic Flores' } },
+        ]),
+      });
+    });
+
+    await page.route('**/rest/v1/player_stars*', async (route) => {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
+    });
+
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'psu_dev_impersonated_persona',
+        JSON.stringify({
+          id: 'faci-user-01',
+          full_name: 'Karl Nuas',
+          email: 'karl.nuas@psu.palawan.edu.ph',
+          role: 'player_student',
+          is_facilitator: true,
+          is_verified: true,
+          college_id: 'col-cba',
+          account_status: 'Approved',
+        })
+      );
+    });
+
+    await page.goto(`/match/${matchId}`);
+    await page.waitForLoadState('networkidle');
+
+    // Open candidate selector on mobile screen
+    const selectTrigger = page.getByTestId('mvp-candidate-trigger');
+    await expect(selectTrigger).toBeVisible();
+    await selectTrigger.click();
+
+    // Verify full names are rendered and do NOT contain truncation ellipsis (...)
+    const jiroOption = page.getByRole('option', { name: /Jiro Mendoza/i });
+    await expect(jiroOption).toBeVisible();
+    const jiroText = await jiroOption.innerText();
+    expect(jiroText).not.toContain('Mendo...');
+    expect(jiroText).toContain('Jiro Mendoza');
+    expect(jiroText).toContain('Setter (S)');
+
+    const dominicOption = page.getByRole('option', { name: /Dominic Flores/i });
+    await expect(dominicOption).toBeVisible();
+    const dominicText = await dominicOption.innerText();
+    expect(dominicText).not.toContain('Flor...');
+    expect(dominicText).toContain('Dominic Flores');
+    expect(dominicText).toContain('Outside Hitter 1 (OH)');
+  });
 });
