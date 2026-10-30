@@ -46,6 +46,7 @@ import {
 import { PlayerDossierModal } from '@/components/scouting/PlayerDossierModal';
 import { MatchBoxScoreModal } from '@/components/scouting/MatchBoxScoreModal';
 import { formatCoachName } from '@/lib/utils';
+import { formatCampusShort } from '@/lib/psuCampuses';
 
 type ScoutPlayer = {
   id: string;
@@ -53,6 +54,7 @@ type ScoutPlayer = {
   role: string;
   is_verified: boolean;
   college_id: string | null;
+  campus?: string | null;
   program: string | null;
   year_level: number | string | null;
   preferred_sports: string[] | null;
@@ -65,6 +67,7 @@ type ScoutCoach = {
   full_name: string;
   is_verified: boolean;
   college_id: string | null;
+  campus?: string | null;
   colleges: { college_name: string } | null;
 };
 
@@ -321,7 +324,7 @@ export const ScoutingHub = () => {
       ] = await Promise.all([
         supabase
           .from('users')
-          .select('id, full_name, role, is_verified, college_id, program, year_level, preferred_sports, primary_position, colleges(college_name)')
+          .select('id, full_name, role, is_verified, college_id, campus, program, year_level, preferred_sports, primary_position, colleges(college_name)')
           .in('role', ['player_student', 'player_faculty', 'player_staff', 'Player'])
           .eq('is_verified', true)
           .neq('account_status', 'inactive')
@@ -330,7 +333,7 @@ export const ScoutingHub = () => {
         fetchBatchPlayerSummaries({ excludeFriendly: !canAccessFriendlyGames }),
         supabase
           .from('users')
-          .select('id, full_name, is_verified, college_id, colleges(college_name)')
+          .select('id, full_name, is_verified, college_id, campus, colleges(college_name)')
           .eq('role', 'coach')
           .neq('account_status', 'inactive')
           .neq('account_status', 'soft_deleted')
@@ -967,9 +970,15 @@ export const ScoutingHub = () => {
                             )}
                           </div>
 
-                          <div className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 min-w-0">
-                            <GraduationCap className="size-3.5 text-orange-500 shrink-0" />
-                            <span className="break-words line-clamp-2 leading-snug">{colName}</span>
+                          <div className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center justify-between gap-2 min-w-0">
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                              <GraduationCap className="size-3.5 text-orange-500 shrink-0" />
+                              <span className="break-words line-clamp-1 leading-snug">{colName}</span>
+                            </div>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 shrink-0 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md border border-slate-200/50 dark:border-white/5">
+                              <MapPin className="size-2.5 text-orange-500" />
+                              {formatCampusShort(p.campus)}
+                            </span>
                           </div>
 
                           {displaySports.length > 0 && (
@@ -1107,9 +1116,15 @@ export const ScoutingHub = () => {
                               <h3 className="text-lg font-black italic uppercase tracking-tight text-slate-900 dark:text-white break-words line-clamp-2 leading-snug">
                                 {formatCoachName(coach.full_name)}
                               </h3>
-                              <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 break-words line-clamp-2 leading-snug mt-0.5">
-                                {coach.colleges?.college_name || 'PSU Athletic Division'}
-                              </p>
+                              <div className="flex items-center justify-between gap-2 mt-0.5">
+                                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 break-words line-clamp-1 leading-snug">
+                                  {coach.colleges?.college_name || 'PSU Athletic Division'}
+                                </p>
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 shrink-0 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md border border-slate-200/50 dark:border-white/5">
+                                  <MapPin className="size-2.5 text-orange-500" />
+                                  {formatCampusShort(coach.campus)}
+                                </span>
+                              </div>
                             </div>
                           </div>
 

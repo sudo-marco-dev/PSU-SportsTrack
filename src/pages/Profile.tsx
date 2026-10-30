@@ -55,6 +55,7 @@ import { MatchBoxScoreModal } from '@/components/scouting/MatchBoxScoreModal';
 import { ExpandableIconTabs } from '@/components/ui/expandable-icon-tabs';
 import { formatCoachName } from '@/lib/utils';
 import { formatYearLevel, parseYearLevelInt, YEAR_LEVEL_OPTIONS } from '@/lib/formatYearLevel';
+import { PSU_CAMPUSES, DEFAULT_PSU_CAMPUS } from '@/lib/psuCampuses';
 
 type PlayerStar = {
   id: string;
@@ -129,8 +130,15 @@ export const Profile = () => {
   });
 
   // Academic Profile State (Editable by player if parsing error)
-  const [academicProfile, setAcademicProfile] = useState({
+  const [academicProfile, setAcademicProfile] = useState<{
+    studentNumber: string;
+    campus: string;
+    program: string;
+    yearLevel: string;
+    age: string;
+  }>({
     studentNumber: '',
+    campus: DEFAULT_PSU_CAMPUS,
     program: '',
     yearLevel: '',
     age: '',
@@ -159,6 +167,7 @@ export const Profile = () => {
     if (profile) {
       setAcademicProfile({
         studentNumber: profile.student_number || '',
+        campus: profile.campus || DEFAULT_PSU_CAMPUS,
         program: profile.program || '',
         yearLevel: profile.year_level ? String(profile.year_level) : '',
         age: profile.age ? String(profile.age) : '',
@@ -263,6 +272,7 @@ export const Profile = () => {
         .from('users')
         .update({
           student_number: academicProfile.studentNumber || null,
+          campus: academicProfile.campus || null,
           program: academicProfile.program || null,
           year_level: parseYearLevelInt(academicProfile.yearLevel),
           age: academicProfile.age ? parseInt(academicProfile.age, 10) : null,
@@ -2023,6 +2033,29 @@ export const Profile = () => {
                         onChange={(e) => setAcademicProfile((prev) => ({ ...prev, studentNumber: e.target.value }))}
                         className="h-11 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold"
                       />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="campus" className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                        PSU Campus
+                      </Label>
+                      <Select
+                        value={academicProfile.campus}
+                        onValueChange={(val) => setAcademicProfile((prev) => ({ ...prev, campus: val || DEFAULT_PSU_CAMPUS }))}
+                      >
+                        <SelectTrigger className="h-11 rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-xs font-bold">
+                          <SelectValue placeholder="Select Campus">
+                            {academicProfile.campus}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl max-h-56">
+                          {PSU_CAMPUSES.map((camp) => (
+                            <SelectItem key={camp} value={camp}>
+                              {camp}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="space-y-1.5">

@@ -47,6 +47,7 @@ interface AuthContextType {
     student_number?: string | null;
     employee_id?: string | null;
     department?: string | null;
+    campus?: string | null;
     program?: string | null;
     year_level?: number | string | null;
     age?: number | null;
@@ -187,6 +188,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           student_number: data.student_number || null,
           employee_id: data.employee_id || null,
           department: data.department || null,
+          campus: data.campus || 'PSU Main Campus (Puerto Princesa)',
           program: data.program || null,
           year_level: data.year_level || null,
           age: data.age ?? null,

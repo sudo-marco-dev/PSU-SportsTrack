@@ -179,20 +179,22 @@ export const FacilitatorsTab: React.FC<FacilitatorsTabProps> = ({
 
       if (error) throw error;
 
-      const formatted: MatchItem[] = (data || []).map((m: any) => ({
-        ...m,
-        team_a: m.team_a ? {
-          ...m.team_a,
-          colleges: Array.isArray(m.team_a.colleges) ? m.team_a.colleges[0] : m.team_a.colleges
-        } : null,
-        team_b: m.team_b ? {
-          ...m.team_b,
-          colleges: Array.isArray(m.team_b.colleges) ? m.team_b.colleges[0] : m.team_b.colleges
-        } : null,
-        designated_facilitator: Array.isArray(m.designated_facilitator)
-          ? m.designated_facilitator[0]
-          : m.designated_facilitator
-      }));
+      const formatted: MatchItem[] = Array.isArray(data)
+        ? data.map((m: any) => ({
+            ...m,
+            team_a: m.team_a ? {
+              ...m.team_a,
+              colleges: Array.isArray(m.team_a.colleges) ? m.team_a.colleges[0] : m.team_a.colleges
+            } : null,
+            team_b: m.team_b ? {
+              ...m.team_b,
+              colleges: Array.isArray(m.team_b.colleges) ? m.team_b.colleges[0] : m.team_b.colleges
+            } : null,
+            designated_facilitator: Array.isArray(m.designated_facilitator)
+              ? m.designated_facilitator[0]
+              : m.designated_facilitator
+          }))
+        : [];
 
       setMatches(formatted);
     } catch (err: any) {
@@ -505,7 +507,12 @@ export const FacilitatorsTab: React.FC<FacilitatorsTabProps> = ({
               <div className="w-full sm:w-64">
                 <Select value={selectedTournamentId} onValueChange={(val) => setSelectedTournamentId(val || '')}>
                   <SelectTrigger className="h-10 text-xs font-bold bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-white/10">
-                    <SelectValue placeholder="Select Tournament" />
+                    <SelectValue placeholder="Select Tournament">
+                      {(() => {
+                        const tourney = tournaments.find((t) => t.id === selectedTournamentId);
+                        return tourney ? `${tourney.name} (${tourney.sport})` : undefined;
+                      })()}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {tournaments.map((t) => (
@@ -661,7 +668,11 @@ export const FacilitatorsTab: React.FC<FacilitatorsTabProps> = ({
                               ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-400"
                               : "border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-slate-950 text-slate-400"
                           )}>
-                            <SelectValue placeholder="Assign Official..." />
+                            <SelectValue placeholder="Assign Official...">
+                              {m.designated_facilitator_id && m.designated_facilitator_id !== 'none'
+                                ? officials.find((o) => o.id === m.designated_facilitator_id)?.full_name || 'Assigned Official'
+                                : undefined}
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none" className="text-slate-400 italic">
@@ -897,7 +908,11 @@ export const FacilitatorsTab: React.FC<FacilitatorsTabProps> = ({
               </label>
               <Select value={bulkOfficialId} onValueChange={(val) => setBulkOfficialId(val || '')}>
                 <SelectTrigger className="h-10 bg-slate-900 border-white/10 text-white font-bold">
-                  <SelectValue placeholder="Choose Official..." />
+                  <SelectValue placeholder="Choose Official...">
+                    {bulkOfficialId
+                      ? officials.find((o) => o.id === bulkOfficialId)?.full_name || 'Choose Official...'
+                      : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {officials.map((off) => (

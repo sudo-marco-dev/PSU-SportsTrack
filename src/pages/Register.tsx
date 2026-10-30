@@ -25,6 +25,7 @@ import { LegalModal } from '@/components/legal/LegalModal';
 import { OtpVerificationStep } from '@/components/auth/OtpVerificationStep';
 import { LEGAL_ACCEPTANCE_STORAGE_KEY, REGISTER_DRAFT_STORAGE_KEY } from '@/pages/Legal';
 import { getFriendlyErrorMessage } from '@/lib/friendlyErrors';
+import { PSU_CAMPUSES, DEFAULT_PSU_CAMPUS } from '@/lib/psuCampuses';
 
 const PSU_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@psu\.palawan\.edu\.ph$/i;
 
@@ -49,6 +50,7 @@ const registerSchema = z.object({
   confirmPassword: z.string().min(1, { message: 'Please confirm your password' }),
   role: z.enum(['player_student', 'player_faculty', 'player_staff', 'coach'] as const, { message: 'Role is required' }),
   collegeId: z.string().optional(),
+  campus: z.string().optional(),
   employeeId: z.string().optional(),
   department: z.string().optional(),
   termsAccepted: z.boolean().refine((val) => val === true, {
@@ -94,6 +96,7 @@ export const Register = () => {
       confirmPassword: '',
       role: 'player_student',
       collegeId: '',
+      campus: DEFAULT_PSU_CAMPUS,
       employeeId: '',
       department: '',
       termsAccepted: false,
@@ -115,6 +118,7 @@ export const Register = () => {
             confirmPassword: draft.confirmPassword ?? '',
             role: draft.role ?? 'player_student',
             collegeId: draft.collegeId ?? '',
+            campus: draft.campus ?? DEFAULT_PSU_CAMPUS,
             employeeId: draft.employeeId ?? '',
             department: draft.department ?? '',
             termsAccepted: Boolean(draft.termsAccepted),
@@ -167,6 +171,7 @@ export const Register = () => {
             last_name: values.lastName.trim(),
             role: values.role,
             college_id: values.collegeId || null,
+            campus: values.role === 'player_student' ? (values.campus || DEFAULT_PSU_CAMPUS) : DEFAULT_PSU_CAMPUS,
             employee_id: values.employeeId ? values.employeeId.trim() : null,
             department: values.department ? values.department.trim() : null,
             terms_accepted_at: finalAcceptedAt,
@@ -200,6 +205,7 @@ export const Register = () => {
           email: cleanEmail,
           role: values.role,
           college_id: values.collegeId || null,
+          campus: values.role === 'player_student' ? (values.campus || DEFAULT_PSU_CAMPUS) : DEFAULT_PSU_CAMPUS,
           employee_id: values.employeeId ? values.employeeId.trim() : null,
           department: values.department ? values.department.trim() : null,
           terms_accepted_at: finalAcceptedAt,
@@ -470,6 +476,39 @@ export const Register = () => {
                       )}
                     />
                   </div>
+
+                  {form.watch('role') === 'player_student' && (
+                    <div className="animate-in fade-in duration-300">
+                      <FormField
+                        control={form.control}
+                        name="campus"
+                        render={({ field }) => (
+                          <FormItem className="space-y-1">
+                            <FormLabel className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
+                              PSU Campus
+                            </FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || DEFAULT_PSU_CAMPUS}>
+                              <FormControl>
+                                <SelectTrigger className="h-11 bg-white/5 border-white/15 text-white rounded-xl">
+                                  <SelectValue placeholder="Select PSU Campus">
+                                    {field.value || DEFAULT_PSU_CAMPUS}
+                                  </SelectValue>
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="bg-slate-800 border-white/15 text-white max-h-60">
+                                {PSU_CAMPUSES.map((camp) => (
+                                  <SelectItem key={camp} value={camp}>
+                                    {camp}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage className="text-orange-500 text-[10px] font-bold uppercase" />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
 
                   {(form.watch('role') === 'player_staff' || form.watch('role') === 'player_faculty') && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-in fade-in duration-300">

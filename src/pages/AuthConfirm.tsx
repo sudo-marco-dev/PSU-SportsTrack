@@ -106,6 +106,7 @@ export const AuthConfirm = () => {
           const collegeId = metadata.college_id || null;
           const employeeId = metadata.employee_id || null;
           const department = metadata.department || null;
+          const campus = metadata.campus || 'PSU Main Campus (Puerto Princesa)';
 
           try {
             await supabase.from('users').upsert(
@@ -117,6 +118,7 @@ export const AuthConfirm = () => {
                 college_id: collegeId,
                 employee_id: employeeId,
                 department: department,
+                campus: campus,
                 account_status: 'active',
                 is_verified: false,
               },

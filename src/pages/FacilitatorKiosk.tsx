@@ -57,6 +57,7 @@ import {
   KioskSubstitutionModal,
   type RosterPlayerItem,
 } from '@/components/kiosk/KioskSubstitutionModal';
+import { KioskScoreCreditModal } from '@/components/kiosk/KioskScoreCreditModal';
 
 type Match = {
   id: string;
@@ -201,6 +202,15 @@ export const FacilitatorKiosk = () => {
   // Substitution Modal State
   const [subModalTeam, setSubModalTeam] = useState<'a' | 'b' | null>(null);
   const [isSubmittingSub, setIsSubmittingSub] = useState(false);
+
+  // Post-Score Player Credit Modal State
+  const [pendingScoreAction, setPendingScoreAction] = useState<{
+    team: 'a' | 'b';
+    points: number;
+    actionType: string;
+    actionDesc?: string;
+  } | null>(null);
+  const [isSubmittingScore, setIsSubmittingScore] = useState(false);
 
   // Score Animations and Deltas
   const prevScoresRef = useRef<{ a: number; b: number; hasInitialized: boolean }>({
@@ -734,8 +744,8 @@ export const FacilitatorKiosk = () => {
     prevScoresRef.current = { a: currA, b: currB, hasInitialized: true };
   }, [match]);
 
-  // Score Action Handler
-  const handleScore = async (
+  // Score Action Trigger - Prompts scorekeeper for 1-tap player attribution
+  const handleScore = (
     team: 'a' | 'b',
     points: number,
     actionType: string,
@@ -756,150 +766,169 @@ export const FacilitatorKiosk = () => {
       return;
     }
 
-    const teamId = team === 'a' ? match.team_a_id : match.team_b_id;
-    const teamName = team === 'a' ? match.team_a?.name || 'Team A' : match.team_b?.name || 'Team B';
-    if (!teamId) return;
+    setPendingScoreAction({ team, points, actionType, actionDesc });
+  };
 
-    const newScoreA = team === 'a' ? match.team_a_score + points : match.team_a_score;
-    const newScoreB = team === 'b' ? match.team_b_score + points : match.team_b_score;
-    const nextStatus = match.status === 'Scheduled' ? 'Ongoing' : match.status;
+  // Commit Score with Selected Player Credit or Team Point
+  const handleConfirmScoreCredit = async (chosenPlayerId: string | null) => {
+    if (!match || !pendingScoreAction || isSubmittingScore) return;
+    if (!user || !isAuthorized) {
+      setPendingScoreAction(null);
+      return;
+    }
 
-    const selectedPlayerId = team === 'a' ? selectedScorerA : selectedScorerB;
-    const scorerObj = selectedPlayerId
-      ? rosterPlayers.find((r) => r.team_id === teamId && r.player_id === selectedPlayerId)
-      : undefined;
-    const scorerName = scorerObj
-      ? (Array.isArray(scorerObj.users) ? scorerObj.users[0]?.full_name : scorerObj.users?.full_name) || ''
-      : '';
-    const scorerPrefix = scorerObj
-      ? ` — #${scorerObj.jersey_number ?? '--'} ${scorerName}`
-      : '';
+    const { team, points, actionType, actionDesc } = pendingScoreAction;
+    setIsSubmittingScore(true);
 
-    const desc = `${teamName}${scorerPrefix} scored ${points} ${sportProfile.pointUnit} (${actionDesc || actionType})!`;
+    try {
+      const teamId = team === 'a' ? match.team_a_id : match.team_b_id;
+      const teamName = team === 'a' ? match.team_a?.name || 'Team A' : match.team_b?.name || 'Team B';
+      if (!teamId) return;
 
-    // Save for undo
-    lastScoreActionRef.current = {
-      team,
-      points,
-      prevScoreA: match.team_a_score,
-      prevScoreB: match.team_b_score,
-    };
+      const newScoreA = team === 'a' ? match.team_a_score + points : match.team_a_score;
+      const newScoreB = team === 'b' ? match.team_b_score + points : match.team_b_score;
+      const nextStatus = match.status === 'Scheduled' ? 'Ongoing' : match.status;
 
-    if (!navigator.onLine) {
-      offlineQueue.bufferScore(match.id, newScoreA, newScoreB);
-      const offlineEvt = offlineQueue.bufferEvent(match.id, desc);
-      if (scorerObj?.player_id) {
-        offlineQueue.bufferScoreEvent(match.id, {
+      const scorerObj = chosenPlayerId
+        ? rosterPlayers.find((r) => r.team_id === teamId && r.player_id === chosenPlayerId)
+        : undefined;
+      const scorerName = scorerObj
+        ? (Array.isArray(scorerObj.users) ? scorerObj.users[0]?.full_name : scorerObj.users?.full_name) || ''
+        : '';
+      const scorerPrefix = scorerObj
+        ? ` — #${scorerObj.jersey_number ?? '--'} ${scorerName}`
+        : '';
+
+      const desc = `${teamName}${scorerPrefix} scored ${points} ${sportProfile.pointUnit} (${actionDesc || actionType})!`;
+
+      // Save for undo
+      lastScoreActionRef.current = {
+        team,
+        points,
+        prevScoreA: match.team_a_score,
+        prevScoreB: match.team_b_score,
+      };
+
+      if (!navigator.onLine) {
+        offlineQueue.bufferScore(match.id, newScoreA, newScoreB);
+        const offlineEvt = offlineQueue.bufferEvent(match.id, desc);
+        if (scorerObj?.player_id) {
+          offlineQueue.bufferScoreEvent(match.id, {
+            match_id: match.id,
+            team_id: teamId,
+            player_id: scorerObj.player_id,
+            jersey_number: scorerObj.jersey_number !== null && scorerObj.jersey_number !== undefined ? String(scorerObj.jersey_number) : null,
+            points: points,
+            delta: points,
+            action_type: actionType,
+            stat_type: `PTS_${points}`,
+          });
+        }
+        setMatch((prev) => (prev ? { ...prev, status: nextStatus, team_a_score: newScoreA, team_b_score: newScoreB } : prev));
+        setEvents((prev) => [offlineEvt, ...prev]);
+        setPendingOfflineCount(offlineQueue.getPendingCount(match.id));
+        setCanUndo(true);
+        toast.warning('Offline Mode: Score buffered locally.');
+        setPendingScoreAction(null);
+        return;
+      }
+
+      const { data: updatedMatches, error } = await supabase
+        .from('matches')
+        .update({ status: nextStatus, team_a_score: newScoreA, team_b_score: newScoreB })
+        .eq('id', match.id)
+        .select('id');
+
+      if (error) {
+        toast.error(getFriendlyErrorMessage(error, 'Failed to update score. Please try again.'));
+        return;
+      }
+
+      if (!updatedMatches || updatedMatches.length === 0) {
+        toast.error('Permission Denied: Database write rejected. Please claim the scoring console lease.');
+        return;
+      }
+
+      setMatch((prev) => (prev ? { ...prev, status: nextStatus, team_a_score: newScoreA, team_b_score: newScoreB } : prev));
+
+      if (broadcastChannelRef.current) {
+        await broadcastChannelRef.current.send({
+          type: 'broadcast',
+          event: 'score_update',
+          payload: {
+            match_id: match.id,
+            team_a_score: newScoreA,
+            team_b_score: newScoreB,
+          },
+        });
+      }
+
+      // Insert score audit event (with player_id when an on-court player is selected)
+      const { data: scoreEvt } = await supabase
+        .from('match_score_events')
+        .insert({
           match_id: match.id,
           team_id: teamId,
-          player_id: scorerObj.player_id,
-          jersey_number: scorerObj.jersey_number !== null && scorerObj.jersey_number !== undefined ? String(scorerObj.jersey_number) : null,
+          player_id: scorerObj?.player_id || null,
           points: points,
-          delta: points,
           action_type: actionType,
           stat_type: `PTS_${points}`,
-        });
-      }
-      setMatch((prev) => (prev ? { ...prev, status: nextStatus, team_a_score: newScoreA, team_b_score: newScoreB } : prev));
-      setEvents((prev) => [offlineEvt, ...prev]);
-      setPendingOfflineCount(offlineQueue.getPendingCount(match.id));
-      setCanUndo(true);
-      toast.warning('Offline Mode: Score buffered locally.');
-      return;
-    }
-
-    const { data: updatedMatches, error } = await supabase
-      .from('matches')
-      .update({ status: nextStatus, team_a_score: newScoreA, team_b_score: newScoreB })
-      .eq('id', match.id)
-      .select('id');
-
-    if (error) {
-      toast.error(getFriendlyErrorMessage(error, 'Failed to update score. Please try again.'));
-      return;
-    }
-
-    if (!updatedMatches || updatedMatches.length === 0) {
-      toast.error('Permission Denied: Database write rejected. Please claim the scoring console lease.');
-      return;
-    }
-
-    setMatch((prev) => (prev ? { ...prev, status: nextStatus, team_a_score: newScoreA, team_b_score: newScoreB } : prev));
-
-    if (broadcastChannelRef.current) {
-      await broadcastChannelRef.current.send({
-        type: 'broadcast',
-        event: 'score_update',
-        payload: {
-          match_id: match.id,
-          team_a_score: newScoreA,
-          team_b_score: newScoreB,
-        },
-      });
-    }
-
-    // Insert score audit event (with player_id when an on-court player is selected)
-    const { data: scoreEvt } = await supabase
-      .from('match_score_events')
-      .insert({
-        match_id: match.id,
-        team_id: teamId,
-        player_id: scorerObj?.player_id || null,
-        points: points,
-        action_type: actionType,
-        stat_type: `PTS_${points}`,
-        delta: points,
-        recorded_by: user.id,
-      })
-      .select('id')
-      .maybeSingle();
-
-    if (scoreEvt) {
-      lastScoreActionRef.current = {
-        ...lastScoreActionRef.current,
-        scoreEventId: scoreEvt.id,
-        playerId: scorerObj?.player_id || undefined,
-      };
-    }
-
-    // Credit match_player_stats when an on-court player is selected
-    if (scorerObj?.player_id) {
-      const { data: existingStat } = await supabase
-        .from('match_player_stats')
-        .select('id, points')
-        .eq('match_id', match.id)
-        .eq('player_id', scorerObj.player_id)
+          delta: points,
+          recorded_by: user.id,
+        })
+        .select('id')
         .maybeSingle();
 
-      if (existingStat) {
-        await supabase
-          .from('match_player_stats')
-          .update({
-            points: Math.max(0, Number(existingStat.points || 0) + points),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', existingStat.id);
-      } else {
-        await supabase.from('match_player_stats').insert({
-          match_id: match.id,
-          team_id: teamId,
-          player_id: scorerObj.player_id,
-          jersey_number: scorerObj.jersey_number !== null && scorerObj.jersey_number !== undefined ? String(scorerObj.jersey_number) : null,
-          points: Math.max(0, points),
-        });
+      if (scoreEvt) {
+        lastScoreActionRef.current = {
+          ...lastScoreActionRef.current,
+          scoreEventId: scoreEvt.id,
+          playerId: scorerObj?.player_id || undefined,
+        };
       }
-    }
 
-    const { data: eventData } = await supabase
-      .from('match_events')
-      .insert({ match_id: match.id, description: desc })
-      .select()
-      .single();
+      // Credit match_player_stats when an on-court player is selected
+      if (scorerObj?.player_id) {
+        const { data: existingStat } = await supabase
+          .from('match_player_stats')
+          .select('id, points')
+          .eq('match_id', match.id)
+          .eq('player_id', scorerObj.player_id)
+          .maybeSingle();
 
-    if (eventData) {
-      setEvents((prev) => [eventData as MatchEvent, ...prev.slice(0, 9)]);
+        if (existingStat) {
+          await supabase
+            .from('match_player_stats')
+            .update({
+              points: Math.max(0, Number(existingStat.points || 0) + points),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existingStat.id);
+        } else {
+          await supabase.from('match_player_stats').insert({
+            match_id: match.id,
+            team_id: teamId,
+            player_id: scorerObj.player_id,
+            jersey_number: scorerObj.jersey_number !== null && scorerObj.jersey_number !== undefined ? String(scorerObj.jersey_number) : null,
+            points: Math.max(0, points),
+          });
+        }
+      }
+
+      const { data: eventData } = await supabase
+        .from('match_events')
+        .insert({ match_id: match.id, description: desc })
+        .select()
+        .single();
+
+      if (eventData) {
+        setEvents((prev) => [eventData as MatchEvent, ...prev.slice(0, 9)]);
+      }
+      setCanUndo(true);
+      setPendingScoreAction(null);
+    } finally {
+      setIsSubmittingScore(false);
     }
-    setCanUndo(true);
   };
 
   // 1-Tap Undo Last Score Action
@@ -1481,7 +1510,13 @@ export const FacilitatorKiosk = () => {
             type="button"
             variant="ghost"
             size="icon"
-            onClick={() => navigate(`/match/${match.id}`)}
+            onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate(`/match/${match.id}`, { replace: true });
+              }
+            }}
             className="size-7 sm:size-8 rounded-lg bg-white/5 hover:bg-white/15 border border-white/10 text-slate-300 shrink-0"
             title="Return to standard Match Control"
           >
@@ -1766,6 +1801,27 @@ export const FacilitatorKiosk = () => {
             </main>
           )}
         </div>
+      )}
+
+      {/* Post-Score Player Credit Modal */}
+      {pendingScoreAction && (
+        <KioskScoreCreditModal
+          isOpen={Boolean(pendingScoreAction)}
+          onClose={() => !isSubmittingScore && setPendingScoreAction(null)}
+          team={pendingScoreAction.team}
+          teamName={
+            pendingScoreAction.team === 'a'
+              ? match.team_a?.name || 'Team A'
+              : match.team_b?.name || 'Team B'
+          }
+          points={pendingScoreAction.points}
+          pointUnit={sportProfile.pointUnit}
+          actionType={pendingScoreAction.actionType}
+          actionDesc={pendingScoreAction.actionDesc}
+          activePlayers={pendingScoreAction.team === 'a' ? activePlayersA : activePlayersB}
+          onConfirmScore={handleConfirmScoreCredit}
+          isSubmitting={isSubmittingScore}
+        />
       )}
 
       {/* Quick Player Substitution Dialog */}

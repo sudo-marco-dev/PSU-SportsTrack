@@ -591,34 +591,40 @@ export const StadiumDisplay = () => {
     >
       {/* Top Arena Navigation & Header Bar */}
       <header className="w-full px-6 py-4 md:px-10 md:py-6 flex items-center justify-between border-b border-white/10 bg-slate-950/80 backdrop-blur-md relative z-20">
-        <div className="flex items-center gap-4 sm:gap-6">
+        <div className="flex items-center gap-3 sm:gap-4 max-w-[calc(50%-100px)] md:max-w-[42%] min-w-0">
           <button
             type="button"
-            onClick={() => navigate(`/match/${match.id}`)}
-            className="size-10 sm:size-11 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer"
+            onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate(`/match/${match.id}`, { replace: true });
+              }
+            }}
+            className="size-10 sm:size-11 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer shrink-0"
             title="Back to Match Control / Box Score"
           >
             <ChevronLeft className="size-5" />
           </button>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-              <span className="p-1 rounded bg-orange-500 text-slate-950">
+              <span className="p-1 rounded bg-orange-500 text-slate-950 shrink-0">
                 {createElement(getSportIcon(match.tournament?.sport), { className: 'size-3.5' })}
               </span>
-              <span className="text-[11px] sm:text-xs font-black uppercase tracking-[0.2em] text-orange-400">
+              <span className="text-[11px] sm:text-xs font-black uppercase tracking-[0.2em] text-orange-400 truncate">
                 {match.tournament?.sport || 'Ball Game'} • {match.round}
               </span>
               {match.venue && (
                 <>
                   <span className="text-slate-600 hidden sm:inline">•</span>
-                  <span className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-slate-400 bg-white/5 px-2 py-0.5 rounded border border-white/5">
+                  <span className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-slate-400 bg-white/5 px-2 py-0.5 rounded border border-white/5 truncate">
                     <MapPin className="size-3 text-orange-400 shrink-0" />
-                    <span>{match.venue}</span>
+                    <span className="truncate">{match.venue}</span>
                   </span>
                 </>
               )}
             </div>
-            <h1 className="text-xs sm:text-base md:text-xl font-black uppercase italic tracking-tight text-slate-100 line-clamp-2 break-words leading-tight pr-2 max-w-sm sm:max-w-lg md:max-w-2xl">
+            <h1 className="text-xs sm:text-base md:text-lg font-black uppercase italic tracking-tight text-slate-100 line-clamp-1 break-words leading-tight pr-2">
               {match.tournament?.name || 'PSU Collegiate Games'}
             </h1>
           </div>
@@ -857,21 +863,23 @@ export const StadiumDisplay = () => {
       </main>
 
       {/* Bottom Arena Footer: Live Play-by-Play Ticker & Spectator QR Code */}
-      <footer className="w-full bg-slate-950/90 border-t border-white/10 px-6 py-4 md:px-10 md:py-5 flex flex-col md:flex-row items-center justify-between gap-4 relative z-20">
-        {/* Play-by-play ticker bar */}
-        <div className="flex-1 flex items-center gap-3 w-full overflow-hidden">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-500/10 border border-orange-500/30 text-orange-400 text-xs font-black uppercase tracking-wider shrink-0">
-            <Radio className="size-3.5 animate-pulse text-orange-500" />
-            <span>Live Action</span>
+      <footer className="w-full bg-slate-950/95 border-t border-white/10 px-6 py-4 md:px-10 md:py-5 flex flex-col md:flex-row items-center justify-between gap-4 relative z-20">
+        {/* Play-by-play ticker bar (Arena Grade High-Contrast Ticker) */}
+        <div className="flex-1 flex items-center gap-3 w-full overflow-hidden bg-slate-900/90 border border-orange-500/30 shadow-[0_0_20px_rgba(249,115,22,0.12)] rounded-2xl px-3.5 py-2.5 sm:px-5 sm:py-3">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-orange-500 text-slate-950 text-xs font-black uppercase tracking-wider shrink-0 shadow-md">
+            <Radio className="size-4 animate-pulse text-slate-950" />
+            <span>LIVE ACTION</span>
           </div>
           <div className="flex-1 overflow-hidden relative">
             {events.length > 0 ? (
-              <div className="text-xs sm:text-sm font-medium text-slate-200 truncate animate-in fade-in duration-300">
-                <strong className="text-orange-400 mr-2">Latest:</strong>
-                {events[0]?.description}
+              <div className="text-sm sm:text-base md:text-lg font-black text-white truncate tracking-wide animate-in fade-in slide-in-from-bottom-1 duration-300">
+                <span className="text-orange-400 uppercase tracking-wider text-xs sm:text-sm mr-2.5 font-black">
+                  Latest:
+                </span>
+                <span className="text-slate-100">{events[0]?.description}</span>
               </div>
             ) : (
-              <span className="text-xs font-medium text-slate-500 italic">
+              <span className="text-xs sm:text-sm font-semibold text-slate-400 italic">
                 Official play-by-play events will stream live here as points are recorded...
               </span>
             )}

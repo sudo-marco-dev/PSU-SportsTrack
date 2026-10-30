@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   Calendar,
   Building,
+  MapPin,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
@@ -51,6 +52,7 @@ type PlayerProfileInfo = {
   age: number | null;
   employee_id?: string | null;
   department?: string | null;
+  campus?: string | null;
   preferred_sports: string[] | null;
   primary_position: string | null;
   colleges: { college_name: string } | null;
@@ -82,7 +84,7 @@ export const PlayerDossierModal = ({
     Promise.all([
       supabase
         .from('users')
-        .select('id, full_name, role, is_verified, program, year_level, age, employee_id, department, preferred_sports, primary_position, colleges(college_name)')
+        .select('id, full_name, role, is_verified, program, year_level, age, employee_id, department, campus, preferred_sports, primary_position, colleges(college_name)')
         .eq('id', playerId)
         .maybeSingle(),
       fetchPlayerTelemetry(playerId, { excludeFriendly: !canAccessFriendlyGames }),
@@ -161,6 +163,10 @@ export const PlayerDossierModal = ({
                       <GraduationCap className="size-3.5 text-orange-500" />
                     )}
                     {playerInfo?.department || playerInfo?.colleges?.college_name || 'Unassigned Unit'}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300">
+                    <MapPin className="size-3 text-orange-500" />
+                    {playerInfo?.campus || 'PSU Main Campus'}
                   </span>
                   {playerInfo?.program && (
                     <span>• {playerInfo.program}</span>
