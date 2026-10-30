@@ -12,10 +12,10 @@ export const FloatingDeltaBadge = ({ deltas }: FloatingDeltaBadgeProps) => {
       {deltas.map((d) => (
         <div
           key={d.id}
-          className={`animate-float-delta absolute left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-base sm:text-lg md:text-xl font-black italic tracking-wider shadow-xl flex items-center gap-1 border ${
+          className={`animate-float-delta absolute left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-lg text-base sm:text-lg md:text-xl font-mono font-black italic tracking-wider flex items-center gap-1 shadow-md ${
             d.isPositive
-              ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-slate-950 border-emerald-300 shadow-emerald-500/50'
-              : 'bg-gradient-to-r from-red-600 to-rose-700 text-white border-red-400 shadow-red-500/50'
+              ? 'bg-emerald-500 text-slate-950 border border-emerald-300'
+              : 'bg-red-600 text-white border border-red-400'
           }`}
         >
           <span>{d.delta}</span>

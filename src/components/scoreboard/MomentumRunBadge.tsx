@@ -11,13 +11,14 @@ export const MomentumRunBadge = ({ run, className = '' }: MomentumRunBadgeProps)
 
   return (
     <div
-      className={`animate-flame-pulse inline-flex items-center gap-2 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full bg-gradient-to-r from-red-600/90 via-orange-600/90 to-amber-600/90 text-white font-black uppercase tracking-wider text-xs sm:text-sm shadow-xl border border-orange-400/50 shadow-orange-600/40 select-none whitespace-nowrap shrink-0 ${className}`}
+      className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-red-950/80 border border-red-500/50 text-white font-black uppercase tracking-wider text-xs select-none whitespace-nowrap shrink-0 ${className}`}
     >
-      <Flame className="size-3.5 sm:size-4 text-yellow-300 fill-current animate-pulse shrink-0" />
-      <span className="drop-shadow whitespace-nowrap flex items-center">
-        <span className="text-yellow-200 font-mono">{run.points}-0 RUN</span>
-        <span className="mx-1.5 opacity-60">•</span>
-        <span className="truncate max-w-[120px] sm:max-w-[180px] inline-block">{run.teamName}</span>
+      <Flame className="size-3.5 text-amber-400 shrink-0" />
+      <span className="px-1.5 py-0.2 rounded bg-red-600 text-white font-mono font-black text-[11px] leading-tight">
+        {run.points}-0 RUN
+      </span>
+      <span className="text-slate-200 text-xs font-bold truncate max-w-[130px] sm:max-w-[180px]">
+        {run.teamName}
       </span>
     </div>
   );

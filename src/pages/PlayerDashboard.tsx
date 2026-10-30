@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Activity, Trophy, Clock, Star, User, CalendarDays, Dumbbell, Swords, MapPin, XCircle, CheckCircle2, Zap, ArrowRight, Layers, Sparkles, ShieldCheck, Users, Mail, ChevronRight } from 'lucide-react';
+import { Activity, Trophy, Clock, Star, User, CalendarDays, Dumbbell, Swords, MapPin, XCircle, CheckCircle2, Zap, ArrowRight, Layers, Sparkles, ShieldCheck, Users, Mail, ChevronRight, Tv } from 'lucide-react';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { getSportIcon, resolveSportName } from '@/lib/sportIcons';
 import { formatYearLevel } from '@/lib/formatYearLevel';
@@ -721,7 +721,127 @@ export const PlayerDashboard = () => {
         </section>
       )}
 
-      {/* 3. MY ACTIVE SQUADS & ROSTERS SECTION */}
+      {/* 3. LIVE & UPCOMING GAMES SECTION (PROMOTED TO TOP) */}
+      <section className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-lg md:text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white flex items-center gap-2 pr-2">
+            <Activity className="size-5 text-orange-500" /> Live & Upcoming Games
+          </h2>
+          {sortedLiveMatches.length > 0 && (
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded-full border border-slate-200 dark:border-white/10">
+              {sortedLiveMatches.filter((m) => m.status === 'Ongoing').length > 0
+                ? `${sortedLiveMatches.filter((m) => m.status === 'Ongoing').length} Live Now`
+                : `${sortedLiveMatches.length} Fixtures`}
+            </span>
+          )}
+        </div>
+        {sortedLiveMatches.length === 0 ? (
+          <Card className="p-10 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-2xl md:rounded-3xl text-center bg-white/50 dark:bg-slate-900/30">
+            <Activity className="size-10 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
+            <h3 className="font-bold text-sm text-slate-700 dark:text-slate-300 uppercase tracking-wider">No Active Fixtures</h3>
+            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+              There are no live or upcoming scheduled matches right now. Check back when tournament rounds begin.
+            </p>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {sortedLiveMatches.map((match, index) => {
+              const isMatchFriendly = isFriendlyTourn(match.tournament);
+              const sportName = resolveSportName(match.tournament?.sport, match.tournament?.name);
+              const SportIcon = getSportIcon(sportName || match.tournament?.name);
+              return (
+                <Card 
+                  key={match.id} 
+                  className={`group transition-all duration-300 border-2 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 ${
+                    match.status === 'Ongoing' ? 'border-orange-500' : 'border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
+                  }`}
+                  style={{ animationDelay: `${index * 75}ms` }}
+                >
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start mb-2 gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Badge 
+                          variant={match.status === 'Ongoing' ? 'destructive' : 'secondary'} 
+                          className={`font-black uppercase text-[10px] tracking-widest gap-1.5 px-2.5 py-0.5 rounded-full ${match.status === 'Ongoing' ? 'bg-red-600 hover:bg-red-600 text-white shadow-sm' : ''}`}
+                        >
+                          {match.status === 'Ongoing' && (
+                            <span className="relative flex size-1.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                              <span className="relative inline-flex rounded-full size-1.5 bg-white"></span>
+                            </span>
+                          )}
+                          {match.status === 'Ongoing' ? 'LIVE NOW' : match.status}
+                        </Badge>
+                        {sportName && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-orange-500 text-white font-bold text-[9px] uppercase tracking-wider shadow-sm shrink-0">
+                            <SportIcon className="size-3 text-white shrink-0" />
+                            <span>{sportName}</span>
+                          </span>
+                        )}
+                        {match.tournament?.type && (
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                            isMatchFriendly
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                              : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20'
+                          }`}>
+                            {isMatchFriendly ? 'Friendly' : match.tournament.type}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic shrink-0 pr-1.5">{match.round}</span>
+                    </div>
+                    <CardTitle className="text-base sm:text-lg mt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
+                      <span className="break-words line-clamp-2 leading-snug pr-2">{match.team_a?.name || 'TBD'}</span>
+                      <span className="text-slate-400 dark:text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider self-center sm:self-auto shrink-0 py-0.5 sm:py-0">VS</span>
+                      <span className="break-words line-clamp-2 leading-snug text-left sm:text-right pr-2">{match.team_b?.name || 'BYE'}</span>
+                    </CardTitle>
+                    {match.venue && (
+                      <div className="flex items-center gap-1 mt-2 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider min-w-0">
+                        <MapPin className="size-3 text-orange-500 shrink-0" />
+                        <span className="break-words line-clamp-1">{match.venue}</span>
+                      </div>
+                    )}
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {match.status === 'Ongoing' && (
+                      <div className="flex justify-center items-center gap-6 bg-slate-950 text-white py-3 rounded-xl font-mono text-2xl font-black tabular-nums border border-white/5">
+                        <span className="text-orange-500 tabular-nums">{match.team_a_score}</span>
+                        <span className="opacity-20">:</span>
+                        <span className="text-orange-500 tabular-nums">{match.team_b_score}</span>
+                      </div>
+                    )}
+                    {match.status === 'Scheduled' && (
+                      <div className="flex justify-center items-center gap-2 text-slate-400 font-bold uppercase text-[10px] tracking-widest py-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-dashed border-slate-200 dark:border-white/10">
+                        <Clock className="size-3" /> <span>Pre-Match Warmup</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        className="flex-1 gap-2 font-black uppercase italic tracking-wider h-11 rounded-xl cursor-pointer" 
+                        variant={match.status === 'Ongoing' ? 'default' : 'outline'}
+                        onClick={() => navigate(`/match/${match.id}`)}
+                      >
+                        Track Live Scores
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="size-11 rounded-xl border-slate-200 dark:border-white/10 hover:border-orange-500/40 text-slate-400 hover:text-orange-500 cursor-pointer shrink-0"
+                        onClick={() => navigate(`/match/${match.id}/display`)}
+                        title="Open Stadium Focus View"
+                      >
+                        <Tv className="size-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* 4. MY ACTIVE SQUADS & ROSTERS SECTION */}
       {user && (
         <section className="space-y-4">
           <div className="flex items-center justify-between px-1">
@@ -926,8 +1046,7 @@ export const PlayerDashboard = () => {
         </section>
       )}
 
-      {/* Coming Soon • Upcoming Tournaments Banner */}
-      {/* Coming Soon • Upcoming Tournaments Banner */}
+      {/* 5. COMING SOON • UPCOMING EVENTS SECTION (BOTTOM OF FEED) */}
       {draftTournaments.length > 0 && (
         <section className="space-y-4 animate-in fade-in slide-in-from-bottom-3 duration-500">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
@@ -1068,106 +1187,6 @@ export const PlayerDashboard = () => {
           )}
         </section>
       )}
-
-      {/* Live & Upcoming Games Section */}
-      <section className="space-y-4">
-        <h2 className="text-lg md:text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white flex items-center gap-2 pr-2">
-          <Activity className="size-5 text-primary" /> Live & Upcoming Games
-        </h2>
-        {sortedLiveMatches.length === 0 ? (
-          <Card className="p-10 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-2xl md:rounded-3xl text-center bg-white/50 dark:bg-slate-900/30">
-            <Activity className="size-10 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
-            <h3 className="font-bold text-sm text-slate-700 dark:text-slate-300 uppercase tracking-wider">No Active Fixtures</h3>
-            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-              There are no live or upcoming scheduled matches right now. Check back when tournament rounds begin.
-            </p>
-          </Card>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {sortedLiveMatches.map((match, index) => {
-              const isMatchFriendly = isFriendlyTourn(match.tournament);
-              const sportName = resolveSportName(match.tournament?.sport, match.tournament?.name);
-              const SportIcon = getSportIcon(sportName || match.tournament?.name);
-              return (
-              <Card 
-                key={match.id} 
-                className={`group transition-all duration-300 border-2 rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 fill-mode-both bg-white dark:bg-slate-900 ${
-                  match.status === 'Ongoing' ? 'border-orange-500 shadow-xl shadow-orange-500/10' : 'border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
-                }`}
-                style={{ animationDelay: `${index * 75}ms` }}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start mb-2 gap-2">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <Badge 
-                        variant={match.status === 'Ongoing' ? 'destructive' : 'secondary'} 
-                        className={`font-black uppercase text-[10px] tracking-widest gap-1.5 px-2.5 py-0.5 rounded-full ${match.status === 'Ongoing' ? 'bg-red-600 hover:bg-red-600 text-white shadow-sm' : ''}`}
-                      >
-                        {match.status === 'Ongoing' && (
-                          <span className="relative flex size-1.5">
-                            <span className="animate-ping-slow absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                            <span className="relative inline-flex rounded-full size-1.5 bg-white"></span>
-                          </span>
-                        )}
-                        {match.status === 'Ongoing' ? 'LIVE NOW' : match.status}
-                      </Badge>
-                      {sportName && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-orange-500 text-white font-bold text-[9px] uppercase tracking-wider shadow-sm shrink-0">
-                          <SportIcon className="size-3 text-white shrink-0" />
-                          <span>{sportName}</span>
-                        </span>
-                      )}
-                      {match.tournament?.type && (
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                          isMatchFriendly
-                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                            : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20'
-                        }`}>
-                          {isMatchFriendly ? 'Friendly' : match.tournament.type}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic shrink-0 pr-1.5">{match.round}</span>
-                  </div>
-                  <CardTitle className="text-base sm:text-lg mt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
-                    <span className="break-words line-clamp-2 leading-snug pr-2">{match.team_a?.name || 'TBD'}</span>
-                    <span className="text-slate-400 dark:text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider self-center sm:self-auto shrink-0 py-0.5 sm:py-0">VS</span>
-                    <span className="break-words line-clamp-2 leading-snug text-left sm:text-right pr-2">{match.team_b?.name || 'BYE'}</span>
-                  </CardTitle>
-                  {match.venue && (
-                    <div className="flex items-center gap-1 mt-2 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider min-w-0">
-                      <MapPin className="size-3 text-orange-500 shrink-0" />
-                      <span className="break-words line-clamp-1">{match.venue}</span>
-                    </div>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {match.status === 'Ongoing' && (
-                    <div className="flex justify-center items-center gap-6 bg-slate-950 text-white py-3 rounded-xl font-mono text-2xl font-black tabular-nums shadow-inner">
-                      <span className="text-orange-500 tabular-nums">{match.team_a_score}</span>
-                      <span className="opacity-20">:</span>
-                      <span className="text-orange-500 tabular-nums">{match.team_b_score}</span>
-                    </div>
-                  )}
-                  {match.status === 'Scheduled' && (
-                    <div className="flex justify-center items-center gap-2 text-slate-400 font-bold uppercase text-[10px] tracking-widest py-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-dashed border-slate-200 dark:border-white/10">
-                      <Clock className="size-3" /> <span>Pre-Match Warmup</span>
-                    </div>
-                  )}
-                  <Button 
-                    className="w-full gap-2 font-black uppercase italic tracking-widest h-11 rounded-xl" 
-                    variant={match.status === 'Ongoing' ? 'default' : 'outline'}
-                    onClick={() => navigate(`/match/${match.id}`)}
-                  >
-                    Track Live Scores
-                  </Button>
-                </CardContent>
-              </Card>
-              );
-            })}
-          </div>
-        )}
-      </section>
 
       {/* Coming Soon Tournament Detail Dialog */}
       <Dialog open={!!selectedTournament} onOpenChange={(open) => { if (!open) setSelectedTournament(null); }}>

@@ -580,17 +580,10 @@ export const StadiumDisplay = () => {
   return (
     <div
       onDoubleClick={toggleFullscreen}
-      className="min-h-dvh w-screen bg-[#020617] text-white flex flex-col justify-between overflow-hidden select-none relative"
-      style={{
-        backgroundImage: `
-          radial-gradient(circle at 50% 0%, rgba(249, 115, 22, 0.15) 0%, transparent 60%),
-          radial-gradient(circle at 15% 100%, rgba(249, 115, 22, 0.08) 0%, transparent 40%),
-          radial-gradient(circle at 85% 100%, rgba(249, 115, 22, 0.08) 0%, transparent 40%)
-        `,
-      }}
+      className="min-h-dvh w-screen bg-[#060913] text-white flex flex-col justify-between overflow-hidden select-none relative"
     >
       {/* Top Arena Navigation & Header Bar */}
-      <header className="w-full px-6 py-4 md:px-10 md:py-6 flex items-center justify-between border-b border-white/10 bg-slate-950/80 backdrop-blur-md relative z-20">
+      <header className="w-full px-6 py-4 md:px-10 md:py-6 flex items-center justify-between border-b border-white/10 bg-slate-950/90 relative z-20">
         <div className="flex items-center gap-3 sm:gap-4 max-w-[calc(50%-100px)] md:max-w-[42%] min-w-0">
           <button
             type="button"
@@ -601,7 +594,7 @@ export const StadiumDisplay = () => {
                 navigate(`/match/${match.id}`, { replace: true });
               }
             }}
-            className="size-10 sm:size-11 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer shrink-0"
+            className="size-10 sm:size-11 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-colors cursor-pointer shrink-0"
             title="Back to Match Control / Box Score"
           >
             <ChevronLeft className="size-5" />
@@ -658,9 +651,9 @@ export const StadiumDisplay = () => {
           <button
             type="button"
             onClick={toggleAudioActive}
-            className={`size-10 sm:size-11 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
+            className={`size-10 sm:size-11 rounded-xl border flex items-center justify-center transition-colors cursor-pointer ${
               isAudioActive
-                ? 'bg-orange-500/15 hover:bg-orange-500/25 border-orange-500/40 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.25)]'
+                ? 'bg-orange-500/15 hover:bg-orange-500/25 border-orange-500/40 text-orange-400'
                 : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-400 hover:text-slate-200'
             }`}
             title={isAudioActive ? 'Courtside Sound FX Active (Click to Mute)' : 'Sound Muted (Click to Enable Sound FX)'}
@@ -671,7 +664,7 @@ export const StadiumDisplay = () => {
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="size-10 sm:size-11 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 text-orange-400 flex items-center justify-center transition-all cursor-pointer"
+            className="size-10 sm:size-11 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 text-orange-400 flex items-center justify-center transition-colors cursor-pointer"
             title={isFullscreen ? 'Exit Fullscreen (F / ESC)' : 'Enter Big Screen Fullscreen (F)'}
           >
             {isFullscreen ? <Minimize2 className="size-5" /> : <Maximize2 className="size-5" />}
@@ -690,33 +683,35 @@ export const StadiumDisplay = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 items-center gap-4 sm:gap-6 my-auto">
           {/* Team A Card */}
           <div
-            className={`lg:col-span-5 p-6 sm:p-8 md:p-10 rounded-3xl border-2 transition-all duration-500 flex flex-col items-center justify-center text-center relative overflow-hidden ${
-              isTeamALeading
-                ? 'bg-slate-900/90 border-orange-500/70 shadow-[0_0_60px_rgba(249,115,22,0.25)]'
-                : 'bg-slate-900/60 border-white/10'
+            className={`lg:col-span-5 p-5 sm:p-7 md:p-9 rounded-2xl border-2 transition-colors duration-200 flex flex-col items-center justify-center text-center relative bg-slate-900 ${
+              isTeamALeading ? 'border-orange-500' : 'border-slate-800'
             }`}
           >
-            {/* Top Badges Bar */}
-            <div className="absolute top-4 inset-x-4 sm:inset-x-6 flex items-center justify-between pointer-events-none z-20">
-              <div className="pointer-events-auto">
-                {momentumRun?.team === 'a' && (
+            {/* Top Dedicated Status Shelf (Fixed height, guaranteed zero collision) */}
+            <div className="w-full flex items-center justify-between min-h-[38px] mb-3 pb-2.5 border-b border-white/5">
+              <div className="flex items-center gap-2 min-w-0">
+                {momentumRun?.team === 'a' ? (
                   <MomentumRunBadge run={momentumRun} />
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded bg-orange-500/10 border border-orange-500/20 text-[10px] font-black uppercase tracking-widest text-orange-400">
+                    TEAM A
+                  </span>
                 )}
               </div>
-              <div className="pointer-events-auto">
-                {isTeamALeading && (
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500 text-slate-950 text-[10px] font-black uppercase tracking-widest shadow-md">
-                    <Sparkles className="size-3" /> Leading
-                  </div>
-                )}
-              </div>
+              {isTeamALeading && (
+                <span className="flex items-center gap-1 px-2.5 py-0.5 rounded bg-orange-500 text-slate-950 text-[10px] font-black uppercase tracking-widest">
+                  <Sparkles className="size-3" /> LEADING
+                </span>
+              )}
             </div>
 
-            <div className="mb-2 sm:mb-4">
-              <span className="text-xs sm:text-sm font-black uppercase tracking-[0.3em] text-orange-400 block mb-1">
-                TEAM A
-              </span>
-              <h2 className={`${getScoreboardTeamFontClass(match.team_a?.name)} font-black uppercase italic tracking-tighter text-white drop-shadow-md line-clamp-2 break-words leading-tight pr-2 sm:pr-3 max-w-full`}>
+            <div className="mb-2 sm:mb-4 w-full">
+              {momentumRun?.team === 'a' && (
+                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-orange-400/80 block mb-0.5">
+                  TEAM A
+                </span>
+              )}
+              <h2 className={`${getScoreboardTeamFontClass(match.team_a?.name)} font-black uppercase italic tracking-tighter text-white line-clamp-2 break-words leading-tight px-1 max-w-full`}>
                 {match.team_a?.name || 'Team A'}
               </h2>
             </div>
@@ -733,21 +728,27 @@ export const StadiumDisplay = () => {
 
             {/* Team A Courtside Stats Bar (Fouls & Timeouts) */}
             <div className="w-full mt-3 pt-3 border-t border-white/10 flex items-center justify-around gap-2 text-xs">
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/5 border border-white/10">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">FOULS</span>
                 <span className="font-mono font-black text-amber-400 text-sm">{teamAFouls}</span>
+                {teamAFouls >= 5 && (
+                  <span className="px-1.5 py-0.2 rounded bg-red-500/20 text-red-400 border border-red-500/40 text-[9px] font-black uppercase tracking-wider">
+                    BONUS
+                  </span>
+                )}
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/5 border border-white/10">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">TO</span>
-                <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">TIMEOUTS</span>
+                <div className="flex items-center gap-1.5">
                   {Array.from({ length: sportProfile.defaultTimeouts || 3 }).map((_, idx) => (
                     <span
                       key={idx}
-                      className={`size-2 rounded-full transition-all ${
+                      className={`h-2.5 w-6 sm:w-8 rounded-xs transition-colors ${
                         idx < teamATimeoutsRemaining
-                          ? 'bg-orange-400 shadow-[0_0_6px_rgba(249,115,22,0.8)]'
-                          : 'bg-slate-700'
+                          ? 'bg-orange-400 border border-orange-300'
+                          : 'bg-slate-800 border border-white/5'
                       }`}
+                      title={idx < teamATimeoutsRemaining ? 'Available Timeout' : 'Used Timeout'}
                     />
                   ))}
                 </div>
@@ -765,7 +766,7 @@ export const StadiumDisplay = () => {
               isTimeoutActive={activeTimeout?.active ?? false}
             />
 
-            <div className="size-12 sm:size-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-lg sm:text-xl font-black italic tracking-tighter text-orange-500 shadow-inner">
+            <div className="size-11 sm:size-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-base sm:text-lg font-black italic tracking-tighter text-slate-400">
               VS
             </div>
 
@@ -778,33 +779,35 @@ export const StadiumDisplay = () => {
 
           {/* Team B Card */}
           <div
-            className={`lg:col-span-5 p-6 sm:p-8 md:p-10 rounded-3xl border-2 transition-all duration-500 flex flex-col items-center justify-center text-center relative overflow-hidden ${
-              isTeamBLeading
-                ? 'bg-slate-900/90 border-cyan-500/70 shadow-[0_0_60px_rgba(6,182,212,0.25)]'
-                : 'bg-slate-900/60 border-white/10'
+            className={`lg:col-span-5 p-5 sm:p-7 md:p-9 rounded-2xl border-2 transition-colors duration-200 flex flex-col items-center justify-center text-center relative bg-slate-900 ${
+              isTeamBLeading ? 'border-cyan-500' : 'border-slate-800'
             }`}
           >
-            {/* Top Badges Bar */}
-            <div className="absolute top-4 inset-x-4 sm:inset-x-6 flex items-center justify-between pointer-events-none z-20">
-              <div className="pointer-events-auto">
-                {momentumRun?.team === 'b' && (
+            {/* Top Dedicated Status Shelf (Fixed height, guaranteed zero collision) */}
+            <div className="w-full flex items-center justify-between min-h-[38px] mb-3 pb-2.5 border-b border-white/5">
+              <div className="flex items-center gap-2 min-w-0">
+                {momentumRun?.team === 'b' ? (
                   <MomentumRunBadge run={momentumRun} />
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 text-[10px] font-black uppercase tracking-widest text-cyan-400">
+                    TEAM B
+                  </span>
                 )}
               </div>
-              <div className="pointer-events-auto">
-                {isTeamBLeading && (
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500 text-slate-950 text-[10px] font-black uppercase tracking-widest shadow-md">
-                    <Sparkles className="size-3" /> Leading
-                  </div>
-                )}
-              </div>
+              {isTeamBLeading && (
+                <span className="flex items-center gap-1 px-2.5 py-0.5 rounded bg-cyan-500 text-slate-950 text-[10px] font-black uppercase tracking-widest">
+                  <Sparkles className="size-3" /> LEADING
+                </span>
+              )}
             </div>
 
-            <div className="mb-2 sm:mb-4">
-              <span className="text-xs sm:text-sm font-black uppercase tracking-[0.3em] text-cyan-400 block mb-1">
-                TEAM B
-              </span>
-              <h2 className={`${getScoreboardTeamFontClass(match.team_b?.name)} font-black uppercase italic tracking-tighter text-white drop-shadow-md line-clamp-2 break-words leading-tight pr-2 sm:pr-3 max-w-full`}>
+            <div className="mb-2 sm:mb-4 w-full">
+              {momentumRun?.team === 'b' && (
+                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-cyan-400/80 block mb-0.5">
+                  TEAM B
+                </span>
+              )}
+              <h2 className={`${getScoreboardTeamFontClass(match.team_b?.name)} font-black uppercase italic tracking-tighter text-white line-clamp-2 break-words leading-tight px-1 max-w-full`}>
                 {match.team_b?.name || 'BYE'}
               </h2>
             </div>
@@ -821,21 +824,27 @@ export const StadiumDisplay = () => {
 
             {/* Team B Courtside Stats Bar (Fouls & Timeouts) */}
             <div className="w-full mt-3 pt-3 border-t border-white/10 flex items-center justify-around gap-2 text-xs">
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/5 border border-white/10">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">FOULS</span>
                 <span className="font-mono font-black text-amber-400 text-sm">{teamBFouls}</span>
+                {teamBFouls >= 5 && (
+                  <span className="px-1.5 py-0.2 rounded bg-red-500/20 text-red-400 border border-red-500/40 text-[9px] font-black uppercase tracking-wider">
+                    BONUS
+                  </span>
+                )}
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/5 border border-white/10">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">TO</span>
-                <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">TIMEOUTS</span>
+                <div className="flex items-center gap-1.5">
                   {Array.from({ length: sportProfile.defaultTimeouts || 3 }).map((_, idx) => (
                     <span
                       key={idx}
-                      className={`size-2 rounded-full transition-all ${
+                      className={`h-2.5 w-6 sm:w-8 rounded-xs transition-colors ${
                         idx < teamBTimeoutsRemaining
-                          ? 'bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.8)]'
-                          : 'bg-slate-700'
+                          ? 'bg-cyan-400 border border-cyan-300'
+                          : 'bg-slate-800 border border-white/5'
                       }`}
+                      title={idx < teamBTimeoutsRemaining ? 'Available Timeout' : 'Used Timeout'}
                     />
                   ))}
                 </div>
@@ -846,9 +855,9 @@ export const StadiumDisplay = () => {
 
         {/* Post-Game Banner if Completed */}
         {match.status === 'Completed' && (
-          <div className="mt-6 p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border border-orange-500/40 text-center animate-in fade-in zoom-in duration-500">
-            <div className="inline-flex items-center gap-2 text-sm sm:text-lg font-black uppercase italic tracking-wide text-orange-300 break-words line-clamp-2 pr-2">
-              <Trophy className="size-5 text-yellow-400" />
+          <div className="mt-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-center animate-in fade-in duration-300">
+            <div className="inline-flex items-center gap-2 text-sm sm:text-base font-black uppercase italic tracking-wide text-amber-300 break-words line-clamp-2 pr-2">
+              <Trophy className="size-5 text-yellow-400 shrink-0" />
               <span>
                 Final Match Concluded • Winner:{' '}
                 {match.team_a_score > match.team_b_score
@@ -862,21 +871,23 @@ export const StadiumDisplay = () => {
         )}
       </main>
 
-      {/* Bottom Arena Footer: Live Play-by-Play Ticker & Spectator QR Code */}
+      {/* Bottom Arena Footer: Live Play-by-Play Ticker & Spectator Hub Link */}
       <footer className="w-full bg-slate-950/95 border-t border-white/10 px-6 py-4 md:px-10 md:py-5 flex flex-col md:flex-row items-center justify-between gap-4 relative z-20">
-        {/* Play-by-play ticker bar (Arena Grade High-Contrast Ticker) */}
-        <div className="flex-1 flex items-center gap-3 w-full overflow-hidden bg-slate-900/90 border border-orange-500/30 shadow-[0_0_20px_rgba(249,115,22,0.12)] rounded-2xl px-3.5 py-2.5 sm:px-5 sm:py-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-orange-500 text-slate-950 text-xs font-black uppercase tracking-wider shrink-0 shadow-md">
-            <Radio className="size-4 animate-pulse text-slate-950" />
+        {/* Play-by-play ticker bar (Arena Grade High-Contrast Ticker - No Truncation Slop) */}
+        <div className="flex-1 flex items-center gap-3 w-full overflow-hidden bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-3">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-500 text-slate-950 text-xs font-black uppercase tracking-wider shrink-0">
+            <Radio className="size-3.5 animate-pulse text-slate-950" />
             <span>LIVE ACTION</span>
           </div>
-          <div className="flex-1 overflow-hidden relative">
+          <div className="flex-1 overflow-x-auto scrollbar-hide py-0.5">
             {events.length > 0 ? (
-              <div className="text-sm sm:text-base md:text-lg font-black text-white truncate tracking-wide animate-in fade-in slide-in-from-bottom-1 duration-300">
-                <span className="text-orange-400 uppercase tracking-wider text-xs sm:text-sm mr-2.5 font-black">
+              <div className="flex items-center gap-2 whitespace-nowrap text-sm sm:text-base font-bold text-white">
+                <span className="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 text-xs font-black uppercase tracking-wider border border-orange-500/20 shrink-0">
                   Latest:
                 </span>
-                <span className="text-slate-100">{events[0]?.description}</span>
+                <span className="text-slate-100 font-black tracking-wide">
+                  {events[0]?.description}
+                </span>
               </div>
             ) : (
               <span className="text-xs sm:text-sm font-semibold text-slate-400 italic">
@@ -887,19 +898,19 @@ export const StadiumDisplay = () => {
         </div>
 
         {/* Spectator Main Website Hub Link */}
-        <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl shrink-0 shadow-lg">
-          <div className="size-9 sm:size-10 rounded-xl bg-orange-500/20 border border-orange-500/40 text-orange-400 flex items-center justify-center shrink-0">
-            <Globe className="size-4 sm:size-5" />
+        <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl shrink-0">
+          <div className="size-8 sm:size-9 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-400 flex items-center justify-center shrink-0">
+            <Globe className="size-4" />
           </div>
           <div className="text-left">
-            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400 block leading-tight">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-tight">
               Follow Live On Your Phone
             </span>
             <a
               href="https://psusportstrack.tech/explorer"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs sm:text-sm font-black font-mono tracking-tight text-orange-400 hover:text-orange-300 transition-colors inline-flex items-center gap-1.5 mt-0.5"
+              className="text-xs sm:text-sm font-black font-mono tracking-tight text-orange-400 hover:text-orange-300 transition-colors inline-flex items-center gap-1 mt-0.5"
             >
               <span>psusportstrack.tech/explorer</span>
               <ExternalLink className="size-3 opacity-80" />
