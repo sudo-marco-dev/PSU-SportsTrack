@@ -52,6 +52,7 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
   // Selected Tournament Data
   const [candidates, setCandidates] = useState<TournamentGoldStarCandidate[]>([]);
   const [championTeamName, setChampionTeamName] = useState<string | null>(null);
+  const [approvedTeamsCount, setApprovedTeamsCount] = useState<number>(0);
   const [isLoadingTournamentData, setIsLoadingTournamentData] = useState<boolean>(false);
   const [candidateSearchQuery, setCandidateSearchQuery] = useState<string>('');
 
@@ -122,6 +123,7 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
     if (!selectedTournamentId) {
       setCandidates([]);
       setChampionTeamName(null);
+      setApprovedTeamsCount(0);
       return;
     }
 
@@ -157,6 +159,7 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
 
         const teamIds = (teamsData || []).map((t) => t.id);
         const teamMap = new Map<string, any>((teamsData || []).map((t) => [t.id, t]));
+        setApprovedTeamsCount(teamIds.length);
 
         // Determine Champion squad (from completed finals match or highest win count)
         const finalsMatch = (matchesData || []).find(
@@ -714,10 +717,15 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
                       Official Tournament Winner
                     </span>
                   </div>
+                ) : selectedTournament.status === 'Draft' ? (
+                  <div className="p-3.5 rounded-2xl bg-slate-900 border border-amber-500/20 flex items-center gap-2.5 text-xs text-amber-400/90">
+                    <AlertCircle className="size-4 text-amber-400 shrink-0" />
+                    <span>Draft Arena • Awaiting team registration and approved rosters in the Approvals tab</span>
+                  </div>
                 ) : (
                   <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-2.5 text-xs text-slate-400">
                     <AlertCircle className="size-4 text-slate-500 shrink-0" />
-                    <span>Tournament in progress or finals pending • Evaluating overall candidate performance</span>
+                    <span>Tournament active • Evaluating contenders as match scorekeepers record stats</span>
                   </div>
                 )}
               </div>
@@ -801,8 +809,22 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
                       Loading tournament contenders...
                     </div>
                   ) : top3Contenders.length === 0 ? (
-                    <div className="p-8 text-center rounded-2xl bg-slate-950 border border-slate-800 text-slate-500 text-xs">
-                      No candidate rosters or stats recorded for this tournament arena yet.
+                    <div className="p-8 text-center rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                      <Users className="size-8 mx-auto text-slate-600 opacity-40" />
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
+                        {selectedTournament.status === 'Draft'
+                          ? 'Draft Tournament — No Approved Rosters Yet'
+                          : approvedTeamsCount === 0
+                          ? 'No Approved Teams Enrolled'
+                          : 'No Verified Players on Team Rosters'}
+                      </h4>
+                      <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                        {selectedTournament.status === 'Draft'
+                          ? 'To display candidates, teams must be approved in the Approvals tab. Once teams and their athlete rosters are approved, contenders appear here automatically.'
+                          : approvedTeamsCount === 0
+                          ? 'Colleges must enroll teams for this tournament. Approve incoming team applications in the Approvals tab.'
+                          : 'Teams are approved, but no student-athletes have approved roster spots yet. Coaches must add verified athletes to their roster.'}
+                      </p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -932,7 +954,9 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
                       {filteredCandidates.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="py-8 text-center text-slate-500 text-xs">
-                            No contenders match search filter.
+                            {candidates.length === 0
+                              ? 'No candidate athletes enrolled in this arena yet.'
+                              : 'No contenders match search filter.'}
                           </td>
                         </tr>
                       ) : (
