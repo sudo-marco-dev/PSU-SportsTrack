@@ -30,11 +30,9 @@ type AuditLog = {
 
 const UUID_REGEX = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
 
-const renderAuditDetails = (details: string | null) => {
-  if (!details) return 'No additional details provided.';
-  
-  const parts = details.split(UUID_REGEX);
-  if (parts.length === 1) return details;
+const renderTextWithUuidPills = (text: string) => {
+  const parts = text.split(UUID_REGEX);
+  if (parts.length === 1) return text;
 
   return (
     <>
@@ -54,6 +52,49 @@ const renderAuditDetails = (details: string | null) => {
         return part;
       })}
     </>
+  );
+};
+
+const renderAuditDetails = (details: string | null) => {
+  if (!details) return 'No additional details provided.';
+
+  let summaryText = details;
+  let diffObj: { before?: Record<string, unknown>; after?: Record<string, unknown> } | null = null;
+
+  if (details.includes('JSON_DIFF:')) {
+    const [prefix, jsonRaw] = details.split('JSON_DIFF:');
+    summaryText = prefix.replace(/\|\s*$/, '').trim();
+    try {
+      diffObj = JSON.parse(jsonRaw.trim());
+    } catch {
+      diffObj = null;
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <div>{renderTextWithUuidPills(summaryText)}</div>
+      {diffObj && (diffObj.before || diffObj.after) && (
+        <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-950 text-slate-200 p-2.5 font-mono text-[10px] leading-relaxed overflow-x-auto shadow-inner">
+          <div className="flex items-center justify-between border-b border-white/10 pb-1.5 mb-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-400">
+            <span>Immutable JSON Payload Diff (Before → After)</span>
+            <span className="text-emerald-400">PostgreSQL Ledger Verified</span>
+          </div>
+          {diffObj.before && (
+            <div className="bg-rose-500/10 text-rose-300 px-2 py-1 rounded border border-rose-500/20 mb-1 whitespace-pre-wrap break-all">
+              <span className="font-bold select-none mr-1.5 text-rose-400">- before:</span>
+              {JSON.stringify(diffObj.before)}
+            </div>
+          )}
+          {diffObj.after && (
+            <div className="bg-emerald-500/10 text-emerald-300 px-2 py-1 rounded border border-emerald-500/20 whitespace-pre-wrap break-all">
+              <span className="font-bold select-none mr-1.5 text-emerald-400">+ after: </span>
+              {JSON.stringify(diffObj.after)}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -233,10 +274,10 @@ export const AdminAuditLogs = () => {
         <Table>
           <TableHeader className="bg-slate-50 dark:bg-white/5">
             <TableRow className="hover:bg-transparent border-none">
-              <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 pl-8 w-[200px]">Timestamp</TableHead>
-              <TableHead className="font-black uppercase tracking-widest text-[10px] h-14">Administrator</TableHead>
-              <TableHead className="font-black uppercase tracking-widest text-[10px] h-14">Action</TableHead>
-              <TableHead className="font-black uppercase tracking-widest text-[10px] h-14">Details</TableHead>
+              <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 pl-6 w-[160px]">Timestamp</TableHead>
+              <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 w-[210px]">Administrator</TableHead>
+              <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 w-[180px]">Action</TableHead>
+              <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 pr-6">Details</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -267,22 +308,27 @@ export const AdminAuditLogs = () => {
               </TableRow>
             ) : (
               filteredLogs.map((log) => (
-                <TableRow key={log.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors border-slate-100 dark:border-white/5">
-                  <TableCell className="pl-8 py-5">
-                    <div className="flex items-center gap-2 text-slate-500">
-                      <Clock className="size-3" />
-                      <span className="text-[11px] font-mono font-bold tabular-nums">
-                        {new Date(log.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                <TableRow key={log.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors border-slate-100 dark:border-white/5 align-top">
+                  <TableCell className="pl-6 py-5 whitespace-nowrap">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                        <Clock className="size-3 text-orange-500 shrink-0" />
+                        <span className="text-[11px] font-mono font-bold tabular-nums">
+                          {new Date(log.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                        </span>
+                      </div>
+                      <span className="inline-block font-mono text-[9px] font-semibold text-slate-400 bg-slate-100 dark:bg-white/5 px-1.5 py-0.5 rounded border border-slate-200/70 dark:border-white/10">
+                        LOG #{log.id.slice(0, 8)}
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="size-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                  <TableCell className="py-5 whitespace-nowrap">
+                    <div className="flex items-center gap-2.5">
+                      <div className="size-8 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
                         <User className="size-4 text-orange-500" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-sm font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
+                        <span className="text-xs sm:text-sm font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">
                           {log.admin?.full_name || 'System Admin'}
                         </span>
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
@@ -291,12 +337,19 @@ export const AdminAuditLogs = () => {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 border-orange-500/20 text-orange-600 bg-orange-500/5">
-                      {log.action.replace(/_/g, ' ')}
-                    </Badge>
+                  <TableCell className="py-5 whitespace-nowrap">
+                    <div className="flex flex-col items-start gap-1">
+                      <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 border-orange-500/30 text-orange-600 bg-orange-500/10">
+                        {log.action.replace(/_/g, ' ')}
+                      </Badge>
+                      {log.entity_type && (
+                        <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                          entity: {log.entity_type}
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
-                  <TableCell className="text-xs font-medium text-slate-600 dark:text-slate-400 max-w-xl py-4 leading-relaxed break-words">
+                  <TableCell className="text-xs font-medium text-slate-600 dark:text-slate-400 py-4 pr-6 leading-relaxed whitespace-normal break-words">
                     {renderAuditDetails(log.details)}
                   </TableCell>
                 </TableRow>

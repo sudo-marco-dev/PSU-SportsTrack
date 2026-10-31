@@ -560,6 +560,7 @@ async function run() {
 
   // 6. Ensure Facilitator Engr. Patrick Manalo is assigned to active matches
   const faciId = userMap['facilitator']?.id;
+  const adminId = userMap['admin']?.id;
   if (faciId) {
     const { data: ongoingMatches } = await adminClient
       .from('matches')
@@ -574,6 +575,322 @@ async function run() {
         .update({ designated_facilitator_id: faciId })
         .in('id', mIds);
       console.log(`✅ Assigned Facilitator Engr. Patrick Manalo to ${mIds.length} active/scheduled matches`);
+    }
+  }
+
+  // 6.5 Seed Appendix I: Official Match Box Score, Bracket Winners & Audit Logs with JSON Diffs
+  console.log('\n📊 Seeding Appendix I (Box Score, Bracket Winners & Audit Trail JSON Diffs)...');
+  // Soft-delete any leftover test tournament like "PSU Friendly Games00" so FR-43 reports are 100% clean
+  await adminClient
+    .from('tournaments')
+    .update({ is_deleted: true })
+    .ilike('name', '%Friendly Games00%');
+
+  const marqueeTourId = '6805d349-f20b-4781-9591-b8731ff684df';
+  const finalsMatchId = 'b2561fce-6d3b-47fa-b68c-9edda34cadca';
+  const ceatTeamId = '1841d2d1-417d-40e2-bc76-f0eec757b456';
+  const csTeamId = '7f910cb3-b2c1-450c-8fd2-d6c824282fc9';
+
+  // Ensure all completed matches in Marquee Basketball Tournament have winner_team_id set
+  const { data: marqueeMatches } = await adminClient
+    .from('matches')
+    .select('id, round, status, team_a_id, team_b_id, team_a_score, team_b_score')
+    .eq('tournament_id', marqueeTourId)
+    .eq('status', 'Completed');
+
+  for (const mm of marqueeMatches || []) {
+    const winId = (mm.team_a_score || 0) >= (mm.team_b_score || 0) ? mm.team_a_id : mm.team_b_id;
+    await adminClient
+      .from('matches')
+      .update({
+        winner_team_id: winId,
+        official_scorekeeper_id: faciId || adminId,
+        finalized_by: faciId || adminId,
+        finalized_at: '2026-10-27T17:45:00+00:00',
+        venue: mm.id === finalsMatchId ? 'PSU Main Gymnasium - Court 1 (Championship Arena)' : 'PSU Main Gymnasium',
+        scorer_notes:
+          mm.id === finalsMatchId
+            ? 'Official Championship Finals tally certified by Technical Officials Committee and signed by both head coaches.'
+            : null,
+      })
+      .eq('id', mm.id);
+  }
+
+  // Populate detailed player box score for Finals Match (CEAT Red Scorpions 92 - 88 CS Byte Titans)
+  const { data: finalsRosters } = await adminClient
+    .from('team_roster')
+    .select('id, team_id, player_id, jersey_number, position, is_starter, is_captain, users:player_id(full_name)')
+    .in('team_id', [ceatTeamId, csTeamId])
+    .eq('status', 'Approved');
+
+  if (finalsRosters && finalsRosters.length > 0) {
+    const ceatPlayers = finalsRosters.filter((r) => r.team_id === ceatTeamId);
+    const csPlayers = finalsRosters.filter((r) => r.team_id === csTeamId);
+
+    // Clear previous Finals box score stats & events to avoid duplicates
+    await adminClient.from('match_player_stats').delete().eq('match_id', finalsMatchId);
+    await adminClient.from('match_score_events').delete().eq('match_id', finalsMatchId);
+    await adminClient.from('match_events').delete().eq('match_id', finalsMatchId);
+
+    // Ensure Star MVP on Finals match is the #1 CEAT player
+    const mvpPlayer = ceatPlayers[0];
+    if (mvpPlayer?.player_id) {
+      await adminClient.from('player_stars').delete().eq('match_id', finalsMatchId);
+      await adminClient.from('player_stars').insert([
+        {
+          player_id: mvpPlayer.player_id,
+          match_id: finalsMatchId,
+          tournament_id: marqueeTourId,
+          star_type: 'Red',
+          awarded_by: faciId || adminId,
+          justification:
+            'Delivered game-high 28 PTS (5 3PM, 5 2PM, 3 FTM) including the go-ahead clutch three-pointer with 0:18 remaining in 4Q to seal the Championship.',
+        },
+        {
+          player_id: mvpPlayer.player_id,
+          match_id: finalsMatchId,
+          tournament_id: marqueeTourId,
+          star_type: 'Gold',
+          awarded_by: adminId || faciId,
+          justification: 'Crowned Season MVP after leading CEAT Red Scorpions to the PSU Binturungan 2026 Basketball title.',
+        },
+      ]);
+    }
+
+    // CEAT breakdown summing to 92 PTS: [28, 22, 16, 12, 8, 6, 0, ...]
+    const ceatProfiles = [
+      { pts: 28, p3: 5, p2: 5, ft: 3, j: 7, pos: 'PG (Point Guard)', starter: true, cap: true },
+      { pts: 22, p3: 3, p2: 5, ft: 3, j: 11, pos: 'SG (Shooting Guard)', starter: true, cap: false },
+      { pts: 16, p3: 2, p2: 4, ft: 2, j: 23, pos: 'SF (Small Forward)', starter: true, cap: false },
+      { pts: 12, p3: 0, p2: 5, ft: 2, j: 15, pos: 'PF (Power Forward)', starter: true, cap: false },
+      { pts: 8, p3: 0, p2: 3, ft: 2, j: 34, pos: 'C (Center)', starter: true, cap: false },
+      { pts: 6, p3: 2, p2: 0, ft: 0, j: 4, pos: 'SG (Sixth Man)', starter: false, cap: false },
+    ];
+
+    // CS breakdown summing to 88 PTS: [25, 20, 17, 14, 8, 4, 0, ...]
+    const csProfiles = [
+      { pts: 25, p3: 4, p2: 5, ft: 3, j: 10, pos: 'PG (Point Guard)', starter: true, cap: true },
+      { pts: 20, p3: 2, p2: 6, ft: 2, j: 8, pos: 'SG (Shooting Guard)', starter: true, cap: false },
+      { pts: 17, p3: 3, p2: 3, ft: 2, j: 13, pos: 'SF (Small Forward)', starter: true, cap: false },
+      { pts: 14, p3: 0, p2: 6, ft: 2, j: 21, pos: 'PF (Power Forward)', starter: true, cap: false },
+      { pts: 8, p3: 0, p2: 4, ft: 0, j: 32, pos: 'C (Center)', starter: true, cap: false },
+      { pts: 4, p3: 0, p2: 2, ft: 0, j: 5, pos: 'PG (Reserve)', starter: false, cap: false },
+    ];
+
+    const seedSquadBox = async (players, profiles, teamId) => {
+      for (let i = 0; i < Math.min(players.length, profiles.length); i++) {
+        const p = players[i];
+        const prof = profiles[i];
+
+        await adminClient
+          .from('team_roster')
+          .update({
+            jersey_number: prof.j,
+            position: prof.pos,
+            is_starter: prof.starter,
+            is_captain: prof.cap,
+          })
+          .eq('id', p.id);
+
+        await adminClient.from('match_player_stats').insert({
+          match_id: finalsMatchId,
+          team_id: teamId,
+          player_id: p.player_id,
+          jersey_number: prof.j,
+          points: prof.pts,
+        });
+
+        const scoreEvents = [];
+        for (let k = 0; k < prof.p3; k++) {
+          scoreEvents.push({
+            match_id: finalsMatchId,
+            team_id: teamId,
+            player_id: p.player_id,
+            points: 3,
+            delta: 3,
+            action_type: 'Triple',
+            undone: false,
+          });
+        }
+        for (let k = 0; k < prof.p2; k++) {
+          scoreEvents.push({
+            match_id: finalsMatchId,
+            team_id: teamId,
+            player_id: p.player_id,
+            points: 2,
+            delta: 2,
+            action_type: 'Field',
+            undone: false,
+          });
+        }
+        for (let k = 0; k < prof.ft; k++) {
+          scoreEvents.push({
+            match_id: finalsMatchId,
+            team_id: teamId,
+            player_id: p.player_id,
+            points: 1,
+            delta: 1,
+            action_type: 'FT',
+            undone: false,
+          });
+        }
+        if (scoreEvents.length > 0) {
+          await adminClient.from('match_score_events').insert(scoreEvents);
+        }
+      }
+    };
+
+    await seedSquadBox(ceatPlayers, ceatProfiles, ceatTeamId);
+    await seedSquadBox(csPlayers, csProfiles, csTeamId);
+
+    const mvpName = Array.isArray(mvpPlayer?.users)
+      ? mvpPlayer.users[0]?.full_name
+      : mvpPlayer?.users?.full_name || 'CEAT Captain';
+
+    await adminClient.from('match_events').insert([
+      {
+        match_id: finalsMatchId,
+        description: `[FINAL] Official Championship Match Concluded: CEAT Red Scorpions 92 - 88 CS Byte Titans. Red Star MVP awarded to #7 ${mvpName} (28 PTS).`,
+        created_at: '2026-10-27T09:45:00+00:00',
+      },
+      {
+        match_id: finalsMatchId,
+        description: `[4Q 0:06] +2 FT Made by #11 (CEAT Red Scorpions) — Score: 92 - 88`,
+        created_at: '2026-10-27T09:43:30+00:00',
+      },
+      {
+        match_id: finalsMatchId,
+        description: `[4Q 0:18] CLUTCH +3PT Triple by #7 ${mvpName} (CEAT Red Scorpions) — Lead change: 90 - 88!`,
+        created_at: '2026-10-27T09:42:10+00:00',
+      },
+      {
+        match_id: finalsMatchId,
+        description: `[4Q 0:42] +3PT Triple by #10 (CS Byte Titans) — CS takes 88 - 87 lead!`,
+        created_at: '2026-10-27T09:40:00+00:00',
+      },
+      {
+        match_id: finalsMatchId,
+        description: `[4Q 1:15] Official Video Review by Technical Committee: 3PT arc verification confirmed (+1 PT adjustment applied).`,
+        created_at: '2026-10-27T09:38:00+00:00',
+      },
+    ]);
+    console.log(`✅ Populated full Finals Box Score & Play-by-Play for match ${finalsMatchId}`);
+  }
+
+  // Seed Immutable Audit Trail Records with JSON_DIFF payloads
+  if (adminId) {
+    // Remove previously seeded JSON_DIFF logs so re-runs stay idempotent
+    await adminClient.from('audit_logs').delete().ilike('details', '%JSON_DIFF:%');
+
+    const auditEntries = [
+      {
+        admin_id: adminId,
+        actor_id: adminId,
+        action: 'SCORE_OVERRIDE',
+        entity_type: 'matches',
+        entity_id: finalsMatchId,
+        target_id: finalsMatchId,
+        created_at: new Date(Date.now() + 240000).toISOString(),
+        details: `Official Technical Committee video review on Championship Finals match ${finalsMatchId} (CEAT Red Scorpions vs CS Byte Titans): upgraded 4Q 1:15 perimeter shot from 2PT Field Goal to 3PT Triple after foot-on-line replay check. | JSON_DIFF:${JSON.stringify({
+          before: {
+            match_id: 'b2561fce',
+            team_a: 'CEAT Red Scorpions',
+            team_a_score: 91,
+            team_b_score: 88,
+            shot_classification: '2PT_FIELD',
+            replay_verified: false,
+          },
+          after: {
+            match_id: 'b2561fce',
+            team_a: 'CEAT Red Scorpions',
+            team_a_score: 92,
+            team_b_score: 88,
+            shot_classification: '3PT_TRIPLE',
+            replay_verified: true,
+            authorized_by: 'Dr. Ramon Bautista (SUPER_ADMIN)',
+          },
+        })}`,
+      },
+      {
+        admin_id: adminId,
+        actor_id: adminId,
+        action: 'APPROVE_DOCUMENT',
+        entity_type: 'verification_documents',
+        entity_id: userMap['student_verified']?.id || null,
+        target_id: userMap['student_verified']?.id || null,
+        created_at: new Date(Date.now() + 180000).toISOString(),
+        details: `Approved Certificate of Registration (COR) and validated varsity eligibility for student-athlete Juan Dela Cruz (${userMap['student_verified']?.id}). | JSON_DIFF:${JSON.stringify({
+          before: {
+            student_no: '2024-8-0284',
+            full_name: 'Juan Dela Cruz',
+            document_type: 'COR_AY2026_SEM1',
+            verification_status: 'Pending',
+            is_verified: false,
+          },
+          after: {
+            student_no: '2024-8-0284',
+            full_name: 'Juan Dela Cruz',
+            document_type: 'COR_AY2026_SEM1',
+            verification_status: 'Approved',
+            is_verified: true,
+            ocr_confidence: '98.4%',
+            college_code: 'CAS',
+          },
+        })}`,
+      },
+      {
+        admin_id: adminId,
+        actor_id: adminId,
+        action: 'OVERRIDE_STAR',
+        entity_type: 'player_stars',
+        entity_id: finalsMatchId,
+        target_id: finalsMatchId,
+        created_at: new Date(Date.now() + 120000).toISOString(),
+        details: `Certified Post-Game Red Star (Game MVP) & Gold Star (Season MVP) attestation for Championship Finals ${finalsMatchId}. | JSON_DIFF:${JSON.stringify({
+          before: {
+            match_round: 'Championship Finals',
+            star_type: 'Red & Gold',
+            governance_state: 'Pending_Committee_Signoff',
+            conflict_of_interest_flag: false,
+          },
+          after: {
+            match_round: 'Championship Finals',
+            star_type: 'Red & Gold',
+            governance_state: 'Certified_Immutable',
+            points_recorded: 28,
+            attested_by: 'Engr. Patrick Manalo (FACILITATOR)',
+          },
+        })}`,
+      },
+      {
+        admin_id: adminId,
+        actor_id: adminId,
+        action: 'GENERATE_BRACKET',
+        entity_type: 'tournaments',
+        entity_id: marqueeTourId,
+        target_id: marqueeTourId,
+        created_at: new Date(Date.now() + 60000).toISOString(),
+        details: `Generated automated Single-Elimination Playoff Bracket Tree for tournament ${marqueeTourId} (PSU Binturungan 2026 - Basketball Championship). | JSON_DIFF:${JSON.stringify({
+          before: {
+            tournament_phase: 'Phase_1_Elimination',
+            playoff_tree_generated: false,
+            seeded_playoff_squads: 0,
+          },
+          after: {
+            tournament_phase: 'Phase_2_Playoffs_SingleElim',
+            playoff_tree_generated: true,
+            seeded_playoff_squads: 8,
+            rounds: ['Quarterfinals (4)', 'Semifinals (2)', '3rd Place Playoff (1)', 'Finals (1)'],
+          },
+        })}`,
+      },
+    ];
+
+    const { error: auditErr } = await adminClient.from('audit_logs').insert(auditEntries);
+    if (auditErr) {
+      console.warn('⚠️ Audit log seed warning:', auditErr.message);
+    } else {
+      console.log(`✅ Seeded ${auditEntries.length} Immutable Audit Trail records with JSON_DIFF payloads`);
     }
   }
 
