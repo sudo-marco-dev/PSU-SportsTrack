@@ -144,8 +144,8 @@ test.describe('Admin MVP Hall of Fame Command Center & Rapid Queue Workflow', ()
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify([
-          { id: 'team-ccje', name: 'CCJE Law Enforcers', college_id: 'col-ccje', colleges: { name: 'College of Criminology and Criminal Justice' }, status: 'Approved' },
-          { id: 'team-cs', name: 'CS Cyber Scorpions', college_id: 'col-cs', colleges: { name: 'College of Sciences' }, status: 'Approved' },
+          { id: 'team-ccje', name: 'CCJE Law Enforcers', college_id: 'col-ccje', colleges: { college_name: 'College of Criminology and Criminal Justice', name: 'College of Criminology and Criminal Justice' }, status: 'Approved' },
+          { id: 'team-cs', name: 'CS Cyber Scorpions', college_id: 'col-cs', colleges: { college_name: 'College of Sciences', name: 'College of Sciences' }, status: 'Approved' },
         ]),
       });
     });
@@ -160,6 +160,7 @@ test.describe('Admin MVP Hall of Fame Command Center & Rapid Queue Workflow', ()
             id: 'm-1',
             round: 'Finals',
             status: 'Completed',
+            winner_team_id: 'team-ccje',
             winner_id: 'team-ccje',
             team_a_id: 'team-ccje',
             team_b_id: 'team-cs',
@@ -171,6 +172,7 @@ test.describe('Admin MVP Hall of Fame Command Center & Rapid Queue Workflow', ()
             id: 'm-2',
             round: 'Semifinals',
             status: 'Completed',
+            winner_team_id: 'team-ccje',
             winner_id: 'team-ccje',
             team_a_id: 'team-ccje',
             team_b_id: 'team-other',

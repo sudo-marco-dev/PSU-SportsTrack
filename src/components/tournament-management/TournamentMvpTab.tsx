@@ -134,19 +134,19 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
       try {
         // Parallel fetch: teams, completed finals match, rosters, player stats, match red stars
         const [
-          { data: teamsData },
-          { data: matchesData },
-          { data: redStarsData },
+          { data: teamsData, error: teamsError },
+          { data: matchesData, error: matchesError },
+          { data: redStarsData, error: redStarsError },
         ] = await Promise.all([
           supabase
             .from('teams')
-            .select('id, name, college_id, colleges(name, short_name), status')
+            .select('id, name, college_id, colleges(college_name), status')
             .eq('tournament_id', selectedTournamentId)
             .eq('status', 'Approved')
             .or('is_deleted.is.null,is_deleted.eq.false'),
           supabase
             .from('matches')
-            .select('id, round, status, winner_id, team_a_id, team_b_id, team_a_score, team_b_score')
+            .select('id, round, status, winner_team_id, team_a_id, team_b_id, team_a_score, team_b_score')
             .eq('tournament_id', selectedTournamentId),
           supabase
             .from('player_stars')
@@ -154,6 +154,10 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
             .eq('tournament_id', selectedTournamentId)
             .eq('star_type', 'Red'),
         ]);
+
+        if (teamsError) console.error('Error fetching tournament teams:', teamsError);
+        if (matchesError) console.error('Error fetching tournament matches:', matchesError);
+        if (redStarsError) console.error('Error fetching tournament red stars:', redStarsError);
 
         if (isCancelled) return;
 
@@ -163,9 +167,9 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
 
         // Determine Champion squad (from completed finals match or highest win count)
         const finalsMatch = (matchesData || []).find(
-          (m) => m.round === 'Finals' && m.status === 'Completed' && m.winner_id
+          (m: any) => m.round === 'Finals' && m.status === 'Completed' && (m.winner_team_id || m.winner_id)
         );
-        let champId = finalsMatch?.winner_id || null;
+        let champId = (finalsMatch as any)?.winner_team_id || (finalsMatch as any)?.winner_id || null;
         let champName = champId ? teamMap.get(champId)?.name || 'Champion Team' : null;
         setChampionTeamName(champName);
 
@@ -234,7 +238,7 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
             position: r.position,
             teamId: r.team_id,
             teamName: team?.name || 'Tournament Squad',
-            collegeName: team?.colleges?.name || null,
+            collegeName: team?.colleges?.college_name || (team?.colleges as any)?.name || null,
             points,
             gamesPlayed,
             ppg,
