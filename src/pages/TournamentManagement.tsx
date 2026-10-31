@@ -54,22 +54,39 @@ export const TournamentManagement: React.FC = () => {
   const [isConcludeOpen, setIsConcludeOpen] = useState(false);
   const [tournamentToConclude, setTournamentToConclude] = useState<Tournament | null>(null);
   const [concludeChampionName, setConcludeChampionName] = useState<string | null>(null);
+  const [matchProgressMap, setMatchProgressMap] = useState<Record<string, { total: number; completed: number }>>({});
 
   // Data Fetching
   const fetchTournaments = async () => {
     setIsLoadingTournaments(true);
-    const { data, error } = await supabase
-      .from('tournaments')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const [tournRes, matchRes] = await Promise.all([
+      supabase.from('tournaments').select('*').order('created_at', { ascending: false }),
+      supabase.from('matches').select('tournament_id, status'),
+    ]);
 
-    if (error) {
-      toast.error('Failed to load tournaments: ' + error.message);
+    if (tournRes.error) {
+      toast.error('Failed to load tournaments: ' + tournRes.error.message);
     } else {
-      const allTournaments = (data as Tournament[]) || [];
+      const allTournaments = (tournRes.data as Tournament[]) || [];
       const activeTournaments = allTournaments.filter(t => !t.is_deleted);
       setTournaments(activeTournaments);
     }
+
+    if (matchRes.data) {
+      const progressMap: Record<string, { total: number; completed: number }> = {};
+      matchRes.data.forEach((m: any) => {
+        if (!m.tournament_id) return;
+        if (!progressMap[m.tournament_id]) {
+          progressMap[m.tournament_id] = { total: 0, completed: 0 };
+        }
+        progressMap[m.tournament_id].total += 1;
+        if (m.status === 'Completed') {
+          progressMap[m.tournament_id].completed += 1;
+        }
+      });
+      setMatchProgressMap(progressMap);
+    }
+
     setIsLoadingTournaments(false);
   };
 
@@ -154,7 +171,7 @@ export const TournamentManagement: React.FC = () => {
         action: 'APPROVE_TEAM',
         entity_type: 'teams',
         entity_id: teamId,
-        details: `Approved team ${teamId} for tournament ${(pendingTeam?.tournaments as any)?.name || 'Draft tournament'}`
+        details: `Approved team "${pendingTeam?.name || 'Squad'}" for tournament ${(pendingTeam?.tournaments as any)?.name || 'Draft tournament'}`
       });
 
       fetchPendingTeams();
@@ -329,7 +346,9 @@ export const TournamentManagement: React.FC = () => {
             tournaments={filteredTournaments}
             isLoading={isLoadingTournaments}
             viewMode={viewMode}
+            matchProgressMap={matchProgressMap}
             onOpenWizard={openBracketWizard}
+            onPromptConclude={(t) => promptConcludeTournament(t, null)}
             onPromptDelete={promptDeleteTournament}
             onToggleCoi={handleToggleTournamentCoi}
             onClearFilters={() => {

@@ -44,7 +44,7 @@ export const ConcludeTournamentModal: React.FC<ConcludeTournamentModalProps> = (
         action: 'CONCLUDE_TOURNAMENT',
         entity_type: 'tournaments',
         entity_id: tournament.id,
-        details: `Officially concluded tournament: ${tournament.name} (${tournament.id}). Crowned Champion: ${championName || 'None'}`
+        details: `Officially concluded tournament: ${tournament.name}. Crowned Champion: ${championName || 'None'}`
       });
 
       onOpenChange(false);

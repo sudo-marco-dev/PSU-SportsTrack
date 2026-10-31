@@ -1474,11 +1474,12 @@ export const LiveMatch = () => {
   const handleUpdateStatus = async (newStatus: string) => {
     if (!isAuthorizedScorekeeper || !match) return;
 
-    // Tie Guard: Bracket elimination matches cannot end in a tie without an awarded winner
+    // Strict Tie Guard: All official ballgame fixtures require a decisive winner before conclusion
     if (newStatus === 'Completed') {
-      const isKnockoutMatch = Boolean(match.next_match_id);
-      if (isKnockoutMatch && match.team_a_score === match.team_b_score && !match.winner_team_id) {
-        toast.error('Cannot complete an elimination bracket match with a tie score! Please break the tie first.');
+      const scoreA = Number(match.team_a_score || 0);
+      const scoreB = Number(match.team_b_score || 0);
+      if (scoreA === scoreB && !match.winner_team_id) {
+        toast.error(`Cannot conclude match with a tied score (${scoreA} - ${scoreB})! In official ballgame competitions, a decisive winner is required. Please play Overtime (OT) or score tiebreaker points.`);
         return;
       }
     }
@@ -1501,9 +1502,11 @@ export const LiveMatch = () => {
       updatePayload.active_scorekeeper_id = null;
 
       // Compute and record the decisive winner_team_id
-      if ((match.team_a_score || 0) > (match.team_b_score || 0)) {
+      const scoreA = Number(match.team_a_score || 0);
+      const scoreB = Number(match.team_b_score || 0);
+      if (scoreA > scoreB) {
         updatePayload.winner_team_id = match.team_a_id;
-      } else if ((match.team_b_score || 0) > (match.team_a_score || 0)) {
+      } else if (scoreB > scoreA) {
         updatePayload.winner_team_id = match.team_b_id;
       } else if (match.winner_team_id) {
         updatePayload.winner_team_id = match.winner_team_id;
@@ -1518,10 +1521,12 @@ export const LiveMatch = () => {
     if (error) {
       toast.error(getFriendlyErrorMessage(error, 'Failed to update match status. Please try again.'));
     } else {
+      const scoreA = Number(match.team_a_score || 0);
+      const scoreB = Number(match.team_b_score || 0);
       const computedWinnerId = updatePayload.winner_team_id || (
-        (match.team_a_score || 0) > (match.team_b_score || 0)
+        scoreA > scoreB
           ? match.team_a_id
-          : (match.team_b_score || 0) > (match.team_a_score || 0)
+          : scoreB > scoreA
           ? match.team_b_id
           : match.winner_team_id
       );
@@ -1536,9 +1541,9 @@ export const LiveMatch = () => {
 
       // Automated Postgres trigger handles bracket advancement (trg_advance_bracket_on_match_completed)
       if (newStatus === 'Completed') {
-        const isTeamAWinner = (match.team_a_score || 0) > (match.team_b_score || 0);
-        const winnerName = isTeamAWinner ? (match.team_a?.name || 'Team A') : (match.team_b?.name || 'Team B');
-        const loserName = isTeamAWinner ? (match.team_b?.name || 'Team B') : (match.team_a?.name || 'Team A');
+        const winnerId = computedWinnerId;
+        const winnerName = winnerId === match.team_a_id ? (match.team_a?.name || 'Team A') : (winnerId === match.team_b_id ? (match.team_b?.name || 'Team B') : 'Decisive Winner');
+        const loserName = winnerId === match.team_a_id ? (match.team_b?.name || 'Team B') : (match.team_a?.name || 'Team A');
 
         if (match.next_match_id || match.loser_next_match_id) {
           toast.success(
@@ -1679,11 +1684,12 @@ export const LiveMatch = () => {
       toast.success('Red Star awarded to player!');
       const candidateName = selectedCandidate?.name || 'Unknown Player';
 
+      const matchLabel = `"${match.team_a?.name || 'Team A'} vs ${match.team_b?.name || 'Team B'}"${match.tournament?.name ? ` (${match.tournament.name})` : ''}`;
       await logAudit({
         action: 'AWARD_STAR',
         entity_type: 'player_stars',
         entity_id: selectedPlayerId,
-        details: `Awarded Match MVP (Red Star) to ${candidateName} in match ${match.id}${justification ? ` (Justification: ${justification})` : ''}`,
+        details: `Awarded Match MVP (Red Star) to ${candidateName} (${selectedCandidate?.teamName || 'Team'}) in ${matchLabel}${justification ? ` (Justification: ${justification})` : ''}`,
       });
 
       setAwardedMVP(candidateName);

@@ -343,13 +343,18 @@ export const FacilitatorsTab: React.FC<FacilitatorsTabProps> = ({
       if (error) throw error;
 
       const official = officials.find(o => o.id === officialId);
+      const targetMatch = matches.find(m => m.id === matchId);
+      const matchLabel = targetMatch
+        ? `"${targetMatch.team_a?.name || 'TBD'} vs ${targetMatch.team_b?.name || 'TBD'}" (${targetMatch.round || 'Match'})`
+        : `Match #${matchId.slice(0, 8)}`;
+
       await logAudit({
         action: 'ASSIGN_MATCH_FACILITATOR',
         entity_type: 'matches',
         entity_id: matchId,
         details: officialId
-          ? `Designated "${official?.full_name || 'Official'}" to match ${matchId}`
-          : `Released match ${matchId} reservation to open pool`
+          ? `Designated "${official?.full_name || 'Official'}" to ${matchLabel}`
+          : `Released ${matchLabel} reservation to open pool`
       });
 
       toast.success(officialId ? `Assigned to ${official?.full_name}` : 'Match released to open pool.');

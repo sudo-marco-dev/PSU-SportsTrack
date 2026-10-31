@@ -69,6 +69,7 @@ type Match = {
   team_b_score: number;
   team_a_id: string;
   team_b_id: string | null;
+  winner_team_id?: string | null;
   venue?: string | null;
   match_time?: string | null;
   team_a: { name: string; college_id?: string | null } | null;
@@ -1368,11 +1369,23 @@ export const FacilitatorKiosk = () => {
   // Conclude Match with Scorer Accountability and Certification Notes
   const handleConcludeMatch = async () => {
     if (!user || !matchId) return;
+
+    const scoreA = Number(match?.team_a_score || 0);
+    const scoreB = Number(match?.team_b_score || 0);
+
+    if (scoreA === scoreB && !match?.winner_team_id) {
+      toast.error(`Cannot conclude match with a tied score (${scoreA} - ${scoreB})! In official ballgames, elimination and championship fixtures require a decisive winner. Please initiate Overtime (OT) or record tiebreaker points.`);
+      setIsConcluding(false);
+      return;
+    }
+
     setIsConcluding(true);
     try {
       if (offlineQueue.getPendingCount(matchId) > 0) {
         await offlineQueue.flush(matchId, supabase);
       }
+
+      const winnerId = match?.winner_team_id || (scoreA > scoreB ? match?.team_a_id : (scoreB > scoreA ? match?.team_b_id : null));
 
       const { error } = await supabase
         .from('matches')
@@ -1384,6 +1397,7 @@ export const FacilitatorKiosk = () => {
           is_finalized: true,
           is_clock_running: false,
           active_scorekeeper_id: null,
+          winner_team_id: winnerId,
         })
         .eq('id', matchId);
 
@@ -2007,6 +2021,18 @@ export const FacilitatorKiosk = () => {
               </div>
             </div>
 
+            {Number(match.team_a_score || 0) === Number(match.team_b_score || 0) && !match.winner_team_id && (
+              <div className="p-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-2.5">
+                <AlertTriangle className="size-4 shrink-0 text-amber-400 mt-0.5" />
+                <div className="space-y-0.5">
+                  <span className="font-bold text-white uppercase text-[10px] tracking-wider block">Scores are Tied ({match.team_a_score || 0} - {match.team_b_score || 0})</span>
+                  <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                    Official ballgame rules prohibit concluding a fixture in a tie. Please initiate Overtime (OT) using the match clock or record decisive tiebreaker points before concluding.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-slate-300">
                 Official Certification Notes (Optional)
@@ -2035,10 +2061,14 @@ export const FacilitatorKiosk = () => {
               type="button"
               size="sm"
               onClick={handleConcludeMatch}
-              disabled={isConcluding}
-              className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-xs uppercase"
+              disabled={isConcluding || (Number(match.team_a_score || 0) === Number(match.team_b_score || 0) && !match.winner_team_id)}
+              className="bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-700 disabled:text-slate-400 text-slate-950 font-black text-xs uppercase"
             >
-              {isConcluding ? 'Finalizing...' : 'Confirm & Conclude Match'}
+              {isConcluding
+                ? 'Finalizing...'
+                : Number(match.team_a_score || 0) === Number(match.team_b_score || 0) && !match.winner_team_id
+                ? 'Cannot Conclude (Tied)'
+                : 'Confirm & Conclude Match'}
             </Button>
           </DialogFooter>
         </DialogContent>

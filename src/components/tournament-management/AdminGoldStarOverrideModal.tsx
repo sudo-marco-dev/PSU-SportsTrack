@@ -35,7 +35,7 @@ export const AdminGoldStarOverrideModal: React.FC<AdminGoldStarOverrideModalProp
   open,
   onOpenChange,
   starId,
-  tournamentId,
+  tournamentId: _tournamentId,
   tournamentName,
   currentWinnerName,
   currentWinnerPlayerId,
@@ -86,7 +86,7 @@ export const AdminGoldStarOverrideModal: React.FC<AdminGoldStarOverrideModalProp
         action: 'OVERRIDE_STAR',
         entity_type: 'player_stars',
         entity_id: starId,
-        details: `Admin reassigned Tournament Gold Star in "${tournamentName}" (${tournamentId}) from ${currentWinnerName} to ${replacementCandidate.name}. Reason: ${reassignReason.trim()}`,
+        details: `Admin reassigned Tournament Gold Star in "${tournamentName}" from ${currentWinnerName} to ${replacementCandidate.name}. Reason: ${reassignReason.trim()}`,
       });
 
       toast.success(`Tournament MVP Gold Star successfully reassigned to ${replacementCandidate.name}`);
@@ -113,7 +113,7 @@ export const AdminGoldStarOverrideModal: React.FC<AdminGoldStarOverrideModalProp
         action: 'REVOKE_STAR',
         entity_type: 'player_stars',
         entity_id: starId,
-        details: `Admin revoked Tournament MVP Gold Star from ${currentWinnerName} in "${tournamentName}" (${tournamentId}). Reason: ${revokeReason.trim()}`,
+        details: `Admin revoked Tournament MVP Gold Star from ${currentWinnerName} in "${tournamentName}". Reason: ${revokeReason.trim()}`,
       });
 
       toast.success(`Gold Star revoked. Tournament "${tournamentName}" returned to Pending MVP queue.`);

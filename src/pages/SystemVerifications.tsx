@@ -241,7 +241,7 @@ export const SystemVerifications = () => {
         action: 'APPROVE_DOCUMENT',
         entity_type: 'verification_documents',
         entity_id: doc.id,
-        details: `Approved ${doc.document_type || 'ID'} clearance and verified user ${doc.user_id} (${doc.users?.full_name || roleLabel})`,
+        details: `Approved ${doc.document_type || 'ID'} clearance for ${doc.users?.full_name || 'User'} (${roleLabel})`,
       });
 
       // Update state
@@ -317,7 +317,7 @@ export const SystemVerifications = () => {
         action: 'REJECT_DOCUMENT',
         entity_type: 'verification_documents',
         entity_id: rejectDoc.id,
-        details: `Rejected clearance for user ${rejectDoc.user_id}. Reason: ${fullReason}`,
+        details: `Rejected ${rejectDoc.document_type || 'clearance'} for ${rejectDoc.users?.full_name || 'User'} (${roleText}). Reason: ${fullReason}`,
       });
 
       setDocuments((prev) => prev.filter((d) => d.id !== rejectDoc.id));

@@ -28,6 +28,35 @@ type AuditLog = {
   } | null;
 };
 
+const UUID_REGEX = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
+
+const renderAuditDetails = (details: string | null) => {
+  if (!details) return 'No additional details provided.';
+  
+  const parts = details.split(UUID_REGEX);
+  if (parts.length === 1) return details;
+
+  return (
+    <>
+      {parts.map((part, idx) => {
+        if (UUID_REGEX.test(part)) {
+          UUID_REGEX.lastIndex = 0;
+          return (
+            <span
+              key={idx}
+              title={`Entity ID: ${part}`}
+              className="inline-flex items-center px-1.5 py-0.5 rounded-md font-mono text-[10px] font-semibold bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/10 mx-0.5 select-all hover:border-orange-500/50 transition-colors"
+            >
+              #{part.slice(0, 8)}
+            </span>
+          );
+        }
+        return part;
+      })}
+    </>
+  );
+};
+
 export const AdminAuditLogs = () => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -185,9 +214,9 @@ export const AdminAuditLogs = () => {
               </div>
 
               {log.details && (
-                <p className="text-xs text-slate-600 dark:text-slate-300 font-medium bg-slate-50 dark:bg-white/5 p-2.5 rounded-xl border border-slate-100 dark:border-white/5 mb-2.5">
-                  {log.details}
-                </p>
+                <div className="text-xs text-slate-600 dark:text-slate-300 font-medium bg-slate-50 dark:bg-white/5 p-2.5 rounded-xl border border-slate-100 dark:border-white/5 mb-2.5 leading-relaxed break-words">
+                  {renderAuditDetails(log.details)}
+                </div>
               )}
 
               <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400">
@@ -267,8 +296,8 @@ export const AdminAuditLogs = () => {
                       {log.action.replace(/_/g, ' ')}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-xs font-medium text-slate-600 dark:text-slate-400 max-w-md truncate">
-                    {log.details || 'No additional details provided.'}
+                  <TableCell className="text-xs font-medium text-slate-600 dark:text-slate-400 max-w-xl py-4 leading-relaxed break-words">
+                    {renderAuditDetails(log.details)}
                   </TableCell>
                 </TableRow>
               ))

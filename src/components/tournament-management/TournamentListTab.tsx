@@ -10,7 +10,8 @@ import {
   Eye, 
   Trash2, 
   ChevronRight, 
-  CheckCircle2 
+  CheckCircle2,
+  Activity
 } from 'lucide-react';
 import { getSportIcon } from '@/lib/sportIcons';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -21,20 +22,24 @@ interface TournamentListTabProps {
   tournaments: Tournament[];
   isLoading: boolean;
   viewMode: 'grid' | 'list';
+  matchProgressMap?: Record<string, { total: number; completed: number }>;
   onOpenWizard: (tournament: Tournament) => void;
   onPromptDelete: (tournament: Tournament) => void;
   onClearFilters: () => void;
   onToggleCoi?: (tournament: Tournament) => void;
+  onPromptConclude?: (tournament: Tournament) => void;
 }
 
 export const TournamentListTab: React.FC<TournamentListTabProps> = ({
   tournaments,
   isLoading,
   viewMode,
+  matchProgressMap,
   onOpenWizard,
   onPromptDelete,
   onClearFilters,
   onToggleCoi,
+  onPromptConclude,
 }) => {
   if (isLoading) {
     return (
@@ -61,6 +66,10 @@ export const TournamentListTab: React.FC<TournamentListTabProps> = ({
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {tournaments.map((t, idx) => {
           const SportIcon = (getSportIcon(t.sport || t.name)) as any;
+          const progress = matchProgressMap?.[t.id] || { total: 0, completed: 0 };
+          const hasMatches = progress.total > 0;
+          const isAllMatchesDone = hasMatches && progress.completed === progress.total;
+          const percentage = hasMatches ? Math.round((progress.completed / progress.total) * 100) : 0;
           return (
             <Card
               key={t.id}
@@ -110,11 +119,68 @@ export const TournamentListTab: React.FC<TournamentListTabProps> = ({
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-8 pt-4">
-                <div className="flex items-center gap-3 text-slate-400 dark:text-slate-500 mb-8 font-bold text-xs">
-                  <CalendarDays className="size-4 text-orange-500" />
-                  {new Date(t.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} -{' '}
-                  {new Date(t.end_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                <div className="flex items-center gap-3 text-slate-400 dark:text-slate-500 mb-5 font-bold text-xs">
+                  <CalendarDays className="size-4 text-orange-500 shrink-0" />
+                  <span>
+                    {new Date(t.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} -{' '}
+                    {new Date(t.end_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
                 </div>
+
+                {/* Match Progress Counter & Mini Bar */}
+                <div className="space-y-1.5 mb-6">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                      <Activity className="size-3 text-orange-500" />
+                      Match Progress
+                    </span>
+                    <span className="text-slate-700 dark:text-slate-300 font-mono text-[11px] font-black">
+                      {hasMatches ? (
+                        <>
+                          <span className={isAllMatchesDone ? 'text-emerald-500' : 'text-orange-500'}>{progress.completed}</span>
+                          <span className="text-slate-400">/{progress.total}</span> Done
+                        </>
+                      ) : (
+                        <span className="text-slate-400 font-sans font-medium text-[10px] italic">0 Matches</span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-700 rounded-full ${
+                        isAllMatchesDone ? 'bg-emerald-500' : 'bg-orange-500'
+                      }`}
+                      style={{ width: `${hasMatches ? percentage : 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Ready to Conclude Prompt Banner */}
+                {isAllMatchesDone && t.status !== 'Completed' && (
+                  <div className="mb-6 p-3 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-between gap-3 animate-in fade-in">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="size-8 rounded-xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                        <Trophy className="size-4 text-emerald-500" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider truncate">
+                          All {progress.total} Matches Finished
+                        </p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                          Ready for official conclusion
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => onPromptConclude ? onPromptConclude(t) : onOpenWizard(t)}
+                      className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-wider rounded-xl shadow-md cursor-pointer shrink-0"
+                    >
+                      Review & Conclude
+                    </Button>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-3">
                   <Button
                     className="flex-1 h-14 flex items-center justify-center gap-3 bg-slate-900 hover:bg-orange-500 text-white font-black uppercase italic tracking-[0.1em] rounded-2xl shadow-xl transition-all duration-300 group-hover:shadow-orange-500/20 cursor-pointer"
@@ -152,6 +218,9 @@ export const TournamentListTab: React.FC<TournamentListTabProps> = ({
       <div className="md:hidden space-y-3">
         {tournaments.map((t) => {
           const SportIcon = (getSportIcon(t.sport || t.name)) as any;
+          const progress = matchProgressMap?.[t.id] || { total: 0, completed: 0 };
+          const hasMatches = progress.total > 0;
+          const isAllMatchesDone = hasMatches && progress.completed === progress.total;
           return (
             <Card
               key={`mob-${t.id}`}
@@ -169,6 +238,16 @@ export const TournamentListTab: React.FC<TournamentListTabProps> = ({
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                       {t.sport}
                     </p>
+                    <div className="flex items-center gap-1.5 mt-0.5 font-mono text-[10px] font-bold">
+                      <span className={isAllMatchesDone ? 'text-emerald-500 font-black' : 'text-slate-500'}>
+                        {hasMatches ? `${progress.completed}/${progress.total} matches` : '0 matches'}
+                      </span>
+                      {isAllMatchesDone && t.status !== 'Completed' && (
+                        <span className="text-[9px] font-black uppercase text-emerald-500">
+                          • Ready to Conclude
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -211,7 +290,7 @@ export const TournamentListTab: React.FC<TournamentListTabProps> = ({
                     className="h-8 px-2.5 text-[10px] font-black uppercase italic text-orange-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-lg cursor-pointer"
                     onClick={() => onOpenWizard(t)}
                   >
-                    Manage <ChevronRight className="size-3 ml-0.5" />
+                    {isAllMatchesDone && t.status !== 'Completed' ? 'Review & Conclude' : 'Manage'} <ChevronRight className="size-3 ml-0.5" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -237,6 +316,7 @@ export const TournamentListTab: React.FC<TournamentListTabProps> = ({
               <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 pl-8">Event Name</TableHead>
               <TableHead className="font-black uppercase tracking-widest text-[10px] h-14">Category</TableHead>
               <TableHead className="font-black uppercase tracking-widest text-[10px] h-14">Status</TableHead>
+              <TableHead className="font-black uppercase tracking-widest text-[10px] h-14">Matches</TableHead>
               <TableHead className="font-black uppercase tracking-widest text-[10px] h-14">Kickoff</TableHead>
               <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 text-right pr-8">Control</TableHead>
             </TableRow>
@@ -244,6 +324,10 @@ export const TournamentListTab: React.FC<TournamentListTabProps> = ({
           <TableBody>
             {tournaments.map((t, idx) => {
               const SportIcon = (getSportIcon(t.sport || t.name)) as any;
+              const progress = matchProgressMap?.[t.id] || { total: 0, completed: 0 };
+              const hasMatches = progress.total > 0;
+              const isAllMatchesDone = hasMatches && progress.completed === progress.total;
+              const percentage = hasMatches ? Math.round((progress.completed / progress.total) * 100) : 0;
               return (
                 <TableRow 
                   key={t.id} 
@@ -274,6 +358,29 @@ export const TournamentListTab: React.FC<TournamentListTabProps> = ({
                       {t.status === 'Completed' && <CheckCircle2 className="size-2.5 mr-1 inline" />}
                       {t.status}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="py-5">
+                    <div className="space-y-1 min-w-[120px]">
+                      <div className="flex items-center justify-between text-[10px] font-mono font-bold">
+                        <span className={isAllMatchesDone ? 'text-emerald-500 font-black' : 'text-slate-600 dark:text-slate-300'}>
+                          {hasMatches ? `${progress.completed}/${progress.total} Done` : '0 Matches'}
+                        </span>
+                        {hasMatches && <span className="text-slate-400">{percentage}%</span>}
+                      </div>
+                      <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-500 rounded-full ${
+                            isAllMatchesDone ? 'bg-emerald-500' : 'bg-orange-500'
+                          }`}
+                          style={{ width: `${hasMatches ? percentage : 0}%` }}
+                        />
+                      </div>
+                      {isAllMatchesDone && t.status !== 'Completed' && (
+                        <span className="text-[9px] font-black uppercase text-emerald-500 tracking-wider block">
+                          Ready to Conclude
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="font-bold text-xs text-slate-400">{new Date(t.start_date).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right pr-8">

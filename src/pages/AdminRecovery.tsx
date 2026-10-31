@@ -399,7 +399,7 @@ export const AdminRecovery = () => {
         action: 'RESTORE_USER',
         entity_type: 'users',
         entity_id: u.id,
-        details: `Restored soft-deleted user profile "${u.full_name}" (${u.id})`
+        details: `Restored soft-deleted user profile "${u.full_name}"`
       });
 
       setUsers(prev => prev.filter(item => item.id !== u.id));

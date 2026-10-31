@@ -26,7 +26,8 @@ import {
   Pencil,
   Save,
   X,
-  Clock
+  Clock,
+  Lock
 } from 'lucide-react';
 import { logAudit } from '@/lib/audit';
 import type { Tournament, ProposedMatch, ApprovedTeam, TournamentStanding, BracketFormatType } from './types';
@@ -381,9 +382,14 @@ export const BracketGenerationModal: React.FC<BracketGenerationModalProps> = ({
     });
 
     if (!finalMatch || finalMatch.status !== 'Completed') return null;
-    const scoreA = finalMatch.team_a_score || 0;
-    const scoreB = finalMatch.team_b_score || 0;
-    return scoreA >= scoreB ? finalMatch.team_a_name : finalMatch.team_b_name;
+    const scoreA = Number(finalMatch.team_a_score || 0);
+    const scoreB = Number(finalMatch.team_b_score || 0);
+    if (finalMatch.winner_team_id) {
+      return finalMatch.winner_team_id === finalMatch.team_a_id ? finalMatch.team_a_name : finalMatch.team_b_name;
+    }
+    if (scoreA > scoreB) return finalMatch.team_a_name;
+    if (scoreB > scoreA) return finalMatch.team_b_name;
+    return null;
   }, [existingMatches, publishedFormatInfo.mode, allMatchesCompleted, tournamentStandings]);
 
   const getBracketRecommendation = (teamCount: number) => {
@@ -1326,11 +1332,18 @@ export const BracketGenerationModal: React.FC<BracketGenerationModalProps> = ({
    * Advances both Winner (to next_match_id) AND Loser (to loser_next_match_id for Double Elimination / 3rd Place)
    */
   const handleConfirmMatchWinner = async (match: any) => {
-    const isTeamAWinner = (match.team_a_score || 0) >= (match.team_b_score || 0);
-    const winnerId = isTeamAWinner ? match.team_a_id : match.team_b_id;
-    const winnerName = isTeamAWinner ? match.team_a_name : match.team_b_name;
-    const loserId = isTeamAWinner ? match.team_b_id : match.team_a_id;
-    const loserName = isTeamAWinner ? match.team_b_name : match.team_a_name;
+    const scoreA = Number(match.team_a_score || 0);
+    const scoreB = Number(match.team_b_score || 0);
+
+    if (scoreA === scoreB && !match.winner_team_id) {
+      toast.error(`Cannot advance winner on a tied match (${scoreA} - ${scoreB}). In official ballgames, elimination rounds require a decisive winner via Overtime or tiebreaker.`);
+      return;
+    }
+
+    const winnerId = match.winner_team_id || (scoreA > scoreB ? match.team_a_id : match.team_b_id);
+    const winnerName = winnerId === match.team_a_id ? match.team_a_name : match.team_b_name;
+    const loserId = winnerId === match.team_a_id ? match.team_b_id : match.team_a_id;
+    const loserName = winnerId === match.team_a_id ? match.team_b_name : match.team_a_name;
 
     if (!winnerId || winnerName === 'TBD' || winnerName === 'BYE') {
       toast.error('Cannot determine a valid winning team for this match.');
@@ -1407,6 +1420,10 @@ export const BracketGenerationModal: React.FC<BracketGenerationModalProps> = ({
    * Starts inline editing for an already-published match (Date, Time, Venue, and Teams if Scheduled)
    */
   const startEditingPublishedMatch = (match: any) => {
+    if (match.status === 'Completed' || match.status === 'Ongoing') {
+      toast.error('Completed or ongoing matches cannot be edited as their records are locked.');
+      return;
+    }
     setEditingMatchId(match.id);
     setEditMatchForm({
       team_a_id: match.team_a_id || 'TBD',
@@ -1418,6 +1435,11 @@ export const BracketGenerationModal: React.FC<BracketGenerationModalProps> = ({
 
   const handleSavePublishedMatchEdit = async (match: any) => {
     if (!tournament) return;
+    if (match.status === 'Completed' || match.status === 'Ongoing') {
+      toast.error('Completed or ongoing matches cannot be edited.');
+      setEditingMatchId(null);
+      return;
+    }
     setIsSavingMatchEdit(true);
     try {
       const updatePayload: any = {
@@ -2136,7 +2158,7 @@ export const BracketGenerationModal: React.FC<BracketGenerationModalProps> = ({
                                       Matchroom <ChevronRight className="size-3 ml-0.5" />
                                     </Button>
 
-                                    {tournament?.status !== 'Completed' && (
+                                    {tournament?.status !== 'Completed' && match.status !== 'Completed' && match.status !== 'Ongoing' ? (
                                       <Button
                                         variant="ghost"
                                         size="sm"
@@ -2145,7 +2167,15 @@ export const BracketGenerationModal: React.FC<BracketGenerationModalProps> = ({
                                       >
                                         <Pencil className="size-3" /> Edit
                                       </Button>
-                                    )}
+                                    ) : isCompleted ? (
+                                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold flex items-center gap-1 select-none">
+                                        <Lock className="size-2.5" /> Locked Record
+                                      </span>
+                                    ) : match.status === 'Ongoing' ? (
+                                      <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1 select-none">
+                                        <Lock className="size-2.5" /> Live Match
+                                      </span>
+                                    ) : null}
                                   </div>
 
                                   {isCompleted && (match.next_match_id || match.loser_next_match_id) && (
