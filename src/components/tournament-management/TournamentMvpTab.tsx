@@ -43,10 +43,11 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sportFilter, setSportFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'crowned'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'concluded' | 'pending' | 'crowned'>('all');
 
   // Master Gold Stars Cache across all tournaments
   const [goldStarsMap, setGoldStarsMap] = useState<Record<string, GoldStarRecord>>({});
+  const [tournamentTeamsCountMap, setTournamentTeamsCountMap] = useState<Record<string, number>>({});
   const [isLoadingGoldStars, setIsLoadingGoldStars] = useState<boolean>(true);
 
   // Selected Tournament Data
@@ -63,20 +64,36 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
 
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState<boolean>(false);
 
-  // 1. Initial Batch Fetch: Load all Gold Stars for all tournaments at once
+  // 1. Initial Batch Fetch: Load all Gold Stars & team counts across all tournaments
   const fetchAllGoldStars = useCallback(async () => {
     setIsLoadingGoldStars(true);
     try {
-      const { data, error } = await supabase
-        .from('player_stars')
-        .select('id, tournament_id, player_id, users:player_id(full_name), justification, override_reason, created_at, awarded_by')
-        .eq('star_type', 'Gold');
+      const [{ data: starsData, error: starsError }, { data: teamsData, error: teamsError }] = await Promise.all([
+        supabase
+          .from('player_stars')
+          .select('id, tournament_id, player_id, users:player_id(full_name), justification, override_reason, created_at, awarded_by')
+          .eq('star_type', 'Gold'),
+        supabase
+          .from('teams')
+          .select('tournament_id')
+          .eq('status', 'Approved')
+          .or('is_deleted.is.null,is_deleted.eq.false'),
+      ]);
 
-      if (error) throw error;
+      if (starsError) throw starsError;
+      if (teamsError) console.error('Error loading team counts:', teamsError);
+
+      const teamCountMap: Record<string, number> = {};
+      for (const tm of (teamsData || []) as any[]) {
+        if (tm.tournament_id) {
+          teamCountMap[tm.tournament_id] = (teamCountMap[tm.tournament_id] || 0) + 1;
+        }
+      }
+      setTournamentTeamsCountMap(teamCountMap);
 
       const map: Record<string, GoldStarRecord> = {};
-      if (data) {
-        for (const star of data as any[]) {
+      if (starsData) {
+        for (const star of starsData as any[]) {
           const uObj = star.users;
           const winnerName = Array.isArray(uObj) ? uObj[0]?.full_name : uObj?.full_name;
           map[star.tournament_id] = {
@@ -103,20 +120,35 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
     fetchAllGoldStars();
   }, [fetchAllGoldStars]);
 
-  // Set default tournament when list loads
+  // Filter out empty Draft tournaments: Only show concluded tournaments or active tournaments with candidate rosters
+  const eligibleTournaments = useMemo(() => {
+    return tournaments.filter((t) => {
+      // Exclude Draft tournaments (unstarted draft tournaments have no candidate rosters)
+      if (t.status === 'Draft') return false;
+
+      // Always include if already crowned (for review/reassign/revoke)
+      if (goldStarsMap[t.id]) return true;
+
+      // Include if tournament has approved teams or is concluded
+      const hasApprovedTeams = (tournamentTeamsCountMap[t.id] || 0) > 0;
+      return hasApprovedTeams || t.status === 'Completed';
+    });
+  }, [tournaments, goldStarsMap, tournamentTeamsCountMap]);
+
+  // Set default tournament when list loads (from eligible tournaments only)
   useEffect(() => {
-    if (tournaments.length === 0) {
+    if (eligibleTournaments.length === 0) {
       setSelectedTournamentId('');
       return;
     }
-    // If current selected tournament is still valid, keep it
-    if (selectedTournamentId && tournaments.some((t) => t.id === selectedTournamentId)) {
+    // If current selected tournament is still valid in eligible list, keep it
+    if (selectedTournamentId && eligibleTournaments.some((t) => t.id === selectedTournamentId)) {
       return;
     }
-    // Otherwise pick the first pending tournament, or first overall
-    const firstPending = tournaments.find((t) => !goldStarsMap[t.id]);
-    setSelectedTournamentId(firstPending ? firstPending.id : tournaments[0].id);
-  }, [tournaments, goldStarsMap, selectedTournamentId]);
+    // Otherwise pick the first pending tournament in eligible list, or first overall
+    const firstPending = eligibleTournaments.find((t) => !goldStarsMap[t.id]);
+    setSelectedTournamentId(firstPending ? firstPending.id : eligibleTournaments[0].id);
+  }, [eligibleTournaments, goldStarsMap, selectedTournamentId]);
 
   // 2. Fetch Selected Tournament Data & Candidates
   useEffect(() => {
@@ -280,9 +312,9 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
     };
   }, [selectedTournamentId]);
 
-  // 3. Filtered Tournaments for the Master Sidebar
+  // 3. Filtered Tournaments for the Master Sidebar (derived from eligible tournaments with rosters)
   const filteredTournaments = useMemo(() => {
-    return tournaments.filter((t) => {
+    return eligibleTournaments.filter((t) => {
       const isCrowned = Boolean(goldStarsMap[t.id]);
 
       // Search Query
@@ -301,21 +333,26 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
       }
 
       // Status Filter
+      if (statusFilter === 'concluded' && t.status !== 'Completed') return false;
       if (statusFilter === 'pending' && isCrowned) return false;
       if (statusFilter === 'crowned' && !isCrowned) return false;
 
       return true;
     });
-  }, [tournaments, goldStarsMap, searchQuery, sportFilter, statusFilter]);
+  }, [eligibleTournaments, goldStarsMap, searchQuery, sportFilter, statusFilter]);
 
   // Overall Hall of Fame Progress Metrics
-  const totalTournaments = tournaments.length;
-  const crownedCount = tournaments.filter((t) => Boolean(goldStarsMap[t.id])).length;
+  const totalTournaments = eligibleTournaments.length;
+  const concludedCount = eligibleTournaments.filter((t) => t.status === 'Completed').length;
+  const crownedCount = eligibleTournaments.filter((t) => Boolean(goldStarsMap[t.id])).length;
   const pendingCount = totalTournaments - crownedCount;
   const progressPercentage = totalTournaments > 0 ? Math.round((crownedCount / totalTournaments) * 100) : 0;
 
   // Selected Tournament Object & Crowned Record
-  const selectedTournament = tournaments.find((t) => t.id === selectedTournamentId) || null;
+  const selectedTournament =
+    eligibleTournaments.find((t) => t.id === selectedTournamentId) ||
+    tournaments.find((t) => t.id === selectedTournamentId) ||
+    null;
   const selectedCrownedStar = selectedTournamentId ? goldStarsMap[selectedTournamentId] : null;
 
   // Standout Top 3 Spotlight Contenders
@@ -335,16 +372,35 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
     );
   }, [candidates, candidateSearchQuery]);
 
-  // Quick Jump: Advance to Next Pending Tournament
+  // Quick Jump: Advance to Next Pending Tournament in sequence (cycles forward without looping trap)
   const handleQuickJumpNextPending = useCallback(() => {
-    const nextPending = tournaments.find((t) => !goldStarsMap[t.id]);
-    if (nextPending) {
-      setSelectedTournamentId(nextPending.id);
-      toast.info(`Switched to pending: ${nextPending.name}`);
-    } else {
-      toast.success('All tournaments have been crowned with Tournament MVPs! 👑');
+    // Look in currently filtered tournaments first, or fall back to eligible tournaments
+    const pendingInFilter = filteredTournaments.filter((t) => !goldStarsMap[t.id]);
+    const pendingInAll = eligibleTournaments.filter((t) => !goldStarsMap[t.id]);
+    const targetList = pendingInFilter.length > 0 ? pendingInFilter : pendingInAll;
+
+    if (targetList.length === 0) {
+      toast.success('All tournaments in the queue have been crowned with Tournament MVPs! 👑');
+      return;
     }
-  }, [tournaments, goldStarsMap]);
+
+    // Find current index in the pending target list
+    const currentIndex = targetList.findIndex((t) => t.id === selectedTournamentId);
+
+    // If currently not on a pending tournament, jump to the first pending
+    if (currentIndex === -1) {
+      setSelectedTournamentId(targetList[0].id);
+      toast.info(`Switched to: ${targetList[0].name}`);
+      return;
+    }
+
+    // Advance forward cyclically to next pending arena
+    const nextIndex = (currentIndex + 1) % targetList.length;
+    const nextPending = targetList[nextIndex];
+
+    setSelectedTournamentId(nextPending.id);
+    toast.info(`Switched to: ${nextPending.name}`);
+  }, [filteredTournaments, eligibleTournaments, goldStarsMap, selectedTournamentId]);
 
   // Nomination Action Handler
   const handleNominateCandidate = (cand: TournamentGoldStarCandidate) => {
@@ -407,8 +463,8 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
       setGoldStarsMap(updatedMap);
       setIsNominationModalOpen(false);
 
-      // Auto-advance to next pending tournament
-      const nextPending = tournaments.find(
+      // Auto-advance to next pending tournament in sequence
+      const nextPending = eligibleTournaments.find(
         (t) => t.id !== selectedTournament.id && !updatedMap[t.id]
       );
       if (nextPending) {
@@ -511,11 +567,11 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
             </div>
 
             {/* Status Filter Tabs */}
-            <div className="grid grid-cols-3 gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+            <div className="grid grid-cols-4 gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
               <button
                 type="button"
                 onClick={() => setStatusFilter('all')}
-                className={`py-1.5 px-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                className={`py-1.5 px-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
                   statusFilter === 'all'
                     ? 'bg-amber-500 text-slate-950 shadow-sm'
                     : 'text-slate-400 hover:text-white'
@@ -525,8 +581,19 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
               </button>
               <button
                 type="button"
+                onClick={() => setStatusFilter('concluded')}
+                className={`py-1.5 px-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                  statusFilter === 'concluded'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Concluded ({concludedCount})
+              </button>
+              <button
+                type="button"
                 onClick={() => setStatusFilter('pending')}
-                className={`py-1.5 px-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                className={`py-1.5 px-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
                   statusFilter === 'pending'
                     ? 'bg-amber-500 text-slate-950 shadow-sm'
                     : 'text-slate-400 hover:text-white'
@@ -537,7 +604,7 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
               <button
                 type="button"
                 onClick={() => setStatusFilter('crowned')}
-                className={`py-1.5 px-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                className={`py-1.5 px-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
                   statusFilter === 'crowned'
                     ? 'bg-amber-500 text-slate-950 shadow-sm'
                     : 'text-slate-400 hover:text-white'
@@ -636,6 +703,10 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
                         {crowned ? (
                           <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[9px] font-black uppercase tracking-wider px-2 py-0.5">
                             👑 {crowned.winner_name.split(' ')[0]}
+                          </Badge>
+                        ) : t.status === 'Completed' ? (
+                          <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-black uppercase tracking-wider px-2 py-0.5">
+                            Concluded
                           </Badge>
                         ) : (
                           <Badge className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-black uppercase tracking-wider px-2 py-0.5">

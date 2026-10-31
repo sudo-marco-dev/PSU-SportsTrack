@@ -243,13 +243,17 @@ test.describe('Admin MVP Hall of Fame Command Center & Rapid Queue Workflow', ()
     await expect(page.locator('[data-testid="tournament-card-tourn-13"]')).toBeVisible();
     await expect(page.locator('[data-testid="tournament-card-tourn-1"]')).not.toBeVisible();
 
-    // 4. Test Quick Jump: Next Pending Arena
+    // 4. Test Quick Jump: Next Pending Arena advances cyclically without looping trap
     const quickJumpBtn = page.locator('[data-testid="quick-jump-pending-btn"]');
     await expect(quickJumpBtn).toBeVisible();
     await quickJumpBtn.click();
 
     // Expect arena 13 to be selected in the workspace header
     await expect(page.locator('h2:has-text("CCJE vs CS Soccer Derby")')).toBeVisible();
+
+    // Clicking again MUST advance forward to the next pending arena (tourn-14), not get stuck!
+    await quickJumpBtn.click();
+    await expect(page.locator('h2:has-text("Binturungan Men Table Tennis Masters")')).toBeVisible();
   });
 
   test('Multi-Factor Contender Spotlight ranks champion team performer with 2x Red Stars', async ({ page }) => {
