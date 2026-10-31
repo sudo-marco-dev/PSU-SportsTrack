@@ -73,7 +73,7 @@ export const TournamentListTab: React.FC<TournamentListTabProps> = ({
           return (
             <Card
               key={t.id}
-              className="group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl rounded-3xl overflow-hidden border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 animate-in fade-in slide-in-from-bottom-4"
+              className="group hover:border-orange-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl rounded-3xl overflow-hidden border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 animate-in fade-in slide-in-from-bottom-4 flex flex-col h-full"
               style={{ animationDelay: `${idx * 50}ms` }}
             >
               <div className="h-2 bg-slate-100 dark:bg-white/5 w-full overflow-hidden">
@@ -111,89 +111,88 @@ export const TournamentListTab: React.FC<TournamentListTabProps> = ({
                     </Badge>
                   </div>
                 </div>
-                <CardTitle className="text-2xl font-black italic uppercase tracking-tighter group-hover:text-orange-500 transition-colors">
+                <CardTitle className="text-2xl font-black italic uppercase tracking-tighter group-hover:text-orange-500 transition-colors min-h-[3.75rem] line-clamp-2 flex items-center">
                   {t.name}
                 </CardTitle>
                 <CardDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mt-1">
                   {t.sport} • {t.type}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-8 pt-4">
-                <div className="flex items-center gap-3 text-slate-400 dark:text-slate-500 mb-5 font-bold text-xs">
-                  <CalendarDays className="size-4 text-orange-500 shrink-0" />
-                  <span>
-                    {new Date(t.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} -{' '}
-                    {new Date(t.end_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </span>
-                </div>
-
-                {/* Match Progress Counter & Mini Bar */}
-                <div className="space-y-1.5 mb-6">
-                  <div className="flex items-center justify-between text-xs font-bold">
-                    <span className="text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
-                      <Activity className="size-3 text-orange-500" />
-                      Match Progress
-                    </span>
-                    <span className="text-slate-700 dark:text-slate-300 font-mono text-[11px] font-black">
-                      {hasMatches ? (
-                        <>
-                          <span className={isAllMatchesDone ? 'text-emerald-500' : 'text-orange-500'}>{progress.completed}</span>
-                          <span className="text-slate-400">/{progress.total}</span> Done
-                        </>
-                      ) : (
-                        <span className="text-slate-400 font-sans font-medium text-[10px] italic">0 Matches</span>
-                      )}
+              <CardContent className="p-8 pt-4 flex-1 flex flex-col justify-between">
+                <div className="space-y-5">
+                  <div className="flex items-center gap-3 text-slate-400 dark:text-slate-500 font-bold text-xs">
+                    <CalendarDays className="size-4 text-orange-500 shrink-0" />
+                    <span>
+                      {new Date(t.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} -{' '}
+                      {new Date(t.end_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </span>
                   </div>
-                  <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-700 rounded-full ${
-                        isAllMatchesDone ? 'bg-emerald-500' : 'bg-orange-500'
-                      }`}
-                      style={{ width: `${hasMatches ? percentage : 0}%` }}
-                    />
-                  </div>
-                </div>
 
-                {/* Ready to Conclude Prompt Banner */}
-                {isAllMatchesDone && t.status !== 'Completed' && (
-                  <div className="mb-6 p-3 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-between gap-3 animate-in fade-in">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="size-8 rounded-xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center shrink-0 border border-emerald-500/30">
-                        <Trophy className="size-4 text-emerald-500" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider truncate">
-                          All {progress.total} Matches Finished
-                        </p>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                          Ready for official conclusion
-                        </p>
-                      </div>
+                  {/* Match Progress Counter & Mini Bar */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs font-bold">
+                      <span className="text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                        <Activity className="size-3 text-orange-500" />
+                        Match Progress
+                      </span>
+                      <span className="text-slate-700 dark:text-slate-300 font-mono text-[11px] font-black">
+                        {hasMatches ? (
+                          <>
+                            <span className={isAllMatchesDone ? 'text-emerald-500' : 'text-orange-500'}>{progress.completed}</span>
+                            <span className="text-slate-400">/{progress.total}</span> Done
+                          </>
+                        ) : (
+                          <span className="text-slate-400 font-sans font-medium text-[10px] italic">0 Matches</span>
+                        )}
+                      </span>
                     </div>
-                    <Button
-                      size="sm"
-                      onClick={() => onPromptConclude ? onPromptConclude(t) : onOpenWizard(t)}
-                      className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-wider rounded-xl shadow-md cursor-pointer shrink-0"
-                    >
-                      Review & Conclude
-                    </Button>
+                    <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-700 rounded-full ${
+                          isAllMatchesDone ? 'bg-emerald-500' : 'bg-orange-500'
+                        }`}
+                        style={{ width: `${hasMatches ? percentage : 0}%` }}
+                      />
+                    </div>
                   </div>
-                )}
+                </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 mt-auto pt-6">
                   <Button
-                    className="flex-1 h-14 flex items-center justify-center gap-3 bg-slate-900 hover:bg-orange-500 text-white font-black uppercase italic tracking-[0.1em] rounded-2xl shadow-xl transition-all duration-300 group-hover:shadow-orange-500/20 cursor-pointer"
-                    onClick={() => onOpenWizard(t)}
+                    className={`flex-1 h-14 flex items-center justify-center gap-3 font-black uppercase italic tracking-[0.1em] rounded-2xl shadow-xl transition-all duration-300 cursor-pointer ${
+                      isAllMatchesDone && t.status !== 'Completed'
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                        : 'bg-slate-900 hover:bg-orange-500 text-white group-hover:shadow-orange-500/20'
+                    }`}
+                    onClick={() => {
+                      if (isAllMatchesDone && t.status !== 'Completed' && onPromptConclude) {
+                        onPromptConclude(t);
+                      } else {
+                        onOpenWizard(t);
+                      }
+                    }}
                   >
-                    {t.status === 'Draft' ? (
-                      <LayoutGrid className="size-5" />
+                    {isAllMatchesDone && t.status !== 'Completed' ? (
+                      <>
+                        <Trophy className="size-5 text-amber-300 animate-bounce" />
+                        Review & Conclude
+                      </>
+                    ) : t.status === 'Draft' ? (
+                      <>
+                        <LayoutGrid className="size-5" />
+                        Setup Bracket
+                      </>
                     ) : t.status === 'Completed' ? (
-                      <Trophy className="size-5 text-amber-400" />
+                      <>
+                        <Trophy className="size-5 text-amber-400" />
+                        View Results
+                      </>
                     ) : (
-                      <Eye className="size-5 text-orange-400" />
+                      <>
+                        <Eye className="size-5 text-orange-400" />
+                        Bracket Preview
+                      </>
                     )}
-                    {t.status === 'Draft' ? 'Setup Bracket' : t.status === 'Completed' ? 'View Results' : 'Bracket Preview'}
                   </Button>
                   <Button
                     variant="outline"
@@ -288,7 +287,13 @@ export const TournamentListTab: React.FC<TournamentListTabProps> = ({
                     variant="ghost"
                     size="sm"
                     className="h-8 px-2.5 text-[10px] font-black uppercase italic text-orange-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-lg cursor-pointer"
-                    onClick={() => onOpenWizard(t)}
+                    onClick={() => {
+                      if (isAllMatchesDone && t.status !== 'Completed' && onPromptConclude) {
+                        onPromptConclude(t);
+                      } else {
+                        onOpenWizard(t);
+                      }
+                    }}
                   >
                     {isAllMatchesDone && t.status !== 'Completed' ? 'Review & Conclude' : 'Manage'} <ChevronRight className="size-3 ml-0.5" />
                   </Button>
@@ -389,9 +394,15 @@ export const TournamentListTab: React.FC<TournamentListTabProps> = ({
                         variant="ghost" 
                         size="sm"
                         className="font-black uppercase italic tracking-widest text-[10px] text-orange-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-500/10 cursor-pointer"
-                        onClick={() => onOpenWizard(t)}
+                        onClick={() => {
+                          if (isAllMatchesDone && t.status !== 'Completed' && onPromptConclude) {
+                            onPromptConclude(t);
+                          } else {
+                            onOpenWizard(t);
+                          }
+                        }}
                       >
-                        Manage <ChevronRight className="size-3 ml-1" />
+                        {isAllMatchesDone && t.status !== 'Completed' ? 'Review & Conclude' : 'Manage'} <ChevronRight className="size-3 ml-1" />
                       </Button>
                       <Button
                         variant="ghost"

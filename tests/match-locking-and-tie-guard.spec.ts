@@ -29,10 +29,21 @@ test.describe('Match Lockout, Strict Tie Guards, and Audit Humanization', () => 
       end_date: '2026-10-05',
       enforce_conflict_of_interest: true,
     },
+    {
+      id: 'tourn-completed-1',
+      name: 'PSU Table Tennis Men\'s Singles Open 2026 Invitational Cup',
+      sport: 'Table Tennis',
+      type: 'Single Elimination',
+      status: 'Completed',
+      start_date: '2026-10-01',
+      end_date: '2026-10-03',
+      enforce_conflict_of_interest: false,
+    },
   ];
 
   // Matches for tournament 1: 1 completed, 1 ongoing, 1 scheduled
   // Matches for tournament 2: 3 completed (3/3 finished)
+  // Matches for tournament 3: 2 completed
   const mockMatches = [
     { id: 'match-1', tournament_id: 'tourn-active-1', status: 'Completed', round: 'Quarterfinals', team_a_score: 82, team_b_score: 75, team_a_id: 't-1', team_b_id: 't-2' },
     { id: 'match-2', tournament_id: 'tourn-active-1', status: 'Ongoing', round: 'Semifinals', team_a_score: 54, team_b_score: 50, team_a_id: 't-1', team_b_id: 't-3' },
@@ -40,6 +51,8 @@ test.describe('Match Lockout, Strict Tie Guards, and Audit Humanization', () => 
     { id: 'match-4', tournament_id: 'tourn-done-all-matches', status: 'Completed', round: 'Quarterfinals', team_a_score: 25, team_b_score: 21, team_a_id: 't-4', team_b_id: 't-5' },
     { id: 'match-5', tournament_id: 'tourn-done-all-matches', status: 'Completed', round: 'Semifinals', team_a_score: 25, team_b_score: 23, team_a_id: 't-4', team_b_id: 't-6' },
     { id: 'match-6', tournament_id: 'tourn-done-all-matches', status: 'Completed', round: 'Finals', team_a_score: 25, team_b_score: 19, team_a_id: 't-4', team_b_id: 't-7' },
+    { id: 'match-7', tournament_id: 'tourn-completed-1', status: 'Completed', round: 'Semifinals', team_a_score: 11, team_b_score: 8, team_a_id: 't-8', team_b_id: 't-9' },
+    { id: 'match-8', tournament_id: 'tourn-completed-1', status: 'Completed', round: 'Finals', team_a_score: 11, team_b_score: 9, team_a_id: 't-8', team_b_id: 't-10' },
   ];
 
   const mockAuditLogs = [
@@ -140,9 +153,20 @@ test.describe('Match Lockout, Strict Tie Guards, and Audit Humanization', () => 
     await expect(card2).toBeVisible();
     await expect(card2.getByText('3/3 Done')).toBeVisible();
 
-    // Verify Ready to Conclude prompt banner appears on tournament 2 because all 3 matches are completed
-    await expect(card2.getByText('All 3 Matches Finished')).toBeVisible();
+    // Verify Review & Conclude primary action button appears on tournament 2 because all 3 matches are completed
     await expect(card2.getByRole('button', { name: 'Review & Conclude' })).toBeVisible();
+
+    // Verify tournament 3 card has "View Results"
+    const card3 = page.locator('.group', { hasText: 'PSU Table Tennis' }).first();
+    await expect(card3).toBeVisible();
+    await expect(card3.getByRole('button', { name: 'View Results' })).toBeVisible();
+
+    // Take screenshot of the tournament cards showing unified button alignment across all 3 cards
+    const cardsGrid = page.locator('.grid.gap-6').first();
+    await cardsGrid.scrollIntoViewIfNeeded();
+    await cardsGrid.screenshot({
+      path: 'C:/Users/Marco/.gemini/antigravity/brain/94a3d8ca-678e-4e5e-bb7a-e2a01fb553dd/unified_tournament_cards.png',
+    });
   });
 
   test('2. Completed and Live matches display locked indicators in Brackets and hide Edit button', async ({ page }) => {
@@ -229,7 +253,7 @@ test.describe('Match Lockout, Strict Tie Guards, and Audit Humanization', () => 
     await expect(certifyBtn).toBeDisabled();
   });
 
-  test('4. System Audit Trail formats legacy UUIDs into compact chips', async ({ page }) => {
+  test('4. System Audit Trail formats legacy UUIDs and displays humanized descriptions without raw UUIDs', async ({ page }) => {
     await page.goto('/admin/audit-logs');
     await page.waitForLoadState('networkidle');
 
@@ -237,9 +261,10 @@ test.describe('Match Lockout, Strict Tie Guards, and Audit Humanization', () => 
     const table = page.locator('table');
     await expect(table.getByText('Designated "Karl Nuas" to "CCS vs CBA" (Finals - Basketball)')).toBeVisible();
 
-    // Verify row 2 legacy UUID is rendered as a clean compact chip '#a2766c85' rather than a 36-char raw string
-    const chip = table.locator('span[title*="a2766c85-f25c-4be3-923a-82fc5e373794"]');
-    await expect(chip).toBeVisible();
-    await expect(chip).toHaveText('#a2766c85');
+    // Verify row 2 legacy UUID is humanized into official facilitator assignment prose
+    await expect(table.getByText('Assigned Karl Nuas as the official courtside match facilitator.')).toBeVisible();
+
+    // Ensure raw 36-character UUID is never exposed in the table
+    await expect(table.getByText('a2766c85-f25c-4be3-923a-82fc5e373794')).not.toBeVisible();
   });
 });

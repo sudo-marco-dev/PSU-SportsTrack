@@ -657,7 +657,7 @@ test.describe('Appendix I: Sample Generated Outputs (Figures 12.13 – 12.17)', 
     await page.goto('/admin/audit-logs');
     await waitForContentReady(page, 1800);
 
-    // Scroll slightly past the hero banner so the DataToolbar + top 4 Audit Trail rows (SCORE OVERRIDE, APPROVE DOCUMENT, OVERRIDE STAR, GENERATE BRACKET with their Immutable JSON Payload Diff blocks) fill the frame
+    // Scroll slightly past the hero banner so the DataToolbar + top Audit Trail rows with Previous -> Updated badges fill the frame
     await page.evaluate(() => {
       window.scrollTo({ top: 165, behavior: 'instant' });
     });
@@ -665,6 +665,25 @@ test.describe('Appendix I: Sample Generated Outputs (Figures 12.13 – 12.17)', 
 
     await page.screenshot({
       path: path.join(OUT_DIR, 'figure-12-16-immutable-audit-trail-record.png'),
+      fullPage: false,
+    });
+
+    // Also update desktop & mobile 15-admin-audit-logs-content.png
+    const desktopDir = path.resolve(process.cwd(), 'docs/paper-screenshots/desktop');
+    const mobileDir = path.resolve(process.cwd(), 'docs/paper-screenshots/mobile');
+    await page.screenshot({
+      path: path.join(desktopDir, '15-admin-audit-logs-content.png'),
+      fullPage: false,
+    });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(400);
+    await page.evaluate(() => {
+      window.scrollTo({ top: 180, behavior: 'instant' });
+    });
+    await page.waitForTimeout(400);
+    await page.screenshot({
+      path: path.join(mobileDir, '15-admin-audit-logs-content.png'),
       fullPage: false,
     });
   });

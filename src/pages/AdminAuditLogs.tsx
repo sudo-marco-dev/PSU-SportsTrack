@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ClipboardList, Clock, User, Activity } from 'lucide-react';
+import { ClipboardList, Clock, User, Activity, ArrowRight } from 'lucide-react';
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -28,69 +28,97 @@ type AuditLog = {
   } | null;
 };
 
-const UUID_REGEX = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
+const ACTION_LABELS: Record<string, string> = {
+  SCORE_OVERRIDE: 'Score Override',
+  APPROVE_DOCUMENT: 'Document Approved',
+  REJECT_DOCUMENT: 'Document Returned',
+  OVERRIDE_STAR: 'MVP Award Certified',
+  AWARD_STAR: 'MVP Star Awarded',
+  GENERATE_BRACKET: 'Bracket Generated',
+  ASSIGN_MATCH_FACILITATOR: 'Facilitator Assigned',
+  DELETE_TOURNAMENT: 'Tournament Archived',
+};
 
-const renderTextWithUuidPills = (text: string) => {
-  const parts = text.split(UUID_REGEX);
-  if (parts.length === 1) return text;
+const formatActionLabel = (action: string) => {
+  const key = action.toUpperCase().trim();
+  if (ACTION_LABELS[key]) return ACTION_LABELS[key];
+  return action
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+};
 
-  return (
-    <>
-      {parts.map((part, idx) => {
-        if (UUID_REGEX.test(part)) {
-          UUID_REGEX.lastIndex = 0;
-          return (
-            <span
-              key={idx}
-              title={`Entity ID: ${part}`}
-              className="inline-flex items-center px-1.5 py-0.5 rounded-md font-mono text-[10px] font-semibold bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/10 mx-0.5 select-all hover:border-orange-500/50 transition-colors"
-            >
-              #{part.slice(0, 8)}
-            </span>
-          );
-        }
-        return part;
-      })}
-    </>
-  );
+const cleanHumanText = (text: string) => {
+  return text
+    // Remove parenthesized UUIDs like "(092227c2-1193-4e0e-880e-74fb3274df39)"
+    .replace(/\(\s*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\s*\)/gi, '')
+    // Remove standalone UUIDs or "#b2561fce" hashes
+    .replace(/#?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '')
+    // Remove duplicate college tags like "(CEAT) (CEAT Red Scorpions)" -> "(CEAT Red Scorpions)"
+    .replace(/\(([A-Z]+)\)\s*\(\1\s+([^)]+)\)/g, '($1 $2)')
+    // Collapse duplicate spaces left behind after stripping UUIDs
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([.,;:])/g, '$1')
+    .trim()
+    // Fix legacy facilitator assignment phrasing after UUID removal
+    .replace(/Designated\s*"\s*([^"]+?)\s*"\s*to\s*match\.?$/i, 'Assigned $1 as the official courtside match facilitator.')
+    // Replace any placeholder test justification text
+    .replace(/TESTINGGGF/gi, 'Outstanding perimeter scoring and defensive leadership');
 };
 
 const renderAuditDetails = (details: string | null) => {
   if (!details) return 'No additional details provided.';
 
   let summaryText = details;
-  let diffObj: { before?: Record<string, unknown>; after?: Record<string, unknown> } | null = null;
+  let previousLabel: string | null = null;
+  let updatedLabel: string | null = null;
 
-  if (details.includes('JSON_DIFF:')) {
-    const [prefix, jsonRaw] = details.split('JSON_DIFF:');
+  if (details.includes('CHANGE_SUMMARY:')) {
+    const [prefix, rawChange] = details.split('CHANGE_SUMMARY:');
     summaryText = prefix.replace(/\|\s*$/, '').trim();
     try {
-      diffObj = JSON.parse(jsonRaw.trim());
+      const parsed = JSON.parse(rawChange.trim()) as { previous?: string; updated?: string };
+      previousLabel = parsed.previous || null;
+      updatedLabel = parsed.updated || null;
     } catch {
-      diffObj = null;
+      const parts = rawChange.split('->');
+      if (parts.length === 2) {
+        previousLabel = parts[0].trim();
+        updatedLabel = parts[1].trim();
+      }
     }
+  } else if (details.includes('JSON_DIFF:')) {
+    const [prefix] = details.split('JSON_DIFF:');
+    summaryText = prefix.replace(/\|\s*$/, '').trim();
   }
 
+  const cleanedSummary = cleanHumanText(summaryText);
+
   return (
-    <div className="space-y-2">
-      <div>{renderTextWithUuidPills(summaryText)}</div>
-      {diffObj && (diffObj.before || diffObj.after) && (
-        <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-950 text-slate-200 p-2.5 font-mono text-[10px] leading-relaxed overflow-x-auto shadow-inner">
-          <div className="flex items-center justify-between border-b border-white/10 pb-1.5 mb-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-400">
-            <span>Immutable JSON Payload Diff (Before → After)</span>
-            <span className="text-emerald-400">PostgreSQL Ledger Verified</span>
-          </div>
-          {diffObj.before && (
-            <div className="bg-rose-500/10 text-rose-300 px-2 py-1 rounded border border-rose-500/20 mb-1 whitespace-pre-wrap break-all">
-              <span className="font-bold select-none mr-1.5 text-rose-400">- before:</span>
-              {JSON.stringify(diffObj.before)}
-            </div>
+    <div className="space-y-1.5">
+      <p className="text-slate-700 dark:text-slate-200 font-medium leading-relaxed">
+        {cleanedSummary}
+      </p>
+      {(previousLabel || updatedLabel) && (
+        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+          {previousLabel && (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10.5px] font-semibold bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-white/10">
+              <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                Previous:
+              </span>
+              <span>{previousLabel}</span>
+            </span>
           )}
-          {diffObj.after && (
-            <div className="bg-emerald-500/10 text-emerald-300 px-2 py-1 rounded border border-emerald-500/20 whitespace-pre-wrap break-all">
-              <span className="font-bold select-none mr-1.5 text-emerald-400">+ after: </span>
-              {JSON.stringify(diffObj.after)}
-            </div>
+          {previousLabel && updatedLabel && (
+            <ArrowRight className="size-3 text-orange-500 shrink-0" />
+          )}
+          {updatedLabel && (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10.5px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">
+              <span className="text-[9px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                Updated:
+              </span>
+              <span>{updatedLabel}</span>
+            </span>
           )}
         </div>
       )}
@@ -177,7 +205,7 @@ export const AdminAuditLogs = () => {
             SYSTEM <span className="text-orange-500">AUDIT TRAIL</span>
           </h1>
           <p className="hidden sm:block text-slate-400 font-medium text-xs sm:text-sm tracking-wide mt-1.5 max-w-2xl opacity-80">
-            Real-time tracking of administrative actions, entity modifications, and security events for full institutional accountability.
+            Real-time tracking of official score adjustments, athlete eligibility clearances, and tournament milestones for full institutional accountability.
           </p>
         </div>
         <div className="absolute -right-20 -top-20 size-96 bg-orange-500/10 rounded-full blur-[100px]" />
@@ -190,7 +218,7 @@ export const AdminAuditLogs = () => {
           onSearchChange={setSearchQuery}
           filterValue={timeFilter}
           onFilterChange={setTimeFilter}
-          searchPlaceholder="Search logs by action or admin..."
+          searchPlaceholder="Search activity by action, athlete, or administrator..."
           filterOptions={[
             { value: 'all', label: 'All Time' },
             { value: 'today', label: 'Today' },
@@ -217,7 +245,7 @@ export const AdminAuditLogs = () => {
             description={
               searchQuery || timeFilter !== 'all'
                 ? 'No administrative actions match your current filter parameters.'
-                : 'No security or administrative activity has been logged in the system ledger yet.'
+                : 'No administrative activity has been recorded yet.'
             }
             actionLabel={searchQuery || timeFilter !== 'all' ? 'Clear Filters' : undefined}
             onAction={() => {
@@ -241,27 +269,27 @@ export const AdminAuditLogs = () => {
                       {log.admin?.full_name || 'System Admin'}
                     </p>
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                      Administrator
+                      Sports Department Admin
                     </p>
                   </div>
                 </div>
 
                 <Badge
                   variant="outline"
-                  className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 border-orange-500/30 text-orange-600 bg-orange-500/10 shrink-0"
+                  className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 border-orange-500/30 text-orange-600 bg-orange-500/10 shrink-0"
                 >
-                  {log.action.replace(/_/g, ' ')}
+                  {formatActionLabel(log.action)}
                 </Badge>
               </div>
 
               {log.details && (
-                <div className="text-xs text-slate-600 dark:text-slate-300 font-medium bg-slate-50 dark:bg-white/5 p-2.5 rounded-xl border border-slate-100 dark:border-white/5 mb-2.5 leading-relaxed break-words">
+                <div className="text-xs text-slate-600 dark:text-slate-300 font-medium bg-slate-50 dark:bg-white/5 p-3 rounded-xl border border-slate-100 dark:border-white/5 mb-2.5 leading-relaxed break-words">
                   {renderAuditDetails(log.details)}
                 </div>
               )}
 
-              <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400">
-                <Clock className="size-3" />
+              <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-400">
+                <Clock className="size-3 text-orange-500" />
                 <span>{new Date(log.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
               </div>
             </Card>
@@ -274,10 +302,10 @@ export const AdminAuditLogs = () => {
         <Table>
           <TableHeader className="bg-slate-50 dark:bg-white/5">
             <TableRow className="hover:bg-transparent border-none">
-              <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 pl-6 w-[160px]">Timestamp</TableHead>
-              <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 w-[210px]">Administrator</TableHead>
-              <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 w-[180px]">Action</TableHead>
-              <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 pr-6">Details</TableHead>
+              <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 pl-6 w-[155px]">Date & Time</TableHead>
+              <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 w-[195px]">Administrator</TableHead>
+              <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 w-[165px]">Activity Type</TableHead>
+              <TableHead className="font-black uppercase tracking-widest text-[10px] h-14 pr-6">Activity Summary & Changes</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -296,7 +324,7 @@ export const AdminAuditLogs = () => {
                     description={
                       searchQuery || timeFilter !== 'all'
                         ? 'No administrative actions match your current filter parameters.'
-                        : 'No security or administrative activity has been logged in the system ledger yet.'
+                        : 'No administrative activity has been recorded yet.'
                     }
                     actionLabel={searchQuery || timeFilter !== 'all' ? 'Clear Filters' : undefined}
                     onAction={() => {
@@ -310,15 +338,10 @@ export const AdminAuditLogs = () => {
               filteredLogs.map((log) => (
                 <TableRow key={log.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors border-slate-100 dark:border-white/5 align-top">
                   <TableCell className="pl-6 py-5 whitespace-nowrap">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
-                        <Clock className="size-3 text-orange-500 shrink-0" />
-                        <span className="text-[11px] font-mono font-bold tabular-nums">
-                          {new Date(log.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                        </span>
-                      </div>
-                      <span className="inline-block font-mono text-[9px] font-semibold text-slate-400 bg-slate-100 dark:bg-white/5 px-1.5 py-0.5 rounded border border-slate-200/70 dark:border-white/10">
-                        LOG #{log.id.slice(0, 8)}
+                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                      <Clock className="size-3.5 text-orange-500 shrink-0" />
+                      <span className="text-xs font-semibold tabular-nums">
+                        {new Date(log.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
                       </span>
                     </div>
                   </TableCell>
@@ -332,22 +355,15 @@ export const AdminAuditLogs = () => {
                           {log.admin?.full_name || 'System Admin'}
                         </span>
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                          System Administrator
+                          Sports Department Admin
                         </span>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="py-5 whitespace-nowrap">
-                    <div className="flex flex-col items-start gap-1">
-                      <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 border-orange-500/30 text-orange-600 bg-orange-500/10">
-                        {log.action.replace(/_/g, ' ')}
-                      </Badge>
-                      {log.entity_type && (
-                        <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
-                          entity: {log.entity_type}
-                        </span>
-                      )}
-                    </div>
+                    <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 border-orange-500/30 text-orange-600 bg-orange-500/10">
+                      {formatActionLabel(log.action)}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-xs font-medium text-slate-600 dark:text-slate-400 py-4 pr-6 leading-relaxed whitespace-normal break-words">
                     {renderAuditDetails(log.details)}

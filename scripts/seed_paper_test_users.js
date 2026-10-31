@@ -777,10 +777,11 @@ async function run() {
     console.log(`✅ Populated full Finals Box Score & Play-by-Play for match ${finalsMatchId}`);
   }
 
-  // Seed Immutable Audit Trail Records with JSON_DIFF payloads
+  // Seed Sports-Department-Friendly Audit Trail Records with Previous -> Updated Change Summaries
   if (adminId) {
-    // Remove previously seeded JSON_DIFF logs so re-runs stay idempotent
+    // Remove previously seeded JSON_DIFF or CHANGE_SUMMARY logs so re-runs stay idempotent
     await adminClient.from('audit_logs').delete().ilike('details', '%JSON_DIFF:%');
+    await adminClient.from('audit_logs').delete().ilike('details', '%CHANGE_SUMMARY:%');
 
     const auditEntries = [
       {
@@ -791,24 +792,9 @@ async function run() {
         entity_id: finalsMatchId,
         target_id: finalsMatchId,
         created_at: new Date(Date.now() + 240000).toISOString(),
-        details: `Official Technical Committee video review on Championship Finals match ${finalsMatchId} (CEAT Red Scorpions vs CS Byte Titans): upgraded 4Q 1:15 perimeter shot from 2PT Field Goal to 3PT Triple after foot-on-line replay check. | JSON_DIFF:${JSON.stringify({
-          before: {
-            match_id: 'b2561fce',
-            team_a: 'CEAT Red Scorpions',
-            team_a_score: 91,
-            team_b_score: 88,
-            shot_classification: '2PT_FIELD',
-            replay_verified: false,
-          },
-          after: {
-            match_id: 'b2561fce',
-            team_a: 'CEAT Red Scorpions',
-            team_a_score: 92,
-            team_b_score: 88,
-            shot_classification: '3PT_TRIPLE',
-            replay_verified: true,
-            authorized_by: 'Dr. Ramon Bautista (SUPER_ADMIN)',
-          },
+        details: `Official Technical Committee video review on the Basketball Championship Finals (CEAT Red Scorpions vs. CS Byte Titans): upgraded 4Q 1:15 perimeter shot from a 2-Point Field Goal to a 3-Point Triple after replay check. | CHANGE_SUMMARY:${JSON.stringify({
+          previous: 'CEAT 91 – 88 CS (2PT Field Goal)',
+          updated: 'CEAT 92 – 88 CS (3PT Triple)',
         })}`,
       },
       {
@@ -819,23 +805,9 @@ async function run() {
         entity_id: userMap['student_verified']?.id || null,
         target_id: userMap['student_verified']?.id || null,
         created_at: new Date(Date.now() + 180000).toISOString(),
-        details: `Approved Certificate of Registration (COR) and validated varsity eligibility for student-athlete Juan Dela Cruz (${userMap['student_verified']?.id}). | JSON_DIFF:${JSON.stringify({
-          before: {
-            student_no: '2024-8-0284',
-            full_name: 'Juan Dela Cruz',
-            document_type: 'COR_AY2026_SEM1',
-            verification_status: 'Pending',
-            is_verified: false,
-          },
-          after: {
-            student_no: '2024-8-0284',
-            full_name: 'Juan Dela Cruz',
-            document_type: 'COR_AY2026_SEM1',
-            verification_status: 'Approved',
-            is_verified: true,
-            ocr_confidence: '98.4%',
-            college_code: 'CAS',
-          },
+        details: `Approved Certificate of Registration (COR) and confirmed varsity eligibility for student-athlete Juan Dela Cruz (College of Arts and Sciences). | CHANGE_SUMMARY:${JSON.stringify({
+          previous: 'Pending Eligibility Review',
+          updated: 'Verified Varsity Athlete (CAS)',
         })}`,
       },
       {
@@ -846,20 +818,9 @@ async function run() {
         entity_id: finalsMatchId,
         target_id: finalsMatchId,
         created_at: new Date(Date.now() + 120000).toISOString(),
-        details: `Certified Post-Game Red Star (Game MVP) & Gold Star (Season MVP) attestation for Championship Finals ${finalsMatchId}. | JSON_DIFF:${JSON.stringify({
-          before: {
-            match_round: 'Championship Finals',
-            star_type: 'Red & Gold',
-            governance_state: 'Pending_Committee_Signoff',
-            conflict_of_interest_flag: false,
-          },
-          after: {
-            match_round: 'Championship Finals',
-            star_type: 'Red & Gold',
-            governance_state: 'Certified_Immutable',
-            points_recorded: 28,
-            attested_by: 'Engr. Patrick Manalo (FACILITATOR)',
-          },
+        details: `Certified official post-game Red Star (Game MVP) and Gold Star (Season MVP) awards for #7 Ezekiel Castro (CEAT Red Scorpions) in the Basketball Championship Finals. | CHANGE_SUMMARY:${JSON.stringify({
+          previous: 'Pending Committee Sign-Off',
+          updated: 'Official MVP Certified (28 PTS)',
         })}`,
       },
       {
@@ -870,18 +831,9 @@ async function run() {
         entity_id: marqueeTourId,
         target_id: marqueeTourId,
         created_at: new Date(Date.now() + 60000).toISOString(),
-        details: `Generated automated Single-Elimination Playoff Bracket Tree for tournament ${marqueeTourId} (PSU Binturungan 2026 - Basketball Championship). | JSON_DIFF:${JSON.stringify({
-          before: {
-            tournament_phase: 'Phase_1_Elimination',
-            playoff_tree_generated: false,
-            seeded_playoff_squads: 0,
-          },
-          after: {
-            tournament_phase: 'Phase_2_Playoffs_SingleElim',
-            playoff_tree_generated: true,
-            seeded_playoff_squads: 8,
-            rounds: ['Quarterfinals (4)', 'Semifinals (2)', '3rd Place Playoff (1)', 'Finals (1)'],
-          },
+        details: `Generated the official Single-Elimination Playoff Bracket for PSU Binturungan 2026 - Basketball Championship. | CHANGE_SUMMARY:${JSON.stringify({
+          previous: 'Elimination Round Phase',
+          updated: '8-Team Playoff Bracket Published',
         })}`,
       },
     ];
@@ -890,7 +842,7 @@ async function run() {
     if (auditErr) {
       console.warn('⚠️ Audit log seed warning:', auditErr.message);
     } else {
-      console.log(`✅ Seeded ${auditEntries.length} Immutable Audit Trail records with JSON_DIFF payloads`);
+      console.log(`✅ Seeded ${auditEntries.length} Sports-Department-friendly Audit Trail records`);
     }
   }
 
