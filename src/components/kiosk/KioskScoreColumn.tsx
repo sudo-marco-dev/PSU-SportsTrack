@@ -73,6 +73,22 @@ export const KioskScoreColumn = ({
     return Array.isArray(users) ? users[0]?.full_name : users?.full_name || 'Player';
   };
 
+  const getPlayerDisplayName = (player: RosterPlayerItem) => {
+    const raw = getPlayerName(player).trim();
+    if (!raw) return 'Player';
+    // If "Lastname, Firstname", extract clean Lastname without trailing comma
+    if (raw.includes(',')) {
+      const commaParts = raw.split(',').map((s) => s.trim());
+      return commaParts[0] || raw;
+    }
+    // If "Firstname Lastname", return the Lastname for compact courtside chips
+    const parts = raw.split(/\s+/);
+    if (parts.length > 1) {
+      return parts[parts.length - 1];
+    }
+    return raw;
+  };
+
   const getJersey = (player: RosterPlayerItem) => {
     if (player.jersey_number === null || player.jersey_number === undefined) return '#--';
     return `#${player.jersey_number}`;
@@ -202,7 +218,7 @@ export const KioskScoreColumn = ({
             title={isCompleted ? 'Match is concluded. Score corrections locked.' : undefined}
           >
             <Minus className="size-2.5" />
-            <span>Score Correction / Deduct</span>
+            <span className="truncate">{compact ? 'Deduct / Correct' : 'Score Correction / Deduct'}</span>
           </Button>
         </div>
       </div>
@@ -361,8 +377,8 @@ export const KioskScoreColumn = ({
                         : 'bg-white/5 border-white/10 text-slate-200 hover:bg-white/10 cursor-pointer'
                     }`}
                   >
-                    <span className="font-mono">{getJersey(p)}</span>
-                    <span className="truncate max-w-[55px]">{getPlayerName(p).split(' ')[0]}</span>
+                    <span className="font-mono text-[9px] shrink-0">{getJersey(p)}</span>
+                    <span className="truncate max-w-[70px] sm:max-w-[85px]">{getPlayerDisplayName(p)}</span>
                   </button>
                 );
               })}
@@ -425,7 +441,7 @@ export const KioskScoreColumn = ({
                     >
                       {getJersey(p)}
                     </span>
-                    <span className="truncate max-w-[85px]">{getPlayerName(p)}</span>
+                    <span className="truncate max-w-[90px] sm:max-w-[120px]">{getPlayerDisplayName(p)}</span>
                   </button>
                 );
               })

@@ -1572,209 +1572,226 @@ export const FacilitatorKiosk = () => {
     />
   );
 
-  return (
-    <div className="h-dvh max-h-dvh w-full max-w-full overflow-hidden bg-[#020617] text-white flex flex-col justify-between p-1.5 sm:p-3 select-none relative">
-      {/* Top Header Control Strip */}
-      <header className="w-full shrink-0 px-2 py-1.5 sm:px-4 sm:py-2 flex items-center justify-between border-b border-white/10 bg-slate-950/90 rounded-xl mb-1.5 sm:mb-2 relative z-20">
-        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              if (window.history.length > 1) {
-                navigate(-1);
-              } else {
-                navigate(`/match/${match.id}`, { replace: true });
-              }
-            }}
-            className="size-7 sm:size-8 rounded-lg bg-white/5 hover:bg-white/15 border border-white/10 text-slate-300 shrink-0"
-            title="Return to standard Match Control"
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="p-0.5 sm:p-1 rounded bg-orange-500 text-slate-950 shrink-0">
-                {createElement(getSportIcon(match.tournament?.sport), { className: 'size-2.5 sm:size-3' })}
-              </span>
-              <span className="text-[9px] sm:text-[11px] font-black uppercase tracking-wider text-orange-400 truncate">
-                {match.tournament?.sport || 'Game'} • {match.round}
-              </span>
-              <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[8px] font-black uppercase h-3.5 px-1 shrink-0">
-                KIOSK
-              </Badge>
-            </div>
-            <h1 className="text-[11px] sm:text-sm font-black uppercase italic tracking-tight text-white line-clamp-1 break-words pr-1.5 max-w-[160px] sm:max-w-sm hidden xs:block">
-              {match.tournament?.name || 'PSU Collegiate Games'}
-            </h1>
-          </div>
-        </div>
-
-        {/* In Mobile Portrait Mode: Quick View Switcher Tabs */}
-        {!isLandscapeMode && (
-          <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-white/5 border border-white/10 text-[9px] font-bold shrink-0">
-            <button
-              type="button"
-              onClick={() => setMobileTab('split')}
-              className={`px-1.5 py-0.5 rounded transition-colors ${
-                mobileTab === 'split' ? 'bg-orange-500 text-slate-950 font-black' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Both
-            </button>
-            <button
-              type="button"
-              onClick={() => setMobileTab('team_a')}
-              className={`px-1.5 py-0.5 rounded transition-colors ${
-                mobileTab === 'team_a' ? 'bg-orange-500 text-slate-950 font-black' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              {match.team_a?.name?.slice(0, 3) || 'A'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setMobileTab('team_b')}
-              className={`px-1.5 py-0.5 rounded transition-colors ${
-                mobileTab === 'team_b' ? 'bg-cyan-500 text-slate-950 font-black' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              {match.team_b?.name?.slice(0, 3) || 'B'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setMobileTab('clock')}
-              className={`px-1.5 py-0.5 rounded transition-colors ${
-                mobileTab === 'clock' ? 'bg-white text-slate-950 font-black' : 'text-slate-400 hover:text-white'
-              }`}
-              title="Full Clock Deck"
-            >
-              <Timer className="size-3" />
-            </button>
-          </div>
+  const renderStatusSection = (compactMobile: boolean = false) => (
+    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+      <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-bold">
+        {isOnline ? (
+          <span className="flex items-center gap-1 text-emerald-400">
+            <Wifi className="size-2.5" /> <span className={compactMobile ? 'hidden' : 'hidden sm:inline'}>Online</span>
+          </span>
+        ) : (
+          <span className="flex items-center gap-1 text-amber-400">
+            <WifiOff className="size-2.5" /> <span className={compactMobile ? 'hidden' : 'hidden sm:inline'}>({pendingOfflineCount})</span>
+          </span>
         )}
+      </div>
 
-        {/* Permanent Layout Switcher (Auto / Wide / Stack) — Always accessible regardless of active mode (Item 15) */}
-        <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-white/5 border border-white/10 text-[9px] font-bold shrink-0">
-          <button
-            type="button"
-            onClick={() => handleOrientationChange('auto')}
-            className={`px-1.5 py-0.5 rounded transition-colors ${
-              orientationMode === 'auto'
-                ? 'bg-orange-500 text-slate-950 font-black'
-                : 'text-slate-400 hover:text-white'
-            }`}
-            title="Auto: Responsively adapts to screen width & orientation"
-          >
-            Auto
-          </button>
-          <button
-            type="button"
-            onClick={() => handleOrientationChange('landscape')}
-            className={`px-1.5 py-0.5 rounded transition-colors ${
-              orientationMode === 'landscape'
-                ? 'bg-orange-500 text-slate-950 font-black'
-                : 'text-slate-400 hover:text-white'
-            }`}
-            title="Wide: Force 3-Column Scoring Deck"
-          >
-            Wide
-          </button>
-          <button
-            type="button"
-            onClick={() => handleOrientationChange('portrait')}
-            className={`px-1.5 py-0.5 rounded transition-colors ${
-              orientationMode === 'portrait'
-                ? 'bg-orange-500 text-slate-950 font-black'
-                : 'text-slate-400 hover:text-white'
-            }`}
-            title="Stack: Force Portrait Stacked View"
-          >
-            Stack
-          </button>
-        </div>
+      {/* Governance & Accountability Trigger */}
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => setShowOfficialsCard(true)}
+        className="h-6 sm:h-7 px-1.5 sm:px-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-[10px] font-bold flex items-center gap-1 shrink-0"
+        title="View Match Governance & Official Scorer Records"
+      >
+        <ShieldCheck className="size-3 text-orange-400" />
+        <span className={compactMobile ? 'hidden' : 'hidden sm:inline'}>Governance</span>
+        {match.conflict_flag && (
+          <span className="size-1.5 rounded-full bg-amber-400 animate-pulse" title="Shortage Override Invoked" />
+        )}
+      </Button>
 
-        {/* Console Lease & Network Connection Status */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-bold">
-            {isOnline ? (
-              <span className="flex items-center gap-1 text-emerald-400">
-                <Wifi className="size-2.5" /> <span className="hidden sm:inline">Online</span>
-              </span>
-            ) : (
-              <span className="flex items-center gap-1 text-amber-400">
-                <WifiOff className="size-2.5" /> <span className="hidden sm:inline">({pendingOfflineCount})</span>
-              </span>
+      {match.status === 'Completed' && (
+        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px] font-black uppercase h-6 px-1.5 shrink-0">
+          Concluded
+        </Badge>
+      )}
+
+      {!user && (
+        <Button
+          type="button"
+          size="sm"
+          onClick={openLoginModal}
+          className="bg-orange-500 hover:bg-orange-600 text-slate-950 font-black text-[10px] uppercase h-6 sm:h-7 px-2 rounded-lg shadow-md flex items-center gap-1 active:scale-95 transition-all shrink-0"
+        >
+          <LogIn className="size-3" />
+          <span>Log In</span>
+        </Button>
+      )}
+
+      {user && !isHoldingLease && isAuthorizedScorekeeper && (
+        isDesignatedLocked ? (
+          <Badge 
+            className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-[9px] font-black uppercase h-6 px-1.5 shrink-0"
+            title={`Reserved for ${match?.designated_facilitator?.full_name || 'Designated Official'}`}
+          >
+            Reserved
+          </Badge>
+        ) : (
+          <div className="flex items-center gap-1 shrink-0">
+            {isDesignatedForMe && (
+              <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px] font-black uppercase h-6 px-1.5">
+                Assigned
+              </Badge>
             )}
-          </div>
-
-          {/* Governance & Accountability Trigger */}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowOfficialsCard(true)}
-            className="h-6 sm:h-7 px-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-[10px] font-bold flex items-center gap-1.5"
-            title="View Match Governance & Official Scorer Records"
-          >
-            <ShieldCheck className="size-3 text-orange-400" />
-            <span className="hidden sm:inline">Governance</span>
-            {match.conflict_flag && (
-              <span className="size-1.5 rounded-full bg-amber-400 animate-pulse" title="Shortage Override Invoked" />
-            )}
-          </Button>
-
-          {match.status === 'Completed' && (
-            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px] font-black uppercase h-6 px-1.5 shrink-0">
-              Concluded
-            </Badge>
-          )}
-
-          {!user && (
             <Button
               type="button"
               size="sm"
-              onClick={openLoginModal}
-              className="bg-orange-500 hover:bg-orange-600 text-slate-950 font-black text-[10px] uppercase h-6 sm:h-7 px-2.5 rounded-lg shadow-md flex items-center gap-1 active:scale-95 transition-all"
+              onClick={() => handleClaimLease()}
+              className="bg-orange-500 hover:bg-orange-600 text-slate-950 font-black text-[10px] uppercase h-6 sm:h-7 px-2 rounded-lg shadow-md active:scale-95 transition-all"
             >
-              <LogIn className="size-3" />
-              <span>Log In</span>
+              Claim
             </Button>
-          )}
+          </div>
+        )
+      )}
 
-          {user && !isHoldingLease && isAuthorizedScorekeeper && (
-            isDesignatedLocked ? (
-              <Badge 
-                className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-[9px] font-black uppercase h-6 px-1.5"
-                title={`Reserved for ${match?.designated_facilitator?.full_name || 'Designated Official'}`}
-              >
-                Reserved
-              </Badge>
-            ) : (
-              <div className="flex items-center gap-1">
-                {isDesignatedForMe && (
-                  <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px] font-black uppercase h-6 px-1.5">
-                    Assigned
-                  </Badge>
-                )}
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => handleClaimLease()}
-                  className="bg-orange-500 hover:bg-orange-600 text-slate-950 font-black text-[10px] uppercase h-6 sm:h-7 px-2.5 rounded-lg shadow-md active:scale-95 transition-all"
-                >
-                  Claim
-                </Button>
+      {user && isHoldingLease && (
+        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px] font-black uppercase h-6 px-1.5 shrink-0">
+          <ShieldCheck className="size-3 mr-0.5" /> Host
+        </Badge>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="h-dvh max-h-dvh w-full max-w-full overflow-hidden bg-[#020617] text-white flex flex-col justify-between p-1.5 sm:p-3 select-none relative">
+      {/* Top Header Control Strip */}
+      <header className="w-full shrink-0 px-2 py-1.5 sm:px-4 sm:py-2 flex flex-col md:flex-row md:items-center md:justify-between gap-1.5 sm:gap-2 border-b border-white/10 bg-slate-950/90 rounded-xl mb-1.5 sm:mb-2 relative z-20 overflow-hidden">
+        {/* Row 1 on mobile, Left Cluster on desktop: Match Identity & Actions */}
+        <div className="flex items-center justify-between gap-2 min-w-0 w-full md:w-auto">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1 overflow-hidden">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                if (window.history.length > 1) {
+                  navigate(-1);
+                } else {
+                  navigate(`/match/${match.id}`, { replace: true });
+                }
+              }}
+              className="size-7 sm:size-8 rounded-lg bg-white/5 hover:bg-white/15 border border-white/10 text-slate-300 shrink-0"
+              title="Return to standard Match Control"
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <div className="flex items-center gap-1.5">
+                <span className="p-0.5 sm:p-1 rounded bg-orange-500 text-slate-950 shrink-0">
+                  {createElement(getSportIcon(match.tournament?.sport), { className: 'size-2.5 sm:size-3' })}
+                </span>
+                <span className="text-[9px] sm:text-[11px] font-black uppercase tracking-wider text-orange-400 whitespace-nowrap truncate">
+                  {match.tournament?.sport || 'Game'} • {match.round}
+                </span>
+                <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[8px] font-black uppercase h-3.5 px-1 shrink-0">
+                  KIOSK
+                </Badge>
               </div>
-            )
+              <h1 className="text-[11px] sm:text-sm font-black uppercase italic tracking-tight text-white whitespace-nowrap truncate max-w-[180px] sm:max-w-xs md:max-w-sm block">
+                {match.tournament?.name || 'PSU Collegiate Games'}
+              </h1>
+            </div>
+          </div>
+
+          {/* Mobile Right: Status Cluster */}
+          <div className="flex md:hidden shrink-0">
+            {renderStatusSection(true)}
+          </div>
+        </div>
+
+        {/* Row 2 on mobile, Right Cluster on desktop: Switchers & Desktop Status */}
+        <div className="flex items-center justify-between md:justify-end gap-1.5 sm:gap-2 w-full md:w-auto shrink-0 border-t border-white/5 pt-1 md:border-t-0 md:pt-0">
+          {/* In Mobile Portrait Mode: Quick View Switcher Tabs */}
+          {!isLandscapeMode && (
+            <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-white/5 border border-white/10 text-[9px] font-bold shrink-0">
+              <button
+                type="button"
+                onClick={() => setMobileTab('split')}
+                className={`px-2 py-0.5 rounded transition-colors ${
+                  mobileTab === 'split' ? 'bg-orange-500 text-slate-950 font-black' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Both
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileTab('team_a')}
+                className={`px-2 py-0.5 rounded transition-colors ${
+                  mobileTab === 'team_a' ? 'bg-orange-500 text-slate-950 font-black' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {match.team_a?.name?.slice(0, 4) || 'A'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileTab('team_b')}
+                className={`px-2 py-0.5 rounded transition-colors ${
+                  mobileTab === 'team_b' ? 'bg-cyan-500 text-slate-950 font-black' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {match.team_b?.name?.slice(0, 4) || 'B'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileTab('clock')}
+                className={`px-2 py-0.5 rounded transition-colors ${
+                  mobileTab === 'clock' ? 'bg-white text-slate-950 font-black' : 'text-slate-400 hover:text-white'
+                }`}
+                title="Full Clock Deck"
+              >
+                <Timer className="size-3" />
+              </button>
+            </div>
           )}
 
-          {user && isHoldingLease && (
-            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px] font-black uppercase h-6 px-1.5">
-              <ShieldCheck className="size-3 mr-0.5" /> Host
-            </Badge>
-          )}
+          {/* Permanent Layout Switcher (Auto / Wide / Stack) — Always accessible regardless of active mode (Item 15) */}
+          <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-white/5 border border-white/10 text-[9px] font-bold shrink-0">
+            <button
+              type="button"
+              onClick={() => handleOrientationChange('auto')}
+              className={`px-2 py-0.5 rounded transition-colors ${
+                orientationMode === 'auto'
+                  ? 'bg-orange-500 text-slate-950 font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Auto: Responsively adapts to screen width & orientation"
+            >
+              Auto
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOrientationChange('landscape')}
+              className={`px-2 py-0.5 rounded transition-colors ${
+                orientationMode === 'landscape'
+                  ? 'bg-orange-500 text-slate-950 font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Wide: Force 3-Column Scoring Deck"
+            >
+              Wide
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOrientationChange('portrait')}
+              className={`px-2 py-0.5 rounded transition-colors ${
+                orientationMode === 'portrait'
+                  ? 'bg-orange-500 text-slate-950 font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Stack: Force Portrait Stacked View"
+            >
+              Stack
+            </button>
+          </div>
+
+          {/* Desktop Status Cluster */}
+          <div className="hidden md:flex shrink-0">
+            {renderStatusSection(false)}
+          </div>
         </div>
       </header>
 
