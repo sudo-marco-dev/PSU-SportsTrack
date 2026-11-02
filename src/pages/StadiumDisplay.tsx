@@ -152,7 +152,7 @@ export const StadiumDisplay = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch initial match data & generate spectator QR code
+  // Fetch initial match data
   const fetchMatchData = useCallback(async () => {
     if (!matchId) return;
 
