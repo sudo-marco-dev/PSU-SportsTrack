@@ -1105,7 +1105,7 @@ export const Profile = () => {
                 const sportProfile = getSportScoringProfile(
                   effectiveSportForRules !== 'All' ? effectiveSportForRules : 'Basketball'
                 );
-                const pointUnitLabel = selectedCareerSport !== 'All' ? sportProfile.pointUnit : 'PTS';
+                const pointUnitLabel = selectedCareerSport !== 'All' ? sportProfile.pointUnit : 'Points';
 
                 const actionCards = getSportScoringActionCards(
                   selectedCareerSport,
@@ -1142,18 +1142,18 @@ export const Profile = () => {
                 const formatGameActionSummary = (g: any) => {
                   const sp = (g.sport || '').toLowerCase();
                   if (sp.includes('volleyball') || sp.includes('takraw')) {
-                    return `${g.kills} Kills • ${g.aces} Aces • ${g.blocks} Blk`;
+                    return `${g.kills} Kills • ${g.aces} Aces • ${g.blocks} Blocks`;
                   }
                   if (sp.includes('soccer') || sp.includes('futsal') || sp.includes('football')) {
-                    return `${g.goals} Goals • ${g.penalties || 0} PK`;
+                    return `${g.goals} Goals • ${g.penalties || 0} Penalties`;
                   }
                   if (sp.includes('baseball') || sp.includes('softball')) {
-                    return `${g.runs || 0} Runs • ${g.homeRuns} HR`;
+                    return `${g.runs || 0} Runs • ${g.homeRuns} Home Runs`;
                   }
                   if (sp.includes('pickleball') || sp.includes('table tennis')) {
-                    return `${g.rallyPoints || g.playerPoints} Rally Pts`;
+                    return `${g.rallyPoints || g.playerPoints} Rally Points`;
                   }
-                  return `${g.threePointers} 3PM • ${g.twoPointers} 2PM • ${g.freeThrows} FT`;
+                  return `${g.threePointers} 3-Pointers • ${g.twoPointers} 2-Pointers • ${g.freeThrows} Free Throws`;
                 };
 
                 const visibleActionCards = showAllScoringActions
@@ -1178,7 +1178,7 @@ export const Profile = () => {
                         </div>
                         {orderedSports[0]?.gamesPlayed > 0 && (
                           <Badge className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20 text-[10px] font-black uppercase w-fit">
-                            Top Sport: {orderedSports[0].sport} ({orderedSports[0].gamesPlayed} GP)
+                            Top Sport: {orderedSports[0].sport} ({orderedSports[0].gamesPlayed} Games Played)
                           </Badge>
                         )}
                       </div>
@@ -1254,7 +1254,7 @@ export const Profile = () => {
                     {/* Mobile & Tablet Telemetry Ribbon (< md) — Adaptive multi-device grid */}
                     <div className="md:hidden grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-5 gap-2 bg-slate-100/90 dark:bg-slate-950/90 border border-slate-300/80 dark:border-white/15 rounded-2xl p-2.5 shadow-sm">
                       <div className="text-center p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10">
-                        <p className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 truncate" title="Games Played">Games</p>
+                        <p className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 truncate" title="Games Played">Games Played</p>
                         <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5 tabular-nums leading-none">
                           {displayGamesPlayed}
                         </p>
@@ -1269,8 +1269,8 @@ export const Profile = () => {
                         </p>
                         <p className="text-[10px] font-bold text-slate-400 truncate mt-1">Total</p>
                       </div>
-                      <div className="text-center p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10">
-                        <p className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 truncate">AVG</p>
+                      <div className="text-center p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10" title="Scoring Average Per Game">
+                        <p className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 truncate">Avg Points</p>
                         <p className="text-base sm:text-lg font-black text-cyan-600 dark:text-cyan-400 mt-0.5 tabular-nums leading-none">
                           {displayPpg}
                         </p>

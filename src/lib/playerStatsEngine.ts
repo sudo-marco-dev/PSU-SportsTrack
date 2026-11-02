@@ -76,36 +76,36 @@ export function getPrimarySportStatPill(
 ): { label: string; value: number; unitLabel: string } {
   const sp = (sportContext && sportContext !== 'All' ? sportContext : summary?.activeSports?.[0] || '').toLowerCase();
   if (sp.includes('volleyball') || sp.includes('takraw')) {
-    return { label: 'KIL', value: (summary?.kills || 0) + (summary?.aces || 0), unitLabel: 'Kills & Aces' };
+    return { label: 'Kills', value: (summary?.kills || 0) + (summary?.aces || 0), unitLabel: 'Kills & Aces' };
   }
   if (sp.includes('soccer') || sp.includes('futsal') || sp.includes('football')) {
-    return { label: 'GLS', value: (summary?.goals || 0) + (summary?.penalties || 0), unitLabel: 'Goals' };
+    return { label: 'Goals', value: (summary?.goals || 0) + (summary?.penalties || 0), unitLabel: 'Goals' };
   }
   if (sp.includes('baseball') || sp.includes('softball')) {
-    return { label: 'RUN', value: (summary?.runs || 0) + (summary?.homeRuns || 0), unitLabel: 'Runs / HRs' };
+    return { label: 'Runs', value: (summary?.runs || 0) + (summary?.homeRuns || 0), unitLabel: 'Runs & Home Runs' };
   }
   if (sp.includes('pickleball') || sp.includes('table tennis')) {
-    return { label: 'WIN', value: summary?.rallyPoints || summary?.totalPoints || 0, unitLabel: 'Rally Pts' };
+    return { label: 'Rally Points', value: summary?.rallyPoints || summary?.totalPoints || 0, unitLabel: 'Rally Points' };
   }
   if (sp.includes('basketball')) {
-    return { label: '3PM', value: summary?.threePointers || 0, unitLabel: '3-Pointers' };
+    return { label: '3-Pointers', value: summary?.threePointers || 0, unitLabel: '3-Pointers' };
   }
   // Auto-detect based on highest recorded action if no sport context is set
   if (summary) {
     if (summary.kills + summary.aces + summary.blocks > summary.threePointers && summary.kills + summary.aces + summary.blocks > summary.goals) {
-      return { label: 'KIL', value: summary.kills, unitLabel: 'Kills/Spikes' };
+      return { label: 'Kills', value: summary.kills, unitLabel: 'Kills & Spikes' };
     }
     if (summary.goals + summary.penalties > summary.threePointers) {
-      return { label: 'GLS', value: summary.goals + summary.penalties, unitLabel: 'Goals' };
+      return { label: 'Goals', value: summary.goals + summary.penalties, unitLabel: 'Goals' };
     }
     if (summary.runs + summary.homeRuns > summary.threePointers) {
-      return { label: 'RUN', value: summary.runs + summary.homeRuns, unitLabel: 'Runs' };
+      return { label: 'Runs', value: summary.runs + summary.homeRuns, unitLabel: 'Runs' };
     }
     if (summary.threePointers > 0) {
-      return { label: '3PM', value: summary.threePointers, unitLabel: '3-Pointers' };
+      return { label: '3-Pointers', value: summary.threePointers, unitLabel: '3-Pointers' };
     }
   }
-  return { label: 'MVP', value: summary?.mvpCount || 0, unitLabel: 'MVP Stars' };
+  return { label: 'MVP Awards', value: summary?.mvpCount || 0, unitLabel: 'MVP Stars' };
 }
 
 export type ActionBreakdown = {

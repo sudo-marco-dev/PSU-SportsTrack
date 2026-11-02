@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { formatCoachName } from '../src/lib/utils';
 import { extractCollegeCode, PSU_COLLEGE_DICTIONARY } from '../src/lib/collegeDictionary';
+import { getPrimarySportStatPill } from '../src/lib/playerStatsEngine';
 
 test.describe('Typography, Anti-Truncation & College Code Engine Tests', () => {
   test('formatCoachName: should handle single, duplicate, case-insensitive, and fallback coach prefixes', () => {
@@ -266,5 +267,43 @@ test.describe('Typography, Anti-Truncation & College Code Engine Tests', () => {
     const mobileText = await mobileChampionHeading.textContent();
     expect(mobileText).not.toContain('...');
     expect(mobileText?.toUpperCase()).toContain('TECHNOLOGY');
+  });
+
+  test('getPrimarySportStatPill: should expand all sport stat pills to human-readable labels with zero cryptic abbreviations', () => {
+    // 1. Basketball (3-Pointers, NOT 3PM)
+    const bballPill = getPrimarySportStatPill({ threePointers: 5 } as any, 'Basketball');
+    expect(bballPill.label).toBe('3-Pointers');
+    expect(bballPill.label).not.toBe('3PM');
+
+    // 2. Volleyball & Sepak Takraw (Kills, NOT KIL)
+    const volleyPill = getPrimarySportStatPill({ kills: 8, aces: 2 } as any, 'Volleyball');
+    expect(volleyPill.label).toBe('Kills');
+    expect(volleyPill.label).not.toBe('KIL');
+
+    const takrawPill = getPrimarySportStatPill({ kills: 4, aces: 1 } as any, 'Sepak Takraw');
+    expect(takrawPill.label).toBe('Kills');
+
+    // 3. Soccer & Futsal (Goals, NOT GLS)
+    const soccerPill = getPrimarySportStatPill({ goals: 3, penalties: 1 } as any, 'Soccer');
+    expect(soccerPill.label).toBe('Goals');
+    expect(soccerPill.label).not.toBe('GLS');
+
+    // 4. Baseball & Softball (Runs, NOT RUN)
+    const baseballPill = getPrimarySportStatPill({ runs: 6, homeRuns: 2 } as any, 'Baseball');
+    expect(baseballPill.label).toBe('Runs');
+    expect(baseballPill.label).not.toBe('RUN');
+
+    // 5. Table Tennis & Pickleball (Rally Points, NOT Rally Pts)
+    const tableTennisPill = getPrimarySportStatPill({ rallyPoints: 15 } as any, 'Table Tennis');
+    expect(tableTennisPill.label).toBe('Rally Points');
+    expect(tableTennisPill.label).not.toBe('Rally Pts');
+
+    const pickleballPill = getPrimarySportStatPill({ rallyPoints: 11 } as any, 'Pickleball');
+    expect(pickleballPill.label).toBe('Rally Points');
+
+    // 6. Generic / Auto-detect fallback (MVP Awards, NOT MVP)
+    const mvpPill = getPrimarySportStatPill({ mvpCount: 3 } as any, 'All');
+    expect(mvpPill.label).toBe('MVP Awards');
+    expect(mvpPill.label).not.toBe('MVP');
   });
 });

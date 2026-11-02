@@ -237,7 +237,7 @@ export const PlayerDossierModal = ({
                 : prefList[0] || 'Basketball';
 
             const sportProfile = getSportScoringProfile(effectiveSportForRules);
-            const pointUnitLabel = selectedSport !== 'All' ? sportProfile.pointUnit : 'PTS';
+            const pointUnitLabel = selectedSport !== 'All' ? sportProfile.pointUnit : 'Points';
 
             const actionCards = getSportScoringActionCards(
               selectedSport,
@@ -260,18 +260,18 @@ export const PlayerDossierModal = ({
             const formatGameActionSummary = (g: any) => {
               const sp = (g.sport || '').toLowerCase();
               if (sp.includes('volleyball') || sp.includes('takraw')) {
-                return `${g.kills} Kills • ${g.aces} Aces • ${g.blocks} Blk`;
+                return `${g.kills} Kills • ${g.aces} Aces • ${g.blocks} Blocks`;
               }
               if (sp.includes('soccer') || sp.includes('futsal') || sp.includes('football')) {
-                return `${g.goals} Goals • ${g.penalties || 0} PK`;
+                return `${g.goals} Goals • ${g.penalties || 0} Penalties`;
               }
               if (sp.includes('baseball') || sp.includes('softball')) {
-                return `${g.runs || 0} Runs • ${g.homeRuns} HR`;
+                return `${g.runs || 0} Runs • ${g.homeRuns} Home Runs`;
               }
               if (sp.includes('pickleball') || sp.includes('table tennis')) {
-                return `${g.rallyPoints || g.playerPoints} Rally Pts`;
+                return `${g.rallyPoints || g.playerPoints} Rally Points`;
               }
-              return `${g.threePointers} 3PM • ${g.twoPointers} 2PM • ${g.freeThrows} FT`;
+              return `${g.threePointers} 3-Pointers • ${g.twoPointers} 2-Pointers • ${g.freeThrows} Free Throws`;
             };
 
             return (
@@ -364,18 +364,18 @@ export const PlayerDossierModal = ({
 
                 {/* Mobile Telemetry Ribbon (< sm) */}
                 <div className="sm:hidden grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-5 gap-2 bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white rounded-2xl p-2.5 border border-slate-300/80 dark:border-white/15">
-                  <div className="text-center p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400" title="Games Played">Games</p>
+                  <div className="text-center p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10" title="Games Played">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">Games Played</p>
                     <p className="text-base xs:text-lg font-black tabular-nums mt-0.5">{displayGamesPlayed}</p>
                     <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 truncate mt-0.5">{displayWins}W-{displayLosses}L</p>
                   </div>
                   <div className="text-center p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">{pointUnitLabel}</p>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">{pointUnitLabel}</p>
                     <p className="text-base xs:text-lg font-black tabular-nums text-orange-600 dark:text-orange-400 mt-0.5">{displayTotalPoints}</p>
                     <p className="text-[10px] font-bold text-slate-400 truncate mt-0.5">Total</p>
                   </div>
-                  <div className="text-center p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">AVG</p>
+                  <div className="text-center p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10" title="Scoring Average Per Game">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">Avg Points</p>
                     <p className="text-base xs:text-lg font-black tabular-nums text-cyan-600 dark:text-cyan-400 mt-0.5">{displayPpg}</p>
                     <p className="text-[10px] font-bold text-slate-400 truncate mt-0.5">/ Game</p>
                   </div>

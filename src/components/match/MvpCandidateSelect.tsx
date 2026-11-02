@@ -68,7 +68,7 @@ export const MvpCandidateSelect: React.FC<MvpCandidateSelectProps> = ({
                     </Badge>
                   )}
                   <Badge className="bg-slate-800 text-slate-200 border-slate-700 text-[11px] font-mono font-bold whitespace-nowrap px-2 py-0.5">
-                    {selectedCandidate.points} PTS
+                    {selectedCandidate.points} Points
                   </Badge>
                 </div>
               </div>
@@ -119,7 +119,7 @@ export const MvpCandidateSelect: React.FC<MvpCandidateSelectProps> = ({
                     </span>
                   )}
                   <span className="font-mono font-bold text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 whitespace-nowrap">
-                    {c.points} PTS
+                    {c.points} Points
                   </span>
                 </div>
               </div>
@@ -164,7 +164,7 @@ export const MvpCandidateSelect: React.FC<MvpCandidateSelectProps> = ({
                     </span>
                   )}
                   <span className="font-mono font-bold text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 whitespace-nowrap">
-                    {c.points} PTS
+                    {c.points} Points
                   </span>
                 </div>
               </div>

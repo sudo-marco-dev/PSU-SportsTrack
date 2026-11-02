@@ -556,13 +556,13 @@ export const AdminReports: React.FC = () => {
                               <th className="py-3 px-3 sm:px-4">Squad Name</th>
                               <th className="py-3 px-3 sm:px-4">College</th>
                               <th className="py-3 px-3 sm:px-4">Discipline</th>
-                              <th className="py-3 px-3 sm:px-4 text-center">GP</th>
-                              <th className="py-3 px-3 sm:px-4 text-center text-emerald-600 dark:text-emerald-400">W</th>
-                              <th className="py-3 px-3 sm:px-4 text-center text-rose-600 dark:text-rose-400">L</th>
+                              <th className="py-3 px-3 sm:px-4 text-center" title="Games Played">Games Played</th>
+                              <th className="py-3 px-3 sm:px-4 text-center text-emerald-600 dark:text-emerald-400" title="Wins">W</th>
+                              <th className="py-3 px-3 sm:px-4 text-center text-rose-600 dark:text-rose-400" title="Losses">L</th>
                               <th className="py-3 px-3 sm:px-4 text-center">Win %</th>
-                              <th className="py-3 px-3 sm:px-4 text-center">PF</th>
-                              <th className="py-3 px-3 sm:px-4 text-center">PA</th>
-                              <th className="py-3 px-3 sm:px-4 text-right">Diff</th>
+                              <th className="py-3 px-3 sm:px-4 text-center" title="Points For (Scored)">PF</th>
+                              <th className="py-3 px-3 sm:px-4 text-center" title="Points Against (Surrendered)">PA</th>
+                              <th className="py-3 px-3 sm:px-4 text-right" title="Point Differential (PF - PA)">Diff</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-medium">
@@ -621,9 +621,9 @@ export const AdminReports: React.FC = () => {
                               <th className="py-3 px-3 sm:px-4">College</th>
                               <th className="py-3 px-3 sm:px-4">Discipline</th>
                               <th className="py-3 px-3 sm:px-4">Squad</th>
-                              <th className="py-3 px-3 sm:px-4 text-center">GP</th>
+                              <th className="py-3 px-3 sm:px-4 text-center" title="Games Played">Games Played</th>
                               <th className="py-3 px-3 sm:px-4 text-center">Total Points</th>
-                              <th className="py-3 px-3 sm:px-4 text-center">PPG</th>
+                              <th className="py-3 px-3 sm:px-4 text-center" title="Points Per Game Average">Avg Points</th>
                               <th className="py-3 px-3 sm:px-4 text-right">MVPs</th>
                             </tr>
                           </thead>

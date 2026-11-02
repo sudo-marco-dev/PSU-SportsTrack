@@ -93,31 +93,31 @@ export const MatchBoxScoreModal = ({
                 <th className="py-2.5 px-3">Athlete</th>
                 {isBasketball && (
                   <>
-                    <th className="py-2.5 px-2 text-center" title="3-Pointers Made">3PM</th>
-                    <th className="py-2.5 px-2 text-center" title="2-Point Field Goals Made">2PM</th>
-                    <th className="py-2.5 px-2 text-center" title="Free Throws Made">FTM</th>
+                    <th className="py-2.5 px-2 text-center" title="3-Pointers Made">3-Pointers</th>
+                    <th className="py-2.5 px-2 text-center" title="2-Point Field Goals Made">2-Pointers</th>
+                    <th className="py-2.5 px-2 text-center" title="Free Throws Made">Free Throws</th>
                   </>
                 )}
                 {isVolleyOrTakraw && (
                   <>
                     <th className="py-2.5 px-2 text-center">Kills</th>
                     <th className="py-2.5 px-2 text-center">Aces</th>
-                    <th className="py-2.5 px-2 text-center">BLK</th>
+                    <th className="py-2.5 px-2 text-center" title="Defensive Blocks">Blocks</th>
                   </>
                 )}
                 {isSoccer && (
                   <>
                     <th className="py-2.5 px-2 text-center">Goals</th>
-                    <th className="py-2.5 px-2 text-center">Pen</th>
+                    <th className="py-2.5 px-2 text-center" title="Penalty Kicks">Penalties</th>
                   </>
                 )}
                 {isBaseball && (
                   <>
                     <th className="py-2.5 px-2 text-center">Runs</th>
-                    <th className="py-2.5 px-2 text-center">HR</th>
+                    <th className="py-2.5 px-2 text-center" title="Home Runs">Home Runs</th>
                   </>
                 )}
-                <th className="py-2.5 px-3 text-right">PTS</th>
+                <th className="py-2.5 px-3 text-right" title="Total Points">Points</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-white/5">

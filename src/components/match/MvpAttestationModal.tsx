@@ -98,7 +98,7 @@ export const MvpAttestationModal: React.FC<MvpAttestationModalProps> = ({
             </div>
             <div className="text-right shrink-0">
               <Badge className="bg-slate-800 text-amber-400 border border-amber-500/30 font-mono font-bold text-xs px-2.5 py-1">
-                {candidate.points} PTS
+                {candidate.points} Points
               </Badge>
               {candidate.isWinningTeam ? (
                 <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1 justify-end mt-1">
@@ -140,7 +140,7 @@ export const MvpAttestationModal: React.FC<MvpAttestationModalProps> = ({
               <span>Performance Justification Required</span>
             </div>
             <p className="text-orange-200/90 text-[11px] leading-relaxed">
-              This athlete scored <strong>{candidate.points} PTS</strong> {!candidate.isWinningTeam ? 'for the non-winning squad' : 'with zero recorded offensive scoring'}. Anti-bias regulations require explaining why this player is awarded MVP over the winning team&apos;s top scorers (e.g. defensive stops, leadership, clutch playmaking).
+              This athlete scored <strong>{candidate.points} Points</strong> {!candidate.isWinningTeam ? 'for the non-winning squad' : 'with zero recorded offensive scoring'}. Anti-bias regulations require explaining why this player is awarded MVP over the winning team&apos;s top scorers (e.g. defensive stops, leadership, clutch playmaking).
             </p>
             <Textarea
               data-testid="mvp-justification-input"

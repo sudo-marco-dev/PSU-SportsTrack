@@ -1597,9 +1597,9 @@ export const Ranking = () => {
                     {isExpanded && (
                       <div className="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-white/5 space-y-2 text-[11px] animate-in fade-in duration-200">
                         <div className="grid grid-cols-3 gap-1.5 text-center">
-                          <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/60">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase">Played</p>
-                            <p className="font-black text-slate-900 dark:text-white">{item.matchesPlayed} GP</p>
+                          <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/60" title="Games Played">
+                            <p className="text-[9px] font-bold text-slate-400 uppercase">Games Played</p>
+                            <p className="font-black text-slate-900 dark:text-white">{item.matchesPlayed} Matches</p>
                           </div>
                           <div
                             className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 cursor-pointer hover:bg-orange-500/10 transition-colors"
@@ -1611,7 +1611,7 @@ export const Ranking = () => {
                             </p>
                             <p className="font-black text-slate-900 dark:text-white font-mono text-[10px]">{item.pointsFor} - {item.pointsAgainst}</p>
                           </div>
-                          <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/60">
+                          <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/60" title="Gold (G), Silver (S), Bronze (B) Medals">
                             <p className="text-[9px] font-bold text-slate-400 uppercase">Medals</p>
                             <p className="font-black text-amber-600 dark:text-amber-400">
                               {item.championships > 0 ? `${item.championships}G ` : ''}
@@ -1657,9 +1657,9 @@ export const Ranking = () => {
                         <th className="py-3.5 px-4">Discipline</th>
                       </>
                     )}
-                    <th className="py-3.5 px-3 text-center">MP</th>
-                    <th className="py-3.5 px-3 text-center">W</th>
-                    <th className="py-3.5 px-3 text-center">L</th>
+                    <th className="py-3.5 px-3 text-center" title="Matches / Games Played">Played</th>
+                    <th className="py-3.5 px-3 text-center" title="Wins">W</th>
+                    <th className="py-3.5 px-3 text-center" title="Losses">L</th>
                     <th className="py-3.5 px-4 text-center">Win %</th>
                     <th
                       className="py-3.5 px-4 text-center cursor-pointer group select-none hover:text-orange-500 transition-colors"

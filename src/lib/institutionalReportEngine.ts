@@ -711,7 +711,7 @@ export function generateReportCSV(data: InstitutionalReportData): string {
 
   // Section 2B: Athlete Standings
   lines.push(`"=== SECTION 2B: ATHLETE SCORING & PERFORMANCE STANDINGS ==="`);
-  lines.push(`"Rank","Athlete Name","College","Code","Sport","Team Squad","Games Played","Total Points","PPG","MVP Awards"`);
+  lines.push(`"Rank","Athlete Name","College","Code","Sport","Team Squad","Games Played","Total Points","Points Per Game (PPG)","MVP Awards"`);
   for (const a of data.athleteStandings) {
     lines.push([
       a.rank,

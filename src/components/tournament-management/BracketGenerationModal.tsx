@@ -1895,11 +1895,11 @@ export const BracketGenerationModal: React.FC<BracketGenerationModalProps> = ({
                             <tr className="border-b border-slate-200 dark:border-white/10 text-[9px] font-black uppercase tracking-wider text-slate-400">
                               <th className="py-2 pr-2">Rank</th>
                               <th className="py-2 px-2">Squad</th>
-                              <th className="py-2 px-2 text-center">GP</th>
+                              <th className="py-2 px-2 text-center" title="Games Played">Games</th>
                               <th className="py-2 px-2 text-center">W - L</th>
-                              <th className="py-2 px-2 text-center">PF</th>
-                              <th className="py-2 px-2 text-center">PA</th>
-                              <th className="py-2 pl-2 text-right">Diff</th>
+                              <th className="py-2 px-2 text-center" title="Points For (Scored)">PF</th>
+                              <th className="py-2 px-2 text-center" title="Points Against (Allowed)">PA</th>
+                              <th className="py-2 pl-2 text-right" title="Point Differential (PF - PA)">Diff</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-bold">

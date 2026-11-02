@@ -1108,16 +1108,16 @@ export const TournamentExplorer = () => {
                       </div>
 
                       <div className="grid grid-cols-3 gap-1.5 text-center text-[10px] bg-white/60 dark:bg-black/20 p-1.5 rounded-lg border border-slate-100 dark:border-white/5">
-                        <div>
-                          <span className="text-[8px] font-bold uppercase text-slate-400">Games</span>
-                          <p className="font-mono font-bold text-slate-700 dark:text-slate-300">{st.gp} GP</p>
+                        <div title="Games Played">
+                          <span className="text-[8px] font-bold uppercase text-slate-400">Games Played</span>
+                          <p className="font-mono font-bold text-slate-700 dark:text-slate-300">{st.gp} Played</p>
                         </div>
-                        <div>
-                          <span className="text-[8px] font-bold uppercase text-slate-400">PF - PA</span>
+                        <div title="Points For - Points Against">
+                          <span className="text-[8px] font-bold uppercase text-slate-400">Points (+ / -)</span>
                           <p className="font-mono font-bold text-slate-700 dark:text-slate-300">{st.pf} - {st.pa}</p>
                         </div>
-                        <div>
-                          <span className="text-[8px] font-bold uppercase text-slate-400">Diff</span>
+                        <div title="Point Differential (PF - PA)">
+                          <span className="text-[8px] font-bold uppercase text-slate-400">Differential</span>
                           <p className={`font-mono font-bold ${diff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
                             {diff > 0 ? `+${diff}` : diff}
                           </p>
@@ -1135,11 +1135,11 @@ export const TournamentExplorer = () => {
                     <tr className="border-b border-slate-200 dark:border-white/10 text-[10px] font-black uppercase tracking-wider text-slate-400">
                       <th className="py-2 pr-3">Rank</th>
                       <th className="py-2 px-3">Squad</th>
-                      <th className="py-2 px-3 text-center">GP</th>
+                      <th className="py-2 px-3 text-center" title="Games Played">Games</th>
                       <th className="py-2 px-3 text-center">W - L</th>
-                      <th className="py-2 px-3 text-center">PF</th>
-                      <th className="py-2 px-3 text-center">PA</th>
-                      <th className="py-2 pl-3 text-right">Diff</th>
+                      <th className="py-2 px-3 text-center" title="Points For (Scored)">PF</th>
+                      <th className="py-2 px-3 text-center" title="Points Against (Allowed)">PA</th>
+                      <th className="py-2 pl-3 text-right" title="Point Differential (PF - PA)">Diff</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-bold">

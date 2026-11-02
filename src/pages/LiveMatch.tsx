@@ -2376,8 +2376,8 @@ export const LiveMatch = () => {
                 <div className="flex items-center justify-between pb-2 border-b border-white/10">
                   <div className="flex items-center gap-2">
                     <span className="font-black text-sm uppercase text-orange-400">{match.team_a?.name || 'Team A'}</span>
-                    <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30 text-[10px] font-black">
-                      {match.team_a_score} PTS
+                    <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30 text-[10px] font-black" title="Total Points">
+                      {match.team_a_score} Points
                     </Badge>
                   </div>
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Points</span>
@@ -2426,8 +2426,8 @@ export const LiveMatch = () => {
                             >
                               {player.is_starter ? 'Starter' : 'Sub'}
                             </span>
-                            <span className={`font-black font-mono ${pts > 0 ? 'text-orange-400' : 'text-slate-500'}`}>
-                              {pts} PTS
+                            <span className={`font-black font-mono ${pts > 0 ? 'text-orange-400' : 'text-slate-500'}`} title="Points">
+                              {pts} Points
                             </span>
                           </div>
                         </div>
@@ -2442,8 +2442,8 @@ export const LiveMatch = () => {
                 <div className="flex items-center justify-between pb-2 border-b border-white/10">
                   <div className="flex items-center gap-2">
                     <span className="font-black text-sm uppercase text-orange-400">{match.team_b?.name || 'Team B'}</span>
-                    <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30 text-[10px] font-black">
-                      {match.team_b_score} PTS
+                    <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30 text-[10px] font-black" title="Total Points">
+                      {match.team_b_score} Points
                     </Badge>
                   </div>
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Points</span>
@@ -2492,8 +2492,8 @@ export const LiveMatch = () => {
                             >
                               {player.is_starter ? 'Starter' : 'Sub'}
                             </span>
-                            <span className={`font-black font-mono ${pts > 0 ? 'text-orange-400' : 'text-slate-500'}`}>
-                              {pts} PTS
+                            <span className={`font-black font-mono ${pts > 0 ? 'text-orange-400' : 'text-slate-500'}`} title="Points">
+                              {pts} Points
                             </span>
                           </div>
                         </div>
@@ -2878,7 +2878,7 @@ export const LiveMatch = () => {
                       const name = Array.isArray(users) ? users[0]?.full_name : users?.full_name;
                       const jersey = p.jersey_number !== null && p.jersey_number !== undefined ? `#${p.jersey_number} ` : '';
                       const pts = playerPointsMap[p.player_id] || 0;
-                      return `${jersey}${name || 'Player'} (${pts} PTS)`;
+                      return `${jersey}${name || 'Player'} (${pts} Points)`;
                     })() : 'Team / Uncredited (Do not deduct player stats)'}
                   </SelectValue>
                 </SelectTrigger>
@@ -2891,7 +2891,7 @@ export const LiveMatch = () => {
                       const name = Array.isArray(users) ? users[0]?.full_name : users?.full_name;
                       const jersey = p.jersey_number !== null && p.jersey_number !== undefined ? `#${p.jersey_number} ` : '';
                       const pts = playerPointsMap[p.player_id] || 0;
-                      const label = `${jersey}${name || 'Player'} (${pts} PTS)`;
+                      const label = `${jersey}${name || 'Player'} (${pts} Points)`;
                       return (
                         <SelectItem key={p.player_id} value={p.player_id}>
                           {label}

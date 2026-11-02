@@ -1266,9 +1266,9 @@ export const TeamManagement = () => {
                       {sortBy === 'points'
                         ? 'Career Points (High → Low)'
                         : sortBy === 'ppg'
-                        ? 'Scoring Average / PPG'
+                        ? 'Scoring Average (Per Game)'
                         : sortBy === 'threes'
-                        ? '3-Pointers Made (3PM)'
+                        ? '3-Pointers Made'
                         : sortBy === 'mvp'
                         ? 'MVP Trophies'
                         : 'Athlete Name (A → Z)'}
@@ -1276,8 +1276,8 @@ export const TeamManagement = () => {
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
                     <SelectItem value="points" className="text-xs font-bold">Career Points (High → Low)</SelectItem>
-                    <SelectItem value="ppg" className="text-xs font-bold">Scoring Average / PPG</SelectItem>
-                    <SelectItem value="threes" className="text-xs font-bold">3-Pointers Made (3PM)</SelectItem>
+                    <SelectItem value="ppg" className="text-xs font-bold">Scoring Average (Per Game)</SelectItem>
+                    <SelectItem value="threes" className="text-xs font-bold">3-Pointers Made</SelectItem>
                     <SelectItem value="mvp" className="text-xs font-bold">MVP Trophies</SelectItem>
                     <SelectItem value="name" className="text-xs font-bold">Athlete Name (A → Z)</SelectItem>
                   </SelectContent>
@@ -1429,30 +1429,55 @@ export const TeamManagement = () => {
                           const primaryPill = getPrimarySportStatPill(summary, sportCtx);
                           return (
                             <div className="grid grid-cols-4 gap-1.5 pt-1">
-                              <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-center">
-                                <p className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400">GP</p>
-                                <p className="text-xs font-black tabular-nums text-slate-900 dark:text-white">{summary?.gamesPlayed || 0}</p>
+                              <div
+                                className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-center flex flex-col justify-between"
+                                title="Games Played"
+                              >
+                                <div className="min-h-[22px] flex items-center justify-center">
+                                  <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-tight leading-tight text-slate-500 dark:text-slate-400">
+                                    Games Played
+                                  </p>
+                                </div>
+                                <p className="text-xs sm:text-sm font-black tabular-nums text-slate-900 dark:text-white mt-1">
+                                  {summary?.gamesPlayed || 0}
+                                </p>
                               </div>
-                              <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-center">
-                                <p className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400">PTS</p>
-                                <p className="text-xs font-black tabular-nums text-orange-600 dark:text-orange-400">
+                              <div
+                                className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-center flex flex-col justify-between"
+                                title="Total Points Scored"
+                              >
+                                <div className="min-h-[22px] flex items-center justify-center">
+                                  <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-tight leading-tight text-slate-500 dark:text-slate-400">
+                                    Points
+                                  </p>
+                                </div>
+                                <p className="text-xs sm:text-sm font-black tabular-nums text-orange-600 dark:text-orange-400 mt-1">
                                   {summary?.totalPoints || 0}
                                 </p>
                               </div>
-                              <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-center">
-                                <p className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400">AVG</p>
-                                <p className="text-xs font-black tabular-nums text-cyan-600 dark:text-cyan-400">
+                              <div
+                                className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-center flex flex-col justify-between"
+                                title="Average Points Per Game"
+                              >
+                                <div className="min-h-[22px] flex items-center justify-center">
+                                  <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-tight leading-tight text-slate-500 dark:text-slate-400">
+                                    Avg Points
+                                  </p>
+                                </div>
+                                <p className="text-xs sm:text-sm font-black tabular-nums text-cyan-600 dark:text-cyan-400 mt-1">
                                   {summary?.ppg || 0}
                                 </p>
                               </div>
                               <div
-                                className="p-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-center"
+                                className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-white/10 text-center flex flex-col justify-between"
                                 title={primaryPill.unitLabel}
                               >
-                                <p className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400">
-                                  {primaryPill.label}
-                                </p>
-                                <p className="text-xs font-black tabular-nums text-amber-600 dark:text-amber-400">
+                                <div className="min-h-[22px] flex items-center justify-center">
+                                  <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-tight leading-tight text-slate-500 dark:text-slate-400">
+                                    {primaryPill.label}
+                                  </p>
+                                </div>
+                                <p className="text-xs sm:text-sm font-black tabular-nums text-amber-600 dark:text-amber-400 mt-1">
                                   {primaryPill.value}
                                 </p>
                               </div>
@@ -1559,13 +1584,13 @@ export const TeamManagement = () => {
                       {/* Micro stats grid */}
                       <div className="grid grid-cols-3 gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 mb-3 text-center">
                         <div>
-                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Games</p>
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Games Played</p>
                           <p className="text-xs font-mono font-black text-slate-800 dark:text-slate-200">
                             {summary?.gamesPlayed || 0}
                           </p>
                         </div>
                         <div>
-                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">PTS (AVG)</p>
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Points (Avg)</p>
                           <p className="text-xs font-mono font-black text-orange-500">
                             {summary?.totalPoints || 0} <span className="text-[10px] opacity-75">({summary?.ppg || 0})</span>
                           </p>
@@ -1634,8 +1659,8 @@ export const TeamManagement = () => {
                         <th className="text-left py-4 px-6 font-black uppercase tracking-widest text-[10px] text-slate-400">Athlete</th>
                         <th className="text-left py-4 px-4 font-black uppercase tracking-widest text-[10px] text-slate-400">College &amp; Eligibility</th>
                         <th className="text-left py-4 px-4 font-black uppercase tracking-widest text-[10px] text-slate-400">Preferred Sports</th>
-                        <th className="text-center py-4 px-3 font-black uppercase tracking-widest text-[10px] text-slate-400">GP</th>
-                        <th className="text-center py-4 px-3 font-black uppercase tracking-widest text-[10px] text-slate-400">PTS (AVG)</th>
+                        <th className="text-center py-4 px-3 font-black uppercase tracking-widest text-[10px] text-slate-400" title="Games Played">Games Played</th>
+                        <th className="text-center py-4 px-3 font-black uppercase tracking-widest text-[10px] text-slate-400" title="Total Points (Scoring Average)">Points (Avg)</th>
                         <th className="text-center py-4 px-3 font-black uppercase tracking-widest text-[10px] text-slate-400">Key Stat</th>
                         <th className="text-right py-4 px-6 font-black uppercase tracking-widest text-[10px] text-slate-400">Actions</th>
                       </tr>

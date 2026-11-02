@@ -171,7 +171,7 @@ export const AdminMvpOverrideModal: React.FC<AdminMvpOverrideModalProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-sm text-white truncate">{currentMvpName}</span>
                   <Badge variant="outline" className="text-[10px] border-slate-700 text-slate-300 font-mono">
-                    {currentCandidate?.points ?? '—'} PTS
+                    {currentCandidate?.points ?? '—'} Points
                   </Badge>
                 </div>
                 <p className="text-[11px] text-slate-500 truncate">
@@ -191,7 +191,7 @@ export const AdminMvpOverrideModal: React.FC<AdminMvpOverrideModalProps> = ({
                         {replacementCandidate.name}
                       </span>
                       <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-[10px] font-mono">
-                        {replacementCandidate.points} PTS
+                        {replacementCandidate.points} Points
                       </Badge>
                     </div>
                     <p className="text-[11px] text-amber-300/80 truncate">
@@ -222,7 +222,7 @@ export const AdminMvpOverrideModal: React.FC<AdminMvpOverrideModalProps> = ({
                   .filter((c) => c.playerId !== currentMvpPlayerId)
                   .map((c) => (
                     <option key={c.playerId} value={c.playerId}>
-                      #{c.jerseyNumber || '?'} {c.name} ({c.teamName}) — {c.points} PTS {c.isTopScorer ? '🔥 Top Scorer' : ''}
+                      #{c.jerseyNumber || '?'} {c.name} ({c.teamName}) — {c.points} Points {c.isTopScorer ? '🔥 Top Scorer' : ''}
                     </option>
                   ))}
               </select>

@@ -129,8 +129,8 @@ export const TournamentGoldStarModal: React.FC<TournamentGoldStarModalProps> = (
               <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Points</div>
               <div className="text-base font-black text-white">{candidate.points}</div>
             </div>
-            <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/60 text-center">
-              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">PPG</div>
+            <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/60 text-center" title="Points Per Game Average">
+              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Avg Points</div>
               <div className="text-base font-black text-amber-400">{candidate.ppg}</div>
             </div>
             <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/60 text-center">
@@ -140,8 +140,8 @@ export const TournamentGoldStarModal: React.FC<TournamentGoldStarModalProps> = (
                 {candidate.redStarsCount}x
               </div>
             </div>
-            <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/60 text-center">
-              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Games</div>
+            <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/60 text-center" title="Tournament Games Played">
+              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Games Played</div>
               <div className="text-base font-black text-white">{candidate.gamesPlayed}</div>
             </div>
           </div>

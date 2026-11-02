@@ -184,7 +184,7 @@ export const AdminGoldStarOverrideModal: React.FC<AdminGoldStarOverrideModalProp
                   <div className="text-[11px] text-slate-400 flex items-center gap-2">
                     <span>{currentCandidate.teamName}</span>
                     <span>•</span>
-                    <span className="font-mono text-amber-400">{currentCandidate.points} PTS</span>
+                    <span className="font-mono text-amber-400">{currentCandidate.points} Points</span>
                   </div>
                 )}
               </div>
@@ -204,7 +204,7 @@ export const AdminGoldStarOverrideModal: React.FC<AdminGoldStarOverrideModalProp
                     <div className="text-[11px] text-slate-300 flex items-center gap-2">
                       <span>{replacementCandidate.teamName}</span>
                       <span>•</span>
-                      <span className="font-mono text-amber-400">{replacementCandidate.points} PTS</span>
+                      <span className="font-mono text-amber-400">{replacementCandidate.points} Points</span>
                     </div>
                   </>
                 ) : (
@@ -241,7 +241,7 @@ export const AdminGoldStarOverrideModal: React.FC<AdminGoldStarOverrideModalProp
                             {cand.name}
                           </span>
                           <span className="text-[11px] text-slate-400">
-                            {cand.teamName} • {cand.points} PTS {cand.redStarsCount > 0 ? `• ⭐ ${cand.redStarsCount}x` : ''}
+                            {cand.teamName} • {cand.points} Points {cand.redStarsCount > 0 ? `• ⭐ ${cand.redStarsCount}x` : ''}
                           </span>
                         </div>
                       </SelectItem>

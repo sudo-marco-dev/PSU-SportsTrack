@@ -875,7 +875,7 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
                       </h3>
                     </div>
                     <span className="text-[10px] font-mono text-slate-500 uppercase">
-                      Ranked by Champion finish + Red Stars + PTS
+                      Ranked by Champion finish + Red Stars + Points
                     </span>
                   </div>
 
@@ -955,8 +955,8 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
                                   <div className="text-[9px] uppercase font-bold text-slate-500">Points</div>
                                   <div className="text-xs font-black text-white">{cand.points}</div>
                                 </div>
-                                <div>
-                                  <div className="text-[9px] uppercase font-bold text-slate-500">PPG</div>
+                                <div title="Points Per Game Average">
+                                  <div className="text-[9px] uppercase font-bold text-slate-500">Avg Points</div>
                                   <div className="text-xs font-black text-amber-400">{cand.ppg}</div>
                                 </div>
                                 <div>
@@ -1019,8 +1019,8 @@ export const TournamentMvpTab: React.FC<TournamentMvpTabProps> = ({ tournaments 
                       <tr>
                         <th className="py-2.5 px-3">Athlete</th>
                         <th className="py-2.5 px-3">Squad</th>
-                        <th className="py-2.5 px-3 text-center">PTS</th>
-                        <th className="py-2.5 px-3 text-center">PPG</th>
+                        <th className="py-2.5 px-3 text-center" title="Total Points Scored">Points</th>
+                        <th className="py-2.5 px-3 text-center" title="Average Points Per Game">Avg Points</th>
                         <th className="py-2.5 px-3 text-center">Match MVPs</th>
                         <th className="py-2.5 px-3 text-right">Action</th>
                       </tr>
