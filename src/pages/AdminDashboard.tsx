@@ -603,6 +603,25 @@ export const AdminDashboard = () => {
               </div>
               <ChevronRight className="size-4 text-slate-300 group-hover:text-amber-500 transition-colors" />
             </Button>
+
+            <Button
+              onClick={() => {
+                const el = document.getElementById('cluster-governance-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="h-20 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-500/5 rounded-3xl flex items-center justify-between px-6 group transition-all cursor-pointer"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-cyan-500/10 rounded-xl group-hover:bg-cyan-500 transition-colors">
+                  <Layers className="size-5 text-cyan-500 group-hover:text-white" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-black uppercase italic tracking-tight text-slate-900 dark:text-white leading-none mb-1">Clusters &amp; Tribes</p>
+                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{clusters.length} Active Tribes</p>
+                </div>
+              </div>
+              <ChevronRight className="size-4 text-slate-300 group-hover:text-cyan-500 transition-colors" />
+            </Button>
           </div>
         </div>
 
