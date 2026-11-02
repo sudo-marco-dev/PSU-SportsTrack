@@ -730,33 +730,32 @@ export const PlayerDashboard = () => {
         </section>
       )}
 
-      {/* 2.5 ATHLETE QUICK-ACCESS CARDS: MY ACTIVE SQUADS & MY TROPHIES (SIDE-BY-SIDE BY DEFAULT, EXPANDABLE) */}
+      {/* 2.5 ATHLETE QUICK-ACCESS CARDS: MY ACTIVE SQUADS & MY TROPHIES (SIDE-BY-SIDE ON ALL SCREENS, EXPANDABLE) */}
       {user && (
         <section className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
             {/* Card 1: My Active Squads */}
             <Card
               onClick={() => setExpandedAthleteCard(prev => prev === 'squads' ? null : 'squads')}
-              className={`group p-4 sm:p-5 rounded-2xl md:rounded-3xl border transition-all duration-300 cursor-pointer select-none ${
+              className={`group p-3 sm:p-5 rounded-2xl md:rounded-3xl border transition-all duration-300 cursor-pointer select-none ${
                 expandedAthleteCard === 'squads'
                   ? 'border-orange-500 bg-orange-500/5 dark:bg-orange-500/10 shadow-lg shadow-orange-500/10 ring-1 ring-orange-500/30'
                   : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-slate-900 hover:border-orange-500/40 hover:shadow-md'
               }`}
             >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`size-11 sm:size-12 rounded-2xl flex items-center justify-center shrink-0 border transition-colors ${
-                    expandedAthleteCard === 'squads'
-                      ? 'bg-orange-500 text-white border-orange-400 shadow-md shadow-orange-500/25'
-                      : 'bg-orange-500/10 text-orange-500 border-orange-500/20 group-hover:bg-orange-500 group-hover:text-white'
-                  }`}>
-                    <Users className="size-5 sm:size-6" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-black uppercase italic tracking-tight text-sm sm:text-base text-slate-900 dark:text-white truncate">
-                        My Active Squads
-                      </h3>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3.5 min-w-0">
+                  {/* Icon & Mobile Action Header */}
+                  <div className="flex items-center justify-between sm:justify-start gap-2">
+                    <div className={`size-9 sm:size-12 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 border transition-colors ${
+                      expandedAthleteCard === 'squads'
+                        ? 'bg-orange-500 text-white border-orange-400 shadow-md shadow-orange-500/25'
+                        : 'bg-orange-500/10 text-orange-500 border-orange-500/20 group-hover:bg-orange-500 group-hover:text-white'
+                    }`}>
+                      <Users className="size-4.5 sm:size-6" />
+                    </div>
+                    {/* Mobile-only counter badge + chevron */}
+                    <div className="flex sm:hidden items-center gap-1.5">
                       <Badge
                         variant="outline"
                         className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
@@ -767,16 +766,45 @@ export const PlayerDashboard = () => {
                       >
                         {myTeams.length}
                       </Badge>
+                      <div className={`size-6 rounded-full flex items-center justify-center border transition-all duration-300 ${
+                        expandedAthleteCard === 'squads'
+                          ? 'bg-orange-500/10 border-orange-500/30 text-orange-500 rotate-180'
+                          : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400'
+                      }`}>
+                        <ChevronDown className="size-3.5" />
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 font-medium">
+                  </div>
+
+                  {/* Title & Preview Subtitle (anti-clipping with padding & leading-snug) */}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-black uppercase italic tracking-tight text-xs sm:text-base text-slate-900 dark:text-white leading-snug pt-0.5 pb-0.5">
+                        My Active Squads
+                      </h3>
+                      {/* Desktop-only counter badge */}
+                      <Badge
+                        variant="outline"
+                        className={`hidden sm:inline-flex text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                          expandedAthleteCard === 'squads'
+                            ? 'border-orange-500 text-orange-600 dark:text-orange-400 bg-orange-500/15'
+                            : 'border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300'
+                        }`}
+                      >
+                        {myTeams.length}
+                      </Badge>
+                    </div>
+                    <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 font-medium leading-normal">
                       {myTeams.length > 0
-                        ? `${myTeams.length} active roster${myTeams.length > 1 ? 's' : ''} enrolled`
-                        : 'No active rosters • Tap to view'}
+                        ? `${myTeams.length} active roster${myTeams.length > 1 ? 's' : ''}`
+                        : 'Tap to view'}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider hidden sm:inline transition-colors ${
+
+                {/* Desktop-only right action pill */}
+                <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider transition-colors ${
                     expandedAthleteCard === 'squads' ? 'text-orange-500' : 'text-slate-400 group-hover:text-orange-500'
                   }`}>
                     {expandedAthleteCard === 'squads' ? 'Collapse' : 'Expand'}
@@ -795,26 +823,25 @@ export const PlayerDashboard = () => {
             {/* Card 2: My Trophies & Achievements */}
             <Card
               onClick={() => setExpandedAthleteCard(prev => prev === 'trophies' ? null : 'trophies')}
-              className={`group p-4 sm:p-5 rounded-2xl md:rounded-3xl border transition-all duration-300 cursor-pointer select-none ${
+              className={`group p-3 sm:p-5 rounded-2xl md:rounded-3xl border transition-all duration-300 cursor-pointer select-none ${
                 expandedAthleteCard === 'trophies'
                   ? 'border-amber-500 bg-amber-500/5 dark:bg-amber-500/10 shadow-lg shadow-orange-500/10 ring-1 ring-amber-500/30'
                   : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-slate-900 hover:border-amber-500/40 hover:shadow-md'
               }`}
             >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`size-11 sm:size-12 rounded-2xl flex items-center justify-center shrink-0 border transition-colors ${
-                    expandedAthleteCard === 'trophies'
-                      ? 'bg-amber-500 text-white border-amber-400 shadow-md shadow-amber-500/25'
-                      : 'bg-amber-500/10 text-amber-500 border-amber-500/20 group-hover:bg-amber-500 group-hover:text-white'
-                  }`}>
-                    <Trophy className="size-5 sm:size-6" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-black uppercase italic tracking-tight text-sm sm:text-base text-slate-900 dark:text-white truncate">
-                        My Trophies
-                      </h3>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3.5 min-w-0">
+                  {/* Icon & Mobile Action Header */}
+                  <div className="flex items-center justify-between sm:justify-start gap-2">
+                    <div className={`size-9 sm:size-12 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 border transition-colors ${
+                      expandedAthleteCard === 'trophies'
+                        ? 'bg-amber-500 text-white border-amber-400 shadow-md shadow-amber-500/25'
+                        : 'bg-amber-500/10 text-amber-500 border-amber-500/20 group-hover:bg-amber-500 group-hover:text-white'
+                    }`}>
+                      <Trophy className="size-4.5 sm:size-6" />
+                    </div>
+                    {/* Mobile-only counter badge + chevron */}
+                    <div className="flex sm:hidden items-center gap-1.5">
                       <Badge
                         variant="outline"
                         className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
@@ -825,16 +852,45 @@ export const PlayerDashboard = () => {
                       >
                         {stars.length}
                       </Badge>
+                      <div className={`size-6 rounded-full flex items-center justify-center border transition-all duration-300 ${
+                        expandedAthleteCard === 'trophies'
+                          ? 'bg-amber-500/10 border-amber-500/30 text-amber-500 rotate-180'
+                          : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400'
+                      }`}>
+                        <ChevronDown className="size-3.5" />
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 font-medium">
+                  </div>
+
+                  {/* Title & Preview Subtitle (anti-clipping with padding & leading-snug) */}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-black uppercase italic tracking-tight text-xs sm:text-base text-slate-900 dark:text-white leading-snug pt-0.5 pb-0.5">
+                        My Trophies
+                      </h3>
+                      {/* Desktop-only counter badge */}
+                      <Badge
+                        variant="outline"
+                        className={`hidden sm:inline-flex text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                          expandedAthleteCard === 'trophies'
+                            ? 'border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-500/15'
+                            : 'border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300'
+                        }`}
+                      >
+                        {stars.length}
+                      </Badge>
+                    </div>
+                    <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 font-medium leading-normal">
                       {stars.length > 0
                         ? `Latest: ${stars[0].star_type === 'Red' ? 'Match MVP' : 'Tournament MVP'}`
-                        : 'Awaiting first medal • Tap to view'}
+                        : 'Tap to view'}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider hidden sm:inline transition-colors ${
+
+                {/* Desktop-only right action pill */}
+                <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider transition-colors ${
                     expandedAthleteCard === 'trophies' ? 'text-amber-500' : 'text-slate-400 group-hover:text-amber-500'
                   }`}>
                     {expandedAthleteCard === 'trophies' ? 'Collapse' : 'Expand'}
