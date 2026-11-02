@@ -116,3 +116,26 @@ export function extractCollegeCode(collegeName?: string | null): string {
 
   return acronym.slice(0, 5) || trimmed.slice(0, 4).toUpperCase();
 }
+
+export interface MainCollegeDef {
+  code: string;
+  name: string;
+}
+
+/**
+ * Palawan State University Main Campus colleges & academic units
+ * for cluster & tribal athletic partition.
+ */
+export const PSU_MAIN_COLLEGES: MainCollegeDef[] = [
+  { code: 'CEAT', name: 'College of Engineering, Architecture and Technology' },
+  { code: 'CS', name: 'College of Sciences' },
+  { code: 'CBA', name: 'College of Business and Accountancy' },
+  { code: 'CCJE', name: 'College of Criminal Justice Education' },
+  { code: 'CTE', name: 'College of Teacher Education' },
+  { code: 'CAH', name: 'College of Arts and Humanities' },
+  { code: 'CHMT', name: 'College of Hospitality Management and Tourism' },
+  { code: 'CNHS', name: 'College of Nursing and Health Sciences' },
+  { code: 'SOL', name: 'School of Law' },
+  { code: 'SOM', name: 'School of Medicine' },
+];
+

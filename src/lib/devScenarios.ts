@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractCollegeCode } from '@/lib/playerStatsEngine';
+import { DEFAULT_BINTURUNGAN_TRIBES } from './clusterGovernance';
 
 export interface ScenarioResult {
   success: boolean;
@@ -1365,19 +1366,17 @@ export async function injectSuperDemo(supabase: SupabaseClient): Promise<Scenari
  * Helper to ensure authentic PSU Binturungan tribes exist in clusters table.
  */
 async function ensureClusters(supabase: SupabaseClient) {
-  const authenticClusters = [
-    { name: 'Tribo Apolaki', description: 'God of Sun & War — College of Teacher Education (CTE), College of Criminal Justice Education (CCJE), Laboratory High School', college_codes: ['CTE', 'CCJE'] },
-    { name: 'Tribo Libulan', description: 'Deity of the Moon & Guidance — College of Engineering, Architecture and Technology (CEAT), College of Nursing and Health Sciences (CNHS), School of Law, School of Medicine', college_codes: ['CEAT', 'CNHS'] },
-    { name: 'Tribo Tala', description: 'Goddess of the Morning & Evening Star — College of Business and Accountancy (CBA), College of Hospitality Management and Tourism (CHMT)', college_codes: ['CBA', 'CHMT'] },
-    { name: 'Tribo Haliya', description: 'Goddess of Moonlight & Protection — College of Sciences (CS), College of Arts and Humanities (CAH)', college_codes: ['CS', 'CAH'] },
-    { name: 'Tribo Mapulon', description: 'God of Seasons & Harvest — CCRD Del Sur (Brooke\'s Point, Bataraza, Balabac, Sofronio Española Campuses)', college_codes: ['CCRD'] },
-    { name: 'Tribo Dumangan', description: 'God of Bountiful Harvest — CCRD Del Norte (Roxas, Taytay, Coron, San Vicente, El Nido, Cuyo, Dumaran, Linapacan Campuses)', college_codes: ['CCRD'] },
-  ];
-
-  for (const c of authenticClusters) {
+  for (const c of DEFAULT_BINTURUNGAN_TRIBES) {
     const { data: existing } = await supabase.from('clusters').select('id').eq('name', c.name).maybeSingle();
     if (!existing) {
       await supabase.from('clusters').insert(c);
+    } else {
+      await supabase.from('clusters').update({
+        description: c.description,
+        college_codes: c.college_codes,
+        campuses: c.campuses,
+        color: c.color,
+      }).eq('id', existing.id);
     }
   }
 }

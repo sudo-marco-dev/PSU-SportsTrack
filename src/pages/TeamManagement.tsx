@@ -61,7 +61,9 @@ type ClusterItem = {
   id: string;
   name: string;
   description: string;
-  college_codes: string[];
+  college_codes?: string[];
+  campuses?: string[];
+  color?: string;
 };
 
 type Player = {
@@ -69,6 +71,7 @@ type Player = {
   full_name: string;
   is_verified: boolean;
   college_id?: string | null;
+  campus?: string | null;
   preferred_sports?: string[] | null;
   primary_position?: string | null;
   program?: string | null;
@@ -163,7 +166,7 @@ export const TeamManagement = () => {
   const fetchCollegesAndClusters = async () => {
     const [colRes, clusRes] = await Promise.all([
       supabase.from('colleges').select('id, college_name').order('college_name'),
-      supabase.from('clusters').select('id, name, description, college_codes').order('name')
+      supabase.from('clusters').select('id, name, description, college_codes, campuses, color').order('name')
     ]);
     if (colRes.data) setColleges(colRes.data as CollegeItem[]);
     if (clusRes.data) setClusters(clusRes.data as ClusterItem[]);
@@ -195,7 +198,7 @@ export const TeamManagement = () => {
     const [usersRes, summaries] = await Promise.all([
       supabase
         .from('users')
-        .select('id, full_name, is_verified, role, account_status, college_id, preferred_sports, primary_position, program, year_level, colleges(college_name)')
+        .select('id, full_name, is_verified, role, account_status, college_id, campus, preferred_sports, primary_position, program, year_level, colleges(college_name)')
         .in('role', ['player_student', 'player_faculty', 'player_staff', 'Player'])
         .eq('is_verified', true)
         .neq('account_status', 'inactive')
@@ -495,7 +498,7 @@ export const TeamManagement = () => {
       if (!matchesSearch) return false;
 
       if (eligibilityFilter === 'eligible' && targetRecruitmentTeam) {
-        const elig = evaluateSquadEligibility(p.college_id, collegeName, targetRecruitmentTeam, clusters);
+        const elig = evaluateSquadEligibility(p.college_id, collegeName, targetRecruitmentTeam, clusters, p.campus);
         if (!elig.eligible) return false;
       }
 
@@ -679,18 +682,27 @@ export const TeamManagement = () => {
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent className="rounded-xl max-w-[calc(100vw-3rem)] sm:max-w-md">
-                          {clusters.map((cl) => (
-                            <SelectItem key={cl.id} value={cl.id} className="rounded-lg">
-                              <div className="flex flex-col gap-0.5 min-w-0 text-left py-0.5">
-                                <span className="font-black text-sm truncate">{cl.name}</span>
-                                {cl.description && (
-                                  <span className="text-[10px] text-slate-400 font-medium truncate max-w-sm">
-                                    {cl.description}
-                                  </span>
-                                )}
-                              </div>
-                            </SelectItem>
-                          ))}
+                          {clusters.map((cl) => {
+                            const colCount = (cl.college_codes || []).length;
+                            const campCount = (cl.campuses || []).length;
+                            return (
+                              <SelectItem key={cl.id} value={cl.id} className="rounded-lg">
+                                <div className="flex flex-col gap-0.5 min-w-0 text-left py-0.5">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-black text-sm truncate">{cl.name}</span>
+                                    <span className="text-[9px] font-bold text-slate-400">
+                                      ({colCount} Colleges, {campCount} Campuses)
+                                    </span>
+                                  </div>
+                                  {cl.description && (
+                                    <span className="text-[10px] text-slate-400 font-medium truncate max-w-sm">
+                                      {cl.description}
+                                    </span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                       {selectedClusterId && (() => {
@@ -1330,7 +1342,8 @@ export const TeamManagement = () => {
                   player.college_id,
                   collegeName,
                   targetRecruitmentTeam,
-                  clusters
+                  clusters,
+                  player.campus
                 );
                 const prefSports = Array.isArray(player.preferred_sports) ? player.preferred_sports : [];
                 const displaySports = Array.from(new Set([...prefSports, ...(summary?.activeSports || [])]));
@@ -1487,7 +1500,8 @@ export const TeamManagement = () => {
                     player.college_id,
                     collegeName,
                     targetRecruitmentTeam,
-                    clusters
+                    clusters,
+                    player.campus
                   );
                   const prefSports = Array.isArray(player.preferred_sports) ? player.preferred_sports : [];
                   const displaySports = Array.from(new Set([...prefSports, ...(summary?.activeSports || [])]));
@@ -1636,7 +1650,8 @@ export const TeamManagement = () => {
                           player.college_id,
                           collegeName,
                           targetRecruitmentTeam,
-                          clusters
+                          clusters,
+                          player.campus
                         );
                         const prefSports = Array.isArray(player.preferred_sports) ? player.preferred_sports : [];
                         const displaySports = Array.from(new Set([...prefSports, ...(summary?.activeSports || [])]));
@@ -1997,7 +2012,7 @@ export const TeamManagement = () => {
               const colName = Array.isArray(targetPl.colleges)
                 ? targetPl.colleges[0]?.college_name
                 : targetPl.colleges?.college_name || '';
-              const check = evaluateSquadEligibility(targetPl.college_id, colName, targetTm, clusters);
+              const check = evaluateSquadEligibility(targetPl.college_id, colName, targetTm, clusters, targetPl.campus);
               return (
                 <div
                   className={`p-3 rounded-2xl border text-xs flex items-start gap-2.5 mt-2 ${
@@ -2042,7 +2057,7 @@ export const TeamManagement = () => {
           const p = players.find((pl) => pl.id === dossierPlayerId);
           if (!p) return null;
           const cName = Array.isArray(p.colleges) ? p.colleges[0]?.college_name : p.colleges?.college_name || '';
-          return evaluateSquadEligibility(p.college_id, cName, targetRecruitmentTeam, clusters);
+          return evaluateSquadEligibility(p.college_id, cName, targetRecruitmentTeam, clusters, p.campus);
         })()}
       />
 

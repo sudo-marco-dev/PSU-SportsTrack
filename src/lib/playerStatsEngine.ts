@@ -364,7 +364,13 @@ export function evaluateSquadEligibility(
     colleges?: { college_name: string } | null;
     clusters?: { name: string } | null;
   } | null,
-  clustersList: { id: string; name: string; college_codes: string[] }[]
+  clustersList: {
+    id: string;
+    name: string;
+    college_codes?: string[];
+    campuses?: string[];
+  }[],
+  playerCampus?: string | null
 ): {
   eligible: boolean;
   badgeLabel: string;
@@ -385,7 +391,10 @@ export function evaluateSquadEligibility(
   if (targetTeam.affiliation_type === 'cluster' && targetTeam.cluster_id) {
     const cluster = clustersList.find((c) => c.id === targetTeam.cluster_id);
     const clusterName = cluster?.name || targetTeam.clusters?.name || 'Tribe';
-    if (!cluster || !cluster.college_codes || cluster.college_codes.length === 0) {
+    const collegeCodes = cluster?.college_codes || [];
+    const campuses = cluster?.campuses || [];
+
+    if (collegeCodes.length === 0 && campuses.length === 0) {
       return {
         eligible: true,
         badgeLabel: `${clusterName} Eligible`,
@@ -394,24 +403,52 @@ export function evaluateSquadEligibility(
       };
     }
 
-    const normalizedCodes = cluster.college_codes.map((c) => c.trim().toUpperCase());
-    const isMatch =
-      Boolean(pCode && normalizedCodes.includes(pCode)) ||
-      Boolean(
-        playerCollegeName &&
-          normalizedCodes.some(
-            (code) =>
-              playerCollegeName.toUpperCase().includes(`(${code})`) ||
-              playerCollegeName.toUpperCase() === code
-          )
+    const isExternalAthlete =
+      Boolean(playerCampus) &&
+      playerCampus !== 'PSU Main Campus (Puerto Princesa)';
+
+    let isMatch = false;
+
+    if (isExternalAthlete && playerCampus) {
+      // External campus whole-entity matching
+      isMatch = campuses.some(
+        (c) =>
+          c.toLowerCase() === playerCampus.toLowerCase() ||
+          c.toLowerCase().includes(playerCampus.toLowerCase()) ||
+          playerCampus.toLowerCase().includes(c.toLowerCase())
       );
+    } else {
+      // Main Campus college-code matching
+      const normalizedCodes = collegeCodes.map((c) => c.trim().toUpperCase());
+      isMatch =
+        Boolean(pCode && normalizedCodes.includes(pCode)) ||
+        Boolean(
+          playerCollegeName &&
+            normalizedCodes.some(
+              (code) =>
+                playerCollegeName.toUpperCase().includes(`(${code})`) ||
+                playerCollegeName.toUpperCase() === code
+            )
+        );
+      // Fallback: if player has a campus assigned to this cluster
+      if (!isMatch && playerCampus && campuses.includes(playerCampus)) {
+        isMatch = true;
+      }
+    }
+
+    const assignedSummary = [
+      ...collegeCodes,
+      ...campuses.map((camp) => camp.replace(/^PSU\s+/i, '')),
+    ].join(', ');
 
     return {
       eligible: isMatch,
-      badgeLabel: isMatch ? `Eligible • ${clusterName}` : `Out of Tribe (${pCode || 'No College'})`,
+      badgeLabel: isMatch
+        ? `Eligible • ${clusterName}`
+        : `Out of Tribe (${isExternalAthlete ? playerCampus : pCode || 'No College'})`,
       reason: isMatch
-        ? `${pCode || playerCollegeName} belongs to ${clusterName} (${normalizedCodes.join(', ')})`
-        : `${clusterName} only accepts athletes from: ${normalizedCodes.join(', ')}`,
+        ? `${isExternalAthlete ? playerCampus : pCode || playerCollegeName} belongs to ${clusterName}`
+        : `${clusterName} accepts athletes from: ${assignedSummary || 'None'}`,
       affiliationType: 'cluster',
     };
   }

@@ -28,6 +28,14 @@ export type PsuCampus = typeof PSU_CAMPUSES[number];
 export const DEFAULT_PSU_CAMPUS: PsuCampus = 'PSU Main Campus (Puerto Princesa)';
 
 /**
+ * 17 Palawan State University provincial external campuses that participate
+ * in university-wide athletic events as whole institutional entities.
+ */
+export const PSU_EXTERNAL_CAMPUSES = PSU_CAMPUSES.filter(
+  (campus) => campus !== DEFAULT_PSU_CAMPUS
+);
+
+/**
  * Returns clean short campus name for display chips (e.g. "Main", "Narra", "Coron").
  */
 export function formatCampusShort(campus?: string | null): string {

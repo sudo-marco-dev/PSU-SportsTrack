@@ -29,7 +29,11 @@ export type AuditAction =
   | 'BULK_ASSIGN_FACILITATOR'
   | 'REVALIDATE_TRIGGER'
   | 'CONCLUDE_TOURNAMENT'
-  | 'REOPEN_TOURNAMENT';
+  | 'REOPEN_TOURNAMENT'
+  | 'CREATE_CLUSTER'
+  | 'UPDATE_CLUSTER'
+  | 'DELETE_CLUSTER'
+  | 'RESET_CLUSTERS';
 
 export const logAudit = async (params: {
   action: AuditAction;

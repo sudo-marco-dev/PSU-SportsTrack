@@ -10,6 +10,7 @@ import { Trophy, Medal, Sparkles, Shield, RotateCcw, Search, CheckCircle2, Gradu
 import { type ExpandableTabItem } from '@/components/ui/expandable-icon-tabs';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { extractCollegeCode as engineExtractCollegeCode } from '@/lib/playerStatsEngine';
+import { formatCampusShort } from '@/lib/psuCampuses';
 
 interface CollegeEntity {
   id: string;
@@ -21,6 +22,8 @@ interface ClusterEntity {
   name: string;
   description: string;
   college_codes?: string[];
+  campuses?: string[];
+  color?: string;
 }
 
 interface RankedEntity {
@@ -33,6 +36,8 @@ interface RankedEntity {
   clusterName?: string;
   collegeName?: string;
   memberColleges?: string[];
+  memberCampuses?: string[];
+  color?: string;
   sport?: string;
   category?: string;
   tournaments: string[];
@@ -165,7 +170,7 @@ export const Ranking = () => {
           .select('id, college_name'),
         supabase
           .from('clusters')
-          .select('id, name, description, college_codes')
+          .select('id, name, description, college_codes, campuses, color')
       ]);
 
       if (tRes.data) {
@@ -300,6 +305,17 @@ export const Ranking = () => {
     const getTeamCluster = (team: any, teamCollege?: CollegeEntity | null): ClusterEntity | null => {
       if (team?.cluster_id && clustersMap.has(team.cluster_id)) {
         return clustersMap.get(team.cluster_id)!;
+      }
+      const tCampus = team?.campus || team?.campus_name;
+      if (tCampus) {
+        const matched = clusters.find(cl => cl.campuses && cl.campuses.includes(tCampus));
+        if (matched) return matched;
+      }
+      const tName = (team?.name || '').toLowerCase();
+      for (const cl of clusters) {
+        if (cl.campuses && cl.campuses.some(camp => tName.includes(camp.toLowerCase().replace('psu ', '')))) {
+          return cl;
+        }
       }
       const col = teamCollege || getTeamCollege(team);
       if (col) {
@@ -586,6 +602,8 @@ export const Ranking = () => {
           subtitle: cl.description,
           type: 'cluster',
           memberColleges: cl.college_codes || [],
+          memberCampuses: cl.campuses || [],
+          color: cl.color || '#f97316',
           tournaments: [],
           matchesPlayed: 0,
           wins: 0,
@@ -700,7 +718,8 @@ export const Ranking = () => {
         const q = searchQuery.toLowerCase();
         return c.name.toLowerCase().includes(q) ||
                (c.subtitle && c.subtitle.toLowerCase().includes(q)) ||
-               (c.memberColleges && c.memberColleges.some(m => m.toLowerCase().includes(q)));
+               (c.memberColleges && c.memberColleges.some(m => m.toLowerCase().includes(q))) ||
+               (c.memberCampuses && c.memberCampuses.some(m => m.toLowerCase().includes(q)));
       });
 
       return sortEntities(filtered);
@@ -1713,13 +1732,22 @@ export const Ranking = () => {
 
                             <td className="py-4 px-4">
                               <div className="flex items-center gap-1.5 flex-wrap max-w-xs">
-                                {item.memberColleges && item.memberColleges.length > 0 ? (
+                                {item.memberColleges && item.memberColleges.length > 0 &&
                                   item.memberColleges.map((code) => (
-                                    <Badge key={code} variant="secondary" className="text-[9px] font-black uppercase px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50">
+                                    <Badge key={code} variant="secondary" className="text-[9px] font-black uppercase px-2 py-0.5 bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                                       {code}
                                     </Badge>
                                   ))
-                                ) : (
+                                }
+                                {item.memberCampuses && item.memberCampuses.length > 0 &&
+                                  item.memberCampuses.map((camp) => (
+                                    <Badge key={camp} variant="secondary" className="text-[9px] font-bold px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20" title={camp}>
+                                      {formatCampusShort(camp)}
+                                    </Badge>
+                                  ))
+                                }
+                                {(!item.memberColleges || item.memberColleges.length === 0) &&
+                                 (!item.memberCampuses || item.memberCampuses.length === 0) && (
                                   <span className="text-[10px] text-slate-400">All Campuses</span>
                                 )}
                               </div>
