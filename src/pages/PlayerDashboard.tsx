@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Activity, Trophy, Clock, Star, User, CalendarDays, Dumbbell, Swords, MapPin, XCircle, CheckCircle2, Zap, ArrowRight, Layers, Sparkles, ShieldCheck, Users, Mail, ChevronRight, Tv } from 'lucide-react';
+import { Activity, Trophy, Clock, Star, User, CalendarDays, Dumbbell, Swords, MapPin, XCircle, CheckCircle2, Zap, ArrowRight, Layers, Sparkles, ShieldCheck, Users, Mail, ChevronRight, ChevronDown, Tv } from 'lucide-react';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { getSportIcon, resolveSportName } from '@/lib/sportIcons';
 import { formatYearLevel } from '@/lib/formatYearLevel';
@@ -75,6 +75,7 @@ export const PlayerDashboard = () => {
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
   const [draftTournaments, setDraftTournaments] = useState<any[]>([]);
   const [stars, setStars] = useState<PlayerStar[]>([]);
+  const [expandedAthleteCard, setExpandedAthleteCard] = useState<'squads' | 'trophies' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTournament, setSelectedTournament] = useState<any | null>(null);
   const [divisionFilter, setDivisionFilter] = useState<'all' | 'friendly' | 'binturungan' | 'collegiate'>('all');
@@ -570,7 +571,11 @@ export const PlayerDashboard = () => {
           {user && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5 pt-1">
               {/* Tile 1: Active Squads */}
-              <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md space-y-1">
+              <div 
+                onClick={() => setExpandedAthleteCard(prev => prev === 'squads' ? null : 'squads')}
+                className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 hover:border-orange-500/40 backdrop-blur-md space-y-1 cursor-pointer transition-all"
+                title="Click to view My Active Squads"
+              >
                 <div className="flex items-center justify-between text-slate-400">
                   <span className="text-[10px] font-bold uppercase tracking-wider">Active Squads</span>
                   <Users className="size-4 text-orange-400" />
@@ -607,7 +612,11 @@ export const PlayerDashboard = () => {
               </div>
 
               {/* Tile 3: MVP Honors */}
-              <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md space-y-1">
+              <div 
+                onClick={() => setExpandedAthleteCard(prev => prev === 'trophies' ? null : 'trophies')}
+                className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 hover:border-orange-500/40 backdrop-blur-md space-y-1 cursor-pointer transition-all"
+                title="Click to view My Trophies"
+              >
                 <div className="flex items-center justify-between text-slate-400">
                   <span className="text-[10px] font-bold uppercase tracking-wider">MVP Stars</span>
                   <Star className="size-4 text-amber-400 fill-amber-400" />
@@ -718,6 +727,334 @@ export const PlayerDashboard = () => {
               );
             })}
           </div>
+        </section>
+      )}
+
+      {/* 2.5 ATHLETE QUICK-ACCESS CARDS: MY ACTIVE SQUADS & MY TROPHIES (SIDE-BY-SIDE BY DEFAULT, EXPANDABLE) */}
+      {user && (
+        <section className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {/* Card 1: My Active Squads */}
+            <Card
+              onClick={() => setExpandedAthleteCard(prev => prev === 'squads' ? null : 'squads')}
+              className={`group p-4 sm:p-5 rounded-2xl md:rounded-3xl border transition-all duration-300 cursor-pointer select-none ${
+                expandedAthleteCard === 'squads'
+                  ? 'border-orange-500 bg-orange-500/5 dark:bg-orange-500/10 shadow-lg shadow-orange-500/10 ring-1 ring-orange-500/30'
+                  : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-slate-900 hover:border-orange-500/40 hover:shadow-md'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`size-11 sm:size-12 rounded-2xl flex items-center justify-center shrink-0 border transition-colors ${
+                    expandedAthleteCard === 'squads'
+                      ? 'bg-orange-500 text-white border-orange-400 shadow-md shadow-orange-500/25'
+                      : 'bg-orange-500/10 text-orange-500 border-orange-500/20 group-hover:bg-orange-500 group-hover:text-white'
+                  }`}>
+                    <Users className="size-5 sm:size-6" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-black uppercase italic tracking-tight text-sm sm:text-base text-slate-900 dark:text-white truncate">
+                        My Active Squads
+                      </h3>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                          expandedAthleteCard === 'squads'
+                            ? 'border-orange-500 text-orange-600 dark:text-orange-400 bg-orange-500/15'
+                            : 'border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300'
+                        }`}
+                      >
+                        {myTeams.length}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 font-medium">
+                      {myTeams.length > 0
+                        ? `${myTeams.length} active roster${myTeams.length > 1 ? 's' : ''} enrolled`
+                        : 'No active rosters • Tap to view'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider hidden sm:inline transition-colors ${
+                    expandedAthleteCard === 'squads' ? 'text-orange-500' : 'text-slate-400 group-hover:text-orange-500'
+                  }`}>
+                    {expandedAthleteCard === 'squads' ? 'Collapse' : 'Expand'}
+                  </span>
+                  <div className={`size-7 rounded-full flex items-center justify-center border transition-all duration-300 ${
+                    expandedAthleteCard === 'squads'
+                      ? 'bg-orange-500/10 border-orange-500/30 text-orange-500 rotate-180'
+                      : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400 group-hover:text-orange-500 group-hover:border-orange-500/30'
+                  }`}>
+                    <ChevronDown className="size-4" />
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Card 2: My Trophies & Achievements */}
+            <Card
+              onClick={() => setExpandedAthleteCard(prev => prev === 'trophies' ? null : 'trophies')}
+              className={`group p-4 sm:p-5 rounded-2xl md:rounded-3xl border transition-all duration-300 cursor-pointer select-none ${
+                expandedAthleteCard === 'trophies'
+                  ? 'border-amber-500 bg-amber-500/5 dark:bg-amber-500/10 shadow-lg shadow-orange-500/10 ring-1 ring-amber-500/30'
+                  : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-slate-900 hover:border-amber-500/40 hover:shadow-md'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`size-11 sm:size-12 rounded-2xl flex items-center justify-center shrink-0 border transition-colors ${
+                    expandedAthleteCard === 'trophies'
+                      ? 'bg-amber-500 text-white border-amber-400 shadow-md shadow-amber-500/25'
+                      : 'bg-amber-500/10 text-amber-500 border-amber-500/20 group-hover:bg-amber-500 group-hover:text-white'
+                  }`}>
+                    <Trophy className="size-5 sm:size-6" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-black uppercase italic tracking-tight text-sm sm:text-base text-slate-900 dark:text-white truncate">
+                        My Trophies
+                      </h3>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                          expandedAthleteCard === 'trophies'
+                            ? 'border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-500/15'
+                            : 'border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300'
+                        }`}
+                      >
+                        {stars.length}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 font-medium">
+                      {stars.length > 0
+                        ? `Latest: ${stars[0].star_type === 'Red' ? 'Match MVP' : 'Tournament MVP'}`
+                        : 'Awaiting first medal • Tap to view'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider hidden sm:inline transition-colors ${
+                    expandedAthleteCard === 'trophies' ? 'text-amber-500' : 'text-slate-400 group-hover:text-amber-500'
+                  }`}>
+                    {expandedAthleteCard === 'trophies' ? 'Collapse' : 'Expand'}
+                  </span>
+                  <div className={`size-7 rounded-full flex items-center justify-center border transition-all duration-300 ${
+                    expandedAthleteCard === 'trophies'
+                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-500 rotate-180'
+                      : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400 group-hover:text-amber-500 group-hover:border-amber-500/30'
+                  }`}>
+                    <ChevronDown className="size-4" />
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* EXPANDED CONTENT: SQUADS */}
+          {expandedAthleteCard === 'squads' && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-3 duration-300 pt-1">
+              <div className="flex items-center justify-between px-1">
+                <h2 className="text-base sm:text-lg font-black uppercase italic tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                  <Users className="size-4 sm:size-5 text-orange-500" /> Active Squad Rosters ({myTeams.length})
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/matches')}
+                  className="text-orange-500 hover:text-orange-600 font-bold uppercase text-[10px] tracking-widest gap-1 p-0 h-auto cursor-pointer"
+                >
+                  <span>Match Center</span>
+                  <ChevronRight className="size-3.5" />
+                </Button>
+              </div>
+
+              {myTeams.length === 0 ? (
+                <Card className="p-8 sm:p-10 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-2xl md:rounded-3xl text-center bg-white/50 dark:bg-slate-900/30 space-y-3">
+                  <Dumbbell className="size-10 text-slate-300 dark:text-slate-700 mx-auto" />
+                  <div>
+                    <h3 className="font-bold text-sm text-slate-700 dark:text-slate-300 uppercase tracking-wider">No Active Team Roster Membership</h3>
+                    <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                      You are not currently enrolled in any athletic rosters. Invitations from campus coaches will appear in your Command Center above.
+                    </p>
+                  </div>
+                </Card>
+              ) : (
+                <div className="grid gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-3">
+                  {myTeams.map((roster, index) => {
+                    const team = Array.isArray(roster.teams) ? roster.teams[0] : roster.teams;
+                    const tourney = Array.isArray(team?.tournaments) ? team?.tournaments[0] : team?.tournaments;
+                    const availability = roster.availability_status || 'active';
+                    const sportName = tourney?.sport || 'Basketball';
+                    const SportIcon = getSportIcon(sportName);
+
+                    return (
+                      <Card 
+                        key={roster.id} 
+                        className="group border border-slate-200/80 dark:border-white/10 hover:border-orange-500/50 transition-all rounded-2xl md:rounded-3xl animate-in fade-in slide-in-from-bottom-3 fill-mode-both bg-white dark:bg-slate-900 shadow-sm hover:shadow-xl overflow-hidden"
+                        style={{ animationDelay: `${index * 75}ms` }}
+                      >
+                        <CardHeader className="p-5 pb-3">
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 text-[10px] font-black uppercase tracking-wider">
+                              <SportIcon className="size-3.5 text-orange-500" />
+                              <span>{sportName}</span>
+                            </span>
+
+                            {/* Game-day status projection badge */}
+                            {availability === 'active' && (
+                              <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[9px] font-black uppercase tracking-wider gap-1">
+                                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                Active Roster
+                              </Badge>
+                            )}
+                            {availability === 'benched' && (
+                              <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[9px] font-black uppercase tracking-wider gap-1">
+                                <span className="size-1.5 rounded-full bg-amber-500" />
+                                Benched
+                              </Badge>
+                            )}
+                            {availability === 'injured' && (
+                              <Badge className="bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 text-[9px] font-black uppercase tracking-wider gap-1">
+                                <span className="size-1.5 rounded-full bg-red-500" />
+                                Injured Reserve
+                              </Badge>
+                            )}
+                            {availability === 'excused' && (
+                              <Badge className="bg-slate-100 dark:bg-white/10 text-slate-500 border-none text-[9px] font-black uppercase tracking-wider gap-1">
+                                <span className="size-1.5 rounded-full bg-slate-400" />
+                                Excused
+                              </Badge>
+                            )}
+                          </div>
+
+                          <CardTitle className="font-black uppercase italic tracking-tight text-xl group-hover:text-orange-500 transition-colors text-slate-900 dark:text-white line-clamp-2 break-words leading-tight pr-2">
+                            {team?.name ?? 'Unknown Team'}
+                          </CardTitle>
+                          <CardDescription className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate">
+                            {tourney?.name ?? 'Official Tournament'}
+                          </CardDescription>
+                        </CardHeader>
+
+                        <CardContent className="p-5 pt-0 space-y-3.5">
+                          {/* Player Roster Credentials Pill Box */}
+                          <div className="grid grid-cols-3 gap-1.5 p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 text-center text-xs">
+                            <div className="flex flex-col">
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Jersey</span>
+                              <span className="font-black text-slate-900 dark:text-white">
+                                {roster.jersey_number !== null && roster.jersey_number !== undefined ? `#${roster.jersey_number}` : '--'}
+                              </span>
+                            </div>
+                            <div className="flex flex-col border-x border-slate-200 dark:border-white/10">
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Position</span>
+                              <span className="font-black text-slate-900 dark:text-white truncate px-1">
+                                {roster.position || 'Player'}
+                              </span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Role</span>
+                              <span className="font-black text-slate-900 dark:text-white flex items-center justify-center gap-1">
+                                {roster.is_starter ? (
+                                  <>
+                                    <Zap className="size-3 fill-emerald-500 text-emerald-500" />
+                                    <span>Starter</span>
+                                  </>
+                                ) : (
+                                  'Bench'
+                                )}
+                              </span>
+                            </div>
+                          </div>
+
+                          {roster.is_captain && (
+                            <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-xs font-black uppercase tracking-wider bg-amber-500/10 px-2.5 py-1.5 rounded-lg border border-amber-500/20">
+                              <Star className="size-3.5 fill-amber-500" />
+                              <span>Official Team Captain</span>
+                            </div>
+                          )}
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full h-10 rounded-xl font-black uppercase tracking-wider text-[10px] text-slate-700 dark:text-slate-200 hover:text-orange-500 hover:border-orange-500/40 gap-1.5 cursor-pointer"
+                            onClick={() => navigate('/matches')}
+                          >
+                            <Trophy className="size-3.5 text-orange-500" />
+                            <span>Follow Squad in Match Center</span>
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* EXPANDED CONTENT: TROPHIES */}
+          {expandedAthleteCard === 'trophies' && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-3 duration-300 pt-1">
+              <div className="flex items-center justify-between px-1">
+                <h2 className="text-base sm:text-lg font-black uppercase italic tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                  <Trophy className="size-4 sm:size-5 text-orange-500" /> Achievements & Trophy Room ({stars.length})
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/profile')}
+                  className="text-orange-500 hover:text-orange-600 font-bold uppercase text-[10px] tracking-widest gap-1 p-0 h-auto cursor-pointer"
+                >
+                  <span>View Full Trophy Room</span>
+                  <ChevronRight className="size-3.5" />
+                </Button>
+              </div>
+
+              <Card className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 overflow-hidden shadow-md rounded-2xl md:rounded-[2rem]">
+                <CardContent className="p-4 md:p-6">
+                  {stars.length === 0 ? (
+                    <div className="text-center py-8 space-y-3 opacity-60">
+                      <div className="flex justify-center gap-3">
+                        <Star className="size-6 text-slate-300 dark:text-slate-700" />
+                        <Star className="size-8 text-slate-400 dark:text-slate-600 -translate-y-1.5" />
+                        <Star className="size-6 text-slate-300 dark:text-slate-700" />
+                      </div>
+                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Trophy Case Awaiting First Medal</p>
+                      <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                        Standout performances recognized by match scorekeepers and tournament directors will appear here.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 group hover:border-orange-500/30 transition-all duration-300">
+                        <div className={`p-4 rounded-2xl shadow-lg shrink-0 ${
+                          stars[0].star_type === 'Red' ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'
+                        }`}>
+                          <Star className="size-7 fill-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-orange-500">Latest Honor</span>
+                            <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+                          </div>
+                          <p className="font-black text-xl uppercase italic tracking-tight leading-none mb-1 text-slate-900 dark:text-white">
+                            {stars[0].star_type === 'Red' ? 'Match MVP' : 'Tournament MVP'}
+                          </p>
+                          <p className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 truncate">
+                            {stars[0].tournaments?.name || 'PSU Championship Arena'}
+                          </p>
+                        </div>
+                        <div className="hidden sm:block shrink-0">
+                          <Badge variant="outline" className="font-black uppercase tracking-widest px-3 py-1 text-[10px] border-slate-200 dark:border-white/10">
+                            {new Date(stars[0].created_at).toLocaleDateString()}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </section>
       )}
 
@@ -841,210 +1178,7 @@ export const PlayerDashboard = () => {
         )}
       </section>
 
-      {/* 4. MY ACTIVE SQUADS & ROSTERS SECTION */}
-      {user && (
-        <section className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-lg sm:text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-              <Users className="size-5 text-orange-500" /> My Active Squads ({myTeams.length})
-            </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/matches')}
-              className="text-orange-500 hover:text-orange-600 font-bold uppercase text-[10px] tracking-widest gap-1 p-0 h-auto cursor-pointer"
-            >
-              <span>Match Center</span>
-              <ChevronRight className="size-3.5" />
-            </Button>
-          </div>
 
-          {myTeams.length === 0 ? (
-            <Card className="p-8 sm:p-10 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-2xl md:rounded-3xl text-center bg-white/50 dark:bg-slate-900/30 space-y-3">
-              <Dumbbell className="size-10 text-slate-300 dark:text-slate-700 mx-auto" />
-              <div>
-                <h3 className="font-bold text-sm text-slate-700 dark:text-slate-300 uppercase tracking-wider">No Active Team Roster Membership</h3>
-                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                  You are not currently enrolled in any athletic rosters. Invitations from campus coaches will appear in your Command Center above.
-                </p>
-              </div>
-            </Card>
-          ) : (
-            <div className="grid gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {myTeams.map((roster, index) => {
-                const team = Array.isArray(roster.teams) ? roster.teams[0] : roster.teams;
-                const tourney = Array.isArray(team?.tournaments) ? team?.tournaments[0] : team?.tournaments;
-                const availability = roster.availability_status || 'active';
-                const sportName = tourney?.sport || 'Basketball';
-                const SportIcon = getSportIcon(sportName);
-
-                return (
-                  <Card 
-                    key={roster.id} 
-                    className="group border border-slate-200/80 dark:border-white/10 hover:border-orange-500/50 transition-all rounded-2xl md:rounded-3xl animate-in fade-in slide-in-from-bottom-3 fill-mode-both bg-white dark:bg-slate-900 shadow-sm hover:shadow-xl overflow-hidden"
-                    style={{ animationDelay: `${index * 75}ms` }}
-                  >
-                    <CardHeader className="p-5 pb-3">
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 text-[10px] font-black uppercase tracking-wider">
-                          <SportIcon className="size-3.5 text-orange-500" />
-                          <span>{sportName}</span>
-                        </span>
-
-                        {/* Game-day status projection badge */}
-                        {availability === 'active' && (
-                          <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[9px] font-black uppercase tracking-wider gap-1">
-                            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            Active Roster
-                          </Badge>
-                        )}
-                        {availability === 'benched' && (
-                          <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[9px] font-black uppercase tracking-wider gap-1">
-                            <span className="size-1.5 rounded-full bg-amber-500" />
-                            Benched
-                          </Badge>
-                        )}
-                        {availability === 'injured' && (
-                          <Badge className="bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 text-[9px] font-black uppercase tracking-wider gap-1">
-                            <span className="size-1.5 rounded-full bg-red-500" />
-                            Injured Reserve
-                          </Badge>
-                        )}
-                        {availability === 'excused' && (
-                          <Badge className="bg-slate-100 dark:bg-white/10 text-slate-500 border-none text-[9px] font-black uppercase tracking-wider gap-1">
-                            <span className="size-1.5 rounded-full bg-slate-400" />
-                            Excused
-                          </Badge>
-                        )}
-                      </div>
-
-                      <CardTitle className="font-black uppercase italic tracking-tight text-xl group-hover:text-orange-500 transition-colors text-slate-900 dark:text-white line-clamp-2 break-words leading-tight pr-2">
-                        {team?.name ?? 'Unknown Team'}
-                      </CardTitle>
-                      <CardDescription className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate">
-                        {tourney?.name ?? 'Official Tournament'}
-                      </CardDescription>
-                    </CardHeader>
-
-                    <CardContent className="p-5 pt-0 space-y-3.5">
-                      {/* Player Roster Credentials Pill Box */}
-                      <div className="grid grid-cols-3 gap-1.5 p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 text-center text-xs">
-                        <div className="flex flex-col">
-                          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Jersey</span>
-                          <span className="font-black text-slate-900 dark:text-white">
-                            {roster.jersey_number !== null && roster.jersey_number !== undefined ? `#${roster.jersey_number}` : '--'}
-                          </span>
-                        </div>
-                        <div className="flex flex-col border-x border-slate-200 dark:border-white/10">
-                          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Position</span>
-                          <span className="font-black text-slate-900 dark:text-white truncate px-1">
-                            {roster.position || 'Player'}
-                          </span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Role</span>
-                          <span className="font-black text-slate-900 dark:text-white flex items-center justify-center gap-1">
-                            {roster.is_starter ? (
-                              <>
-                                <Zap className="size-3 fill-emerald-500 text-emerald-500" />
-                                <span>Starter</span>
-                              </>
-                            ) : (
-                              'Bench'
-                            )}
-                          </span>
-                        </div>
-                      </div>
-
-                      {roster.is_captain && (
-                        <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-xs font-black uppercase tracking-wider bg-amber-500/10 px-2.5 py-1.5 rounded-lg border border-amber-500/20">
-                          <Star className="size-3.5 fill-amber-500" />
-                          <span>Official Team Captain</span>
-                        </div>
-                      )}
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full h-10 rounded-xl font-black uppercase tracking-wider text-[10px] text-slate-700 dark:text-slate-200 hover:text-orange-500 hover:border-orange-500/40 gap-1.5 cursor-pointer"
-                        onClick={() => navigate('/matches')}
-                      >
-                        <Trophy className="size-3.5 text-orange-500" />
-                        <span>Follow Squad in Match Center</span>
-                      </Button>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* 4. MY ACHIEVEMENTS & TROPHY ROOM */}
-      {user && (
-        <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200 fill-mode-both">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-lg sm:text-xl font-black uppercase italic tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-              <Trophy className="size-5 text-orange-500" /> My Achievements ({stars.length})
-            </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/profile')}
-              className="text-orange-500 hover:text-orange-600 font-bold uppercase text-[10px] tracking-widest gap-1 p-0 h-auto cursor-pointer"
-            >
-              <span>View Full Trophy Room</span>
-              <ChevronRight className="size-3.5" />
-            </Button>
-          </div>
-
-          <Card className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 overflow-hidden shadow-md rounded-2xl md:rounded-[2rem]">
-            <CardContent className="p-4 md:p-6">
-              {stars.length === 0 ? (
-                <div className="text-center py-8 space-y-3 opacity-60">
-                  <div className="flex justify-center gap-3">
-                    <Star className="size-6 text-slate-300 dark:text-slate-700" />
-                    <Star className="size-8 text-slate-400 dark:text-slate-600 -translate-y-1.5" />
-                    <Star className="size-6 text-slate-300 dark:text-slate-700" />
-                  </div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Trophy Case Awaiting First Medal</p>
-                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                    Standout performances recognized by match scorekeepers and tournament directors will appear here.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 group hover:border-orange-500/30 transition-all duration-300">
-                    <div className={`p-4 rounded-2xl shadow-lg shrink-0 ${
-                      stars[0].star_type === 'Red' ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'
-                    }`}>
-                      <Star className="size-7 fill-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-orange-500">Latest Honor</span>
-                        <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
-                      </div>
-                      <p className="font-black text-xl uppercase italic tracking-tight leading-none mb-1 text-slate-900 dark:text-white">
-                        {stars[0].star_type === 'Red' ? 'Match MVP' : 'Tournament MVP'}
-                      </p>
-                      <p className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 truncate">
-                        {stars[0].tournaments?.name || 'PSU Championship Arena'}
-                      </p>
-                    </div>
-                    <div className="hidden sm:block shrink-0">
-                      <Badge variant="outline" className="font-black uppercase tracking-widest px-3 py-1 text-[10px] border-slate-200 dark:border-white/10">
-                        {new Date(stars[0].created_at).toLocaleDateString()}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </section>
-      )}
 
       {/* 5. COMING SOON • UPCOMING EVENTS SECTION (BOTTOM OF FEED) */}
       {draftTournaments.length > 0 && (

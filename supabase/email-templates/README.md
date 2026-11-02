@@ -10,7 +10,7 @@ Production-ready, bulletproof HTML email templates designed for **PSU SportsTrac
 | Template File | Supabase Dashboard Setting | Purpose & Flow | Primary Variables |
 | :--- | :--- | :--- | :--- |
 | [`confirm-signup.html`](./confirm-signup.html) | **Confirm signup** | **OTP Account Activation** (Includes OTP token + direct confirmation URL for initial sign-up) | `{{ .Token }}`, `{{ .ConfirmationURL }}` |
-| [`reset-password.html`](./reset-password.html) | **Reset password** | **Password Recovery** (OTP code + reset link for password retrieval) | `{{ .Token }}`, `{{ .ConfirmationURL }}` |
+| [`reset-password.html`](./reset-password.html) | **Reset password** | **Password Recovery** (Direct magic recovery link for password reset) | `{{ .ConfirmationURL }}`, `{{ .Email }}` |
 
 ### Inactive / Not In Use
 | Template File | Status | Reason |
