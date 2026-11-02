@@ -3,40 +3,22 @@ import { supabase } from '@/lib/supabase';
 import {
   Trophy,
   Activity,
-  ShieldAlert,
-  Users,
   Plus,
   ChevronRight,
   LayoutDashboard,
   ShieldCheck,
+  ShieldAlert,
+  Users,
   TrendingUp,
   History,
   RotateCcw,
   FileBarChart2,
-  Layers,
-  Loader2,
-  Trash2
+  Layers
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { FacilitatorManagementModal } from '@/components/admin/FacilitatorManagementModal';
-import { ClusterGovernanceModal } from '@/components/admin/ClusterGovernanceModal';
-import { ClusterGovernanceCard } from '@/components/admin/ClusterGovernanceCard';
-import {
-  type Cluster,
-  resetToOfficialBinturunganTribes
-} from '@/lib/clusterGovernance';
-import { logAudit } from '@/lib/audit';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter
-} from '@/components/ui/dialog';
-import { toast } from 'sonner';
 import { getSportIcon } from '@/lib/sportIcons';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 
@@ -69,84 +51,16 @@ export const AdminDashboard = () => {
   const [isFacilitatorModalOpen, setIsFacilitatorModalOpen] = useState(false);
 
   // Cluster Governance State
-  const [clusters, setClusters] = useState<Cluster[]>([]);
-  const [isLoadingClusters, setIsLoadingClusters] = useState(false);
-  const [isClusterModalOpen, setIsClusterModalOpen] = useState(false);
-  const [clusterToEdit, setClusterToEdit] = useState<Cluster | null>(null);
-  const [clusterToDelete, setClusterToDelete] = useState<Cluster | null>(null);
-  const [isResetClustersDialogOpen, setIsResetClustersDialogOpen] = useState(false);
-  const [isResettingClusters, setIsResettingClusters] = useState(false);
-  const [isDeletingCluster, setIsDeletingCluster] = useState(false);
+  const [clustersCount, setClustersCount] = useState(0);
 
-  const fetchClusters = async () => {
-    setIsLoadingClusters(true);
+  const fetchClustersCount = async () => {
     try {
-      const { data, error } = await supabase
+      const { count } = await supabase
         .from('clusters')
-        .select('id, name, description, college_codes, campuses, color, created_at')
-        .order('name');
-      if (error) throw error;
-      setClusters((data || []) as Cluster[]);
+        .select('*', { count: 'exact', head: true });
+      setClustersCount(count || 0);
     } catch (err) {
-      console.error('Error fetching clusters:', err);
-    } finally {
-      setIsLoadingClusters(false);
-    }
-  };
-
-  const handleDeleteCluster = async () => {
-    if (!clusterToDelete) return;
-    setIsDeletingCluster(true);
-    try {
-      const { count: teamCount } = await supabase
-        .from('teams')
-        .select('*', { count: 'exact', head: true })
-        .eq('cluster_id', clusterToDelete.id);
-
-      if (teamCount && teamCount > 0) {
-        toast.error(`Cannot delete cluster "${clusterToDelete.name}" because ${teamCount} squad(s) are currently affiliated with it. Reassign or delete those squads first.`);
-        setClusterToDelete(null);
-        return;
-      }
-
-      const { error } = await supabase
-        .from('clusters')
-        .delete()
-        .eq('id', clusterToDelete.id);
-
-      if (error) throw error;
-
-      await logAudit({
-        action: 'DELETE_CLUSTER',
-        entity_type: 'clusters',
-        entity_id: clusterToDelete.id,
-        details: `Deleted cluster "${clusterToDelete.name}"`,
-      });
-
-      toast.success(`Cluster "${clusterToDelete.name}" deleted successfully.`);
-      setClusterToDelete(null);
-      fetchClusters();
-    } catch (err: any) {
-      console.error('Error deleting cluster:', err);
-      toast.error(err.message || 'Failed to delete cluster');
-    } finally {
-      setIsDeletingCluster(false);
-    }
-  };
-
-  const handleResetClusters = async () => {
-    setIsResettingClusters(true);
-    try {
-      const res = await resetToOfficialBinturunganTribes(supabase);
-      if (!res.success) throw new Error(res.error);
-      toast.success('Successfully reset all clusters to authentic PSU Binturungan Tribes presets!');
-      setIsResetClustersDialogOpen(false);
-      fetchClusters();
-    } catch (err: any) {
-      console.error('Error resetting clusters:', err);
-      toast.error(err.message || 'Failed to reset clusters');
-    } finally {
-      setIsResettingClusters(false);
+      console.warn('Error fetching clusters count:', err);
     }
   };
 
@@ -233,7 +147,7 @@ export const AdminDashboard = () => {
 
   useEffect(() => {
     fetchStats();
-    fetchClusters();
+    fetchClustersCount();
   }, []);
 
   const statCards = [
@@ -305,18 +219,15 @@ export const AdminDashboard = () => {
 
         <div className="relative z-10 shrink-0 flex items-center gap-2 flex-wrap">
           <Button
-            onClick={() => {
-              const el = document.getElementById('cluster-governance-section');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
-            }}
+            onClick={() => navigate('/admin/tournaments?tab=clusters')}
             variant="ghost"
             className="h-9 sm:h-10 border border-white/15 hover:border-orange-500/60 bg-white/5 hover:bg-orange-500/20 text-white hover:text-white font-bold gap-1.5 sm:gap-2 px-3 sm:px-4 rounded-xl text-[11px] sm:text-xs uppercase tracking-wider group cursor-pointer"
           >
             <Layers className="size-3.5 sm:size-4 text-orange-400 group-hover:scale-110 transition-transform" />
             <span className="text-white group-hover:text-white">Clusters / Tribes</span>
-            {clusters.length > 0 && (
+            {clustersCount > 0 && (
               <span className="px-1.5 py-0.5 rounded-full bg-orange-500 text-white text-[9px] sm:text-[10px] font-black shadow-sm">
-                {clusters.length}
+                {clustersCount}
               </span>
             )}
           </Button>
@@ -605,10 +516,7 @@ export const AdminDashboard = () => {
             </Button>
 
             <Button
-              onClick={() => {
-                const el = document.getElementById('cluster-governance-section');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-              }}
+              onClick={() => navigate('/admin/tournaments?tab=clusters')}
               className="h-20 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-500/5 rounded-3xl flex items-center justify-between px-6 group transition-all cursor-pointer"
             >
               <div className="flex items-center gap-4">
@@ -617,7 +525,7 @@ export const AdminDashboard = () => {
                 </div>
                 <div className="text-left">
                   <p className="text-sm font-black uppercase italic tracking-tight text-slate-900 dark:text-white leading-none mb-1">Clusters &amp; Tribes</p>
-                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{clusters.length} Active Tribes</p>
+                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{clustersCount} Active Tribes</p>
                 </div>
               </div>
               <ChevronRight className="size-4 text-slate-300 group-hover:text-cyan-500 transition-colors" />
@@ -673,210 +581,11 @@ export const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Cluster & Tribe Governance Center */}
-      <div id="cluster-governance-section" className="space-y-4 relative z-10 pt-2">
-        <div className="bg-slate-950 text-white rounded-3xl p-5 sm:p-7 border border-white/5 relative overflow-hidden shadow-xl">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-            <div className="flex items-start sm:items-center gap-3">
-              <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-2xl text-orange-500 shrink-0">
-                <Layers className="size-6" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">
-                    Institutional Governance
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full bg-white/10 text-slate-300 text-[9px] font-bold">
-                    {clusters.length} Active Tribes
-                  </span>
-                </div>
-                <h2 className="text-xl sm:text-2xl font-black uppercase italic tracking-tight text-white mt-0.5">
-                  Cluster &amp; Tribe Governance
-                </h2>
-                <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
-                  Configure athletic clusters for Palawan State University. Assign Main Campus colleges and whole external campuses (e.g. Brooke&apos;s Point, Narra, Coron) with strict exclusivity.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 flex-wrap shrink-0">
-              <Button
-                variant="ghost"
-                onClick={() => setIsResetClustersDialogOpen(true)}
-                className="h-10 border border-white/15 hover:border-orange-500/60 bg-white/5 hover:bg-orange-500/20 text-white hover:text-white font-bold gap-2 px-3.5 rounded-xl text-xs uppercase tracking-wider cursor-pointer"
-              >
-                <RotateCcw className="size-3.5 text-orange-400" />
-                <span>Reset to Official Tribes</span>
-              </Button>
-
-              <Button
-                onClick={() => {
-                  setClusterToEdit(null);
-                  setIsClusterModalOpen(true);
-                }}
-                className="h-10 bg-orange-500 hover:bg-orange-600 text-white font-black uppercase text-xs tracking-wider gap-2 px-4 rounded-xl shadow-lg shadow-orange-500/25 cursor-pointer"
-              >
-                <Plus className="size-4" />
-                <span>Create Cluster</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Clusters Grid */}
-        {isLoadingClusters ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-56 rounded-3xl bg-slate-100 dark:bg-white/5 animate-pulse border border-slate-200 dark:border-white/5"
-              />
-            ))}
-          </div>
-        ) : clusters.length === 0 ? (
-          <div className="rounded-3xl border-2 border-dashed border-slate-200 dark:border-white/10 p-10 text-center space-y-3">
-            <Layers className="size-10 text-slate-400 mx-auto" />
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-              No Clusters Configured
-            </h3>
-            <p className="text-xs text-slate-400 max-w-md mx-auto">
-              Click &quot;Reset to Official Tribes&quot; to automatically seed the 6 authentic PSU Binturungan Tribes with default colleges and external campus assignments.
-            </p>
-            <Button
-              onClick={() => setIsResetClustersDialogOpen(true)}
-              className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold uppercase tracking-wider rounded-xl gap-2 cursor-pointer"
-            >
-              <RotateCcw className="size-3.5" />
-              Reset to Official Tribes
-            </Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {clusters.map((c) => (
-              <ClusterGovernanceCard
-                key={c.id}
-                cluster={c}
-                onEdit={(item) => {
-                  setClusterToEdit(item);
-                  setIsClusterModalOpen(true);
-                }}
-                onDelete={(item) => setClusterToDelete(item)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
       <FacilitatorManagementModal
         open={isFacilitatorModalOpen}
         onOpenChange={setIsFacilitatorModalOpen}
         onUpdated={fetchStats}
       />
-
-      {/* Cluster Create / Edit Modal */}
-      <ClusterGovernanceModal
-        open={isClusterModalOpen}
-        onOpenChange={setIsClusterModalOpen}
-        clusterToEdit={clusterToEdit}
-        allClusters={clusters}
-        onSuccess={fetchClusters}
-      />
-
-      {/* Delete Cluster Confirmation Dialog */}
-      <Dialog
-        open={!!clusterToDelete}
-        onOpenChange={(open) => !open && setClusterToDelete(null)}
-      >
-        <DialogContent className="sm:max-w-md bg-white dark:bg-slate-950 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-3xl p-6 shadow-2xl">
-          <DialogHeader className="space-y-2">
-            <div className="size-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center mx-auto">
-              <Trash2 className="size-6" />
-            </div>
-            <DialogTitle className="text-center text-lg font-black uppercase tracking-tight">
-              Delete Cluster / Tribe
-            </DialogTitle>
-            <DialogDescription className="text-center text-xs text-slate-500 dark:text-slate-400">
-              Are you sure you want to delete <strong className="text-slate-900 dark:text-white font-bold">{clusterToDelete?.name}</strong>? Its assigned colleges and external campuses will become unassigned. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter className="flex sm:justify-center gap-2 pt-4">
-            <Button
-              variant="ghost"
-              onClick={() => setClusterToDelete(null)}
-              disabled={isDeletingCluster}
-              className="rounded-xl text-xs font-bold uppercase tracking-wider flex-1 sm:flex-initial"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleDeleteCluster}
-              disabled={isDeletingCluster}
-              className="bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-black uppercase tracking-wider gap-2 shadow-lg shadow-rose-500/20 flex-1 sm:flex-initial cursor-pointer"
-            >
-              {isDeletingCluster ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="size-4" />
-                  Delete Cluster
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reset to Official Tribes Confirmation Dialog */}
-      <Dialog
-        open={isResetClustersDialogOpen}
-        onOpenChange={setIsResetClustersDialogOpen}
-      >
-        <DialogContent className="sm:max-w-md bg-white dark:bg-slate-950 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-3xl p-6 shadow-2xl">
-          <DialogHeader className="space-y-2">
-            <div className="size-12 rounded-2xl bg-orange-500/10 border border-orange-500/20 text-orange-500 flex items-center justify-center mx-auto">
-              <RotateCcw className="size-6" />
-            </div>
-            <DialogTitle className="text-center text-lg font-black uppercase tracking-tight">
-              Reset to Official PSU Binturungan Tribes
-            </DialogTitle>
-            <DialogDescription className="text-center text-xs text-slate-500 dark:text-slate-400">
-              This will restore the 6 official university tribes (Tribo Apolaki, Tribo Libulan, Tribo Tala, Tribo Haliya, Tribo Mapulon, Tribo Dumangan) with default Main Campus colleges and external campus assignments.
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter className="flex sm:justify-center gap-2 pt-4">
-            <Button
-              variant="ghost"
-              onClick={() => setIsResetClustersDialogOpen(false)}
-              disabled={isResettingClusters}
-              className="rounded-xl text-xs font-bold uppercase tracking-wider flex-1 sm:flex-initial"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleResetClusters}
-              disabled={isResettingClusters}
-              className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-black uppercase tracking-wider gap-2 shadow-lg shadow-orange-500/20 flex-1 sm:flex-initial cursor-pointer"
-            >
-              {isResettingClusters ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Resetting...
-                </>
-              ) : (
-                <>
-                  <RotateCcw className="size-4" />
-                  Confirm Reset
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

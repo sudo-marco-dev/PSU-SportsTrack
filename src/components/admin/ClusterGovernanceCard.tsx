@@ -21,10 +21,10 @@ export const ClusterGovernanceCard = ({
   const clusterColor = cluster.color || '#f97316';
 
   return (
-    <Card className="rounded-2xl md:rounded-3xl border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col justify-between group">
+    <Card className="rounded-2xl md:rounded-3xl border-2 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group">
       <CardContent className="p-4 sm:p-5 space-y-4 flex flex-col justify-between h-full">
         {/* Card Header: Color chip, Name, Description & Quick Actions */}
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
               <div
@@ -32,7 +32,7 @@ export const ClusterGovernanceCard = ({
                 style={{ backgroundColor: clusterColor }}
               />
               <div className="min-w-0">
-                <h3 className="text-base sm:text-lg font-black uppercase italic tracking-tight text-slate-900 dark:text-white leading-snug pt-0.5 pb-0.5 truncate group-hover:text-orange-500 transition-colors">
+                <h3 className="text-base sm:text-lg font-black uppercase italic tracking-tight text-slate-900 dark:text-white leading-normal pt-1 pb-1 pr-1 group-hover:text-orange-500 transition-colors whitespace-normal break-words">
                   {cluster.name}
                 </h3>
               </div>
@@ -62,14 +62,14 @@ export const ClusterGovernanceCard = ({
           </div>
 
           {cluster.description && (
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed whitespace-normal break-words">
               {cluster.description}
             </p>
           )}
         </div>
 
         {/* Assignments Breakdown */}
-        <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-white/5 text-xs">
+        <div className="space-y-3 pt-2.5 border-t border-slate-100 dark:border-white/5 text-xs">
           {/* Main Campus Colleges */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400">
@@ -81,7 +81,7 @@ export const ClusterGovernanceCard = ({
             </div>
 
             {collegesCount > 0 ? (
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
                 {cluster.college_codes.map((code) => (
                   <Badge
                     key={code}
@@ -110,7 +110,7 @@ export const ClusterGovernanceCard = ({
             </div>
 
             {campusesCount > 0 ? (
-              <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-0.5">
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
                 {cluster.campuses.map((campus) => (
                   <Badge
                     key={campus}
@@ -131,7 +131,7 @@ export const ClusterGovernanceCard = ({
         </div>
 
         {/* Card Footer: Summary Tag */}
-        <div className="pt-2 mt-auto border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[9px] font-black uppercase tracking-wider text-slate-400">
+        <div className="pt-2.5 mt-auto border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[9px] font-black uppercase tracking-wider text-slate-400">
           <span
             className="px-2 py-0.5 rounded-md text-white font-bold"
             style={{ backgroundColor: clusterColor }}

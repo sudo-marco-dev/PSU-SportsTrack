@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { logAudit } from '@/lib/audit';
 import { toast } from 'sonner';
@@ -22,6 +22,8 @@ import {
   AlertCircle,
   Loader2,
   Palette,
+  Search,
+  X,
 } from 'lucide-react';
 import {
   type Cluster,
@@ -50,7 +52,17 @@ export const ClusterGovernanceModal = ({
   const [color, setColor] = useState('#f97316');
   const [selectedColleges, setSelectedColleges] = useState<string[]>([]);
   const [selectedCampuses, setSelectedCampuses] = useState<string[]>([]);
+  const [campusFilterQuery, setCampusFilterQuery] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Filtered external campuses based on search query
+  const filteredExternalCampuses = useMemo(() => {
+    if (!campusFilterQuery.trim()) return PSU_EXTERNAL_CAMPUSES;
+    const q = campusFilterQuery.trim().toLowerCase();
+    return PSU_EXTERNAL_CAMPUSES.filter(
+      (c) => c.toLowerCase().includes(q) || formatCampusShort(c).toLowerCase().includes(q)
+    );
+  }, [campusFilterQuery]);
 
   // Initialize form when opened or clusterToEdit changes
   useEffect(() => {
@@ -406,9 +418,9 @@ export const ClusterGovernanceModal = ({
                       ) : assignedToOther ? (
                         <Badge
                           variant="outline"
-                          className="text-[8px] font-bold uppercase tracking-wider border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/20 group-hover:border-orange-500"
+                          className="text-[8px] font-bold border-amber-500/30 text-amber-700 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/20 group-hover:border-orange-500"
                         >
-                          In: {assignedToOther.name}
+                          Transfer from {assignedToOther.name.replace(/^Tribo\s+/i, '')}
                         </Badge>
                       ) : (
                         <span className="text-[9px] font-bold uppercase text-slate-400 group-hover:text-blue-500">
@@ -455,8 +467,28 @@ export const ClusterGovernanceModal = ({
               Provincial campuses participate as whole university entities (e.g. PSU Brooke&apos;s Point, Narra, Coron) rather than by college divisions.
             </p>
 
+            {/* Campus Search Filter */}
+            <div className="relative">
+              <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Input
+                value={campusFilterQuery}
+                onChange={(e) => setCampusFilterQuery(e.target.value)}
+                placeholder="Search external campuses (e.g. Narra, Coron, Brooke's Point)..."
+                className="pl-8 pr-8 h-8 rounded-xl border-slate-200 dark:border-white/10 text-xs font-medium"
+              />
+              {campusFilterQuery && (
+                <button
+                  type="button"
+                  onClick={() => setCampusFilterQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                >
+                  <X className="size-3" />
+                </button>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-1">
-              {PSU_EXTERNAL_CAMPUSES.map((campus) => {
+              {filteredExternalCampuses.map((campus) => {
                 const isSelected = selectedCampuses.includes(campus);
                 const assignedToOther = getCampusAssignment(campus);
                 const shortName = formatCampusShort(campus);
@@ -488,9 +520,12 @@ export const ClusterGovernanceModal = ({
                           <Check className="size-2.5 stroke-[3]" />
                         </div>
                       ) : assignedToOther ? (
-                        <span className="text-[8px] font-bold text-amber-600 dark:text-amber-400 truncate max-w-[70px] inline-block">
-                          {assignedToOther.name.replace('Tribo ', '')}
-                        </span>
+                        <Badge
+                          variant="outline"
+                          className="text-[8px] font-bold border-amber-500/30 text-amber-700 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/20 group-hover:border-orange-500"
+                        >
+                          Transfer from {assignedToOther.name.replace(/^Tribo\s+/i, '')}
+                        </Badge>
                       ) : (
                         <span className="text-[8px] font-bold uppercase text-slate-400 group-hover:text-emerald-500">
                           + Add
@@ -501,6 +536,11 @@ export const ClusterGovernanceModal = ({
                 );
               })}
             </div>
+            {filteredExternalCampuses.length === 0 && (
+              <p className="text-xs text-center text-slate-400 py-3 italic">
+                No campuses match &quot;{campusFilterQuery}&quot;
+              </p>
+            )}
           </div>
         </div>
 

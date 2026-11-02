@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
@@ -9,7 +10,8 @@ import {
   Users, 
   Plus, 
   Star,
-  UserCheck 
+  UserCheck,
+  Layers
 } from 'lucide-react';
 import { DataToolbar } from '@/components/admin/DataToolbar';
 import { ViewToggle } from '@/components/admin/ViewToggle';
@@ -24,24 +26,43 @@ import { TournamentListTab } from '@/components/tournament-management/Tournament
 import { TeamApprovalsTab } from '@/components/tournament-management/TeamApprovalsTab';
 import { FacilitatorsTab } from '@/components/tournament-management/FacilitatorsTab';
 import { TournamentMvpTab } from '@/components/tournament-management/TournamentMvpTab';
+import { ClusterGovernanceTab } from '@/components/tournament-management/ClusterGovernanceTab';
 import { BracketGenerationModal } from '@/components/tournament-management/BracketGenerationModal';
 import { ExpandableIconTabs } from '@/components/ui/expandable-icon-tabs';
 
 export const TournamentManagement: React.FC = () => {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const paramTab = searchParams.get('tab');
 
   // Primary Datasets
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [pendingTeams, setPendingTeams] = useState<PendingTeam[]>([]);
   const [officialsCount, setOfficialsCount] = useState(0);
+  const [clustersCount, setClustersCount] = useState(0);
   const [isLoadingTournaments, setIsLoadingTournaments] = useState(true);
   const [isLoadingTeams, setIsLoadingTeams] = useState(true);
 
   // Tab & Filters
-  const [activeTab, setActiveTab] = useState('tournaments');
+  const [activeTab, setActiveTab] = useState(paramTab || 'tournaments');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  useEffect(() => {
+    if (paramTab && paramTab !== activeTab) {
+      setActiveTab(paramTab);
+    }
+  }, [paramTab]);
+
+  const handleTabChange = (val: string) => {
+    setActiveTab(val);
+    if (val === 'tournaments') {
+      setSearchParams({}, { replace: true });
+    } else {
+      setSearchParams({ tab: val }, { replace: true });
+    }
+  };
 
   // Modal States
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -119,10 +140,22 @@ export const TournamentManagement: React.FC = () => {
     }
   };
 
+  const fetchClustersCount = async () => {
+    try {
+      const { count } = await supabase
+        .from('clusters')
+        .select('*', { count: 'exact', head: true });
+      setClustersCount(count || 0);
+    } catch (err) {
+      console.warn('Failed to fetch clusters count:', err);
+    }
+  };
+
   useEffect(() => {
     fetchTournaments();
     fetchPendingTeams();
     fetchOfficialsCount();
+    fetchClustersCount();
   }, []);
 
   // Filtered Datasets
@@ -293,7 +326,7 @@ export const TournamentManagement: React.FC = () => {
       </div>
 
       {/* Management Navigation Tabs — Expandable Icon Tabs (Single sleek 44px row) */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full relative z-10 flex flex-col min-w-0">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full relative z-10 flex flex-col min-w-0">
         <ExpandableIconTabs
           tabs={[
             { id: 'tournaments', label: 'Tournaments', shortLabel: 'Tourneys', icon: Trophy, count: tournaments.length },
@@ -312,15 +345,22 @@ export const TournamentManagement: React.FC = () => {
               icon: UserCheck,
               count: officialsCount,
             },
+            {
+              id: 'clusters',
+              label: 'Clusters & Tribes',
+              shortLabel: 'Tribes',
+              icon: Layers,
+              count: clustersCount,
+            },
             { id: 'mvp', label: 'MVP Hall of Fame', shortLabel: 'Hall of Fame', icon: Star },
           ]}
           activeTab={activeTab}
-          onChange={setActiveTab}
+          onChange={handleTabChange}
           className="w-full sm:w-fit sm:mx-auto sm:self-center mb-6"
           ariaLabel="Tournament Operations Navigation"
         />
 
-        {activeTab !== 'mvp' && activeTab !== 'facilitators' && (
+        {activeTab !== 'mvp' && activeTab !== 'facilitators' && activeTab !== 'clusters' && (
           <div className="mb-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
             <DataToolbar
               searchQuery={searchQuery}
@@ -377,6 +417,10 @@ export const TournamentManagement: React.FC = () => {
               fetchOfficialsCount();
             }}
           />
+        </TabsContent>
+
+        <TabsContent value="clusters" className="space-y-6 outline-none">
+          <ClusterGovernanceTab />
         </TabsContent>
 
         <TabsContent value="mvp" className="space-y-6 outline-none">

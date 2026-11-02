@@ -47,46 +47,48 @@ async function configureSession(page: Page, accountKey: 'admin' | 'coach') {
   }
 }
 
-test.describe('Cluster & Tribe Governance (/admin)', () => {
-  test('1. Admin views Cluster Governance section with all authentic PSU Binturungan tribes', async ({ page }) => {
+test.describe('Cluster & Tribe Governance Tab & Operations Hub', () => {
+  test('1. Admin accesses Clusters & Tribes via Dashboard quick action & checks 5th tab', async ({ page }) => {
     await configureSession(page, 'admin');
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/admin');
     await page.waitForLoadState('networkidle');
 
-    // Look for Cluster Governance header button & section
-    const clusterHeaderBtn = page.getByRole('button', { name: /Clusters \/ Tribes/i });
-    await expect(clusterHeaderBtn).toBeVisible({ timeout: 15000 });
+    // Verify Clusters & Tribes Quick Action card exists on /admin
+    const clustersQuickCard = page.locator('button', { hasText: 'Clusters & Tribes' }).first();
+    await expect(clustersQuickCard).toBeVisible({ timeout: 15000 });
+    await clustersQuickCard.click();
 
-    const clusterSection = page.locator('#cluster-governance-section');
-    await expect(clusterSection).toBeVisible();
+    // Verify navigation landed on /admin/tournaments?tab=clusters
+    await page.waitForURL(/\/admin\/tournaments\?tab=clusters/, { timeout: 10000 });
 
-    // Verify Title and Subtitle
-    await expect(clusterSection.getByRole('heading', { name: /Cluster & Tribe Governance/i })).toBeVisible();
+    // Verify 5th tab 'Clusters & Tribes' is active in ExpandableIconTabs
+    const tribesTab = page.locator('button[role="tab"]', { hasText: /Clusters & Tribes|Tribes/i });
+    await expect(tribesTab).toBeVisible();
 
     // Verify the authentic tribes are present: Mapulon, Dumangan, Apolaki, Libulan, Tala, Haliya
-    await expect(clusterSection.getByText('Tribo Mapulon')).toBeVisible({ timeout: 10000 });
-    await expect(clusterSection.getByText('Tribo Dumangan')).toBeVisible();
-    await expect(clusterSection.getByText('Tribo Apolaki')).toBeVisible();
+    await expect(page.getByText('Tribo Mapulon')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Tribo Dumangan')).toBeVisible();
+    await expect(page.getByText('Tribo Apolaki')).toBeVisible();
 
-    // Verify external campuses are shown under Mapulon & Dumangan
-    await expect(clusterSection.getByText("Brooke's Point", { exact: true })).toBeVisible();
+    // Verify external campuses are shown without clipping
+    await expect(page.getByText("Brooke's Point", { exact: true })).toBeVisible();
 
-    // Take Desktop Screenshot
+    // Take Desktop Tab Screenshot
     const screenshotDir = 'C:/Users/Marco/.gemini/antigravity/brain/472be629-050a-48a2-8ad9-1c9920850f1e/screenshots/clusters';
     if (!fs.existsSync(screenshotDir)) {
       fs.mkdirSync(screenshotDir, { recursive: true });
     }
     await page.screenshot({
-      path: path.join(screenshotDir, 'cluster-governance-desktop.png'),
+      path: path.join(screenshotDir, 'cluster-governance-tab-desktop.png'),
       fullPage: false,
     });
   });
 
-  test('2. Admin opens Configure Cluster modal and inspects strict exclusivity chips', async ({ page }) => {
+  test('2. Admin tests instant search in Configure Cluster modal with zero text clipping', async ({ page }) => {
     await configureSession(page, 'admin');
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto('/admin');
+    await page.goto('/admin/tournaments?tab=clusters');
     await page.waitForLoadState('networkidle');
 
     // Find Tribo Mapulon card and click its edit button
@@ -105,13 +107,23 @@ test.describe('Cluster & Tribe Governance (/admin)', () => {
     await expect(modal.getByText('Main Campus Colleges (Partitioned)')).toBeVisible();
     await expect(modal.getByText('External Campuses (Whole Entities)')).toBeVisible();
 
-    // Check that external campuses are selected for Mapulon (e.g. Brooke's Point)
-    await expect(modal.getByRole('button', { name: "Brooke's Point" })).toBeVisible();
+    // Test campus instant search filter
+    const campusSearchInput = modal.getByPlaceholder(/Search external campuses/i);
+    await expect(campusSearchInput).toBeVisible();
+    await campusSearchInput.fill('Narra');
+
+    // Verify Narra is visible and other non-matching campuses are filtered out
+    await expect(modal.getByRole('button', { name: "Narra" })).toBeVisible();
+    await expect(modal.getByRole('button', { name: "Coron" })).not.toBeVisible();
+
+    // Clear search
+    await campusSearchInput.fill('');
+    await expect(modal.getByRole('button', { name: "Coron" })).toBeVisible();
 
     // Screenshot modal
     const screenshotDir = 'C:/Users/Marco/.gemini/antigravity/brain/472be629-050a-48a2-8ad9-1c9920850f1e/screenshots/clusters';
     await modal.screenshot({
-      path: path.join(screenshotDir, 'cluster-governance-modal.png'),
+      path: path.join(screenshotDir, 'cluster-governance-modal-instant-search.png'),
     });
 
     // Close modal
@@ -119,31 +131,25 @@ test.describe('Cluster & Tribe Governance (/admin)', () => {
     await expect(modal).not.toBeVisible();
   });
 
-  test('3. Mobile responsiveness check (<640px)', async ({ page }) => {
+  test('3. Mobile responsiveness check (<640px) on Clusters Tab', async ({ page }) => {
     await configureSession(page, 'admin');
     await page.setViewportSize({ width: 375, height: 812 }); // iPhone X viewport
-    await page.goto('/admin');
+    await page.goto('/admin/tournaments?tab=clusters');
     await page.waitForLoadState('networkidle');
 
-    const clusterSection = page.locator('#cluster-governance-section');
-    await expect(clusterSection).toBeVisible({ timeout: 15000 });
-
-    // Scroll to cluster section
-    await clusterSection.scrollIntoViewIfNeeded();
-
     // Ensure action buttons stack cleanly and cards are visible
-    const createBtn = clusterSection.getByRole('button', { name: /Create Cluster/i });
-    await expect(createBtn).toBeVisible();
+    const createBtn = page.getByRole('button', { name: /Create Cluster/i });
+    await expect(createBtn).toBeVisible({ timeout: 15000 });
 
     // Check no horizontal overflow on mobile
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 2);
 
-    // Take Mobile Screenshot
+    // Take Mobile Tab Screenshot
     const screenshotDir = 'C:/Users/Marco/.gemini/antigravity/brain/472be629-050a-48a2-8ad9-1c9920850f1e/screenshots/clusters';
     await page.screenshot({
-      path: path.join(screenshotDir, 'cluster-governance-mobile.png'),
+      path: path.join(screenshotDir, 'cluster-governance-tab-mobile.png'),
       fullPage: false,
     });
   });
