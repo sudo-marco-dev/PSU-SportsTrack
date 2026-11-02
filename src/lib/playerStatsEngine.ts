@@ -925,12 +925,14 @@ export async function fetchBatchPlayerSummaries(
     supabase.from('player_stars').select('player_id, star_type'),
     supabase
       .from('team_roster')
-      .select('player_id, position, status, teams(name, is_deleted, status, tournaments(name, sport, type, is_deleted))')
+      .select('player_id, team_id, position, status, teams(id, name, is_deleted, status, tournaments(name, sport, type, is_deleted))')
       .eq('status', 'Approved'),
   ]);
 
   const map: Record<string, PlayerDirectorySummary> = {};
   const matchSets: Record<string, Set<string>> = {};
+  const playerTeams: Record<string, Set<string>> = {};
+  const allApprovedTeamIds = new Set<string>();
 
   const ensurePlayer = (id: string): PlayerDirectorySummary => {
     if (!map[id]) {
@@ -958,22 +960,97 @@ export async function fetchBatchPlayerSummaries(
         positions: [],
       };
       matchSets[id] = new Set();
+      playerTeams[id] = new Set();
     }
     return map[id];
   };
 
-  for (const row of (statsRes.data || []) as any[]) {
-    if (!row.player_id) continue;
-    const p = ensurePlayer(row.player_id);
-    p.totalPoints += Math.max(0, Number(row.points || 0));
-    if (row.match_id) matchSets[row.player_id].add(row.match_id);
+  for (const r of (rostersRes.data || []) as any[]) {
+    if (!r.player_id) continue;
+    const p = ensurePlayer(r.player_id);
+    if (r.position && !p.positions.includes(r.position)) {
+      p.positions.push(r.position);
+    }
+    const tObj = Array.isArray(r.teams) ? r.teams[0] : r.teams;
+    if (tObj && !tObj.is_deleted && tObj.status !== 'Rejected') {
+      const teamId = tObj.id || r.team_id;
+      if (teamId) {
+        playerTeams[r.player_id].add(teamId);
+        allApprovedTeamIds.add(teamId);
+      }
+      if (tObj.name && !p.activeTeamNames.includes(tObj.name)) {
+        p.activeTeamNames.push(tObj.name);
+      }
+      const trObj = Array.isArray(tObj.tournaments) ? tObj.tournaments[0] : tObj.tournaments;
+      if (options?.excludeFriendly && isFriendlyTourn(trObj)) continue;
+      if (trObj && !trObj.is_deleted && trObj.sport && !p.activeSports.includes(trObj.sport)) {
+        p.activeSports.push(trObj.sport);
+      }
+    }
   }
 
+  // Fetch matches played by any approved team so gamesPlayed and W/L reflect all team fixtures
+  const teamMatchesMap: Record<string, Set<string>> = {};
+  if (allApprovedTeamIds.size > 0) {
+    const teamIdList = Array.from(allApprovedTeamIds);
+    const [teamAMatches, teamBMatches] = await Promise.all([
+      supabase
+        .from('matches')
+        .select('id, team_a_id, status, round')
+        .in('team_a_id', teamIdList)
+        .in('status', ['Ongoing', 'Completed']),
+      supabase
+        .from('matches')
+        .select('id, team_b_id, status, round')
+        .in('team_b_id', teamIdList)
+        .in('status', ['Ongoing', 'Completed']),
+    ]);
+
+    const addTeamMatch = (tId: string, mId: string, round?: string) => {
+      if (round && String(round).startsWith('[ARCHIVED]')) return;
+      if (!teamMatchesMap[tId]) teamMatchesMap[tId] = new Set();
+      teamMatchesMap[tId].add(mId);
+    };
+
+    for (const m of teamAMatches.data || []) {
+      if (m.team_a_id) addTeamMatch(m.team_a_id, m.id, m.round);
+    }
+    for (const m of teamBMatches.data || []) {
+      if (m.team_b_id) addTeamMatch(m.team_b_id, m.id, m.round);
+    }
+  }
+
+  // Map squad matches to each player's matchSet
+  for (const pId of Object.keys(playerTeams)) {
+    for (const tId of playerTeams[pId]) {
+      if (teamMatchesMap[tId]) {
+        for (const mId of teamMatchesMap[tId]) {
+          matchSets[pId].add(mId);
+        }
+      }
+    }
+  }
+
+  // Collect per-player per-match points from match_player_stats and match_score_events
+  const playerMatchStatPoints: Record<string, number> = {};
+  for (const row of (statsRes.data || []) as any[]) {
+    if (!row.player_id || !row.match_id) continue;
+    ensurePlayer(row.player_id);
+    matchSets[row.player_id].add(row.match_id);
+    const key = `${row.player_id}:${row.match_id}`;
+    playerMatchStatPoints[key] = Math.max(0, Number(row.points || 0));
+  }
+
+  const playerMatchEventPoints: Record<string, number> = {};
   for (const ev of (eventsRes.data || []) as any[]) {
     if (!ev.player_id) continue;
     const p = ensurePlayer(ev.player_id);
     if (ev.match_id) matchSets[ev.player_id].add(ev.match_id);
     const pts = Number(ev.delta ?? ev.points ?? 0);
+    if (ev.match_id) {
+      const key = `${ev.player_id}:${ev.match_id}`;
+      playerMatchEventPoints[key] = (playerMatchEventPoints[key] || 0) + pts;
+    }
     if (pts > 0) {
       const act = (ev.action_type || '').trim();
       if (act === 'Triple' || act === '3PT') p.threePointers += 1;
@@ -998,29 +1075,21 @@ export async function fetchBatchPlayerSummaries(
     else if (st.star_type === 'Gold') p.goldStars += 1;
   }
 
-  for (const r of (rostersRes.data || []) as any[]) {
-    if (!r.player_id) continue;
-    const p = ensurePlayer(r.player_id);
-    if (r.position && !p.positions.includes(r.position)) {
-      p.positions.push(r.position);
-    }
-    const tObj = Array.isArray(r.teams) ? r.teams[0] : r.teams;
-    if (tObj && !tObj.is_deleted && tObj.status !== 'Rejected') {
-      if (tObj.name && !p.activeTeamNames.includes(tObj.name)) {
-        p.activeTeamNames.push(tObj.name);
-      }
-      const trObj = Array.isArray(tObj.tournaments) ? tObj.tournaments[0] : tObj.tournaments;
-      if (options?.excludeFriendly && isFriendlyTourn(trObj)) continue;
-      if (trObj && !trObj.is_deleted && trObj.sport && !p.activeSports.includes(trObj.sport)) {
-        p.activeSports.push(trObj.sport);
-      }
-    }
-  }
-
+  // Calculate totalPoints using Math.max(statPoints, eventPoints) per match, exactly like fetchPlayerCareerTelemetry
   for (const id of Object.keys(map)) {
-    const gp = matchSets[id]?.size || 0;
+    const pMatches = matchSets[id] || new Set();
+    let computedTotalPoints = 0;
+    for (const mId of pMatches) {
+      const key = `${id}:${mId}`;
+      const statPts = playerMatchStatPoints[key] ?? 0;
+      const evtPts = playerMatchEventPoints[key] ?? 0;
+      computedTotalPoints += Math.max(statPts, evtPts, 0);
+    }
+
+    const gp = pMatches.size;
     map[id].gamesPlayed = gp;
-    map[id].ppg = gp > 0 ? Number((map[id].totalPoints / gp).toFixed(1)) : 0;
+    map[id].totalPoints = computedTotalPoints;
+    map[id].ppg = gp > 0 ? Number((computedTotalPoints / gp).toFixed(1)) : 0;
   }
 
   return map;

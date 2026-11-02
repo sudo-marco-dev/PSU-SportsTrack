@@ -344,7 +344,7 @@ export const PlayerDossierModal = ({
                           key={spItem.sport}
                           type="button"
                           onClick={() => setSelectedSport(spItem.sport)}
-                          title={`${spItem.sport} (${spItem.gamesPlayed} GP)`}
+                          title={`${spItem.sport} (${spItem.gamesPlayed} Games Played)`}
                           className={`min-h-[34px] px-2 sm:px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
                             isSelected
                               ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
@@ -365,7 +365,7 @@ export const PlayerDossierModal = ({
                 {/* Mobile Telemetry Ribbon (< sm) */}
                 <div className="sm:hidden grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-5 gap-2 bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white rounded-2xl p-2.5 border border-slate-300/80 dark:border-white/15">
                   <div className="text-center p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">GP</p>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400" title="Games Played">Games</p>
                     <p className="text-base xs:text-lg font-black tabular-nums mt-0.5">{displayGamesPlayed}</p>
                     <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 truncate mt-0.5">{displayWins}W-{displayLosses}L</p>
                   </div>
@@ -399,7 +399,7 @@ export const PlayerDossierModal = ({
                 <div className="hidden sm:grid sm:grid-cols-5 gap-2.5 sm:gap-3">
                   <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 min-w-0">
                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 truncate">
-                      {selectedSport === 'All' ? 'Games Played' : `${selectedSport} GP`}
+                      {selectedSport === 'All' ? 'Games Played' : `${selectedSport} Games`}
                     </p>
                     <p className="text-2xl font-black tabular-nums mt-0.5">{displayGamesPlayed}</p>
                     <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">

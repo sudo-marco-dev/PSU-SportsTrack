@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trophy, Medal, Sparkles, Shield, RotateCcw, Search, CheckCircle2, GraduationCap, Users, SlidersHorizontal, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trophy, Medal, Sparkles, Shield, RotateCcw, Search, CheckCircle2, GraduationCap, Users, SlidersHorizontal, ChevronDown, ChevronUp, BookOpen, HelpCircle } from 'lucide-react';
 import { type ExpandableTabItem } from '@/components/ui/expandable-icon-tabs';
+import { SportsLegendModal } from '@/components/common/SportsLegendModal';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { extractCollegeCode as engineExtractCollegeCode } from '@/lib/playerStatsEngine';
 import { formatCampusShort } from '@/lib/psuCampuses';
@@ -84,6 +85,7 @@ export const Ranking = () => {
   // Mobile UX States: Collapsible Filter & Expanded Table Row
   const [isFiltersExpanded, setIsFiltersExpanded] = useState<boolean>(false);
   const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null);
+  const [isLegendOpen, setIsLegendOpen] = useState<boolean>(false);
 
   // Viewport breakpoint state: matches Tailwind md: breakpoint (768px)
   const [isDesktop, setIsDesktop] = useState<boolean>(() => {
@@ -1032,6 +1034,17 @@ export const Ranking = () => {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setIsLegendOpen(true)}
+              className="h-9 px-2.5 rounded-xl text-xs font-bold gap-1.5 border-slate-300 dark:border-white/15 text-slate-700 dark:text-slate-300 cursor-pointer hover:border-orange-500 hover:text-orange-500 transition-all"
+              title="Learn about PF, PA, DIFF, and Leaderboard calculations"
+            >
+              <BookOpen className="size-3.5 text-orange-500" />
+              <span className="hidden sm:inline">Legends</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
               className={`h-9 px-3 rounded-xl text-xs font-bold gap-1.5 cursor-pointer transition-all ${
                 isFiltersExpanded || activeFiltersCount > 0
@@ -1588,8 +1601,14 @@ export const Ranking = () => {
                             <p className="text-[9px] font-bold text-slate-400 uppercase">Played</p>
                             <p className="font-black text-slate-900 dark:text-white">{item.matchesPlayed} GP</p>
                           </div>
-                          <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/60">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase">Points (PF-PA)</p>
+                          <div
+                            className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 cursor-pointer hover:bg-orange-500/10 transition-colors"
+                            onClick={() => setIsLegendOpen(true)}
+                            title="Click for Points For - Points Against explanation"
+                          >
+                            <p className="text-[9px] font-bold text-slate-400 uppercase inline-flex items-center gap-0.5">
+                              Points (PF-PA) <HelpCircle className="size-2.5 text-orange-500" />
+                            </p>
                             <p className="font-black text-slate-900 dark:text-white font-mono text-[10px]">{item.pointsFor} - {item.pointsAgainst}</p>
                           </div>
                           <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/60">
@@ -1642,8 +1661,26 @@ export const Ranking = () => {
                     <th className="py-3.5 px-3 text-center">W</th>
                     <th className="py-3.5 px-3 text-center">L</th>
                     <th className="py-3.5 px-4 text-center">Win %</th>
-                    <th className="py-3.5 px-4 text-center">PF - PA</th>
-                    <th className="py-3.5 px-4 text-center">Diff</th>
+                    <th
+                      className="py-3.5 px-4 text-center cursor-pointer group select-none hover:text-orange-500 transition-colors"
+                      onClick={() => setIsLegendOpen(true)}
+                      title="Points For − Points Against (Click for metric explanation)"
+                    >
+                      <span className="inline-flex items-center justify-center gap-1">
+                        PF - PA
+                        <HelpCircle className="size-3 text-orange-500 opacity-60 group-hover:opacity-100" />
+                      </span>
+                    </th>
+                    <th
+                      className="py-3.5 px-4 text-center cursor-pointer group select-none hover:text-orange-500 transition-colors"
+                      onClick={() => setIsLegendOpen(true)}
+                      title="Point Differential = PF − PA (Click for metric explanation)"
+                    >
+                      <span className="inline-flex items-center justify-center gap-1">
+                        Diff
+                        <HelpCircle className="size-3 text-orange-500 opacity-60 group-hover:opacity-100" />
+                      </span>
+                    </th>
                     <th className="py-3.5 px-4 text-center">Medals</th>
                     <th className="py-3.5 px-6 text-right">Standing Tier</th>
                   </tr>
@@ -1895,6 +1932,9 @@ export const Ranking = () => {
           <span className="text-[11px]">Real-Time Sync Active</span>
         </div>
       </Card>
+
+      {/* Interactive Sports Metrics Legend & Rules Modal */}
+      <SportsLegendModal isOpen={isLegendOpen} onClose={() => setIsLegendOpen(false)} />
     </div>
   );
 };

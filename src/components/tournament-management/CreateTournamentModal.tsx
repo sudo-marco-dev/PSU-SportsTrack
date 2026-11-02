@@ -149,7 +149,7 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
                 Host <span className="text-orange-500">Tournament</span>
               </DialogTitle>
             </div>
-            <span className="px-2.5 py-0.5 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 text-[10px] font-black uppercase tracking-wider border border-orange-500/20">
+            <span className="px-2.5 py-0.5 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 text-[10px] font-black uppercase tracking-wider border border-orange-500/20 mr-8 sm:mr-9">
               Draft Phase
             </span>
           </div>

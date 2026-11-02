@@ -248,7 +248,8 @@ export const MatchBoxScoreModal = ({
                   onClose();
                   navigate(`/match/${boxData.match.id}`);
                 }}
-                className="h-8 rounded-xl text-xs font-bold gap-1.5"
+                className="h-8 rounded-xl text-xs font-bold gap-1.5 mr-8 sm:mr-10 hover:border-orange-500 hover:text-orange-500 transition-colors"
+                title="Navigate to live match control and box score"
               >
                 <span>Open Match Console</span>
                 <ExternalLink className="size-3.5" />

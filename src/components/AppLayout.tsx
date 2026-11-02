@@ -17,14 +17,15 @@ import {
   Globe,
   ClipboardList,
   Medal,
-  Activity,
   Info,
   RotateCcw,
   Terminal,
   Search,
   FileText,
-  FileBarChart2
+  FileBarChart2,
+  BookOpen
 } from 'lucide-react';
+import { SportsLegendModal } from '@/components/common/SportsLegendModal';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ThemeToggle } from './ui/ThemeToggle';
@@ -38,6 +39,7 @@ export const AppLayout = () => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showSignOutPrompt, setShowSignOutPrompt] = useState(false);
+  const [isLegendOpen, setIsLegendOpen] = useState(false);
 
   const formatRole = (r: string | null) => {
     if (!r) return 'Spectator';
@@ -62,10 +64,10 @@ export const AppLayout = () => {
 
   const getDashboardHref = () => {
     if (!user) return '/';
-    if (isDev) return '/dev';
     if (isAdmin) return '/admin';
     if (isCoach) return '/coach';
     if (isPlayer) return '/player';
+    if (isDev) return '/dev';
     return '/explorer';
   };
 
@@ -99,9 +101,6 @@ export const AppLayout = () => {
       { name: 'System Audit', href: '/admin/audit-logs', icon: ClipboardList },
       { name: 'Recovery Center', href: '/admin/recovery', icon: RotateCcw },
       { name: 'Institutional Reports', href: '/admin/reports', icon: FileBarChart2 },
-    ] : []),
-    ...(isFacilitator && !isAdmin ? [
-      { name: 'Live Scorer', href: '/explorer', icon: Activity },
     ] : []),
     ...(isCoach ? [
       { name: 'My Teams', href: '/coach/teams', icon: UserCheck },
@@ -169,7 +168,16 @@ export const AppLayout = () => {
           ))}
         </nav>
 
-        <div className="px-4 py-2 border-t border-white/5">
+        <div className="px-3 py-2 border-t border-white/5 space-y-1">
+          <button
+            type="button"
+            onClick={() => setIsLegendOpen(true)}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-all cursor-pointer text-left"
+            title="Sports Metrics, Standings Abbreviations (PF/PA/DIFF) & Ballgame Rules"
+          >
+            <BookOpen className="size-4 text-orange-400 shrink-0" />
+            <span className="truncate">Sports Legend &amp; Rules</span>
+          </button>
           <ThemeToggle className="w-full justify-start gap-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl h-9" />
         </div>
 
@@ -220,6 +228,15 @@ export const AppLayout = () => {
             <span className="text-white">SportsTrack</span>
           </Link>
           <div className="flex items-center gap-1.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsLegendOpen(true)}
+              className="text-slate-400 hover:text-white hover:bg-white/10 rounded-full size-8 sm:size-9"
+              title="Sports Metrics & Legends (PF/PA/DIFF)"
+            >
+              <BookOpen className="size-4 text-orange-400" />
+            </Button>
             {user && <NotificationBell />}
           </div>
         </header>
@@ -541,6 +558,9 @@ export const AppLayout = () => {
       <Suspense fallback={null}>
         <LoginModal />
       </Suspense>
+
+      {/* Global Sports Metrics & Standings Legend Dialog */}
+      <SportsLegendModal isOpen={isLegendOpen} onClose={() => setIsLegendOpen(false)} />
     </div>
   );
 };

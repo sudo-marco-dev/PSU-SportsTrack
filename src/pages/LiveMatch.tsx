@@ -148,7 +148,7 @@ type IncomingClaimRequest = {
 export const LiveMatch = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
-  const { user, profile, isAdmin, isFacilitator, isOfficial } = useAuth();
+  const { user, profile, isAdmin, isFacilitator, isOfficial, isCoach } = useAuth();
   const [match, setMatch] = useState<Match | null>(null);
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -470,8 +470,8 @@ export const LiveMatch = () => {
   const broadcastChannelRef = useRef<any>(null);
 
   // Strict Governance: ONLY Facilitators, Officials, and Admins can score games. Coaches are strictly read-only!
-  const isAuthorizedScorekeeper = Boolean(isFacilitator || isAdmin || isOfficial);
-  const isAuthorized = isAuthorizedScorekeeper && (isHoldingLease || isAdmin);
+  const isAuthorizedScorekeeper = Boolean(user && (isFacilitator || isAdmin || isOfficial) && !isCoach);
+  const isAuthorized = Boolean(isAuthorizedScorekeeper && (isHoldingLease || isAdmin));
   const isDesignatedLocked = Boolean(match?.designated_facilitator_id && match.designated_facilitator_id !== user?.id && !isAdmin);
   const isDesignatedForMe = Boolean(match?.designated_facilitator_id && match.designated_facilitator_id === user?.id);
 
@@ -894,6 +894,10 @@ export const LiveMatch = () => {
   }, [matchId]);
 
   const handleClaimLease = async (force: boolean = false, overrideReason?: string) => {
+    if (isCoach && !isAdmin) {
+      toast.error('Coaches have read-only visibility. Scoring console write access is strictly reserved for Facilitators and Admins.');
+      return;
+    }
     if (!isAuthorizedScorekeeper || !user || !matchId) return;
 
     try {
@@ -1472,7 +1476,15 @@ export const LiveMatch = () => {
   };
 
   const handleUpdateStatus = async (newStatus: string) => {
-    if (!isAuthorizedScorekeeper || !match) return;
+    if (!match) return;
+    if (isCoach && !isAdmin) {
+      toast.error('Coaches have read-only visibility and cannot modify match status.');
+      return;
+    }
+    if (!isAuthorized) {
+      toast.error('You must claim the scoring console lease before updating match status.');
+      return;
+    }
 
     // Strict Tie Guard: All official ballgame fixtures require a decisive winner before conclusion
     if (newStatus === 'Completed') {
@@ -1876,12 +1888,32 @@ export const LiveMatch = () => {
             {isAuthorizedScorekeeper && (
               <div className="bg-black/10 p-4 flex flex-wrap items-center justify-center gap-3">
                 {match.status === 'Scheduled' && (
-                  <Button variant="secondary" className="bg-white text-primary hover:bg-white/90 font-bold" onClick={() => handleUpdateStatus('Ongoing')}>
+                  <Button
+                    variant="secondary"
+                    className="bg-white text-primary hover:bg-white/90 font-bold"
+                    onClick={() => {
+                      if (!isAuthorized) {
+                        toast.error('You must claim the scoring console lease before starting the match.');
+                        return;
+                      }
+                      handleUpdateStatus('Ongoing');
+                    }}
+                  >
                     Start Match
                   </Button>
                 )}
                 {match.status === 'Ongoing' && (
-                  <Button variant="secondary" className="bg-white text-primary hover:bg-white/90 font-bold" onClick={() => handleUpdateStatus('Completed')}>
+                  <Button
+                    variant="secondary"
+                    className="bg-white text-primary hover:bg-white/90 font-bold"
+                    onClick={() => {
+                      if (!isAuthorized) {
+                        toast.error('You must claim the scoring console lease before ending the match.');
+                        return;
+                      }
+                      handleUpdateStatus('Completed');
+                    }}
+                  >
                     End Match
                   </Button>
                 )}

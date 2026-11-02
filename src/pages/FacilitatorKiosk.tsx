@@ -104,10 +104,17 @@ type MatchEvent = {
   created_at?: string;
 };
 
+type PendingScoreAction = {
+  team: 'a' | 'b';
+  points: number;
+  actionType: string;
+  actionDesc?: string;
+};
+
 export const FacilitatorKiosk = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
-  const { user, profile, isAdmin, isFacilitator, isOfficial, openLoginModal } = useAuth();
+  const { user, profile, isAdmin, isFacilitator, isOfficial, isCoach, openLoginModal } = useAuth();
 
   // Match and Realtime State
   const [match, setMatch] = useState<Match | null>(null);
@@ -120,6 +127,9 @@ export const FacilitatorKiosk = () => {
   // Facilitator Console Lease
   const [isHoldingLease, setIsHoldingLease] = useState(false);
   const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  // Clock Paused Scoring Confirmation (Item 14)
+  const [clockPromptPendingAction, setClockPromptPendingAction] = useState<PendingScoreAction | null>(null);
 
   // Conflict of Interest Shortage Override Modal
   const [conflictPrompt, setConflictPrompt] = useState<{
@@ -275,10 +285,9 @@ export const FacilitatorKiosk = () => {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }, [gameTimeSeconds]);
 
-  // Strict Governance: Facilitator/Official/Admin authorization
-  // User must be authenticated to satisfy Postgres Row Level Security (RLS) policies
-  const isAuthorizedScorekeeper = Boolean(user && (isFacilitator || isAdmin || isOfficial));
-  const isAuthorized = Boolean(user && (isHoldingLease || isAdmin || isFacilitator || isOfficial));
+  // Strict Governance: ONLY accredited Facilitators and Admins can score games. Coaches are strictly barred from write authority!
+  const isAuthorizedScorekeeper = Boolean(user && (isFacilitator || isAdmin || isOfficial) && !isCoach);
+  const isAuthorized = Boolean(user && (isHoldingLease || isAdmin) && !isCoach);
   const isDesignatedLocked = Boolean(match?.designated_facilitator_id && match.designated_facilitator_id !== user?.id && !isAdmin);
   const isDesignatedForMe = Boolean(match?.designated_facilitator_id && match.designated_facilitator_id === user?.id);
 
@@ -771,6 +780,13 @@ export const FacilitatorKiosk = () => {
     }
     if (match.status === 'Completed') {
       toast.error('Match is already Completed. Reopen the match in Match Control before modifying scores.');
+      return;
+    }
+
+    // Item 14: If sport is timed (e.g. Basketball, Soccer, Futsal) and clock is paused, prompt to confirm starting clock
+    const isTimedSport = Boolean(sportProfile.defaultPeriodMinutes && sportProfile.defaultPeriodMinutes > 0 && isClockEnabled);
+    if (isTimedSport && !isClockRunning) {
+      setClockPromptPendingAction({ team, points, actionType, actionDesc });
       return;
     }
 
@@ -1323,6 +1339,14 @@ export const FacilitatorKiosk = () => {
       openLoginModal();
       return;
     }
+    if (isCoach && !isAdmin) {
+      toast.error('Coaches have read-only match visibility. Scoring console write access is strictly reserved for Facilitators and Admins.');
+      return;
+    }
+    if (!isAuthorizedScorekeeper) {
+      toast.error('Only accredited match facilitators and tournament admins can claim the scoring console.');
+      return;
+    }
     if (!matchId) return;
 
     try {
@@ -1631,6 +1655,46 @@ export const FacilitatorKiosk = () => {
           </div>
         )}
 
+        {/* Permanent Layout Switcher (Auto / Wide / Stack) — Always accessible regardless of active mode (Item 15) */}
+        <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-white/5 border border-white/10 text-[9px] font-bold shrink-0">
+          <button
+            type="button"
+            onClick={() => handleOrientationChange('auto')}
+            className={`px-1.5 py-0.5 rounded transition-colors ${
+              orientationMode === 'auto'
+                ? 'bg-orange-500 text-slate-950 font-black'
+                : 'text-slate-400 hover:text-white'
+            }`}
+            title="Auto: Responsively adapts to screen width & orientation"
+          >
+            Auto
+          </button>
+          <button
+            type="button"
+            onClick={() => handleOrientationChange('landscape')}
+            className={`px-1.5 py-0.5 rounded transition-colors ${
+              orientationMode === 'landscape'
+                ? 'bg-orange-500 text-slate-950 font-black'
+                : 'text-slate-400 hover:text-white'
+            }`}
+            title="Wide: Force 3-Column Scoring Deck"
+          >
+            Wide
+          </button>
+          <button
+            type="button"
+            onClick={() => handleOrientationChange('portrait')}
+            className={`px-1.5 py-0.5 rounded transition-colors ${
+              orientationMode === 'portrait'
+                ? 'bg-orange-500 text-slate-950 font-black'
+                : 'text-slate-400 hover:text-white'
+            }`}
+            title="Stack: Force Portrait Stacked View"
+          >
+            Stack
+          </button>
+        </div>
+
         {/* Console Lease & Network Connection Status */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-bold">
@@ -1864,6 +1928,67 @@ export const FacilitatorKiosk = () => {
           )}
         </div>
       )}
+
+      {/* Clock Paused Scoring Confirmation Dialog (Item 14) */}
+      <Dialog
+        open={Boolean(clockPromptPendingAction)}
+        onOpenChange={(open) => !open && setClockPromptPendingAction(null)}
+      >
+        <DialogContent className="sm:max-w-[420px] rounded-2xl bg-slate-950 border border-white/10 text-white p-6 shadow-2xl">
+          <DialogHeader className="space-y-2">
+            <div className="flex items-center gap-2 text-amber-400">
+              <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <Timer className="size-5" />
+              </div>
+              <DialogTitle className="text-lg font-black uppercase italic tracking-tight text-white">
+                Game Clock Paused
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-slate-400 leading-relaxed">
+              The game clock is currently stopped. In official timed ballgame fixtures ({sportProfile.sport}), play time runs concurrently with scoring. Would you like to start the game clock and record this score?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-2.5 mt-4">
+            <Button
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black uppercase text-xs h-11 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20"
+              onClick={() => {
+                if (!isClockRunning) {
+                  handleToggleClock();
+                }
+                if (clockPromptPendingAction) {
+                  setPendingScoreAction(clockPromptPendingAction);
+                  setClockPromptPendingAction(null);
+                }
+              }}
+            >
+              <Play className="size-3.5 fill-slate-950" />
+              <span>Start Clock &amp; Record Score</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full border-white/10 hover:bg-white/5 text-slate-300 font-bold uppercase text-xs h-10 rounded-xl"
+              onClick={() => {
+                if (clockPromptPendingAction) {
+                  setPendingScoreAction(clockPromptPendingAction);
+                  setClockPromptPendingAction(null);
+                }
+              }}
+            >
+              Record Score Without Starting Clock
+            </Button>
+
+            <Button
+              variant="ghost"
+              className="w-full text-slate-400 hover:text-white font-bold text-xs h-8"
+              onClick={() => setClockPromptPendingAction(null)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Post-Score Player Credit Modal */}
       {pendingScoreAction && (

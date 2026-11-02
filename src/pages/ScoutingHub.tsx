@@ -1047,7 +1047,7 @@ export const ScoutingHub = () => {
                                 className="w-full h-10 rounded-xl font-black uppercase text-xs tracking-wider gap-1.5 border-slate-200 dark:border-white/10 hover:border-orange-500/50"
                               >
                                 <Eye className="size-3.5 text-orange-500" />
-                                <span>Dossier</span>
+                                <span>Profile</span>
                               </Button>
                               <Button
                                 onClick={() => handleStartCoachRecruit(p.id)}

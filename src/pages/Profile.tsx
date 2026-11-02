@@ -1218,7 +1218,7 @@ export const Profile = () => {
                               key={spItem.sport}
                               type="button"
                               onClick={() => setSelectedCareerSport(spItem.sport)}
-                              title={`${spItem.sport} (${spItem.gamesPlayed} GP)`}
+                              title={`${spItem.sport} (${spItem.gamesPlayed} Games Played)`}
                               className={`min-h-[38px] px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider border transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
                                 isSelected
                                   ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20'
@@ -1238,7 +1238,7 @@ export const Profile = () => {
                                     : 'bg-slate-200/60 dark:bg-white/5 text-slate-400'
                                 }`}
                               >
-                                {spItem.gamesPlayed}<span className="hidden sm:inline"> GP</span>
+                                {spItem.gamesPlayed}<span className="hidden sm:inline"> Games</span>
                               </span>
                               {isTopPlayed && !isSelected && (
                                 <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 hidden sm:inline">
@@ -1254,7 +1254,7 @@ export const Profile = () => {
                     {/* Mobile & Tablet Telemetry Ribbon (< md) — Adaptive multi-device grid */}
                     <div className="md:hidden grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-5 gap-2 bg-slate-100/90 dark:bg-slate-950/90 border border-slate-300/80 dark:border-white/15 rounded-2xl p-2.5 shadow-sm">
                       <div className="text-center p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10">
-                        <p className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 truncate">GP</p>
+                        <p className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 truncate" title="Games Played">Games</p>
                         <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5 tabular-nums leading-none">
                           {displayGamesPlayed}
                         </p>
