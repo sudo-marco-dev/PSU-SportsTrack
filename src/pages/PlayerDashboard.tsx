@@ -1186,7 +1186,7 @@ export const PlayerDashboard = () => {
                     <CardTitle className="text-base sm:text-lg mt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 font-black uppercase italic tracking-tight text-slate-900 dark:text-white">
                       <span className="break-words line-clamp-2 leading-snug pr-2">{match.team_a?.name || 'TBD'}</span>
                       <span className="text-slate-400 dark:text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider self-center sm:self-auto shrink-0 py-0.5 sm:py-0">VS</span>
-                      <span className="break-words line-clamp-2 leading-snug text-left sm:text-right pr-2">{match.team_b?.name || 'BYE'}</span>
+                      <span className="break-words line-clamp-2 leading-snug text-left sm:text-right pr-2">{match.team_b?.name || 'TBD'}</span>
                     </CardTitle>
                     {match.venue && (
                       <div className="flex items-center gap-1 mt-2 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider min-w-0">

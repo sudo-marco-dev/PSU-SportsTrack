@@ -861,7 +861,7 @@ export const StadiumDisplay = () => {
                 </span>
               )}
               <h2 className={`${getScoreboardTeamFontClass(match.team_b?.name)} font-black uppercase italic tracking-tighter text-white line-clamp-2 break-words leading-tight px-1 max-w-full`}>
-                {match.team_b?.name || 'BYE'}
+                {match.team_b?.name || 'TBD'}
               </h2>
             </div>
 

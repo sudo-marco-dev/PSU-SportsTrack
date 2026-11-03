@@ -1878,7 +1878,7 @@ export const LiveMatch = () => {
 
               <div className="flex-1 min-w-0 text-center relative">
                 <FloatingDeltaBadge deltas={deltasB} />
-                <h2 className={`${(match.team_b?.name?.length || 0) > 24 ? 'text-xs sm:text-base md:text-xl' : 'text-sm sm:text-lg md:text-xl'} font-bold mb-1 uppercase break-words line-clamp-2 leading-tight px-1`}>{match.team_b?.name || 'BYE'}</h2>
+                <h2 className={`${(match.team_b?.name?.length || 0) > 24 ? 'text-xs sm:text-base md:text-xl' : 'text-sm sm:text-lg md:text-xl'} font-bold mb-1 uppercase break-words line-clamp-2 leading-tight px-1`}>{match.team_b?.name || 'TBD'}</h2>
                 <div className={`text-4xl sm:text-5xl md:text-7xl font-black tabular-nums transition-transform ${isPoppingB ? 'animate-score-pop' : ''}`}>
                   {match.team_b_score}
                 </div>
@@ -2282,7 +2282,7 @@ export const LiveMatch = () => {
                 <Card className={`rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 ${!match.team_b_id ? 'opacity-50 pointer-events-none' : ''}`}>
                   <CardHeader className="text-center border-b pb-3 pt-4">
                     <CardTitle className="text-primary text-base sm:text-lg font-black uppercase tracking-tight">
-                      {match.team_b?.name || 'BYE'}
+                      {match.team_b?.name || 'Team B'}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-4 sm:p-5 space-y-3">
