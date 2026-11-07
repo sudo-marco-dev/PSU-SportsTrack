@@ -185,6 +185,14 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
             <Button
               size="sm"
               variant="outline"
+              className="text-xs h-8 bg-white/5 border-white/20 hover:bg-white/15 text-purple-300"
+              onClick={() => handleManualSimulate(`Substitute player 1 to player 2 from ${teamAName || 'Team A'}`)}
+            >
+              Sub 1 $\rightarrow$ 2
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
               className="text-xs h-8 bg-white/5 border-white/20 hover:bg-white/15 text-red-300"
               onClick={() => handleManualSimulate('Undo last score')}
             >

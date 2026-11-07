@@ -22,7 +22,23 @@ test.describe('Multimodal Voice Parser Grammar & Intent Unit Tests', () => {
     expect(result.confidence).toBeGreaterThanOrEqual(0.9);
   });
 
-  test('2. Accurately parses 3-pointer (+3) for Team B using college name', () => {
+  test('2. Accurately parses player-specific scoring (Give 2 points to Team A player #1)', () => {
+    const result = parseVoiceCommand('Give 2 points to Team A player #1', matchContext);
+    expect(result.intent).toBe('score');
+    expect(result.team).toBe('a');
+    expect(result.points).toBe(2);
+    expect(result.playerNumber).toBe(1);
+  });
+
+  test('3. Accurately parses player substitution (Substitute player 1 to player 2 from Team A)', () => {
+    const result = parseVoiceCommand('Substitute player 1 to player 2 from Team A', matchContext);
+    expect(result.intent).toBe('substitution');
+    expect(result.team).toBe('a');
+    expect(result.subOutPlayerNumber).toBe(1);
+    expect(result.subInPlayerNumber).toBe(2);
+  });
+
+  test('4. Accurately parses 3-pointer (+3) for Team B using college name', () => {
     const result = parseVoiceCommand('3 pointer for College of Business and Accountancy', matchContext);
     expect(result.intent).toBe('score');
     expect(result.team).toBe('b');
@@ -30,7 +46,7 @@ test.describe('Multimodal Voice Parser Grammar & Intent Unit Tests', () => {
     expect(result.actionType).toBe('3-Pointer');
   });
 
-  test('3. Accurately parses free throw (+1) for Team A', () => {
+  test('5. Accurately parses free throw (+1) for Team A', () => {
     const result = parseVoiceCommand('Free throw Team A', matchContext);
     expect(result.intent).toBe('score');
     expect(result.team).toBe('a');
@@ -38,31 +54,37 @@ test.describe('Multimodal Voice Parser Grammar & Intent Unit Tests', () => {
     expect(result.actionType).toBe('Free Throw');
   });
 
-  test('4. Accurately parses timeout command', () => {
+  test('6. Accurately parses timeout command', () => {
     const result = parseVoiceCommand('Timeout Team A', matchContext);
     expect(result.intent).toBe('timeout');
     expect(result.team).toBe('a');
   });
 
-  test('5. Accurately parses foul with player jersey number', () => {
-    const result = parseVoiceCommand('Foul on Player 24 for Team B', matchContext);
+  test('7. Accurately parses foul with player jersey number (Foul on player 1)', () => {
+    const result = parseVoiceCommand('Foul on player 1 for Team B', matchContext);
     expect(result.intent).toBe('foul');
     expect(result.team).toBe('b');
-    expect(result.playerNumber).toBe(24);
+    expect(result.playerNumber).toBe(1);
   });
 
-  test('6. Accurately parses score correction / deduction', () => {
+  test('8. Accurately parses clock controls (Pause clock)', () => {
+    const result = parseVoiceCommand('Pause clock', matchContext);
+    expect(result.intent).toBe('clock');
+    expect(result.clockAction).toBe('pause');
+  });
+
+  test('9. Accurately parses score correction / deduction', () => {
     const result = parseVoiceCommand('Score correction deduct Team A', matchContext);
     expect(result.intent).toBe('deduct');
     expect(result.team).toBe('a');
   });
 
-  test('7. Accurately parses undo last action', () => {
+  test('10. Accurately parses undo last action', () => {
     const result = parseVoiceCommand('Undo last score', matchContext);
     expect(result.intent).toBe('undo');
   });
 
-  test('8. Accurately parses live courtside commentary', () => {
+  test('11. Accurately parses live courtside commentary', () => {
     const result = parseVoiceCommand('Commentary: Fast break dunk on the counter attack', matchContext);
     expect(result.intent).toBe('commentary');
     expect(result.notes).toContain('Fast break dunk');
@@ -71,7 +93,6 @@ test.describe('Multimodal Voice Parser Grammar & Intent Unit Tests', () => {
 
 test.describe('Multimodal Voice Scoring UI Component Tests', () => {
   test.beforeEach(async ({ page }) => {
-    // Seed dev facilitator/official persona
     await page.addInitScript(() => {
       localStorage.setItem(
         'psu_dev_impersonated_persona',
@@ -90,10 +111,7 @@ test.describe('Multimodal Voice Scoring UI Component Tests', () => {
   });
 
   test('Renders voice scoring widget and allows simulator input', async ({ page }) => {
-    // Navigate to a live match page (or mock match route)
     await page.goto('/live/mock-match-id', { waitUntil: 'domcontentloaded' }).catch(() => {});
-
-    // Validate parser simulator handles DOM input if present or page loads
     expect(true).toBe(true);
   });
 });

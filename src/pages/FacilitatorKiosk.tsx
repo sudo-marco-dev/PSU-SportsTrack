@@ -60,6 +60,10 @@ import {
   type RosterPlayerItem,
 } from '@/components/kiosk/KioskSubstitutionModal';
 import { KioskScoreCreditModal } from '@/components/kiosk/KioskScoreCreditModal';
+import { useVoiceScoring } from '@/hooks/useVoiceScoring';
+import { VoiceScoringWidget } from '@/components/match/VoiceScoringWidget';
+import { useTouchlessGestures } from '@/hooks/useTouchlessGestures';
+import { TouchlessGestureHUD } from '@/components/kiosk/TouchlessGestureHUD';
 
 type Match = {
   id: string;
@@ -1332,6 +1336,77 @@ export const FacilitatorKiosk = () => {
     }
   };
 
+  // Active roster partitions
+  const teamAPlayers = useMemo(() => rosterPlayers.filter((p) => p.team_id === match?.team_a_id), [rosterPlayers, match?.team_a_id]);
+  const teamBPlayers = useMemo(() => rosterPlayers.filter((p) => p.team_id === match?.team_b_id), [rosterPlayers, match?.team_b_id]);
+  const activePlayersA = useMemo(() => teamAPlayers.filter((p) => activePlayerIdsA.has(p.player_id)), [teamAPlayers, activePlayerIdsA]);
+  const benchPlayersA = useMemo(() => teamAPlayers.filter((p) => !activePlayerIdsA.has(p.player_id)), [teamAPlayers, activePlayerIdsA]);
+  const activePlayersB = useMemo(() => teamBPlayers.filter((p) => activePlayerIdsB.has(p.player_id)), [teamBPlayers, activePlayerIdsB]);
+  const benchPlayersB = useMemo(() => teamBPlayers.filter((p) => !activePlayerIdsB.has(p.player_id)), [teamBPlayers, activePlayerIdsB]);
+
+  // Multimodal Voice Scoring Hook for Facilitator Kiosk
+  const voiceScoring = useVoiceScoring({
+    teamAName: match?.team_a?.name || 'Team A',
+    teamBName: match?.team_b?.name || 'Team B',
+    sport: match?.tournament?.sport || 'General',
+    onScore: (team, points, actionType, description, playerNumber) => {
+      if (playerNumber) {
+        const pool = team === 'a' ? teamAPlayers : teamBPlayers;
+        const target = pool.find((p) => p.jersey_number === playerNumber);
+        if (target) {
+          if (team === 'a') setSelectedScorerA(target.player_id);
+          else setSelectedScorerB(target.player_id);
+        }
+      }
+      handleScore(team, points, actionType, description);
+    },
+    onSubstitution: (team, subOutJersey, subInJersey) => {
+      const activeList = team === 'a' ? activePlayersA : activePlayersB;
+      const benchList = team === 'a' ? benchPlayersA : benchPlayersB;
+      const subOut = activeList.find((p) => p.jersey_number === subOutJersey) || activeList[0];
+      const subIn = benchList.find((p) => p.jersey_number === subInJersey) || benchList[0];
+      if (subOut && subIn) {
+        setSubModalTeam(team);
+        handleConfirmSub(subOut, subIn);
+      } else {
+        toast.warning(`Could not find jersey #${subOutJersey} or #${subInJersey} for substitution.`);
+      }
+    },
+    onClockControl: (action) => {
+      if ((action === 'pause' && isClockRunning) || (action === 'resume' && !isClockRunning)) {
+        handleToggleClock();
+      }
+    },
+    onDeduct: (team) => {
+      handleQuickDeduct(team);
+    },
+    onTimeout: (team) => {
+      handleCallTimeout(team || 'a');
+    },
+    onFoul: (team) => {
+      handleAddFoul(team || 'a');
+    },
+    onUndo: () => {
+      if (canUndo) handleUndoLastScore();
+    },
+  });
+
+  // Multimodal Touchless Gestures Hook for Facilitator Kiosk
+  const touchlessGestures = useTouchlessGestures({
+    onOpenPalm: () => {
+      handleToggleClock();
+    },
+    onPeaceSign: () => {
+      setSubModalTeam('a');
+    },
+    onThumbsUp: () => {
+      handleScore('a', 2, 'Field Goal', 'Touchless +2 pts');
+    },
+    onSwipeLeft: () => {
+      if (canUndo) handleUndoLastScore();
+    },
+  });
+
   // Console Lease Claim with Conflict of Interest check and Shortage Policy Override
   const handleClaimLease = async (force: boolean = false, overrideReason?: string) => {
     if (!user) {
@@ -1453,16 +1528,6 @@ export const FacilitatorKiosk = () => {
       </div>
     );
   }
-
-  // Active roster partitions
-  const teamAPlayers = rosterPlayers.filter((p) => p.team_id === match.team_a_id);
-  const teamBPlayers = rosterPlayers.filter((p) => p.team_id === match.team_b_id);
-
-  const activePlayersA = teamAPlayers.filter((p) => activePlayerIdsA.has(p.player_id));
-  const benchPlayersA = teamAPlayers.filter((p) => !activePlayerIdsA.has(p.player_id));
-
-  const activePlayersB = teamBPlayers.filter((p) => activePlayerIdsB.has(p.player_id));
-  const benchPlayersB = teamBPlayers.filter((p) => !activePlayerIdsB.has(p.player_id));
 
   const isTeamALeading = match.team_a_score > match.team_b_score;
   const isTeamBLeading = match.team_b_score > match.team_a_score;
@@ -1814,6 +1879,18 @@ export const FacilitatorKiosk = () => {
       {leadChangeAlert && (
         <div className="w-full max-w-xl mx-auto mb-1 shrink-0">
           <LeadChangeBanner alert={leadChangeAlert} onDismiss={() => setLeadChangeAlert(null)} />
+        </div>
+      )}
+
+      {/* Multimodal Interaction Controls: Voice Scoring & Touchless Gestures (HCI Capstone) */}
+      {isAuthorized && match.status !== 'Completed' && (
+        <div className="w-full shrink-0 mb-2 space-y-2">
+          <TouchlessGestureHUD gestures={touchlessGestures} />
+          <VoiceScoringWidget
+            voice={voiceScoring}
+            teamAName={match.team_a?.name || 'Team A'}
+            teamBName={match.team_b?.name || 'Team B'}
+          />
         </div>
       )}
 

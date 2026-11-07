@@ -1501,8 +1501,28 @@ export const LiveMatch = () => {
     teamAName: match?.team_a?.name || 'Team A',
     teamBName: match?.team_b?.name || 'Team B',
     sport: match?.tournament?.sport || 'General',
-    onScore: (team, points, actionType, description) => {
+    onScore: (team, points, actionType, description, playerNumber) => {
+      if (playerNumber) {
+        const teamId = team === 'a' ? match?.team_a_id : match?.team_b_id;
+        const target = rosterPlayers.find(p => p.team_id === teamId && p.jersey_number === playerNumber);
+        if (target) {
+          handleInitiateScore(team, points, actionType, description);
+          handleConfirmScore(target);
+          return;
+        }
+      }
       handleInitiateScore(team, points, actionType, description);
+    },
+    onSubstitution: (team, subOutJersey, subInJersey) => {
+      const teamId = team === 'a' ? match?.team_a_id : match?.team_b_id;
+      const teamName = team === 'a' ? match?.team_a?.name : match?.team_b?.name;
+      const subOut = rosterPlayers.find(p => p.team_id === teamId && p.jersey_number === subOutJersey);
+      const subIn = rosterPlayers.find(p => p.team_id === teamId && p.jersey_number === subInJersey);
+      const outLabel = subOut?.jersey_number ? `#${subOut.jersey_number}` : `#${subOutJersey}`;
+      const inLabel = subIn?.jersey_number ? `#${subIn.jersey_number}` : `#${subInJersey}`;
+      const desc = `[SUBSTITUTION] ${teamName || 'Team'}: ${outLabel} subbed out for ${inLabel}.`;
+      handleLogVoiceEvent(desc);
+      toast.info(desc);
     },
     onDeduct: (team) => {
       handleOpenDeductModal(team);

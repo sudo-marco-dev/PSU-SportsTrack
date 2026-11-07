@@ -12,6 +12,7 @@ interface MatchContext {
 }
 
 const NUMBER_WORDS: Record<string, number> = {
+  zero: 0,
   one: 1,
   two: 2,
   three: 3,
@@ -32,6 +33,11 @@ const NUMBER_WORDS: Record<string, number> = {
   eighteen: 18,
   nineteen: 19,
   twenty: 20,
+  'twenty one': 21,
+  'twenty two': 22,
+  'twenty three': 23,
+  'twenty four': 24,
+  'twenty five': 25,
 };
 
 function normalizeText(text: string): string {
@@ -42,9 +48,6 @@ function normalizeText(text: string): string {
     .trim();
 }
 
-/**
- * Checks if query contains any of the target tokens
- */
 function containsAny(text: string, targets: string[]): boolean {
   return targets.some((t) => text.includes(t.toLowerCase()));
 }
@@ -52,7 +55,7 @@ function containsAny(text: string, targets: string[]): boolean {
 /**
  * Determines which team (if any) was referenced in the speech
  */
-function resolveTeam(
+export function resolveTeam(
   text: string,
   teamAName: string,
   teamBName: string
@@ -90,8 +93,8 @@ function resolveTeam(
   if (hasB && !hasA) return 'b';
 
   // Specific fallback for "team a" or "team b"
-  if (/\b(team a|to a|for a)\b/i.test(text)) return 'a';
-  if (/\b(team b|to b|for b)\b/i.test(text)) return 'b';
+  if (/\b(team a|to a|for a|from a)\b/i.test(text)) return 'a';
+  if (/\b(team b|to b|for b|from b)\b/i.test(text)) return 'b';
 
   return null;
 }
@@ -116,8 +119,8 @@ function extractPoints(text: string): { points: number; actionType: string } | n
     return { points: 1, actionType: 'Goal' };
   }
 
-  // Regex for digits: "+3 points", "add 2 points", "1 point"
-  const digitMatch = norm.match(/(?:\+|\badd\s+|\bplus\s+)?(\d+)\s*(?:points?|pts?|score)?/i);
+  // Regex for digits: "give 2 points", "+3 points", "add 2 points", "1 point"
+  const digitMatch = norm.match(/(?:give\s+|add\s+|\bplus\s+|\+)?(\d+)\s*(?:points?|pts?|score)?/i);
   if (digitMatch && digitMatch[1]) {
     const val = parseInt(digitMatch[1], 10);
     if (!isNaN(val) && val > 0 && val <= 10) {
@@ -130,8 +133,8 @@ function extractPoints(text: string): { points: number; actionType: string } | n
 
   // Number words: "two points", "plus three"
   for (const [word, num] of Object.entries(NUMBER_WORDS)) {
-    if (new RegExp(`\\b(?:add|plus)?\\s*${word}\\s*(?:points?|pts?)?\\b`, 'i').test(norm)) {
-      if (num <= 5) {
+    if (new RegExp(`\\b(?:give|add|plus)?\\s*${word}\\s*(?:points?|pts?)?\\b`, 'i').test(norm)) {
+      if (num <= 5 && num > 0) {
         return {
           points: num,
           actionType: num === 3 ? '3-Pointer' : num === 2 ? 'Field Goal' : 'Point',
@@ -144,18 +147,61 @@ function extractPoints(text: string): { points: number; actionType: string } | n
 }
 
 /**
- * Extracts jersey / player numbers from speech (e.g. "player 24", "number 7")
+ * Extracts jersey / player numbers from speech (e.g. "player 24", "number 7", "player #1")
  */
 function extractPlayerNumber(text: string): number | null {
   const norm = normalizeText(text);
-  const match = norm.match(/(?:player|number|jersey|no\.?)\s*(\d+)/i);
+  const match = norm.match(/(?:player|number|jersey|no\.?)\s*#?\s*(\d+)/i);
   if (match && match[1]) {
     return parseInt(match[1], 10);
   }
 
   for (const [word, num] of Object.entries(NUMBER_WORDS)) {
-    if (new RegExp(`(?:player|number|jersey)\\s+${word}\\b`, 'i').test(norm)) {
+    if (new RegExp(`(?:player|number|jersey)\\s+#?${word}\\b`, 'i').test(norm)) {
       return num;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Parses player substitution phrases:
+ * "Substitute player 1 to player 2 from Team A"
+ * "Substitute player 1 with player 2"
+ * "Sub out 1 sub in 2 for Team B"
+ * "Sub player 1 for player 2 Team A"
+ */
+function parseSubstitution(
+  text: string,
+  _team: 'a' | 'b' | null
+): { subOut: number; subIn: number } | null {
+  const norm = normalizeText(text);
+
+  // Pattern 1: sub out X sub in Y
+  const subOutInMatch = norm.match(/sub\s+(?:out\s+)?(?:player\s+|#)?(\d+)\s+(?:sub\s+in\s+|(?:to|with|for)\s+(?:player\s+|#)?)(\d+)/i);
+  if (subOutInMatch && subOutInMatch[1] && subOutInMatch[2]) {
+    return {
+      subOut: parseInt(subOutInMatch[1], 10),
+      subIn: parseInt(subOutInMatch[2], 10),
+    };
+  }
+
+  // Pattern 2: substitute player X to player Y / substitute X with Y
+  const subMatch = norm.match(/sub(?:stitute)?\s+(?:player\s+|#)?(\d+)\s+(?:to|with|for)\s+(?:player\s+|#)?(\d+)/i);
+  if (subMatch && subMatch[1] && subMatch[2]) {
+    return {
+      subOut: parseInt(subMatch[1], 10),
+      subIn: parseInt(subMatch[2], 10),
+    };
+  }
+
+  // Pattern 3: words e.g. "substitute player one to player two"
+  for (const [word1, num1] of Object.entries(NUMBER_WORDS)) {
+    for (const [word2, num2] of Object.entries(NUMBER_WORDS)) {
+      if (new RegExp(`sub(?:stitute)?\\s+(?:player\\s+)?${word1}\\s+(?:to|with|for)\\s+(?:player\\s+)?${word2}\\b`, 'i').test(norm)) {
+        return { subOut: num1, subIn: num2 };
+      }
     }
   }
 
@@ -174,7 +220,53 @@ export function parseVoiceCommand(
   const teamName = team === 'a' ? context.teamAName : team === 'b' ? context.teamBName : null;
   const playerNumber = extractPlayerNumber(rawTranscript);
 
-  // 1. Check for Undo / Cancel
+  // 1. Check for Substitution
+  if (norm.includes('substitute') || norm.includes('substitution') || norm.includes('sub out') || norm.startsWith('sub ')) {
+    const subInfo = parseSubstitution(rawTranscript, team);
+    if (subInfo) {
+      return {
+        rawTranscript,
+        intent: 'substitution',
+        team,
+        teamName,
+        points: null,
+        actionType: 'Substitution',
+        playerNumber: subInfo.subOut,
+        subOutPlayerNumber: subInfo.subOut,
+        subInPlayerNumber: subInfo.subIn,
+        confidence: 0.94,
+        timestamp: Date.now(),
+      };
+    }
+  }
+
+  // 2. Check for Clock / Timer Controls
+  if (
+    norm.includes('clock') ||
+    norm.includes('timer') ||
+    norm.includes('stopwatch') ||
+    norm.includes('start time') ||
+    norm.includes('stop time')
+  ) {
+    const isPause = norm.includes('pause') || norm.includes('stop') || norm.includes('hold');
+    const isResume = norm.includes('resume') || norm.includes('start') || norm.includes('play') || norm.includes('run');
+    if (isPause || isResume) {
+      return {
+        rawTranscript,
+        intent: 'clock',
+        team: null,
+        teamName: null,
+        points: null,
+        actionType: isPause ? 'Pause Clock' : 'Resume Clock',
+        playerNumber: null,
+        clockAction: isPause ? 'pause' : 'resume',
+        confidence: 0.95,
+        timestamp: Date.now(),
+      };
+    }
+  }
+
+  // 3. Check for Undo / Cancel
   if (
     norm.includes('undo') ||
     norm.includes('cancel last') ||
@@ -194,7 +286,7 @@ export function parseVoiceCommand(
     };
   }
 
-  // 2. Check for Timeout
+  // 4. Check for Timeout
   if (norm.includes('timeout') || norm.includes('time out') || norm.includes('call time')) {
     return {
       rawTranscript,
@@ -209,7 +301,7 @@ export function parseVoiceCommand(
     };
   }
 
-  // 3. Check for Foul / Technical / Violation
+  // 5. Check for Foul / Technical / Violation
   if (
     norm.includes('foul') ||
     norm.includes('violation') ||
@@ -230,7 +322,7 @@ export function parseVoiceCommand(
     };
   }
 
-  // 4. Check for Deduction / Score Correction
+  // 6. Check for Deduction / Score Correction
   if (
     norm.includes('deduct') ||
     norm.includes('minus') ||
@@ -251,7 +343,7 @@ export function parseVoiceCommand(
     };
   }
 
-  // 5. Check for Commentary / Play-by-play broadcast
+  // 7. Check for Commentary / Play-by-play broadcast
   if (
     norm.startsWith('commentary') ||
     norm.startsWith('broadcast') ||
@@ -273,7 +365,7 @@ export function parseVoiceCommand(
     };
   }
 
-  // 6. Check for Help
+  // 8. Check for Help
   if (norm.includes('help') || norm.includes('what can i say') || norm.includes('commands')) {
     return {
       rawTranscript,
@@ -288,7 +380,7 @@ export function parseVoiceCommand(
     };
   }
 
-  // 7. Check for Points / Score update
+  // 9. Check for Points / Score update
   const pointsInfo = extractPoints(rawTranscript);
   if (pointsInfo) {
     return {
@@ -299,7 +391,7 @@ export function parseVoiceCommand(
       points: pointsInfo.points,
       actionType: pointsInfo.actionType,
       playerNumber,
-      confidence: team ? 0.92 : 0.65, // Lower confidence if team wasn't explicitly detected
+      confidence: team ? 0.92 : 0.65,
       timestamp: Date.now(),
     };
   }

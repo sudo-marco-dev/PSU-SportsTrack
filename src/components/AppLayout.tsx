@@ -26,6 +26,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import { SportsLegendModal } from '@/components/common/SportsLegendModal';
+import { PublicVoiceAssistantHUD } from '@/components/common/PublicVoiceAssistantHUD';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ThemeToggle } from './ui/ThemeToggle';
@@ -561,6 +562,9 @@ export const AppLayout = () => {
 
       {/* Global Sports Metrics & Standings Legend Dialog */}
       <SportsLegendModal isOpen={isLegendOpen} onClose={() => setIsLegendOpen(false)} />
+
+      {/* Universal Public Voice Assistant (HCI-2 Multimodal) */}
+      <PublicVoiceAssistantHUD />
     </div>
   );
 };

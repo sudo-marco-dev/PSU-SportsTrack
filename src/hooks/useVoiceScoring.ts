@@ -10,7 +10,7 @@ import type {
   ParsedVoiceCommand,
 } from '@/types/multimodal';
 import { parseVoiceCommand } from '@/lib/voiceCommandParser';
-import { playScoreChime } from '@/lib/audioFx';
+import { playScoreChime, playSubHornSound, playClockPauseSound, playClockStartSound } from '@/lib/audioFx';
 
 // Type definitions for Web Speech API
 interface IWindow extends Window {
@@ -41,9 +41,11 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
     teamBName,
     sport = 'Basketball',
     onScore,
+    onSubstitution,
     onDeduct,
     onTimeout,
     onFoul,
+    onClockControl,
     onCommentary,
     onUndo,
     enableSpeechFeedback = true,
@@ -88,7 +90,18 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
    */
   const executeCommand = useCallback(
     (command: ParsedVoiceCommand) => {
-      const { intent, team, teamName, points, actionType, playerNumber, notes } = command;
+      const {
+        intent,
+        team,
+        teamName,
+        points,
+        actionType,
+        playerNumber,
+        subOutPlayerNumber,
+        subInPlayerNumber,
+        clockAction,
+        notes,
+      } = command;
 
       switch (intent) {
         case 'score': {
@@ -103,13 +116,49 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
 
           const targetName = teamName || (team === 'a' ? 'Team A' : 'Team B');
           const description = playerNumber
-            ? `[#${playerNumber}] scored +${points} (${actionType}) via voice command`
-            : `${targetName} scored +${points} (${actionType}) via voice command`;
+            ? `[#${playerNumber}] scored +${points} (${actionType}) via voice`
+            : `${targetName} scored +${points} (${actionType}) via voice`;
 
-          onScore?.(team, points, actionType || 'Score', description);
+          onScore?.(team, points, actionType || 'Score', description, playerNumber || undefined);
           playScoreChime(points);
 
-          const feedback = `Recorded +${points} for ${targetName}`;
+          const feedback = playerNumber
+            ? `Recorded +${points} to #${playerNumber} (${targetName})`
+            : `Recorded +${points} for ${targetName}`;
+          setState((prev) => ({ ...prev, feedbackMessage: feedback }));
+          if (!isMuted) speakConfirmation(feedback);
+          break;
+        }
+
+        case 'substitution': {
+          const targetTeam = team || 'a';
+          const targetName = (targetTeam === 'a' ? teamAName : teamBName) || 'Team';
+          const subOut = subOutPlayerNumber || 1;
+          const subIn = subInPlayerNumber || 2;
+
+          onSubstitution?.(targetTeam, subOut, subIn);
+          try {
+            playSubHornSound();
+          } catch {
+            // fallback
+          }
+
+          const feedback = `Substituted #${subOut} with #${subIn} for ${targetName}`;
+          setState((prev) => ({ ...prev, feedbackMessage: feedback }));
+          if (!isMuted) speakConfirmation(feedback);
+          break;
+        }
+
+        case 'clock': {
+          const action = clockAction === 'resume' ? 'resume' : 'pause';
+          onClockControl?.(action);
+          if (action === 'pause') {
+            try { playClockPauseSound(); } catch {}
+          } else {
+            try { playClockStartSound(); } catch {}
+          }
+
+          const feedback = action === 'pause' ? 'Match clock paused' : 'Match clock resumed';
           setState((prev) => ({ ...prev, feedbackMessage: feedback }));
           if (!isMuted) speakConfirmation(feedback);
           break;
@@ -163,7 +212,7 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
         }
 
         case 'help': {
-          const feedback = 'You can say: "Add 2 points to Team A", "Timeout Team B", or "Undo"';
+          const feedback = 'You can say: "Give 2 points to Team A player 1", "Substitute player 1 with 2", or "Timeout Team B"';
           setState((prev) => ({ ...prev, feedbackMessage: feedback }));
           if (!isMuted) speakConfirmation(feedback);
           break;
@@ -171,13 +220,13 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
 
         case 'unknown':
         default: {
-          const feedback = `Unrecognized command: "${command.rawTranscript}". Try "Add 2 points to Team A".`;
+          const feedback = `Unrecognized command: "${command.rawTranscript}".`;
           setState((prev) => ({ ...prev, feedbackMessage: feedback }));
           break;
         }
       }
     },
-    [teamAName, teamBName, onScore, onDeduct, onTimeout, onFoul, onCommentary, onUndo, isMuted]
+    [teamAName, teamBName, onScore, onSubstitution, onDeduct, onTimeout, onFoul, onClockControl, onCommentary, onUndo, isMuted]
   );
 
   /**
@@ -263,7 +312,6 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
       };
 
       recognition.onerror = (event: any) => {
-        // 'no-speech' is expected during silent intervals
         if (event.error !== 'no-speech') {
           setState((prev) => ({
             ...prev,
@@ -273,7 +321,6 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
       };
 
       recognition.onend = () => {
-        // If still flagged as listening (e.g. browser timed out), auto-restart
         if (isListeningRef.current) {
           try {
             recognition.start();
@@ -297,9 +344,6 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
     }
   }, [processTranscript]);
 
-  /**
-   * Stop listening
-   */
   const stopListening = useCallback(() => {
     isListeningRef.current = false;
     if (recognitionRef.current) {
@@ -318,9 +362,6 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
     }));
   }, []);
 
-  /**
-   * Toggle listening state
-   */
   const toggleListening = useCallback(() => {
     if (state.isListening) {
       stopListening();
@@ -329,9 +370,6 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
     }
   }, [state.isListening, startListening, stopListening]);
 
-  /**
-   * Simulate a voice command manually (essential for testing and simulated environments)
-   */
   const simulateVoiceCommand = useCallback(
     (spokenText: string) => {
       processTranscript(spokenText);
@@ -339,7 +377,6 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
     [processTranscript]
   );
 
-  // Clean up on unmount
   useEffect(() => {
     return () => {
       isListeningRef.current = false;
