@@ -53,6 +53,8 @@ import { getSportScoringProfile } from '@/lib/sportScoringRules';
 import { getSportIcon } from '@/lib/sportIcons';
 import { pipScoreboard } from '@/lib/pipScoreboard';
 import { FloatingScoreWidget } from '@/components/scoreboard/FloatingScoreWidget';
+import { useVoiceScoring } from '@/hooks/useVoiceScoring';
+import { VoiceScoringWidget } from '@/components/match/VoiceScoringWidget';
 import { formatRole } from '@/lib/utils';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { getFriendlyErrorMessage } from '@/lib/friendlyErrors';
@@ -1475,6 +1477,64 @@ export const LiveMatch = () => {
     setIsSubmitting(false);
   };
 
+  const handleLogVoiceEvent = async (description: string) => {
+    if (!match) return;
+    const { data: eventData, error } = await supabase.from('match_events').insert({
+      match_id: match.id,
+      description
+    }).select().single();
+
+    if (!error && eventData) {
+      const newEvent = eventData as MatchEvent;
+      setEvents(prev => prev.some(e => e.id === newEvent.id) ? prev : [newEvent, ...prev]);
+      if (broadcastChannelRef.current) {
+        await broadcastChannelRef.current.send({
+          type: 'broadcast',
+          event: 'event_update',
+          payload: eventData
+        });
+      }
+    }
+  };
+
+  const voiceScoring = useVoiceScoring({
+    teamAName: match?.team_a?.name || 'Team A',
+    teamBName: match?.team_b?.name || 'Team B',
+    sport: match?.tournament?.sport || 'General',
+    onScore: (team, points, actionType, description) => {
+      handleInitiateScore(team, points, actionType, description);
+    },
+    onDeduct: (team) => {
+      handleOpenDeductModal(team);
+    },
+    onTimeout: (team) => {
+      const teamName = team === 'a' ? match?.team_a?.name : match?.team_b?.name;
+      const desc = teamName ? `[TIMEOUT] ${teamName} called a timeout.` : `[TIMEOUT] Official timeout called.`;
+      handleLogVoiceEvent(desc);
+      toast.info(desc);
+    },
+    onFoul: (team, playerNumber) => {
+      const teamName = team === 'a' ? match?.team_a?.name : match?.team_b?.name;
+      const desc = playerNumber
+        ? `[FOUL] Foul committed by #${playerNumber} (${teamName || 'Team'}).`
+        : `[FOUL] Team foul charged to ${teamName || 'Team'}.`;
+      handleLogVoiceEvent(desc);
+      toast.warning(desc);
+    },
+    onCommentary: (text) => {
+      handleLogVoiceEvent(`[COMMENTARY] ${text}`);
+      toast.success('Live voice commentary published.');
+    },
+    onUndo: () => {
+      if (pendingScore) {
+        setPendingScore(null);
+        toast.info('Cancelled pending score.');
+      } else {
+        toast.info('Use Score Correction / Deduct to adjust recorded points.');
+      }
+    },
+  });
+
   const handleUpdateStatus = async (newStatus: string) => {
     if (!match) return;
     if (isCoach && !isAdmin) {
@@ -2241,6 +2301,15 @@ export const LiveMatch = () => {
         {/* Facilitator Live Scoring Controls (Facilitators / Admins Only) */}
         {isAuthorizedScorekeeper && (
           <div className="space-y-6">
+            {/* Multimodal Voice User Interface (VUI) for Hands-Free Courtside Scoring */}
+            {match.status === 'Ongoing' && (
+              <VoiceScoringWidget
+                voice={voiceScoring}
+                teamAName={match.team_a?.name || 'Team A'}
+                teamBName={match.team_b?.name || 'Team B'}
+              />
+            )}
+
             {/* Live Scoring Controls */}
             {match.status === 'Ongoing' && (
               <div className="grid md:grid-cols-2 gap-5">
