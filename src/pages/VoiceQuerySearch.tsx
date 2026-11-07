@@ -32,6 +32,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/lib/supabase';
+import {
+  parseNaturalVoiceQuery,
+  executeSmartVoiceQuery,
+  type DirectAnswerData,
+  type SmartVoiceAnalysis,
+  type FuzzyCorrection,
+} from '@/lib/smartVoiceQueryEngine';
 
 interface MatchItem {
   id: string;
@@ -101,6 +108,13 @@ export const VoiceQuerySearch: React.FC = () => {
   const [stars, setStars] = useState<StarItem[]>([]);
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
 
+  // Smart NLP & Direct Answer states
+  const [directAnswer, setDirectAnswer] = useState<DirectAnswerData | null>(null);
+  const [smartAnalysis, setSmartAnalysis] = useState<SmartVoiceAnalysis | null>(null);
+  const [isFallback, setIsFallback] = useState<boolean>(false);
+  const [fallbackMessage, setFallbackMessage] = useState<string>('');
+  const [fuzzyCorrection, setFuzzyCorrection] = useState<FuzzyCorrection | null>(null);
+
   // Sync tab with URL parameter
   useEffect(() => {
     if (urlType) {
@@ -131,8 +145,51 @@ export const VoiceQuerySearch: React.FC = () => {
     setLoading(true);
     const term = queryTerm.trim();
 
+    if (!term) {
+      setDirectAnswer(null);
+      setSmartAnalysis(null);
+      setIsFallback(false);
+      setFallbackMessage('');
+      setFuzzyCorrection(null);
+    }
+
     try {
-      // 1. Matches Query
+      // 0. Smart Natural Language Understanding
+      let analysis: SmartVoiceAnalysis | null = null;
+      if (term) {
+        analysis = parseNaturalVoiceQuery(term);
+        setSmartAnalysis(analysis);
+        setFuzzyCorrection(analysis.fuzzyCorrection || null);
+
+        // Check for direct analytical questions (e.g. "Who won last week?", "Highest rated college")
+        if (
+          analysis.intent === 'question_winner' ||
+          analysis.intent === 'question_top_college' ||
+          analysis.intent === 'question_highest_mvp' ||
+          analysis.intent === 'question_highest_win_rate'
+        ) {
+          const smartResult = await executeSmartVoiceQuery(analysis);
+          if (smartResult.directAnswer) {
+            setDirectAnswer(smartResult.directAnswer);
+          }
+          if (smartResult.isFallback) {
+            setIsFallback(true);
+            setFallbackMessage(smartResult.fallbackMessage || '');
+          } else {
+            setIsFallback(false);
+            setFallbackMessage('');
+          }
+        } else {
+          setDirectAnswer(null);
+          setIsFallback(false);
+          setFallbackMessage('');
+        }
+      }
+
+      // Effective search keyword (using auto-corrected sport or term if available)
+      const effectiveTerm = analysis?.fuzzyCorrection?.corrected || term;
+
+      // 1. Matches Query (with Temporal & Status awareness)
       let matchQuery = supabase
         .from('matches')
         .select(`
@@ -147,8 +204,19 @@ export const VoiceQuerySearch: React.FC = () => {
           team_b:teams!matches_team_b_id_fkey(name),
           tournament:tournaments!matches_tournament_id_fkey(name, sport)
         `)
-        .order('created_at', { ascending: false })
+        .order('match_time', { ascending: false })
         .limit(20);
+
+      // Apply Temporal Filter if present
+      if (analysis?.temporalWindow?.startDate && analysis?.temporalWindow?.endDate) {
+        matchQuery = matchQuery
+          .gte('match_time', analysis.temporalWindow.startDate)
+          .lte('match_time', analysis.temporalWindow.endDate);
+      }
+
+      if (analysis?.temporalWindow?.expectedStatus && analysis?.temporalWindow.expectedStatus !== 'any') {
+        matchQuery = matchQuery.eq('status', analysis.temporalWindow.expectedStatus);
+      }
 
       // 2. Players Query
       let playerQuery = supabase
@@ -164,8 +232,8 @@ export const VoiceQuerySearch: React.FC = () => {
         .in('role', ['player_student', 'player_faculty', 'player_staff', 'Player', 'coach'])
         .limit(20);
 
-      if (term) {
-        playerQuery = playerQuery.ilike('full_name', `%${term}%`);
+      if (effectiveTerm && !analysis?.sport) {
+        playerQuery = playerQuery.ilike('full_name', `%${effectiveTerm}%`);
       }
 
       // 3. Colleges Query
@@ -175,13 +243,13 @@ export const VoiceQuerySearch: React.FC = () => {
         .order('college_name')
         .limit(20);
 
-      if (term && term.toLowerCase() !== 'colleges' && term.toLowerCase() !== 'college') {
-        if (term.toUpperCase() === 'CET') {
+      if (effectiveTerm && effectiveTerm.toLowerCase() !== 'colleges' && effectiveTerm.toLowerCase() !== 'college') {
+        if (effectiveTerm.toUpperCase() === 'CET' || analysis?.college === 'CET') {
           collegeQuery = collegeQuery.or('college_name.ilike.%CET%,college_name.ilike.%CEAT%');
-        } else if (term.toUpperCase() === 'CCJ') {
+        } else if (effectiveTerm.toUpperCase() === 'CCJ' || analysis?.college === 'CCJE') {
           collegeQuery = collegeQuery.or('college_name.ilike.%CCJ%,college_name.ilike.%CCJE%');
         } else {
-          collegeQuery = collegeQuery.ilike('college_name', `%${term}%`);
+          collegeQuery = collegeQuery.ilike('college_name', `%${effectiveTerm}%`);
         }
       }
 
@@ -211,8 +279,10 @@ export const VoiceQuerySearch: React.FC = () => {
         .order('start_date', { ascending: false })
         .limit(20);
 
-      if (term) {
-        scheduleQuery = scheduleQuery.or(`name.ilike.%${term}%,sport.ilike.%${term}%`);
+      if (analysis?.sport) {
+        scheduleQuery = scheduleQuery.ilike('sport', `%${analysis.sport}%`);
+      } else if (effectiveTerm) {
+        scheduleQuery = scheduleQuery.or(`name.ilike.%${effectiveTerm}%,sport.ilike.%${effectiveTerm}%`);
       }
 
       // Execute in parallel
@@ -228,8 +298,15 @@ export const VoiceQuerySearch: React.FC = () => {
       // Process Matches
       if (mRes.status === 'fulfilled' && mRes.value.data) {
         let mData = mRes.value.data as unknown as MatchItem[];
-        if (term) {
-          const lowerTerm = term.toLowerCase();
+
+        // Sport filter
+        if (analysis?.sport) {
+          const lowerSport = analysis.sport.toLowerCase();
+          mData = mData.filter((m) =>
+            m.tournament?.sport?.toLowerCase().includes(lowerSport)
+          );
+        } else if (effectiveTerm) {
+          const lowerTerm = effectiveTerm.toLowerCase();
           mData = mData.filter((m) => {
             const teamA = m.team_a?.name?.toLowerCase() || '';
             const teamB = m.team_b?.name?.toLowerCase() || '';
@@ -247,7 +324,39 @@ export const VoiceQuerySearch: React.FC = () => {
             );
           });
         }
-        setMatches(mData);
+
+        // Smart Temporal Fallback: If 0 matches found in window, fetch latest completed matches!
+        if (mData.length === 0 && analysis?.temporalWindow) {
+          setIsFallback(true);
+          setFallbackMessage(`No matches found for ${analysis.temporalWindow.label}. Displaying the most recent games.`);
+          const { data: recData } = await supabase
+            .from('matches')
+            .select(`
+              id,
+              status,
+              round,
+              venue,
+              match_time,
+              team_a_score,
+              team_b_score,
+              team_a:teams!matches_team_a_id_fkey(name),
+              team_b:teams!matches_team_b_id_fkey(name),
+              tournament:tournaments!matches_tournament_id_fkey(name, sport)
+            `)
+            .order('match_time', { ascending: false })
+            .limit(10);
+
+          let recList = (recData || []) as unknown as MatchItem[];
+          if (analysis?.sport) {
+            const lowerSport = analysis.sport.toLowerCase();
+            recList = recList.filter((m) =>
+              m.tournament?.sport?.toLowerCase().includes(lowerSport)
+            );
+          }
+          setMatches(recList);
+        } else {
+          setMatches(mData);
+        }
       } else {
         setMatches([]);
       }
@@ -517,43 +626,43 @@ export const VoiceQuerySearch: React.FC = () => {
             </Button>
           </form>
 
-          {/* Popular Query Suggestion Chips */}
+          {/* Conversational & Popular Query Suggestion Chips */}
           <div className="flex flex-wrap items-center gap-1.5 mt-3 text-xs text-slate-400">
-            <span className="font-semibold text-slate-500 mr-1">Try:</span>
+            <span className="font-semibold text-slate-500 mr-1">Ask:</span>
             <button
               type="button"
-              onClick={() => handleQuickSearch('upcoming games', 'matches')}
-              className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 text-xs transition-colors"
+              onClick={() => handleQuickSearch('Who won last week?', 'matches')}
+              className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-300 text-xs transition-colors flex items-center gap-1"
             >
-              Upcoming games
+              <Trophy className="size-3" /> Who won last week?
             </button>
             <button
               type="button"
-              onClick={() => handleQuickSearch('basketball', 'schedules')}
-              className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 text-xs transition-colors"
+              onClick={() => handleQuickSearch('Who is the highest rated college right now?', 'colleges')}
+              className="px-2.5 py-1 rounded-lg bg-sky-500/10 border border-sky-500/30 hover:bg-sky-500/20 text-sky-300 text-xs transition-colors flex items-center gap-1"
             >
-              Basketball schedule
+              <GraduationCap className="size-3" /> Highest rated college
             </button>
             <button
               type="button"
-              onClick={() => handleQuickSearch('highest stars', 'rankings')}
-              className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 text-xs transition-colors"
+              onClick={() => handleQuickSearch('Search for upcoming games this month', 'matches')}
+              className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 text-xs transition-colors flex items-center gap-1"
             >
-              Highest stars
+              <Calendar className="size-3 text-primary" /> Upcoming games this month
             </button>
             <button
               type="button"
-              onClick={() => handleQuickSearch('volleyball', 'schedules')}
+              onClick={() => handleQuickSearch('Search for basketball games this week', 'matches')}
               className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 text-xs transition-colors"
             >
-              Volleyball
+              Basketball games this week
             </button>
             <button
               type="button"
-              onClick={() => handleQuickSearch('college', 'colleges')}
-              className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 text-xs transition-colors"
+              onClick={() => handleQuickSearch('Search for player with highest win rate', 'players')}
+              className="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-300 text-xs transition-colors flex items-center gap-1"
             >
-              Colleges
+              <Star className="size-3" /> Highest win rate
             </button>
           </div>
         </div>
@@ -652,6 +761,122 @@ export const VoiceQuerySearch: React.FC = () => {
               {schedules.length}
             </Badge>
           </Button>
+        </div>
+
+        {/* Active Context Badges & Direct Answer AI Card */}
+        <div className="space-y-4 mb-8">
+          {/* Active Context Badges */}
+          {(smartAnalysis?.sport || smartAnalysis?.temporalWindow || isFallback) && (
+            <div className="flex flex-wrap items-center gap-2" data-testid="page-active-context-badges">
+              <span className="text-xs font-semibold text-slate-400">Context Filters:</span>
+              {smartAnalysis?.sport && (
+                <Badge variant="outline" className="text-xs uppercase font-bold border-primary/50 text-primary bg-primary/10">
+                  Sport: {smartAnalysis.sport}
+                </Badge>
+              )}
+              {smartAnalysis?.temporalWindow && (
+                <Badge variant="outline" className="text-xs font-bold border-amber-500/50 text-amber-300 bg-amber-500/10">
+                  Period: {smartAnalysis.temporalWindow.label}
+                </Badge>
+              )}
+              {isFallback && (
+                <Badge variant="outline" className="text-xs font-bold border-sky-500/50 text-sky-300 bg-sky-500/10">
+                  Smart Fallback: Recent Games
+                </Badge>
+              )}
+            </div>
+          )}
+
+          {/* Fuzzy Auto-Correction Notice */}
+          {fuzzyCorrection && (
+            <div
+              data-testid="page-fuzzy-notice"
+              className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-2.5 text-xs text-amber-200 flex items-center justify-between"
+            >
+              <span>
+                Showing results for <strong className="text-white font-bold">{fuzzyCorrection.corrected}</strong> (auto-corrected from "{fuzzyCorrection.original}").
+              </span>
+              <button
+                type="button"
+                onClick={() => handleQuickSearch(fuzzyCorrection.original)}
+                className="text-xs underline text-amber-400 hover:text-white font-semibold ml-3"
+              >
+                Search "{fuzzyCorrection.original}" instead
+              </button>
+            </div>
+          )}
+
+          {/* Smart Fallback Notice */}
+          {isFallback && fallbackMessage && (
+            <div
+              data-testid="page-fallback-notice"
+              className="bg-sky-500/10 border border-sky-500/30 rounded-xl px-4 py-3 text-xs text-sky-200 flex items-center gap-2.5"
+            >
+              <Activity className="size-4 text-sky-400 shrink-0" />
+              <span>{fallbackMessage}</span>
+            </div>
+          )}
+
+          {/* Direct Answer AI Highlight Card */}
+          {directAnswer && (
+            <div
+              data-testid="page-direct-answer-card"
+              className="bg-gradient-to-r from-amber-500/20 via-primary/20 to-emerald-500/20 border-2 border-amber-500/40 rounded-2xl p-5 shadow-2xl space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className="p-2 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/40">
+                    <Sparkles className="size-5" />
+                  </span>
+                  <div>
+                    <span className="text-xs font-black uppercase tracking-wider text-amber-300">
+                      {directAnswer.title}
+                    </span>
+                    <p className="text-[11px] text-slate-400">Synthesized from live tournament database records</p>
+                  </div>
+                </div>
+                <Badge className="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold">
+                  {directAnswer.badge || 'Direct Answer'}
+                </Badge>
+              </div>
+
+              <div>
+                <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  {directAnswer.headline}
+                </h3>
+                {directAnswer.details && (
+                  <p className="text-sm text-slate-300 mt-1">
+                    {directAnswer.details}
+                  </p>
+                )}
+              </div>
+
+              <div className="pt-2 border-t border-white/10 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {directAnswer.metricValue && (
+                    <span className="text-sm font-black text-amber-300 bg-black/40 px-2.5 py-1 rounded-lg border border-white/10">
+                      {directAnswer.metricValue}
+                    </span>
+                  )}
+                  {directAnswer.metricLabel && (
+                    <span className="text-xs text-slate-300 font-medium">
+                      {directAnswer.metricLabel}
+                    </span>
+                  )}
+                </div>
+                {directAnswer.entityRoute && (
+                  <Button
+                    size="sm"
+                    onClick={() => navigate(directAnswer.entityRoute!)}
+                    data-testid="btn-page-direct-answer-view"
+                    className="text-xs bg-primary hover:bg-primary/90 text-white font-bold rounded-xl gap-1.5"
+                  >
+                    Open Fixture / Profile <ArrowRight className="size-3.5" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Loading State */}

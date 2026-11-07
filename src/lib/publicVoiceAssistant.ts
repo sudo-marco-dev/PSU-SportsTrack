@@ -1,10 +1,18 @@
 /**
  * Public Voice Assistant Query Engine for PSU SportsTrack
  * Empowers students, athletes, and fans to search fixtures, players, colleges,
- * star leaderboards, and sport schedules.
+ * star leaderboards, and sport schedules with context-aware NLP semantics.
  */
 
 import { supabase } from '@/lib/supabase';
+import {
+  parseNaturalVoiceQuery,
+  executeSmartVoiceQuery,
+  type SmartVoiceAnalysis,
+  type DirectAnswerData,
+  type TemporalWindow,
+  type FuzzyCorrection,
+} from './smartVoiceQueryEngine';
 
 export type PublicVoiceAssistantQueryType =
   | 'upcoming_games'
@@ -26,6 +34,11 @@ export interface ParsedPublicVoiceQuery {
   targetRoute?: string;
   spokenResponse: string;
   confidence: number;
+  directAnswer?: DirectAnswerData;
+  temporalWindow?: TemporalWindow;
+  fuzzyCorrection?: FuzzyCorrection;
+  isQuestion?: boolean;
+  smartAnalysis?: SmartVoiceAnalysis;
 }
 
 const ALL_SPORTS = [
@@ -78,9 +91,11 @@ function normalize(text: string): string {
 
 /**
  * Parses user spoken queries into structured ParsedPublicVoiceQuery
+ * Uses smart natural language understanding with sentence context awareness.
  */
 export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQuery {
   const norm = normalize(rawTranscript);
+  const smart = parseNaturalVoiceQuery(rawTranscript);
 
   // 1. Direct Navigation Shortcuts (e.g. "go to rankings", "open tournaments", "home")
   if (
@@ -97,6 +112,7 @@ export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQ
         targetRoute: '/ranking',
         spokenResponse: 'Navigating to College Standings and Medal Rankings.',
         confidence: 0.98,
+        smartAnalysis: smart,
       };
     }
     if (norm.includes('tournament') || norm.includes('explorer') || norm.includes('bracket') || norm.includes('fixture')) {
@@ -106,6 +122,7 @@ export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQ
         targetRoute: '/explorer',
         spokenResponse: 'Navigating to Tournament Explorer.',
         confidence: 0.98,
+        smartAnalysis: smart,
       };
     }
     if (norm.includes('scouting') || norm.includes('athletic')) {
@@ -115,6 +132,7 @@ export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQ
         targetRoute: '/athletics',
         spokenResponse: 'Navigating to Athletics Scouting Hub.',
         confidence: 0.98,
+        smartAnalysis: smart,
       };
     }
     if (norm.includes('home') || norm.includes('dashboard') || norm.includes('main page')) {
@@ -124,6 +142,7 @@ export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQ
         targetRoute: '/',
         spokenResponse: 'Navigating to PSU SportsTrack Home.',
         confidence: 0.98,
+        smartAnalysis: smart,
       };
     }
     if (norm.includes('search') || norm.includes('query')) {
@@ -133,11 +152,12 @@ export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQ
         targetRoute: '/search',
         spokenResponse: 'Opening Dedicated Voice Query Search Hub.',
         confidence: 0.98,
+        smartAnalysis: smart,
       };
     }
   }
 
-  // 2. Upcoming Games This Week / Fixtures
+  // 2. Exact Classic Upcoming Games Trigger ("upcoming games this week", "games this week")
   if (
     norm.includes('upcoming games') ||
     norm.includes('games this week') ||
@@ -152,20 +172,18 @@ export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQ
       targetRoute: '/explorer',
       spokenResponse: 'Here are the upcoming games scheduled this week across Palawan State University.',
       confidence: 0.95,
+      temporalWindow: smart.temporalWindow,
+      smartAnalysis: smart,
     };
   }
 
-  // 3. Highest Stars / MVP Leaderboards
+  // 3. Exact Classic Highest Stars / MVP Trigger
   if (
     norm.includes('highest stars') ||
     norm.includes('most stars') ||
-    norm.includes('mvp') ||
-    norm.includes('top players') ||
-    norm.includes('star leaders') ||
     norm.includes('gold stars') ||
     norm.includes('red stars') ||
-    norm.includes('star leaderboard') ||
-    /\bhighest\b/i.test(norm)
+    norm.includes('star leaderboard')
   ) {
     return {
       rawTranscript,
@@ -173,10 +191,38 @@ export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQ
       targetRoute: '/ranking',
       spokenResponse: 'Opening the university MVP star leaderboard. Here are the top standout athletes.',
       confidence: 0.96,
+      smartAnalysis: smart,
     };
   }
 
-  // 4. Player & Athlete Search (singular & plural, name extraction or directory)
+  // 4. Interrogative Questions & Analytical Intents (Who won, highest rated college, highest win rate)
+  if (
+    smart.intent === 'question_winner' ||
+    smart.intent === 'question_top_college' ||
+    smart.intent === 'question_highest_mvp' ||
+    smart.intent === 'question_highest_win_rate'
+  ) {
+    let qType: PublicVoiceAssistantQueryType = 'match_search';
+    if (smart.intent === 'question_top_college') qType = 'college_search';
+    else if (smart.intent === 'question_highest_mvp') qType = 'highest_stars';
+    else if (smart.intent === 'question_highest_win_rate') qType = 'player_search';
+
+    return {
+      rawTranscript,
+      queryType: qType,
+      searchTerm: smart.sport || smart.college || smart.playerName || '',
+      sport: smart.sport,
+      targetRoute: smart.targetRoute,
+      spokenResponse: smart.spokenResponse,
+      confidence: smart.confidence,
+      temporalWindow: smart.temporalWindow,
+      fuzzyCorrection: smart.fuzzyCorrection,
+      isQuestion: true,
+      smartAnalysis: smart,
+    };
+  }
+
+  // 5. Classic Player & Athlete Search
   const playerMatch = norm.match(/(?:search for players?|find players?|show players?|who is|players?|athletes?)\s*(.*)/i);
   if (
     /\b(player|players|athlete|athletes)\b/i.test(norm) ||
@@ -184,22 +230,39 @@ export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQ
     playerMatch
   ) {
     const rawCaptured = playerMatch && playerMatch[1] ? playerMatch[1].trim() : '';
-    // Clean filler words
     const term = rawCaptured.replace(/^(?:for|of|in|named|with)\s+/i, '').trim();
 
     return {
       rawTranscript,
       queryType: 'player_search',
       searchTerm: term,
-      targetRoute: term ? '/athletics' : '/athletics',
+      targetRoute: '/athletics',
       spokenResponse: term
         ? `Searching records for player ${term}.`
         : 'Searching university athletes and scouting directory.',
       confidence: 0.93,
+      fuzzyCorrection: smart.fuzzyCorrection,
+      smartAnalysis: smart,
     };
   }
 
-  // 5. College & Campus Search (e.g. "colleges", "campus", acronyms like "CET", "CBA")
+  // 6. Conversational Temporal Match Filters (e.g., "Search for upcoming games this month", "Search for basketball games this week", "Search past game last year")
+  if (smart.intent === 'filter_matches' && smart.temporalWindow) {
+    return {
+      rawTranscript,
+      queryType: 'match_search',
+      searchTerm: smart.sport || smart.temporalWindow?.label || '',
+      sport: smart.sport,
+      targetRoute: smart.targetRoute,
+      spokenResponse: smart.spokenResponse,
+      confidence: smart.confidence,
+      temporalWindow: smart.temporalWindow,
+      fuzzyCorrection: smart.fuzzyCorrection,
+      smartAnalysis: smart,
+    };
+  }
+
+  // 7. College & Campus Search (e.g. "colleges", "campus", acronyms like "CET", "CBA")
   const isCollegeQuery =
     /\b(college|colleges|campus|campuses|department|departments)\b/i.test(norm) ||
     KNOWN_COLLEGES.some((c) => new RegExp(`\\b${c}\\b`, 'i').test(norm));
@@ -226,10 +289,28 @@ export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQ
         ? `Searching collegiate records and standings for ${term}.`
         : 'Searching collegiate units and campus standings across PSU.',
       confidence: 0.92,
+      fuzzyCorrection: smart.fuzzyCorrection,
+      smartAnalysis: smart,
     };
   }
 
-  // 6. Sport Specific Schedules & Tournaments (all catalog sports)
+  // 6. Sport Specific Schedules & Tournaments (all catalog sports + fuzzy corrections)
+  if (smart.sport) {
+    return {
+      rawTranscript,
+      queryType: 'sport_schedule',
+      sport: smart.sport,
+      searchTerm: smart.sport,
+      targetRoute: `/search?q=${encodeURIComponent(smart.sport)}&type=schedules`,
+      spokenResponse: smart.fuzzyCorrection
+        ? `Showing scheduled matches and brackets for ${smart.sport.toUpperCase()} (corrected from "${smart.fuzzyCorrection.original}").`
+        : `Showing scheduled matches and brackets for ${smart.sport.toUpperCase()}.`,
+      confidence: 0.9,
+      fuzzyCorrection: smart.fuzzyCorrection,
+      smartAnalysis: smart,
+    };
+  }
+
   for (const s of ALL_SPORTS) {
     if (norm.includes(s)) {
       return {
@@ -239,6 +320,7 @@ export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQ
         targetRoute: `/search?q=${encodeURIComponent(s)}&type=schedules`,
         spokenResponse: `Showing scheduled matches and brackets for ${s.toUpperCase()}.`,
         confidence: 0.9,
+        smartAnalysis: smart,
       };
     }
   }
@@ -251,6 +333,7 @@ export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQ
       targetRoute: '/search?type=schedules',
       spokenResponse: 'Opening tournament schedules and bracket fixtures.',
       confidence: 0.9,
+      smartAnalysis: smart,
     };
   }
 
@@ -264,6 +347,9 @@ export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQ
       targetRoute: `/search?q=${encodeURIComponent(matchTerm)}&type=matches`,
       spokenResponse: `Searching matches and game fixtures for "${matchTerm || 'games'}".`,
       confidence: 0.91,
+      temporalWindow: smart.temporalWindow,
+      fuzzyCorrection: smart.fuzzyCorrection,
+      smartAnalysis: smart,
     };
   }
 
@@ -275,6 +361,7 @@ export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQ
       targetRoute: '/ranking',
       spokenResponse: 'Navigating to College Standings and Medal Rankings.',
       confidence: 0.98,
+      smartAnalysis: smart,
     };
   }
   if (norm.includes('tournaments') || norm.includes('explorer') || norm.includes('brackets')) {
@@ -284,6 +371,7 @@ export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQ
       targetRoute: '/explorer',
       spokenResponse: 'Navigating to Tournament Explorer.',
       confidence: 0.98,
+      smartAnalysis: smart,
     };
   }
   if (norm.includes('home') || norm.includes('dashboard') || norm.includes('main page')) {
@@ -293,6 +381,7 @@ export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQ
       targetRoute: '/',
       spokenResponse: 'Navigating to PSU SportsTrack Home.',
       confidence: 0.98,
+      smartAnalysis: smart,
     };
   }
 
@@ -301,8 +390,9 @@ export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQ
     return {
       rawTranscript,
       queryType: 'help',
-      spokenResponse: 'You can ask: "Search for upcoming games this week", "Search for player Cruz", "Colleges standings", or "Basketball schedule".',
+      spokenResponse: 'You can ask: "Who won last week?", "Who is the highest rated college right now?", "Search for basketball games this week", or "Search for player Cruz".',
       confidence: 0.99,
+      smartAnalysis: smart,
     };
   }
 
@@ -314,14 +404,33 @@ export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQ
     targetRoute: `/search?q=${encodeURIComponent(rawTranscript)}`,
     spokenResponse: `Searching tournaments and athletic records for "${rawTranscript}".`,
     confidence: 0.7,
+    fuzzyCorrection: smart.fuzzyCorrection,
+    smartAnalysis: smart,
   };
 }
 
 /**
  * Executes database queries based on the parsed public voice query
+ * Integrates direct analytical answers and smart temporal fallbacks
  */
 export async function executePublicVoiceDataQuery(query: ParsedPublicVoiceQuery) {
   try {
+    // If smart analysis is present and contains analytical intents or temporal windows:
+    if (query.smartAnalysis && (query.isQuestion || (query.smartAnalysis.intent === 'filter_matches' && query.temporalWindow))) {
+      const smartResult = await executeSmartVoiceQuery(query.smartAnalysis);
+      if (smartResult.directAnswer || smartResult.isFallback || smartResult.items.length > 0) {
+        return {
+          type: query.queryType,
+          items: smartResult.items,
+          directAnswer: smartResult.directAnswer,
+          isFallback: smartResult.isFallback,
+          fallbackMessage: smartResult.fallbackMessage,
+          autoCorrectedNotice: smartResult.autoCorrectedNotice,
+          spokenResponse: smartResult.analysis.spokenResponse,
+        };
+      }
+    }
+
     switch (query.queryType) {
       case 'upcoming_games':
       case 'match_search': {
@@ -340,10 +449,17 @@ export async function executePublicVoiceDataQuery(query: ParsedPublicVoiceQuery)
             team_b:teams!matches_team_b_id_fkey(name),
             tournament:tournaments!matches_tournament_id_fkey(name, sport)
           `)
-          .limit(8);
+          .order('match_time', { ascending: false })
+          .limit(10);
 
         if (query.queryType === 'upcoming_games') {
           dbQuery = dbQuery.in('status', ['Scheduled', 'Ongoing']);
+        }
+
+        if (query.temporalWindow?.startDate && query.temporalWindow?.endDate) {
+          dbQuery = dbQuery
+            .gte('match_time', query.temporalWindow.startDate)
+            .lte('match_time', query.temporalWindow.endDate);
         }
 
         const { data, error } = await dbQuery;
@@ -360,7 +476,38 @@ export async function executePublicVoiceDataQuery(query: ParsedPublicVoiceQuery)
             return teamA.includes(lower) || teamB.includes(lower) || sport.includes(lower) || venue.includes(lower);
           });
         }
-        return { type: query.queryType, items: items.slice(0, 4) };
+
+        // Smart fallback if temporal window returned 0 records
+        let isFallback = false;
+        let fallbackMessage = '';
+        if (items.length === 0 && query.temporalWindow) {
+          isFallback = true;
+          fallbackMessage = `No matches found for ${query.temporalWindow.label}. Displaying latest completed games.`;
+          const { data: recData } = await supabase
+            .from('matches')
+            .select(`
+              id,
+              status,
+              round,
+              venue,
+              match_time,
+              team_a_score,
+              team_b_score,
+              team_a:teams!matches_team_a_id_fkey(name),
+              team_b:teams!matches_team_b_id_fkey(name),
+              tournament:tournaments!matches_tournament_id_fkey(name, sport)
+            `)
+            .order('match_time', { ascending: false })
+            .limit(4);
+          items = recData || [];
+        }
+
+        return {
+          type: query.queryType,
+          items: items.slice(0, 4),
+          isFallback,
+          fallbackMessage,
+        };
       }
 
       case 'highest_stars': {

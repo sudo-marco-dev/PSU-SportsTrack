@@ -174,6 +174,53 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                 )}
               </div>
 
+              {/* Active Context Badges & Auto-Correction */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                {activeQuery?.sport && (
+                  <Badge variant="outline" className="text-[10px] uppercase font-bold border-primary/50 text-primary bg-primary/10">
+                    Sport: {activeQuery.sport}
+                  </Badge>
+                )}
+                {activeQuery?.temporalWindow && (
+                  <Badge variant="outline" className="text-[10px] font-bold border-amber-500/50 text-amber-300 bg-amber-500/10">
+                    Period: {activeQuery.temporalWindow.label}
+                  </Badge>
+                )}
+                {queryResults?.isFallback && (
+                  <Badge variant="outline" className="text-[10px] font-bold border-sky-500/50 text-sky-300 bg-sky-500/10">
+                    Smart Fallback Active
+                  </Badge>
+                )}
+              </div>
+
+              {/* Fuzzy Auto-Correction Notice */}
+              {activeQuery?.fuzzyCorrection && (
+                <div
+                  data-testid="hud-fuzzy-notice"
+                  className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-1.5 text-xs text-amber-200 flex items-center justify-between"
+                >
+                  <span>
+                    Showing results for <strong className="text-white font-bold">{activeQuery.fuzzyCorrection.corrected}</strong> (auto-corrected from "{activeQuery.fuzzyCorrection.original}").
+                  </span>
+                  <button
+                    onClick={() => handleQuickChip(activeQuery.fuzzyCorrection!.original)}
+                    className="text-[11px] underline text-amber-400 hover:text-white ml-2"
+                  >
+                    Search original
+                  </button>
+                </div>
+              )}
+
+              {/* Fallback Notice */}
+              {queryResults?.isFallback && queryResults?.fallbackMessage && (
+                <div
+                  data-testid="hud-fallback-notice"
+                  className="bg-sky-500/10 border border-sky-500/30 rounded-lg px-3 py-1.5 text-xs text-sky-200"
+                >
+                  {queryResults.fallbackMessage}
+                </div>
+              )}
+
               {activeQuery?.spokenResponse && (
                 <div className="pt-2 border-t border-white/10 text-xs text-primary-foreground font-medium flex items-center justify-between">
                   <span>{activeQuery.spokenResponse}</span>
@@ -190,6 +237,68 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Direct Answer AI Highlight Card */}
+            {(queryResults?.directAnswer || activeQuery?.directAnswer) && (
+              <div
+                data-testid="hud-direct-answer-card"
+                className="bg-gradient-to-r from-amber-500/20 via-primary/20 to-emerald-500/20 border-2 border-amber-500/40 rounded-2xl p-4 shadow-xl space-y-2"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-lg bg-amber-400/20 text-amber-300 border border-amber-400/40">
+                      <Sparkles className="size-4" />
+                    </span>
+                    <span className="text-[11px] font-black uppercase tracking-wider text-amber-300">
+                      {(queryResults?.directAnswer || activeQuery?.directAnswer)?.title || 'Direct Answer'}
+                    </span>
+                  </div>
+                  <Badge className="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold">
+                    {(queryResults?.directAnswer || activeQuery?.directAnswer)?.badge || 'Verified Result'}
+                  </Badge>
+                </div>
+
+                <div>
+                  <h4 className="text-base sm:text-lg font-black text-white leading-snug">
+                    {(queryResults?.directAnswer || activeQuery?.directAnswer)?.headline}
+                  </h4>
+                  {(queryResults?.directAnswer || activeQuery?.directAnswer)?.details && (
+                    <p className="text-xs text-slate-300 mt-1">
+                      {(queryResults?.directAnswer || activeQuery?.directAnswer)?.details}
+                    </p>
+                  )}
+                </div>
+
+                <div className="pt-2 border-t border-white/10 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {(queryResults?.directAnswer || activeQuery?.directAnswer)?.metricValue && (
+                      <span className="text-xs font-black text-amber-300 bg-black/40 px-2 py-0.5 rounded border border-white/10">
+                        {(queryResults?.directAnswer || activeQuery?.directAnswer)?.metricValue}
+                      </span>
+                    )}
+                    {(queryResults?.directAnswer || activeQuery?.directAnswer)?.metricLabel && (
+                      <span className="text-[11px] text-slate-400">
+                        {(queryResults?.directAnswer || activeQuery?.directAnswer)?.metricLabel}
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    data-testid="btn-hud-direct-answer-view"
+                    onClick={() =>
+                      navigateToResult(
+                        (queryResults?.directAnswer || activeQuery?.directAnswer)?.entityRoute ||
+                          activeQuery?.targetRoute
+                      )
+                    }
+                    className="h-7 text-xs bg-white/10 hover:bg-white/20 text-white border-white/20 gap-1 rounded-lg"
+                  >
+                    View Details <ArrowRight className="size-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Dynamic Results Preview Section */}
             {isLoadingResults ? (
@@ -465,6 +574,30 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                 >
                   College rankings
                 </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs h-7 bg-white/5 border-white/15 hover:bg-white/15 text-slate-300 rounded-lg"
+                  onClick={() => handleQuickChip('Who won last week?')}
+                >
+                  <Trophy className="size-3 mr-1 text-emerald-400" /> Who won last week?
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs h-7 bg-white/5 border-white/15 hover:bg-white/15 text-slate-300 rounded-lg"
+                  onClick={() => handleQuickChip('Who is the highest rated college right now?')}
+                >
+                  <GraduationCap className="size-3 mr-1 text-sky-400" /> Highest rated college
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs h-7 bg-white/5 border-white/15 hover:bg-white/15 text-slate-300 rounded-lg"
+                  onClick={() => handleQuickChip('Search for player with highest win rate')}
+                >
+                  <Star className="size-3 mr-1 text-amber-400" /> Highest win rate
+                </Button>
               </div>
             </div>
 
@@ -473,6 +606,7 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
               <input
                 type="text"
                 data-testid="input-public-voice-search"
+                id="input-hud-manual-query"
                 value={typedQuery}
                 onChange={(e) => setTypedQuery(e.target.value)}
                 placeholder='Type or speak: "Upcoming games this week", "Player Santos"...'
@@ -482,6 +616,7 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                 type="submit"
                 size="sm"
                 data-testid="btn-submit-public-voice-search"
+                id="btn-hud-manual-submit"
                 className="bg-primary hover:bg-primary/90 text-white font-bold text-xs px-4 rounded-xl"
               >
                 <Search className="size-3.5 mr-1" /> Search

@@ -22,7 +22,16 @@ export function usePublicVoiceAssistant() {
   const [transcript, setTranscript] = useState('');
   const [interimTranscript, setInterimTranscript] = useState('');
   const [activeQuery, setActiveQuery] = useState<ParsedPublicVoiceQuery | null>(null);
-  const [queryResults, setQueryResults] = useState<{ type: string; items: any[]; error?: boolean } | null>(null);
+  const [queryResults, setQueryResults] = useState<{
+    type: string;
+    items: any[];
+    directAnswer?: any;
+    isFallback?: boolean;
+    fallbackMessage?: string;
+    autoCorrectedNotice?: string;
+    spokenResponse?: string;
+    error?: boolean;
+  } | null>(null);
   const [isLoadingResults, setIsLoadingResults] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
 
@@ -45,16 +54,26 @@ export function usePublicVoiceAssistant() {
       setInterimTranscript('');
       setIsOpen(true);
 
-      // Audible Speech Response
+      // Audible Initial Acknowledgment
       if (!isMuted && parsed.spokenResponse) {
         speakConfirmation(parsed.spokenResponse);
       }
 
-      // Fetch dynamic previews
+      // Fetch dynamic previews and analytical direct answers
       setIsLoadingResults(true);
       const results = await executePublicVoiceDataQuery(parsed);
       setQueryResults(results);
       setIsLoadingResults(false);
+
+      // Audible Final Direct Answer if computed and different from initial acknowledgment
+      if (
+        !isMuted &&
+        results &&
+        results.spokenResponse &&
+        results.spokenResponse !== parsed.spokenResponse
+      ) {
+        speakConfirmation(results.spokenResponse);
+      }
     },
     [isMuted]
   );
