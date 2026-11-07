@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ThemeProvider } from '@/context/ThemeProvider';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -31,6 +31,13 @@ const FacilitatorKiosk = React.lazy(() => import('@/pages/FacilitatorKiosk').the
 const DevSandbox = React.lazy(() => import('@/pages/DevSandbox').then(m => ({ default: m.DevSandbox })));
 const ScoutingHub = React.lazy(() => import('@/pages/ScoutingHub').then(m => ({ default: m.ScoutingHub })));
 const AdminReports = React.lazy(() => import('@/pages/AdminReports').then(m => ({ default: m.AdminReports })));
+const VoiceQuerySearch = React.lazy(() => import('@/pages/VoiceQuerySearch').then(m => ({ default: m.VoiceQuerySearch })));
+
+// Dynamic route alias forwarder to preserve matchId without 404s
+function LiveMatchRedirect() {
+  const { matchId } = useParams();
+  return <Navigate to={matchId ? `/match/${matchId}` : '/explorer'} replace />;
+}
 
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
@@ -102,6 +109,19 @@ function AppRoutes() {
           <Route path="/privacy" element={<Navigate to="/legal?tab=privacy" replace />} />
           <Route path="/terms" element={<Navigate to="/legal?tab=terms" replace />} />
           <Route path="/match/:matchId" element={<LiveMatch />} />
+
+          {/* Dedicated Voice Query Search Page */}
+          <Route path="/search" element={<VoiceQuerySearch />} />
+          <Route path="/query" element={<Navigate to="/search" replace />} />
+
+          {/* 404 Prevention Route Aliases */}
+          <Route path="/tournaments" element={<Navigate to="/explorer" replace />} />
+          <Route path="/rankings" element={<Navigate to="/ranking" replace />} />
+          <Route path="/live/:matchId" element={<LiveMatchRedirect />} />
+          <Route path="/live" element={<Navigate to="/explorer" replace />} />
+          <Route path="/brackets" element={<Navigate to="/explorer" replace />} />
+          <Route path="/standings" element={<Navigate to="/ranking" replace />} />
+          <Route path="/fixtures" element={<Navigate to="/explorer" replace />} />
 
           {/* Platform Developer Sandbox */}
           <Route element={<ProtectedRoute requiredRole="dev" />}>

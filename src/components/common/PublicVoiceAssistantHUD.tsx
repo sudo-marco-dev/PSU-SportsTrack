@@ -17,6 +17,8 @@ import {
   ExternalLink,
   Star,
   Activity,
+  GraduationCap,
+  SearchX,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -208,8 +210,8 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                   )}
                 </div>
 
-                {/* Upcoming Games Previews */}
-                {queryResults.type === 'upcoming_games' && (
+                {/* Upcoming Games & Match Search Previews */}
+                {(queryResults.type === 'upcoming_games' || queryResults.type === 'match_search') && (
                   <div className="grid gap-2">
                     {queryResults.items.map((m: any, idx: number) => (
                       <div
@@ -230,7 +232,8 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => navigateToResult(`/live/${m.id}`)}
+                          data-testid={`btn-preview-view-match-${idx}`}
+                          onClick={() => navigateToResult(`/match/${m.id}`)}
                           className="text-xs h-8 bg-primary/20 border-primary/40 hover:bg-primary/30 text-white"
                         >
                           View Match
@@ -288,7 +291,8 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => navigateToResult('/scouting')}
+                          data-testid={`btn-preview-view-player-${idx}`}
+                          onClick={() => navigateToResult('/athletics')}
                           className="text-xs h-7 bg-white/10 border-white/20 hover:bg-white/20 text-white"
                         >
                           Scout Dossier
@@ -297,6 +301,129 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                     ))}
                   </div>
                 )}
+
+                {/* Sport Schedule Previews */}
+                {queryResults.type === 'sport_schedule' && (
+                  <div className="grid gap-2">
+                    {queryResults.items.map((tourn: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className="bg-white/5 border border-white/10 rounded-xl p-3 flex items-center justify-between"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="outline" className="text-[10px] uppercase font-bold border-primary/50 text-primary">
+                              {tourn.sport || 'Sport'}
+                            </Badge>
+                            <span className="text-[10px] text-slate-400">{tourn.status || 'Active'}</span>
+                          </div>
+                          <p className="font-bold text-sm text-slate-100">{tourn.name}</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          data-testid={`btn-preview-view-schedule-${idx}`}
+                          onClick={() => navigateToResult('/explorer')}
+                          className="text-xs h-7 bg-primary/20 border-primary/40 hover:bg-primary/30 text-white"
+                        >
+                          View Fixtures
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* College Search Previews */}
+                {queryResults.type === 'college_search' && (
+                  <div className="grid gap-2">
+                    {queryResults.items.map((c: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className="bg-white/5 border border-white/10 rounded-xl p-3 flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="size-8 rounded-lg bg-sky-500/20 border border-sky-500/40 flex items-center justify-center text-sky-300">
+                            <GraduationCap className="size-4" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm text-slate-100">{c.college_name}</p>
+                            <p className="text-[11px] text-slate-400">{c.cluster?.name || 'Academic Unit'}</p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          data-testid={`btn-preview-view-college-${idx}`}
+                          onClick={() => navigateToResult('/ranking')}
+                          className="text-xs h-7 bg-sky-500/20 border-sky-500/40 hover:bg-sky-500/30 text-white"
+                        >
+                          View Standings
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* General Multi-Entity Search Previews */}
+                {queryResults.type === 'general_search' && (
+                  <div className="grid gap-2">
+                    {queryResults.items.map((item: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className="bg-white/5 border border-white/10 rounded-xl p-3 flex items-center justify-between"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="outline" className="text-[10px] uppercase font-bold border-white/20 text-slate-300">
+                              {item.entityType || 'Record'}
+                            </Badge>
+                            {item.sport && <span className="text-[10px] text-slate-400">{item.sport}</span>}
+                          </div>
+                          <p className="font-bold text-sm text-slate-100">
+                            {item.name || item.full_name || item.round || 'University Record'}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          data-testid={`btn-preview-view-general-${idx}`}
+                          onClick={() =>
+                            navigateToResult(
+                              item.entityType === 'match'
+                                ? `/match/${item.id}`
+                                : item.entityType === 'player'
+                                ? '/athletics'
+                                : '/explorer'
+                            )
+                          }
+                          className="text-xs h-7 bg-white/10 border-white/20 hover:bg-white/20 text-white"
+                        >
+                          Open Details
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : queryResults && queryResults.items.length === 0 ? (
+              <div
+                data-testid="hud-empty-state"
+                className="py-6 px-4 text-center border border-white/10 rounded-xl bg-white/5 space-y-2"
+              >
+                <SearchX className="size-7 mx-auto text-slate-500 opacity-80" />
+                <p className="font-bold text-sm text-slate-200">No matching athletic records found</p>
+                <p className="text-[11px] text-slate-400">
+                  Try asking for "upcoming games", "basketball schedule", or "players with highest stars".
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  data-testid="btn-hud-open-search"
+                  onClick={() => navigateToResult(`/search?q=${encodeURIComponent(transcript || '')}`)}
+                  className="mt-2 text-xs bg-primary/20 border-primary/40 hover:bg-primary/30 text-white rounded-lg gap-1.5"
+                >
+                  Open Dedicated Search Hub <ExternalLink className="size-3" />
+                </Button>
               </div>
             ) : null}
 

@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { ParsedPublicVoiceQuery } from '@/types/multimodal';
+import type { ParsedPublicVoiceQuery } from '@/lib/publicVoiceAssistant';
 import { parsePublicVoiceQuery, executePublicVoiceDataQuery } from '@/lib/publicVoiceAssistant';
 import { speakConfirmation } from './useVoiceScoring';
 
