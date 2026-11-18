@@ -164,9 +164,9 @@ export const TouchlessGestureHUD: React.FC<TouchlessGestureHUDProps> = ({
     return (
       <div
         data-testid={`indicator-${side}-hand`}
-        className={`rounded-xl px-3 py-2 border transition-colors ${accentBorder}`}
+        className={`rounded-xl px-3 py-2 border transition-colors min-h-[4.5rem] flex flex-col justify-between ${accentBorder}`}
       >
-        <div className="flex items-center justify-between gap-2 mb-1">
+        <div className="flex items-center justify-between gap-2">
           <span
             className={`text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 truncate ${
               isLeft ? 'text-orange-400' : 'text-cyan-400'
@@ -193,20 +193,18 @@ export const TouchlessGestureHUD: React.FC<TouchlessGestureHUDProps> = ({
           </div>
         </div>
 
-        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mb-1">
+        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden my-1">
           <div
             className={`h-full transition-all duration-75 ${barClass}`}
             style={{ width: `${hand.chargePercent}%` }}
           />
         </div>
 
-        <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
+        <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium min-h-[1rem]">
           <span className="truncate">{hand.actionLabel}</span>
-          {hand.detected && (
-            <span className="font-mono tabular-nums text-slate-500 ml-2 shrink-0">
-              {Math.round(hand.score * 100)}% AI
-            </span>
-          )}
+          <span className="font-mono tabular-nums text-slate-500 ml-2 shrink-0">
+            {hand.detected ? `${Math.round(hand.score * 100)}% AI` : 'Standby'}
+          </span>
         </div>
       </div>
     );
@@ -218,151 +216,162 @@ export const TouchlessGestureHUD: React.FC<TouchlessGestureHUDProps> = ({
   return (
     <div
       data-testid="touchless-gesture-hud"
-      className="bg-slate-950 border border-white/10 rounded-2xl p-3 text-white shadow-xl space-y-3"
+      className="bg-slate-950 border border-white/10 rounded-2xl p-3 text-white shadow-xl space-y-2.5"
     >
-      {/* Top Control & Telemetry Header */}
-      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-2.5">
-        {/* Camera + Safety Controls */}
-        <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
-          <Button
-            size="sm"
-            data-testid="btn-toggle-touchless-camera"
-            variant="outline"
-            onClick={toggleCamera}
-            className={`h-9 px-3.5 text-xs font-black uppercase tracking-wider gap-2 rounded-xl transition-all border active:scale-[0.98] ${
-              isCameraActive
-                ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500'
-                : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-white/15'
+      {/* Top Status & Guide Bar */}
+      <div className="flex items-center justify-between gap-2">
+        <div
+          data-testid="touchless-model-status"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-white/10 min-w-0"
+        >
+          <Cpu
+            className={`size-3.5 shrink-0 ${
+              modelStatus === 'ready'
+                ? 'text-emerald-400'
+                : modelStatus === 'loading'
+                  ? 'text-orange-400 animate-spin'
+                  : modelStatus === 'error'
+                    ? 'text-rose-400'
+                    : 'text-slate-500'
             }`}
-          >
-            {isCameraActive ? (
-              <>
-                <CameraOff className="size-4" /> Stop Sensor
-              </>
-            ) : (
-              <>
-                <Camera className="size-4 text-orange-400" /> Enable Hand AI Camera
-              </>
-            )}
-          </Button>
-
-          {/* Live Armed vs Dry-Run Test Lock */}
-          <Button
-            size="sm"
-            variant="outline"
-            data-testid="btn-toggle-touchless-armed"
-            onClick={toggleArmed}
-            className={`h-9 px-3 text-[11px] font-black uppercase tracking-wider gap-1.5 rounded-xl border transition-all active:scale-[0.98] ${
-              isArmed
-                ? 'bg-slate-900 hover:bg-slate-800 text-emerald-400 border-emerald-500/40'
-                : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border-amber-500/60'
-            }`}
-            title={
-              isArmed
-                ? 'Live Armed: Completed hand poses update the scoreboard & clock'
-                : 'Test Lock (Dry-Run): Detects poses without mutating scoreboard'
-            }
-          >
-            {isArmed ? (
-              <>
-                <ShieldCheck className="size-3.5" /> Live Armed
-              </>
-            ) : (
-              <>
-                <Lock className="size-3.5" /> Test Lock (Dry-Run)
-              </>
-            )}
-          </Button>
-
-          {/* Flip L/R Hardware Mirror Button */}
-          <Button
-            size="sm"
-            variant="outline"
-            data-testid="btn-toggle-invert-handedness"
-            onClick={toggleInvertHandedness}
-            className={`h-9 px-2.5 text-[11px] font-bold uppercase tracking-wider gap-1.5 rounded-xl border transition-all ${
-              invertHandedness
-                ? 'bg-orange-500/20 text-orange-300 border-orange-500/50'
-                : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-white/15'
-            }`}
-            title="Invert anatomical Left/Right hand mapping if using an unmirrored USB camera"
-          >
-            <FlipHorizontal2 className="size-3.5 text-orange-400" />
-            <span>{invertHandedness ? 'L/R Inverted' : 'Flip L/R'}</span>
-          </Button>
-
-          {isCameraActive && (
-            <Button
-              size="sm"
-              variant="outline"
-              data-testid="btn-recalibrate-touchless"
-              onClick={recalibrateCamera}
-              className="h-9 px-2.5 text-[11px] font-bold uppercase tracking-wider gap-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border-white/15"
-              title="Reset hand dwell charge & lock timers"
-            >
-              <RotateCcw className="size-3.5 text-orange-400" />
-              <span className="hidden md:inline">Reset Hold</span>
-            </Button>
-          )}
-
-          {/* Model Readiness Pill */}
-          <div
-            data-testid="touchless-model-status"
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-white/10"
-          >
-            <Cpu
-              className={`size-3.5 ${
-                modelStatus === 'ready'
-                  ? 'text-emerald-400'
-                  : modelStatus === 'loading'
-                    ? 'text-orange-400 animate-spin'
-                    : modelStatus === 'error'
-                      ? 'text-rose-400'
-                      : 'text-slate-500'
-              }`}
-            />
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-300">
-              {modelStatusLabel}
-            </span>
-          </div>
+          />
+          <span className="text-[10px] font-black uppercase tracking-wider text-slate-300 truncate">
+            {modelStatusLabel}
+          </span>
         </div>
 
-        {/* Active Trigger Feedback Pill */}
-        {detectedGesture !== 'none' && (
-          <div
-            data-testid="hud-detected-gesture-banner"
-            className={`px-3 py-1.5 rounded-xl flex items-center gap-2 border ${
-              isArmed
-                ? 'bg-slate-900 border-orange-500/60'
-                : 'bg-amber-950/60 border-amber-500/60'
-            }`}
-          >
-            {getPoseIcon(detectedGesture)}
-            <div>
-              <span className="text-[11px] font-black text-orange-400 uppercase block leading-tight">
-                {!isArmed ? '[DRY-RUN] ' : ''}
-                {detectedHandSide ? `${detectedHandSide.toUpperCase()} HAND: ` : ''}
-                {detectedGesture === 'open_palm' ||
-                detectedGesture === 'one_finger' ||
-                detectedGesture === 'two_fingers' ||
-                detectedGesture === 'three_fingers' ||
-                detectedGesture === 'four_fingers' ||
-                detectedGesture === 'closed_fist' ||
-                detectedGesture === 'thumbs_up' ||
-                detectedGesture === 'shaka'
-                  ? describeHandAction(detectedGesture, activePoseTeam, maxPoint)
-                  : detectedGesture}
-              </span>
-              <span className="text-[10px] text-slate-300 font-mono tabular-nums">
-                Confidence: {Math.round(confidence * 100)}%
-              </span>
-            </div>
-          </div>
-        )}
+        <Button
+          size="sm"
+          variant="outline"
+          data-testid="btn-toggle-pose-guide"
+          className="h-7 px-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-200 bg-slate-900 hover:bg-slate-800 border-white/15 gap-1.5 rounded-lg shrink-0"
+          onClick={() => setShowCheatSheet(!showCheatSheet)}
+        >
+          <HelpCircle className="size-3.5 text-orange-400" />
+          <span>{showCheatSheet ? 'Hide Pose Guide' : 'Pose Guide'}</span>
+        </Button>
       </div>
 
-      {/* Live Anatomical Left vs Right Hand Gauges */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+      {/* Balanced 4-Button Control Grid (2x2 on mobile, 4x1 on tablet/desktop; never shifts count) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full">
+        <Button
+          size="sm"
+          data-testid="btn-toggle-touchless-camera"
+          variant="outline"
+          onClick={toggleCamera}
+          className={`h-9 w-full justify-center px-2.5 text-[11px] font-black uppercase tracking-wider gap-1.5 rounded-xl transition-colors border active:scale-[0.98] ${
+            isCameraActive
+              ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500'
+              : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-white/15'
+          }`}
+        >
+          {isCameraActive ? (
+            <>
+              <CameraOff className="size-3.5 shrink-0" />
+              <span className="truncate">Stop Sensor</span>
+            </>
+          ) : (
+            <>
+              <Camera className="size-3.5 text-orange-400 shrink-0" />
+              <span className="truncate">Enable Camera</span>
+            </>
+          )}
+        </Button>
+
+        <Button
+          size="sm"
+          variant="outline"
+          data-testid="btn-toggle-touchless-armed"
+          onClick={toggleArmed}
+          className={`h-9 w-full justify-center px-2.5 text-[11px] font-black uppercase tracking-wider gap-1.5 rounded-xl border transition-colors active:scale-[0.98] ${
+            isArmed
+              ? 'bg-slate-900 hover:bg-slate-800 text-emerald-400 border-emerald-500/40'
+              : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border-amber-500/60'
+          }`}
+          title={
+            isArmed
+              ? 'Live Armed: Completed hand poses update the scoreboard & clock'
+              : 'Test Lock (Dry-Run): Detects poses without mutating scoreboard'
+          }
+        >
+          {isArmed ? (
+            <>
+              <ShieldCheck className="size-3.5 shrink-0" />
+              <span className="truncate">Live Armed</span>
+            </>
+          ) : (
+            <>
+              <Lock className="size-3.5 shrink-0" />
+              <span className="truncate">Dry-Run Lock</span>
+            </>
+          )}
+        </Button>
+
+        <Button
+          size="sm"
+          variant="outline"
+          data-testid="btn-toggle-invert-handedness"
+          onClick={toggleInvertHandedness}
+          className={`h-9 w-full justify-center px-2.5 text-[11px] font-bold uppercase tracking-wider gap-1.5 rounded-xl border transition-colors active:scale-[0.98] ${
+            invertHandedness
+              ? 'bg-orange-500/20 text-orange-300 border-orange-500/50'
+              : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-white/15'
+          }`}
+          title="Invert anatomical Left/Right hand mapping if using an unmirrored USB camera"
+        >
+          <FlipHorizontal2 className="size-3.5 text-orange-400 shrink-0" />
+          <span className="truncate">{invertHandedness ? 'L/R Inverted' : 'Flip L/R'}</span>
+        </Button>
+
+        <Button
+          size="sm"
+          variant="outline"
+          data-testid="btn-recalibrate-touchless"
+          disabled={!isCameraActive}
+          onClick={recalibrateCamera}
+          className="h-9 w-full justify-center px-2.5 text-[11px] font-bold uppercase tracking-wider gap-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border-white/15 disabled:opacity-40"
+          title="Reset hand dwell charge & lock timers"
+        >
+          <RotateCcw className="size-3.5 text-orange-400 shrink-0" />
+          <span className="truncate">Reset Hold</span>
+        </Button>
+      </div>
+
+      {/* Active Trigger Feedback Pill */}
+      {detectedGesture !== 'none' && (
+        <div
+          data-testid="hud-detected-gesture-banner"
+          className={`px-3 py-2 rounded-xl flex items-center justify-between gap-2 border ${
+            isArmed
+              ? 'bg-slate-900 border-orange-500/60'
+              : 'bg-amber-950/60 border-amber-500/60'
+          }`}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            {getPoseIcon(detectedGesture)}
+            <span className="text-[11px] font-black text-orange-400 uppercase truncate">
+              {!isArmed ? '[DRY-RUN] ' : ''}
+              {detectedHandSide ? `${detectedHandSide.toUpperCase()} HAND: ` : ''}
+              {detectedGesture === 'open_palm' ||
+              detectedGesture === 'one_finger' ||
+              detectedGesture === 'two_fingers' ||
+              detectedGesture === 'three_fingers' ||
+              detectedGesture === 'four_fingers' ||
+              detectedGesture === 'closed_fist' ||
+              detectedGesture === 'thumbs_up' ||
+              detectedGesture === 'shaka'
+                ? describeHandAction(detectedGesture, activePoseTeam, maxPoint)
+                : detectedGesture}
+            </span>
+          </div>
+          <span className="text-[10px] text-slate-300 font-mono tabular-nums shrink-0">
+            {Math.round(confidence * 100)}%
+          </span>
+        </div>
+      )}
+
+      {/* Live Anatomical Left vs Right Hand Gauges (Equal-height 2-col grid) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {renderHandCard('left', leftHand, resolvedLeftTeam)}
         {renderHandCard('right', rightHand, resolvedRightTeam)}
       </div>
@@ -429,19 +438,19 @@ export const TouchlessGestureHUD: React.FC<TouchlessGestureHUDProps> = ({
         </div>
       )}
 
-      {/* Simulator Bar + Help Toggle */}
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-900/70 border border-white/10 rounded-xl p-2">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 mr-1">
-            Simulate Hand:
+      {/* Balanced Simulator Bar (2-col Hand Switcher + 4x2 / 8x1 Symmetric Pose Grid) */}
+      <div className="bg-slate-900/70 border border-white/10 rounded-xl p-2.5 space-y-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+            Simulate Hand Pose:
           </span>
 
-          <div className="inline-flex rounded-lg border border-white/15 bg-slate-950 p-0.5 mr-1">
+          <div className="grid grid-cols-2 gap-1 rounded-lg border border-white/15 bg-slate-950 p-0.5 w-full sm:w-72">
             <button
               type="button"
               data-testid="btn-simulate-left-hand"
               onClick={() => setSimHandSide('left')}
-              className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase transition-colors ${
+              className={`h-7 px-2 rounded-md text-[10px] font-black uppercase truncate transition-colors ${
                 simHandSide === 'left'
                   ? 'bg-orange-500 text-slate-950'
                   : 'text-slate-400 hover:text-white'
@@ -453,7 +462,7 @@ export const TouchlessGestureHUD: React.FC<TouchlessGestureHUDProps> = ({
               type="button"
               data-testid="btn-simulate-right-hand"
               onClick={() => setSimHandSide('right')}
-              className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase transition-colors ${
+              className={`h-7 px-2 rounded-md text-[10px] font-black uppercase truncate transition-colors ${
                 simHandSide === 'right'
                   ? 'bg-cyan-500 text-slate-950'
                   : 'text-slate-400 hover:text-white'
@@ -462,14 +471,16 @@ export const TouchlessGestureHUD: React.FC<TouchlessGestureHUDProps> = ({
               Right ({resolvedRightTeam.slice(0, 8)})
             </button>
           </div>
+        </div>
 
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5 w-full">
           {SIM_POSES.map((item) => (
             <Button
               key={item.pose}
               size="sm"
               variant="outline"
               data-testid={item.testId}
-              className="h-7 px-2 text-[10px] font-bold bg-slate-950 hover:bg-slate-800 text-slate-200 border-white/15 rounded-lg active:scale-[0.98]"
+              className="h-8 w-full justify-center px-1 text-[10px] font-bold bg-slate-950 hover:bg-slate-800 text-slate-200 border-white/15 rounded-lg truncate active:scale-[0.98]"
               onClick={() => simulateHandCommand(simHandSide, item.pose)}
               title={`Simulate ${simHandSide} hand: ${describeHandAction(
                 item.pose,
@@ -477,21 +488,10 @@ export const TouchlessGestureHUD: React.FC<TouchlessGestureHUDProps> = ({
                 maxPoint
               )}`}
             >
-              {item.short}
+              <span className="truncate">{item.short}</span>
             </Button>
           ))}
         </div>
-
-        <Button
-          size="sm"
-          variant="ghost"
-          data-testid="btn-toggle-pose-guide"
-          className="h-7 px-2 text-[11px] font-bold text-slate-300 hover:text-white hover:bg-slate-800 gap-1 rounded-lg"
-          onClick={() => setShowCheatSheet(!showCheatSheet)}
-        >
-          <HelpCircle className="size-3.5 text-orange-400" />
-          <span>{showCheatSheet ? 'Hide Pose Guide' : 'Pose Guide'}</span>
-        </Button>
       </div>
 
       {/* Error Message */}
@@ -505,13 +505,13 @@ export const TouchlessGestureHUD: React.FC<TouchlessGestureHUDProps> = ({
         </div>
       )}
 
-      {/* Collapsible Referee Finger Pose Guide (Zero Emojis) */}
+      {/* Collapsible Referee Finger Pose Guide (Symmetric 2x4 / 4x2 Grid, Zero Emojis) */}
       {showCheatSheet && (
         <div
           data-testid="touchless-pose-guide"
           className="bg-slate-900 border border-white/10 rounded-xl p-3 space-y-2.5 text-[11px]"
         >
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-white/10 pb-2">
             <span className="font-black uppercase tracking-wider text-orange-400">
               Referee Finger Pose Vocabulary (Anatomical Left vs. Right Hand)
             </span>
@@ -520,22 +520,22 @@ export const TouchlessGestureHUD: React.FC<TouchlessGestureHUDProps> = ({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-slate-300">
-            <div className="bg-slate-950 border border-white/10 p-2 rounded-lg">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 text-slate-300">
+            <div className="bg-slate-950 border border-white/10 p-2.5 rounded-lg flex flex-col justify-between min-h-[3.75rem]">
               <p className="font-black text-white uppercase text-[10px]">
                 1 Finger (Index Up)
               </p>
               <p className="text-slate-400 text-[10px]">+1 Point for hand&apos;s team</p>
             </div>
-            <div className="bg-slate-950 border border-white/10 p-2 rounded-lg">
+            <div className="bg-slate-950 border border-white/10 p-2.5 rounded-lg flex flex-col justify-between min-h-[3.75rem]">
               <p className="font-black text-white uppercase text-[10px]">
-                2 Fingers (Peace / Index+Mid)
+                2 Fingers (Index+Mid)
               </p>
               <p className="text-slate-400 text-[10px]">
                 +{Math.min(2, maxPoint)} Pts for hand&apos;s team
               </p>
             </div>
-            <div className="bg-slate-950 border border-white/10 p-2 rounded-lg">
+            <div className="bg-slate-950 border border-white/10 p-2.5 rounded-lg flex flex-col justify-between min-h-[3.75rem]">
               <p className="font-black text-white uppercase text-[10px]">
                 3 Fingers (Index+Mid+Ring)
               </p>
@@ -543,31 +543,31 @@ export const TouchlessGestureHUD: React.FC<TouchlessGestureHUDProps> = ({
                 +{Math.min(3, maxPoint)} Pts for hand&apos;s team
               </p>
             </div>
-            <div className="bg-slate-950 border border-white/10 p-2 rounded-lg">
+            <div className="bg-slate-950 border border-white/10 p-2.5 rounded-lg flex flex-col justify-between min-h-[3.75rem]">
               <p className="font-black text-white uppercase text-[10px]">
                 4 Fingers (Thumb Tucked)
               </p>
               <p className="text-slate-400 text-[10px]">Cycle active player on team</p>
             </div>
-            <div className="bg-slate-950 border border-white/10 p-2 rounded-lg">
+            <div className="bg-slate-950 border border-white/10 p-2.5 rounded-lg flex flex-col justify-between min-h-[3.75rem]">
               <p className="font-black text-white uppercase text-[10px]">
                 Open Palm (All 5 Extended)
               </p>
               <p className="text-slate-400 text-[10px]">Pause or Resume match clock</p>
             </div>
-            <div className="bg-slate-950 border border-white/10 p-2 rounded-lg">
+            <div className="bg-slate-950 border border-white/10 p-2.5 rounded-lg flex flex-col justify-between min-h-[3.75rem]">
               <p className="font-black text-white uppercase text-[10px]">
                 Closed Fist (0 Fingers)
               </p>
               <p className="text-slate-400 text-[10px]">Deduct -1 Point correction</p>
             </div>
-            <div className="bg-slate-950 border border-white/10 p-2 rounded-lg">
+            <div className="bg-slate-950 border border-white/10 p-2.5 rounded-lg flex flex-col justify-between min-h-[3.75rem]">
               <p className="font-black text-white uppercase text-[10px]">
                 Thumbs Up Only
               </p>
               <p className="text-slate-400 text-[10px]">Call Official Timeout</p>
             </div>
-            <div className="bg-slate-950 border border-white/10 p-2 rounded-lg">
+            <div className="bg-slate-950 border border-white/10 p-2.5 rounded-lg flex flex-col justify-between min-h-[3.75rem]">
               <p className="font-black text-white uppercase text-[10px]">
                 Shaka (Thumb + Pinky)
               </p>

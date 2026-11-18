@@ -101,7 +101,7 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
 
       {/* Interactive Voice Assistant Modal Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto bg-slate-950 text-white border-2 border-primary/30 p-0 rounded-2xl shadow-2xl">
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-xl max-h-[88dvh] overflow-y-auto overscroll-contain bg-slate-950 text-white border-2 border-primary/30 p-0 rounded-2xl shadow-2xl">
           {/* Header */}
           <DialogHeader className="p-5 pb-3 border-b border-white/10 flex flex-row items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -595,89 +595,89 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
               </div>
             ) : null}
 
-            {/* Quick Suggestion Pills */}
+            {/* Symmetric 2x4 Quick Suggestion Grid (Balanced equal widths & heights on mobile & desktop) */}
             <div className="space-y-1.5 pt-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
                 Suggested Voice Commands:
               </span>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5 w-full">
                 <Button
                   size="sm"
                   variant="outline"
-                  className="text-xs h-7 bg-white/5 border-white/15 hover:bg-white/15 text-slate-300 rounded-lg"
+                  className="h-8 w-full justify-start px-2.5 text-[11px] font-semibold bg-slate-900 border-white/15 hover:bg-slate-800 text-slate-200 rounded-lg truncate active:scale-[0.98]"
                   onClick={() => handleQuickChip('Search for upcoming games this week')}
                 >
-                  <Calendar className="size-3 mr-1 text-primary" /> Upcoming games this week
+                  <Calendar className="size-3 mr-1.5 text-primary shrink-0" />
+                  <span className="truncate">Upcoming games this week</span>
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="text-xs h-7 bg-white/5 border-white/15 hover:bg-white/15 text-slate-300 rounded-lg"
+                  className="h-8 w-full justify-start px-2.5 text-[11px] font-semibold bg-slate-900 border-white/15 hover:bg-slate-800 text-slate-200 rounded-lg truncate active:scale-[0.98]"
                   onClick={() => handleQuickChip('Search for players with highest stars')}
                 >
-                  <Trophy className="size-3 mr-1 text-amber-400" /> Players with highest stars
+                  <Trophy className="size-3 mr-1.5 text-amber-400 shrink-0" />
+                  <span className="truncate">Players with highest stars</span>
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="text-xs h-7 bg-white/5 border-white/15 hover:bg-white/15 text-slate-300 rounded-lg"
-                  onClick={() => handleQuickChip('Show Basketball schedule')}
-                >
-                  Basketball schedule
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs h-7 bg-white/5 border-white/15 hover:bg-white/15 text-slate-300 rounded-lg"
-                  onClick={() => handleQuickChip('Go to rankings')}
-                >
-                  College rankings
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs h-7 bg-white/5 border-white/15 hover:bg-white/15 text-slate-300 rounded-lg"
-                  onClick={() => handleQuickChip('Who won last week?')}
-                >
-                  <Trophy className="size-3 mr-1 text-emerald-400" /> Who won last week?
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs h-7 bg-white/5 border-white/15 hover:bg-white/15 text-slate-300 rounded-lg"
-                  onClick={() => handleQuickChip('Who is the highest rated college right now?')}
-                >
-                  <GraduationCap className="size-3 mr-1 text-sky-400" /> Highest rated college
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs h-7 bg-slate-900 border-white/15 hover:bg-slate-800 text-slate-200 rounded-lg"
+                  className="h-8 w-full justify-start px-2.5 text-[11px] font-semibold bg-slate-900 border-white/15 hover:bg-slate-800 text-slate-200 rounded-lg truncate active:scale-[0.98]"
                   onClick={() => handleQuickChip("What's the top 3 highest scoring player?")}
                 >
-                  <Trophy className="size-3 mr-1 text-orange-400" /> Top 3 scorers
+                  <Trophy className="size-3 mr-1.5 text-orange-400 shrink-0" />
+                  <span className="truncate">Top 3 highest scorers</span>
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="text-xs h-7 bg-slate-900 border-white/15 hover:bg-slate-800 text-slate-200 rounded-lg"
+                  className="h-8 w-full justify-start px-2.5 text-[11px] font-semibold bg-slate-900 border-white/15 hover:bg-slate-800 text-slate-200 rounded-lg truncate active:scale-[0.98]"
                   onClick={() => handleQuickChip("What's the top 5 highest win rate tribes or squads?")}
                 >
-                  <Star className="size-3 mr-1 text-emerald-400" /> Top 5 tribes win rate
+                  <Star className="size-3 mr-1.5 text-emerald-400 shrink-0" />
+                  <span className="truncate">Top 5 tribes win rate</span>
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="text-xs h-7 bg-slate-900 border-white/15 hover:bg-slate-800 text-slate-200 rounded-lg"
-                  onClick={() => handleQuickChip('Search for player with highest win rate')}
+                  className="h-8 w-full justify-start px-2.5 text-[11px] font-semibold bg-slate-900 border-white/15 hover:bg-slate-800 text-slate-200 rounded-lg truncate active:scale-[0.98]"
+                  onClick={() => handleQuickChip('Who won last week?')}
                 >
-                  <Star className="size-3 mr-1 text-amber-400" /> Highest win rate
+                  <Trophy className="size-3 mr-1.5 text-emerald-400 shrink-0" />
+                  <span className="truncate">Who won last week?</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 w-full justify-start px-2.5 text-[11px] font-semibold bg-slate-900 border-white/15 hover:bg-slate-800 text-slate-200 rounded-lg truncate active:scale-[0.98]"
+                  onClick={() => handleQuickChip('Who is the highest rated college right now?')}
+                >
+                  <GraduationCap className="size-3 mr-1.5 text-sky-400 shrink-0" />
+                  <span className="truncate">Highest rated college</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 w-full justify-start px-2.5 text-[11px] font-semibold bg-slate-900 border-white/15 hover:bg-slate-800 text-slate-200 rounded-lg truncate active:scale-[0.98]"
+                  onClick={() => handleQuickChip('Show Basketball schedule')}
+                >
+                  <Activity className="size-3 mr-1.5 text-orange-400 shrink-0" />
+                  <span className="truncate">Basketball schedule</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 w-full justify-start px-2.5 text-[11px] font-semibold bg-slate-900 border-white/15 hover:bg-slate-800 text-slate-200 rounded-lg truncate active:scale-[0.98]"
+                  onClick={() => handleQuickChip('Go to rankings')}
+                >
+                  <GraduationCap className="size-3 mr-1.5 text-amber-400 shrink-0" />
+                  <span className="truncate">College rankings</span>
                 </Button>
               </div>
             </div>
 
             {/* Manual Query Bar for Quiet/No-Mic Environments */}
-            <form onSubmit={handleManualSubmit} className="flex gap-2 pt-2 border-t border-white/10">
+            <form onSubmit={handleManualSubmit} className="flex items-center gap-2 pt-2 border-t border-white/10">
               <input
                 type="text"
                 data-testid="input-public-voice-search"
@@ -685,14 +685,14 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                 value={typedQuery}
                 onChange={(e) => setTypedQuery(e.target.value)}
                 placeholder='Type or speak: "Upcoming games this week", "Player Santos"...'
-                className="flex-1 bg-slate-900 border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary"
+                className="flex-1 h-9 bg-slate-900 border border-white/20 rounded-xl px-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary"
               />
               <Button
                 type="submit"
                 size="sm"
                 data-testid="btn-submit-public-voice-search"
                 id="btn-hud-manual-submit"
-                className="bg-primary hover:bg-primary/90 text-white font-bold text-xs px-4 rounded-xl"
+                className="h-9 bg-primary hover:bg-primary/90 text-white font-bold text-xs px-4 rounded-xl shrink-0"
               >
                 <Search className="size-3.5 mr-1" /> Search
               </Button>

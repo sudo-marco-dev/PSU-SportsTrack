@@ -678,50 +678,55 @@ export const VoiceQuerySearch: React.FC = () => {
             </Button>
           </form>
 
-          {/* Conversational & Popular Query Suggestion Chips */}
-          <div className="flex flex-wrap items-center gap-1.5 mt-3 text-xs text-slate-400">
-            <span className="font-semibold text-slate-500 mr-1">Ask:</span>
+          {/* Symmetric 2x3 / 3x2 Conversational Query Suggestion Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3.5">
             <button
               type="button"
               onClick={() => handleQuickSearch('Who won last week?', 'matches')}
-              className="px-2.5 py-1 rounded-lg bg-slate-900 border border-emerald-500/30 hover:bg-slate-800 text-emerald-400 text-xs font-bold transition-colors flex items-center gap-1"
+              className="h-9 w-full px-3 rounded-xl bg-slate-900 border border-emerald-500/30 hover:bg-slate-800 text-emerald-400 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 truncate active:scale-[0.98]"
             >
-              <Trophy className="size-3" /> Who won last week?
+              <Trophy className="size-3.5 shrink-0" />
+              <span className="truncate">Who won last week?</span>
             </button>
             <button
               type="button"
               onClick={() => handleQuickSearch('Who is the highest rated college right now?', 'colleges')}
-              className="px-2.5 py-1 rounded-lg bg-slate-900 border border-orange-500/30 hover:bg-slate-800 text-orange-400 text-xs font-bold transition-colors flex items-center gap-1"
+              className="h-9 w-full px-3 rounded-xl bg-slate-900 border border-orange-500/30 hover:bg-slate-800 text-orange-400 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 truncate active:scale-[0.98]"
             >
-              <GraduationCap className="size-3" /> Highest rated college
+              <GraduationCap className="size-3.5 shrink-0" />
+              <span className="truncate">Highest rated college</span>
             </button>
             <button
               type="button"
               onClick={() => handleQuickSearch("What's the top 3 highest scoring player?", 'players')}
-              className="px-2.5 py-1 rounded-lg bg-slate-900 border border-white/15 hover:bg-slate-800 text-slate-200 text-xs font-bold transition-colors flex items-center gap-1"
+              className="h-9 w-full px-3 rounded-xl bg-slate-900 border border-white/15 hover:bg-slate-800 text-slate-200 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 truncate active:scale-[0.98]"
             >
-              <Star className="size-3 text-orange-400" /> Top 3 scorers
+              <Star className="size-3.5 text-orange-400 shrink-0" />
+              <span className="truncate">Top 3 scorers</span>
             </button>
             <button
               type="button"
               onClick={() => handleQuickSearch("What's the top 5 highest win rate tribes or squads?", 'colleges')}
-              className="px-2.5 py-1 rounded-lg bg-slate-900 border border-white/15 hover:bg-slate-800 text-slate-200 text-xs font-bold transition-colors flex items-center gap-1"
+              className="h-9 w-full px-3 rounded-xl bg-slate-900 border border-white/15 hover:bg-slate-800 text-slate-200 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 truncate active:scale-[0.98]"
             >
-              <Trophy className="size-3 text-emerald-400" /> Top 5 tribes win rate
+              <Trophy className="size-3.5 text-emerald-400 shrink-0" />
+              <span className="truncate">Top 5 tribes win rate</span>
             </button>
             <button
               type="button"
               onClick={() => handleQuickSearch('Search for upcoming games this month', 'matches')}
-              className="px-2.5 py-1 rounded-lg bg-slate-900 border border-white/15 hover:bg-slate-800 text-slate-200 text-xs font-bold transition-colors flex items-center gap-1"
+              className="h-9 w-full px-3 rounded-xl bg-slate-900 border border-white/15 hover:bg-slate-800 text-slate-200 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 truncate active:scale-[0.98]"
             >
-              <Calendar className="size-3 text-orange-400" /> Upcoming games this month
+              <Calendar className="size-3.5 text-orange-400 shrink-0" />
+              <span className="truncate">Upcoming this month</span>
             </button>
             <button
               type="button"
               onClick={() => handleQuickSearch('Search for basketball games this week', 'matches')}
-              className="px-2.5 py-1 rounded-lg bg-slate-900 border border-white/15 hover:bg-slate-800 text-slate-200 text-xs font-bold transition-colors"
+              className="h-9 w-full px-3 rounded-xl bg-slate-900 border border-white/15 hover:bg-slate-800 text-slate-200 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 truncate active:scale-[0.98]"
             >
-              Basketball games this week
+              <Activity className="size-3.5 text-orange-400 shrink-0" />
+              <span className="truncate">Basketball this week</span>
             </button>
           </div>
         </div>
@@ -729,19 +734,22 @@ export const VoiceQuerySearch: React.FC = () => {
 
       {/* Main Results View */}
       <main className="max-w-5xl mx-auto px-4 mt-6">
-        {/* Category Filter Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-3 mb-6 border-b border-white/10 no-scrollbar">
+        {/* Balanced 2x3 / 3x2 / 6x1 Category Filter Grid (No uneven widths or overflow scrolling) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pb-4 mb-6 border-b border-white/10">
           <Button
             size="sm"
             variant={activeTab === 'all' ? 'default' : 'outline'}
             onClick={() => handleTabChange('all')}
             data-testid="tab-filter-all"
-            className={`text-xs font-bold gap-1.5 rounded-xl h-8 px-3.5 ${
-              activeTab === 'all' ? 'bg-primary text-white' : 'bg-white/5 text-slate-400 border-white/10'
+            className={`w-full justify-between text-xs font-bold gap-1.5 rounded-xl h-9 px-3 ${
+              activeTab === 'all' ? 'bg-primary text-white' : 'bg-slate-900 text-slate-300 border-white/10'
             }`}
           >
-            <Layers className="size-3.5" /> All
-            <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4 bg-white/10 text-white">
+            <span className="inline-flex items-center gap-1.5 truncate">
+              <Layers className="size-3.5 shrink-0" />
+              <span className="truncate">All</span>
+            </span>
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-white/10 text-white shrink-0">
               {totalCount}
             </Badge>
           </Button>
@@ -751,12 +759,15 @@ export const VoiceQuerySearch: React.FC = () => {
             variant={activeTab === 'matches' ? 'default' : 'outline'}
             onClick={() => handleTabChange('matches')}
             data-testid="tab-filter-matches"
-            className={`text-xs font-bold gap-1.5 rounded-xl h-8 px-3.5 ${
-              activeTab === 'matches' ? 'bg-primary text-white' : 'bg-white/5 text-slate-400 border-white/10'
+            className={`w-full justify-between text-xs font-bold gap-1.5 rounded-xl h-9 px-3 ${
+              activeTab === 'matches' ? 'bg-primary text-white' : 'bg-slate-900 text-slate-300 border-white/10'
             }`}
           >
-            <Activity className="size-3.5" /> Matches & Games
-            <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4 bg-white/10 text-white">
+            <span className="inline-flex items-center gap-1.5 truncate">
+              <Activity className="size-3.5 shrink-0" />
+              <span className="truncate">Matches</span>
+            </span>
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-white/10 text-white shrink-0">
               {matches.length}
             </Badge>
           </Button>
@@ -766,12 +777,15 @@ export const VoiceQuerySearch: React.FC = () => {
             variant={activeTab === 'players' ? 'default' : 'outline'}
             onClick={() => handleTabChange('players')}
             data-testid="tab-filter-players"
-            className={`text-xs font-bold gap-1.5 rounded-xl h-8 px-3.5 ${
-              activeTab === 'players' ? 'bg-primary text-white' : 'bg-white/5 text-slate-400 border-white/10'
+            className={`w-full justify-between text-xs font-bold gap-1.5 rounded-xl h-9 px-3 ${
+              activeTab === 'players' ? 'bg-primary text-white' : 'bg-slate-900 text-slate-300 border-white/10'
             }`}
           >
-            <Users className="size-3.5" /> Athletes
-            <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4 bg-white/10 text-white">
+            <span className="inline-flex items-center gap-1.5 truncate">
+              <Users className="size-3.5 shrink-0" />
+              <span className="truncate">Athletes</span>
+            </span>
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-white/10 text-white shrink-0">
               {players.length}
             </Badge>
           </Button>
@@ -781,12 +795,15 @@ export const VoiceQuerySearch: React.FC = () => {
             variant={activeTab === 'colleges' ? 'default' : 'outline'}
             onClick={() => handleTabChange('colleges')}
             data-testid="tab-filter-colleges"
-            className={`text-xs font-bold gap-1.5 rounded-xl h-8 px-3.5 ${
-              activeTab === 'colleges' ? 'bg-primary text-white' : 'bg-white/5 text-slate-400 border-white/10'
+            className={`w-full justify-between text-xs font-bold gap-1.5 rounded-xl h-9 px-3 ${
+              activeTab === 'colleges' ? 'bg-primary text-white' : 'bg-slate-900 text-slate-300 border-white/10'
             }`}
           >
-            <GraduationCap className="size-3.5" /> Colleges
-            <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4 bg-white/10 text-white">
+            <span className="inline-flex items-center gap-1.5 truncate">
+              <GraduationCap className="size-3.5 shrink-0" />
+              <span className="truncate">Colleges</span>
+            </span>
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-white/10 text-white shrink-0">
               {colleges.length}
             </Badge>
           </Button>
@@ -796,12 +813,15 @@ export const VoiceQuerySearch: React.FC = () => {
             variant={activeTab === 'rankings' ? 'default' : 'outline'}
             onClick={() => handleTabChange('rankings')}
             data-testid="tab-filter-rankings"
-            className={`text-xs font-bold gap-1.5 rounded-xl h-8 px-3.5 ${
-              activeTab === 'rankings' ? 'bg-primary text-white' : 'bg-white/5 text-slate-400 border-white/10'
+            className={`w-full justify-between text-xs font-bold gap-1.5 rounded-xl h-9 px-3 ${
+              activeTab === 'rankings' ? 'bg-primary text-white' : 'bg-slate-900 text-slate-300 border-white/10'
             }`}
           >
-            <Trophy className="size-3.5 text-amber-400" /> Star Leaders & MVP
-            <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4 bg-white/10 text-white">
+            <span className="inline-flex items-center gap-1.5 truncate">
+              <Trophy className="size-3.5 text-amber-400 shrink-0" />
+              <span className="truncate">Star Leaders</span>
+            </span>
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-white/10 text-white shrink-0">
               {stars.length}
             </Badge>
           </Button>
@@ -811,12 +831,15 @@ export const VoiceQuerySearch: React.FC = () => {
             variant={activeTab === 'schedules' ? 'default' : 'outline'}
             onClick={() => handleTabChange('schedules')}
             data-testid="tab-filter-schedules"
-            className={`text-xs font-bold gap-1.5 rounded-xl h-8 px-3.5 ${
-              activeTab === 'schedules' ? 'bg-primary text-white' : 'bg-white/5 text-slate-400 border-white/10'
+            className={`w-full justify-between text-xs font-bold gap-1.5 rounded-xl h-9 px-3 ${
+              activeTab === 'schedules' ? 'bg-primary text-white' : 'bg-slate-900 text-slate-300 border-white/10'
             }`}
           >
-            <Calendar className="size-3.5" /> Schedules
-            <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4 bg-white/10 text-white">
+            <span className="inline-flex items-center gap-1.5 truncate">
+              <Calendar className="size-3.5 shrink-0" />
+              <span className="truncate">Schedules</span>
+            </span>
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-white/10 text-white shrink-0">
               {schedules.length}
             </Badge>
           </Button>

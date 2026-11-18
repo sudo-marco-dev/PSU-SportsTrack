@@ -121,15 +121,25 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
         </div>
       </CardHeader>
 
-      <CardContent className="p-4 space-y-4">
-        {/* Main Controls & Live Visualizer */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/5 p-3.5 rounded-xl border border-white/10">
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+      <CardContent className="p-3.5 space-y-3">
+        {/* Primary Voice Control + Live Audio Transcript Box (Placed at top for instant mobile visibility) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-stretch">
+          <div className="lg:col-span-4 flex flex-col justify-between bg-slate-900/90 p-3 rounded-xl border border-white/10 gap-2">
+            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <span className="inline-flex items-center gap-1.5">
+                <Activity className="size-3.5 text-orange-400 shrink-0" />
+                <span>Microphone Control</span>
+              </span>
+              <span className={isListening ? 'text-emerald-400' : 'text-slate-500'}>
+                {isListening ? 'Active' : 'Standby'}
+              </span>
+            </div>
+
             <Button
               size="lg"
               data-testid="btn-toggle-voice-scoring"
               onClick={toggleListening}
-              className={`font-black uppercase tracking-wide gap-2.5 h-12 px-6 rounded-xl transition-colors shadow-lg active:scale-[0.98] ${
+              className={`w-full justify-center font-black uppercase tracking-wide gap-2 h-11 px-4 rounded-xl transition-colors shadow-lg active:scale-[0.98] ${
                 isListening
                   ? 'bg-red-600 hover:bg-red-700 text-white shadow-red-900/40 ring-2 ring-red-500/40'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-900/40'
@@ -137,159 +147,166 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
             >
               {isListening ? (
                 <>
-                  <MicOff className="size-5" />
-                  Stop Voice
+                  <MicOff className="size-4 shrink-0" />
+                  <span className="truncate">Stop Voice</span>
                 </>
               ) : (
                 <>
-                  <Mic className="size-5" />
-                  Start Voice (Hands-Free)
+                  <Mic className="size-4 shrink-0" />
+                  <span className="truncate">Start Voice (Hands-Free)</span>
                 </>
               )}
             </Button>
-
-            {isListening && (
-              <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold">
-                <Activity className="size-4" />
-                <span className="hidden sm:inline">Microphone Active</span>
-              </div>
-            )}
           </div>
 
-          {/* Quick Preset Voice Testing Buttons */}
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-            <span className="text-[11px] font-bold uppercase text-slate-400 mr-1 hidden sm:inline">
-              Quick Test:
-            </span>
+          {/* Live Audio Transcript Box (Fixed minimum height prevents mobile scroll jumping) */}
+          <div className="lg:col-span-8 bg-slate-900/90 rounded-xl p-3 border border-white/10 font-mono text-xs min-h-[5.5rem] flex flex-col justify-between gap-1.5">
+            <div className="flex items-center justify-between gap-2 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
+              <span className="truncate">Real-time Speech Recognition Feed</span>
+              {lastCommand && (
+                <span className="text-emerald-400 font-bold shrink-0">
+                  {lastCommand.intent} ({Math.round(lastCommand.confidence * 100)}%)
+                </span>
+              )}
+            </div>
+
+            <div className="min-h-6 flex items-center text-slate-200 text-xs sm:text-sm">
+              {interimTranscript ? (
+                <span className="text-amber-400 italic font-sans flex items-center gap-1.5 truncate">
+                  <span className="size-1.5 bg-amber-400 rounded-full shrink-0" />
+                  "{interimTranscript}"
+                </span>
+              ) : transcript ? (
+                <span className="text-emerald-300 font-sans font-semibold truncate">
+                  "{transcript}"
+                </span>
+              ) : (
+                <span className="text-slate-500 italic font-sans text-xs truncate">
+                  {isListening
+                    ? 'Listening... say "Give 2 points to Team A" or "Timeout Team B"'
+                    : 'Tap "Start Voice" or use the balanced Quick Test grid below.'}
+                </span>
+              )}
+            </div>
+
+            <div className="pt-1 border-t border-white/10 min-h-[1.35rem] flex items-center gap-2 text-[11px] font-medium font-sans">
+              {error ? (
+                <div className="flex items-center gap-1.5 text-red-400 truncate">
+                  <AlertCircle className="size-3.5 shrink-0" />
+                  <span className="truncate">{error}</span>
+                </div>
+              ) : feedbackMessage ? (
+                <div className="flex items-center gap-1.5 text-primary-foreground truncate">
+                  <CheckCircle2 className="size-3.5 text-emerald-400 shrink-0" />
+                  <span className="truncate">{feedbackMessage}</span>
+                </div>
+              ) : (
+                <span className="text-slate-500 text-[10px]">
+                  Ready for voice or quick-test input
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Symmetric 8-Button Quick Test Grid (2x4 on mobile, 4x2 on tablet, 8x1 on wide desktop) */}
+        <div className="bg-slate-900/60 border border-white/10 rounded-xl p-2.5 space-y-1.5">
+          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+            Quick Command Test Grid:
+          </span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-1.5 w-full">
             <Button
               size="sm"
               variant="outline"
-              className="text-xs h-8 bg-white/5 border-white/20 hover:bg-white/15 text-slate-200"
+              className="h-8 w-full justify-center px-2 text-[11px] font-bold bg-slate-950 border-white/15 hover:bg-slate-800 text-orange-400 rounded-lg truncate active:scale-[0.98]"
               onClick={() => handleManualSimulate(`Add 2 points to ${teamAName || 'Team A'}`)}
             >
-              +2 {teamAName?.slice(0, 8) || 'Team A'}
+              <span className="truncate">+2 {(teamAName || 'Team A').slice(0, 7)}</span>
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="text-xs h-8 bg-white/5 border-white/20 hover:bg-white/15 text-slate-200"
+              className="h-8 w-full justify-center px-2 text-[11px] font-bold bg-slate-950 border-white/15 hover:bg-slate-800 text-cyan-400 rounded-lg truncate active:scale-[0.98]"
               onClick={() => handleManualSimulate(`Add 3 points to ${teamBName || 'Team B'}`)}
             >
-              +3 {teamBName?.slice(0, 8) || 'Team B'}
+              <span className="truncate">+3 {(teamBName || 'Team B').slice(0, 7)}</span>
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="text-xs h-8 bg-white/5 border-white/20 hover:bg-white/15 text-amber-300"
-              onClick={() => handleManualSimulate(`Timeout ${teamAName || 'Team A'}`)}
+              className="h-8 w-full justify-center px-2 text-[11px] font-bold bg-slate-950 border-white/15 hover:bg-slate-800 text-slate-200 rounded-lg truncate active:scale-[0.98]"
+              onClick={() => handleManualSimulate(`Pick player 1 ${teamAName || 'Team A'}`)}
             >
-              Timeout
+              <span className="truncate">Pick #1</span>
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="text-xs h-8 bg-slate-900 border-white/15 hover:bg-slate-800 text-slate-200 inline-flex items-center"
-              onClick={() => handleManualSimulate(`Substitute player 1 to player 2 from ${teamAName || 'Team A'}`)}
+              className="h-8 w-full justify-center px-2 text-[11px] font-bold bg-slate-950 border-white/15 hover:bg-slate-800 text-slate-200 inline-flex items-center rounded-lg truncate active:scale-[0.98]"
+              onClick={() =>
+                handleManualSimulate(
+                  `Substitute player 1 to player 2 from ${teamAName || 'Team A'}`
+                )
+              }
             >
               <span>Sub #1</span>
-              <ArrowRight className="size-3 mx-1 text-orange-400" />
+              <ArrowRight className="size-3 mx-0.5 text-orange-400 shrink-0" />
               <span>#2</span>
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="text-xs h-8 bg-slate-900 border-white/15 hover:bg-slate-800 text-emerald-400"
+              className="h-8 w-full justify-center px-2 text-[11px] font-bold bg-slate-950 border-white/15 hover:bg-slate-800 text-amber-300 rounded-lg truncate active:scale-[0.98]"
+              onClick={() => handleManualSimulate(`Timeout ${teamAName || 'Team A'}`)}
+            >
+              <span className="truncate">Timeout</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 w-full justify-center px-2 text-[11px] font-bold bg-slate-950 border-white/15 hover:bg-slate-800 text-emerald-400 rounded-lg truncate active:scale-[0.98]"
               onClick={() => handleManualSimulate('Pause game')}
             >
-              <Pause className="size-3 mr-1" />
-              Pause
+              <Pause className="size-3 mr-1 shrink-0" />
+              <span className="truncate">Pause</span>
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="text-xs h-8 bg-slate-900 border-white/15 hover:bg-slate-800 text-rose-400"
+              className="h-8 w-full justify-center px-2 text-[11px] font-bold bg-slate-950 border-white/15 hover:bg-slate-800 text-rose-400 rounded-lg truncate active:scale-[0.98]"
               onClick={() => handleManualSimulate(`Deduct 1 point from ${teamAName || 'Team A'}`)}
             >
-              <MinusCircle className="size-3 mr-1" />
-              Deduct -1
+              <MinusCircle className="size-3 mr-1 shrink-0" />
+              <span className="truncate">Deduct -1</span>
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="text-xs h-8 bg-slate-900 border-white/15 hover:bg-slate-800 text-amber-300"
+              className="h-8 w-full justify-center px-2 text-[11px] font-bold bg-slate-950 border-white/15 hover:bg-slate-800 text-amber-300 rounded-lg truncate active:scale-[0.98]"
               onClick={() => handleManualSimulate('Undo last score')}
             >
-              <RotateCcw className="size-3 mr-1" />
-              Undo
+              <RotateCcw className="size-3 mr-1 shrink-0" />
+              <span className="truncate">Undo</span>
             </Button>
-          </div>
-        </div>
-
-        {/* Live Audio Transcript Box (Fixed minimum height prevents mobile scroll jumping) */}
-        <div className="bg-slate-950/80 rounded-xl p-3 border border-white/10 font-mono text-xs min-h-[5.5rem] flex flex-col justify-between gap-1.5">
-          <div className="flex items-center justify-between text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-            <span>Real-time Speech Recognition Feed</span>
-            {lastCommand && (
-              <span className="text-emerald-400 font-bold">
-                Intent: {lastCommand.intent} ({Math.round(lastCommand.confidence * 100)}% match)
-              </span>
-            )}
-          </div>
-
-          <div className="min-h-6 flex items-center text-slate-200 text-sm">
-            {interimTranscript ? (
-              <span className="text-amber-400 italic font-sans flex items-center gap-1.5">
-                <span className="size-1.5 bg-amber-400 rounded-full shrink-0" />
-                "{interimTranscript}"
-              </span>
-            ) : transcript ? (
-              <span className="text-emerald-300 font-sans font-semibold">
-                "{transcript}"
-              </span>
-            ) : (
-              <span className="text-slate-500 italic font-sans text-xs">
-                {isListening
-                  ? 'Listening... say e.g. "Add 2 points Team A" or "Timeout Team B"'
-                  : 'Click "Start Voice" or use the quick test buttons to issue commands.'}
-              </span>
-            )}
-          </div>
-
-          <div className="pt-1 border-t border-white/10 min-h-[1.35rem] flex items-center gap-2 text-[11px] font-medium font-sans">
-            {error ? (
-              <div className="flex items-center gap-1.5 text-red-400">
-                <AlertCircle className="size-3.5 shrink-0" />
-                <span>{error}</span>
-              </div>
-            ) : feedbackMessage ? (
-              <div className="flex items-center gap-1.5 text-primary-foreground">
-                <CheckCircle2 className="size-3.5 text-emerald-400 shrink-0" />
-                <span>{feedbackMessage}</span>
-              </div>
-            ) : (
-              <span className="text-slate-500 text-[10px]">
-                Ready for voice or quick-test input
-              </span>
-            )}
           </div>
         </div>
 
         {/* Manual Voice Simulator Input for Fallback or Testing */}
-        <form onSubmit={handleCustomSubmit} className="flex gap-2">
+        <form onSubmit={handleCustomSubmit} className="flex items-center gap-2">
           <input
             type="text"
             data-testid="input-simulate-voice-command"
             value={customPhrase}
             onChange={(e) => setCustomPhrase(e.target.value)}
-            placeholder='Type command to test parser, e.g. "Add 3 points to Team B" or "Foul player 12"'
-            className="flex-1 bg-slate-950 border border-white/15 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder='Type command, e.g. "Add 3 points to Team B" or "Foul player 12"'
+            className="flex-1 h-9 bg-slate-900 border border-white/15 rounded-xl px-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <Button
             type="submit"
             size="sm"
             data-testid="btn-submit-simulate-voice"
             variant="outline"
-            className="text-xs bg-white/10 hover:bg-white/20 border-white/20 text-white font-bold"
+            className="h-9 px-3.5 text-xs bg-slate-900 hover:bg-slate-800 border-white/20 text-white font-bold rounded-xl shrink-0"
           >
             <Sparkles className="size-3.5 mr-1 text-amber-400" />
             Test Parser
