@@ -72,7 +72,6 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
           onClick={() => {
             if (!isOpen) {
               setIsOpen(true);
-              startListening(180);
             } else {
               stopListening();
               setIsOpen(false);
@@ -145,7 +144,7 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                   size="sm"
                   variant="outline"
                   data-testid="btn-hud-speak-toggle"
-                  onClick={() => (isListening ? stopListening() : startListening(0))}
+                  onClick={() => (isListening ? stopListening() : startListening())}
                   className={`h-8 px-3.5 text-xs font-bold gap-1.5 border-white/20 rounded-lg transition-colors active:scale-[0.98] ${
                     isListening
                       ? 'bg-red-500/20 text-red-300 border-red-500/40 hover:bg-red-500/30'

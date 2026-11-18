@@ -39,6 +39,7 @@ import {
   type SmartVoiceAnalysis,
   type FuzzyCorrection,
 } from '@/lib/smartVoiceQueryEngine';
+import { extractCleanSpeechTranscript } from '@/hooks/usePublicVoiceAssistant';
 
 interface MatchItem {
   id: string;
@@ -534,33 +535,39 @@ export const VoiceQuerySearch: React.FC = () => {
       };
 
       recognition.onresult = (event: any) => {
-        let interim = '';
-        let final = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          const piece = event.results[i]?.[0]?.transcript || '';
-          if (event.results[i].isFinal) {
-            final += piece;
-          } else {
-            interim += piece;
-          }
-        }
-        const combined = (final || interim).trim();
+        const { interim, final } = extractCleanSpeechTranscript(event);
+        const combined = final || interim;
         if (combined) {
           pageInterimRef.current = combined;
           setInputVal(combined);
         }
-        if (final.trim() && !pageFinalProcessedRef.current) {
+        if (final && !pageFinalProcessedRef.current) {
           pageFinalProcessedRef.current = true;
           pageInterimRef.current = '';
           setIsListening(false);
           const newParams = new URLSearchParams(searchParams);
-          newParams.set('q', final.trim());
+          newParams.set('q', final);
           setSearchParams(newParams);
         }
       };
 
-      recognition.onerror = () => {
+      recognition.onerror = (event: any) => {
+        if (pageInterimRef.current.trim().length > 0) return;
         setIsListening(false);
+        pageRecognitionRef.current = null;
+        const errCode = event?.error || '';
+        if (
+          (errCode === 'not-allowed' || errCode === 'service-not-allowed') &&
+          typeof navigator !== 'undefined' &&
+          navigator.mediaDevices?.getUserMedia
+        ) {
+          navigator.mediaDevices
+            .getUserMedia({ audio: true })
+            .then((stream) => {
+              stream.getTracks().forEach((t) => t.stop());
+            })
+            .catch(() => {});
+        }
       };
 
       recognition.onend = () => {
@@ -578,6 +585,7 @@ export const VoiceQuerySearch: React.FC = () => {
 
       pageRecognitionRef.current = recognition;
       recognition.start();
+      setIsListening(true);
     } catch {
       setIsListening(false);
       pageRecognitionRef.current = null;

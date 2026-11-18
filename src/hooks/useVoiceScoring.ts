@@ -2,9 +2,11 @@
  * Web Speech API Hook for Courtside Voice Scoring
  * PSU SportsTrack - Multimodal Interaction Module
  *
- * Includes mobile SpeechRecognition interim-result flushing on `onend`,
- * TTS audio-ducking cooldowns, benign 'aborted'/'no-speech' suppression,
- * and steady `isListening` state across mobile utterance restarts.
+ * Engineered for both Desktop Chrome/Edge/Safari and Mobile Chrome (Android) / iOS Safari:
+ * - Calls `recognition.start()` 100% synchronously inside the user's tap handler (required by Mobile Chrome).
+ * - Deduplicates Android Chrome's cumulative `event.results` transcript chunks.
+ * - Flushes uncommitted `interimResults` on `onend` when mobile browsers omit `isFinal = true`.
+ * - Defaults TTS speech synthesis to muted on mobile so Android AudioManager never revokes mic focus.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -20,11 +22,16 @@ import {
   playClockPauseSound,
   playClockStartSound,
 } from '@/lib/audioFx';
+import { extractCleanSpeechTranscript } from './usePublicVoiceAssistant';
 
 interface IWindow extends Window {
   SpeechRecognition?: any;
   webkitSpeechRecognition?: any;
 }
+
+const IS_MOBILE_BROWSER =
+  typeof navigator !== 'undefined' &&
+  /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
 /**
  * Text-to-speech synthesized audio confirmation
@@ -32,7 +39,9 @@ interface IWindow extends Window {
 export function speakConfirmation(text: string): void {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
   try {
-    window.speechSynthesis.cancel();
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+    }
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1.05;
     utterance.pitch = 1.0;
@@ -72,15 +81,16 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
     history: [],
   });
 
-  const [isMuted, setIsMuted] = useState<boolean>(!enableSpeechFeedback);
+  // Default TTS muted on mobile browsers so Android AudioManager does not abort SpeechRecognizer
+  const [isMuted, setIsMuted] = useState<boolean>(
+    IS_MOBILE_BROWSER ? true : !enableSpeechFeedback
+  );
 
   const recognitionRef = useRef<any>(null);
   const isListeningRef = useRef<boolean>(false);
   const restartTimerRef = useRef<number | null>(null);
   const latestInterimRef = useRef<string>('');
   const finalProcessedRef = useRef<boolean>(false);
-  const lastStartTimestampRef = useRef<number>(0);
-  const rapidAbortCountRef = useRef<number>(0);
 
   const optionsRef = useRef(options);
   optionsRef.current = options;
@@ -100,7 +110,7 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
     }
   }, []);
 
-  const detachCurrentRecognition = useCallback(() => {
+  const cleanupRecognitionRef = useCallback(() => {
     if (restartTimerRef.current !== null && typeof window !== 'undefined') {
       window.clearTimeout(restartTimerRef.current);
       restartTimerRef.current = null;
@@ -112,11 +122,6 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
       existing.onresult = null;
       existing.onerror = null;
       existing.onend = null;
-      try {
-        existing.abort?.();
-      } catch {
-        // ignore
-      }
       try {
         existing.stop?.();
       } catch {
@@ -344,171 +349,197 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
   );
 
   /**
-   * Internal cycle launcher that respects mobile audio ducking & debounce
+   * Creates and starts a SpeechRecognition instance.
+   * When invoked from `startListening()`, this runs 100% SYNCHRONOUSLY inside the user's click event.
    */
-  const launchRecognitionCycle = useCallback(
-    (delayMs = 0) => {
+  const startRecognitionNow = useCallback(
+    (isAutoRestart = false) => {
       const win = typeof window !== 'undefined' ? (window as unknown as IWindow) : null;
       const SpeechRecognitionClass = win?.SpeechRecognition || win?.webkitSpeechRecognition;
-      if (!SpeechRecognitionClass || !isListeningRef.current) return;
+      if (!SpeechRecognitionClass) return;
 
-      detachCurrentRecognition();
+      cleanupRecognitionRef();
 
-      restartTimerRef.current = window.setTimeout(() => {
-        restartTimerRef.current = null;
-        if (!isListeningRef.current) return;
+      try {
+        const recognition = new SpeechRecognitionClass();
+        // Desktop Chrome supports continuous=true; Mobile Chrome requires single-utterance mode
+        recognition.continuous = !IS_MOBILE_BROWSER;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+        recognition.lang = 'en-US';
 
-        // If browser TTS is currently speaking confirmation audio, wait for it to finish
-        // so mobile OS audio routing does not immediately abort the microphone.
-        if (typeof window !== 'undefined' && window.speechSynthesis?.speaking) {
-          launchRecognitionCycle(320);
-          return;
-        }
+        latestInterimRef.current = '';
+        finalProcessedRef.current = false;
 
-        try {
-          const isMobile =
-            typeof navigator !== 'undefined' &&
-            /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+        recognition.onstart = () => {
+          isListeningRef.current = true;
+          setState((prev) => ({
+            ...prev,
+            isListening: true,
+            error: null,
+            feedbackMessage:
+              isAutoRestart && prev.feedbackMessage
+                ? prev.feedbackMessage
+                : 'Listening now — speak your command clearly.',
+          }));
+        };
 
-          const recognition = new SpeechRecognitionClass();
-          // Mobile browsers handle single-utterance + debounced auto-restart cleanly
-          // without triggering continuous-mode audio session aborts.
-          recognition.continuous = !isMobile;
-          recognition.interimResults = true;
-          recognition.maxAlternatives = 1;
-          recognition.lang = 'en-US';
+        recognition.onresult = (event: any) => {
+          const { interim, final } = extractCleanSpeechTranscript(event);
+          const combined = final || interim;
 
-          latestInterimRef.current = '';
-          finalProcessedRef.current = false;
-          lastStartTimestampRef.current = Date.now();
+          if (combined) {
+            latestInterimRef.current = combined;
+            setState((prev) => ({ ...prev, interimTranscript: combined }));
+          }
 
-          recognition.onstart = () => {
-            if (!isListeningRef.current) return;
-            setState((prev) => ({
-              ...prev,
-              isListening: true,
-              error: null,
-              feedbackMessage:
-                prev.feedbackMessage && prev.feedbackMessage !== 'Voice scoring paused.'
-                  ? prev.feedbackMessage
-                  : 'Voice scoring active. Speak commands clearly.',
-            }));
-          };
+          if (final && !finalProcessedRef.current) {
+            finalProcessedRef.current = true;
+            latestInterimRef.current = '';
+            processTranscript(final);
+          }
+        };
 
-          recognition.onresult = (event: any) => {
-            let interim = '';
-            let final = '';
+        recognition.onerror = (event: any) => {
+          const errCode = event?.error || 'unknown';
 
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-              const piece = event.results[i]?.[0]?.transcript || '';
-              if (event.results[i].isFinal) {
-                final += piece;
-              } else {
-                interim += piece;
-              }
-            }
+          // If words were already captured before mobile fired 'aborted'/'no-speech', let onend flush them
+          if (latestInterimRef.current.trim().length > 0) {
+            return;
+          }
 
-            rapidAbortCountRef.current = 0;
-
-            const combined = (final || interim).trim();
-            if (combined) {
-              latestInterimRef.current = combined;
-              setState((prev) => ({ ...prev, interimTranscript: combined }));
-            }
-
-            if (final.trim() && !finalProcessedRef.current) {
-              finalProcessedRef.current = true;
-              latestInterimRef.current = '';
-              processTranscript(final.trim());
-            }
-          };
-
-          recognition.onerror = (event: any) => {
-            const errCode = event?.error || 'unknown';
-            // Ignore routine mobile 'aborted' and 'no-speech' events so the UI never
-            // flashes red errors or jumps scroll height during continuous listening.
-            if (errCode === 'no-speech' || errCode === 'aborted') {
-              return;
-            }
-
-            if (
-              errCode === 'not-allowed' ||
-              errCode === 'service-not-allowed' ||
-              errCode === 'audio-capture'
-            ) {
-              isListeningRef.current = false;
-              setState((prev) => ({
-                ...prev,
-                isListening: false,
-                error:
-                  'Microphone access denied or unavailable. Check browser mic permissions.',
-              }));
-              return;
-            }
-
-            setState((prev) => ({
-              ...prev,
-              error: `Voice recognition notice: ${errCode}`,
-            }));
-          };
-
-          recognition.onend = () => {
+          // If a background auto-restart was rejected by mobile Chrome (because mobile requires
+          // a fresh user tap per utterance), exit listening cleanly without showing a red error.
+          if (isAutoRestart && (errCode === 'aborted' || errCode === 'not-allowed' || errCode === 'no-speech')) {
+            isListeningRef.current = false;
             recognitionRef.current = null;
+            setState((prev) => ({
+              ...prev,
+              isListening: false,
+              interimTranscript: '',
+              error: null,
+            }));
+            return;
+          }
 
-            // Flush any uncommitted mobile interim speech before restarting or stopping
-            const pendingInterim = latestInterimRef.current.trim();
-            if (!finalProcessedRef.current && pendingInterim.length > 0) {
-              finalProcessedRef.current = true;
-              latestInterimRef.current = '';
-              processTranscript(pendingInterim);
-            }
-
-            if (!isListeningRef.current) {
-              setState((prev) => ({ ...prev, isListening: false, interimTranscript: '' }));
-              return;
-            }
-
-            const elapsed = Date.now() - lastStartTimestampRef.current;
-            if (elapsed < 220 && !pendingInterim) {
-              rapidAbortCountRef.current += 1;
-            } else {
-              rapidAbortCountRef.current = 0;
-            }
-
-            // Guard against mobile background/hardware lockouts (>5 instant aborts in a row)
-            if (rapidAbortCountRef.current >= 5) {
+          if (errCode === 'no-speech' || errCode === 'aborted') {
+            if (IS_MOBILE_BROWSER) {
               isListeningRef.current = false;
+              recognitionRef.current = null;
               setState((prev) => ({
                 ...prev,
                 isListening: false,
                 interimTranscript: '',
-                feedbackMessage: 'Microphone paused by device. Tap Start Voice when ready to speak.',
+                error: null,
+                feedbackMessage: 'Tap Start Voice and speak right away.',
               }));
-              return;
             }
+            return;
+          }
 
-            // Keep state.isListening = true across the 320ms mobile debounce so the
-            // Stop Voice button never blinks or flickers between utterances.
-            launchRecognitionCycle(320);
-          };
-
-          recognitionRef.current = recognition;
-          recognition.start();
-        } catch (err: any) {
           isListeningRef.current = false;
+          recognitionRef.current = null;
+
+          if (errCode === 'not-allowed' || errCode === 'service-not-allowed') {
+            if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+              navigator.mediaDevices
+                .getUserMedia({ audio: true })
+                .then((stream) => {
+                  stream.getTracks().forEach((t) => t.stop());
+                  setState((prev) => ({
+                    ...prev,
+                    isListening: false,
+                    error: null,
+                    feedbackMessage: 'Microphone permission unlocked! Tap Start Voice again.',
+                  }));
+                })
+                .catch(() => {
+                  setState((prev) => ({
+                    ...prev,
+                    isListening: false,
+                    error:
+                      'Microphone permission blocked. Tap the lock icon in Chrome address bar -> Allow Microphone.',
+                  }));
+                });
+            } else {
+              setState((prev) => ({
+                ...prev,
+                isListening: false,
+                error: 'Microphone access denied. Check browser site permissions.',
+              }));
+            }
+            return;
+          }
+
           setState((prev) => ({
             ...prev,
             isListening: false,
-            error: `Could not start microphone: ${err?.message || 'Permission denied'}`,
+            error: `Voice recognition notice (${errCode}). Use Quick Test grid or type below.`,
           }));
-        }
-      }, delayMs);
+        };
+
+        recognition.onend = () => {
+          recognitionRef.current = null;
+
+          // Flush any uncommitted mobile interim speech before ending or restarting
+          const pendingInterim = latestInterimRef.current.trim();
+          const didFlushCommand = !finalProcessedRef.current && pendingInterim.length > 0;
+          if (didFlushCommand) {
+            finalProcessedRef.current = true;
+            latestInterimRef.current = '';
+            processTranscript(pendingInterim);
+          }
+
+          if (!isListeningRef.current) {
+            setState((prev) => ({ ...prev, isListening: false, interimTranscript: '' }));
+            return;
+          }
+
+          // On Mobile Chrome, a single user tap authorizes one utterance session; trying to call
+          // recognition.start() from an async timer without a new tap causes Android Chrome to abort.
+          // End cleanly after each mobile utterance so the next tap is a 100% synchronous user gesture!
+          if (IS_MOBILE_BROWSER) {
+            isListeningRef.current = false;
+            setState((prev) => ({
+              ...prev,
+              isListening: false,
+              interimTranscript: '',
+            }));
+            return;
+          }
+
+          // On Desktop Chrome/Edge, auto-restart continuous listening seamlessly
+          restartTimerRef.current = window.setTimeout(() => {
+            restartTimerRef.current = null;
+            if (isListeningRef.current) {
+              startRecognitionNow(true);
+            }
+          }, 250);
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
+        isListeningRef.current = true;
+        setState((prev) => ({
+          ...prev,
+          isListening: true,
+          error: null,
+        }));
+      } catch (err: any) {
+        isListeningRef.current = false;
+        recognitionRef.current = null;
+        setState((prev) => ({
+          ...prev,
+          isListening: false,
+          error: `Could not start microphone: ${err?.message || 'Permission denied'}`,
+        }));
+      }
     },
-    [detachCurrentRecognition, processTranscript]
+    [cleanupRecognitionRef, processTranscript]
   );
 
   /**
-   * Start listening for voice commands
+   * Start listening for voice commands — called SYNCHRONOUSLY inside onClick!
    */
   const startListening = useCallback(() => {
     const win = typeof window !== 'undefined' ? (window as unknown as IWindow) : null;
@@ -519,7 +550,7 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
         ...prev,
         isListening: false,
         error:
-          'Mobile browsers require HTTPS (or localhost) for microphone access. Over plain HTTP LAN (192.168.x.x), use Quick Test buttons or type below.',
+          'Mobile browsers require HTTPS (Vercel preview URL) for microphone access. Over plain HTTP LAN, use the Quick Test buttons below.',
       }));
       return;
     }
@@ -533,23 +564,27 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
       return;
     }
 
-    rapidAbortCountRef.current = 0;
-    isListeningRef.current = true;
-    setState((prev) => ({
-      ...prev,
-      isListening: true,
-      error: null,
-      feedbackMessage: 'Voice scoring active. Speak commands clearly.',
-    }));
+    if (
+      typeof window !== 'undefined' &&
+      'speechSynthesis' in window &&
+      window.speechSynthesis?.speaking
+    ) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {
+        // ignore
+      }
+    }
 
-    launchRecognitionCycle(60);
-  }, [launchRecognitionCycle]);
+    // Call startRecognitionNow(false) synchronously on the user's tap call stack!
+    startRecognitionNow(false);
+  }, [startRecognitionNow]);
 
   const stopListening = useCallback(() => {
     isListeningRef.current = false;
 
     const pendingInterim = latestInterimRef.current.trim();
-    detachCurrentRecognition();
+    cleanupRecognitionRef();
 
     if (!finalProcessedRef.current && pendingInterim.length > 0) {
       finalProcessedRef.current = true;
@@ -562,12 +597,12 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
       isListening: false,
       interimTranscript: '',
       error: null,
-      feedbackMessage: 'Voice scoring paused.',
+      feedbackMessage: prev.feedbackMessage || 'Voice scoring paused.',
     }));
-  }, [detachCurrentRecognition, processTranscript]);
+  }, [cleanupRecognitionRef, processTranscript]);
 
   const toggleListening = useCallback(() => {
-    if (state.isListening) {
+    if (isListeningRef.current || state.isListening) {
       stopListening();
     } else {
       startListening();
@@ -584,9 +619,9 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
   useEffect(() => {
     return () => {
       isListeningRef.current = false;
-      detachCurrentRecognition();
+      cleanupRecognitionRef();
     };
-  }, [detachCurrentRecognition]);
+  }, [cleanupRecognitionRef]);
 
   return {
     ...state,
