@@ -2081,7 +2081,7 @@ export const FacilitatorKiosk = () => {
           </div>
 
           {isMultimodalOpen && (
-            <div className="max-h-[42vh] overflow-y-auto scrollbar-hide space-y-2 pr-0.5">
+            <div className="max-h-[42vh] overflow-y-auto overscroll-contain touch-pan-y scrollbar-hide space-y-2 pr-0.5">
               <TouchlessGestureHUD
                 gestures={touchlessGestures}
                 leftTeamName={leftColumnTeamName}

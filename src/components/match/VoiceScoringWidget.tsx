@@ -129,9 +129,9 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
               size="lg"
               data-testid="btn-toggle-voice-scoring"
               onClick={toggleListening}
-              className={`font-black uppercase tracking-wide gap-2.5 h-12 px-6 rounded-xl transition-all shadow-lg active:scale-95 ${
+              className={`font-black uppercase tracking-wide gap-2.5 h-12 px-6 rounded-xl transition-colors shadow-lg active:scale-[0.98] ${
                 isListening
-                  ? 'bg-red-600 hover:bg-red-700 text-white shadow-red-900/40 ring-4 ring-red-500/30 animate-pulse'
+                  ? 'bg-red-600 hover:bg-red-700 text-white shadow-red-900/40 ring-2 ring-red-500/40'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-900/40'
               }`}
             >
@@ -149,7 +149,7 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
             </Button>
 
             {isListening && (
-              <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold animate-pulse">
+              <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold">
                 <Activity className="size-4" />
                 <span className="hidden sm:inline">Microphone Active</span>
               </div>
@@ -225,8 +225,8 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
           </div>
         </div>
 
-        {/* Live Audio Transcript Box */}
-        <div className="bg-slate-950/80 rounded-xl p-3 border border-white/10 font-mono text-xs space-y-1.5">
+        {/* Live Audio Transcript Box (Fixed minimum height prevents mobile scroll jumping) */}
+        <div className="bg-slate-950/80 rounded-xl p-3 border border-white/10 font-mono text-xs min-h-[5.5rem] flex flex-col justify-between gap-1.5">
           <div className="flex items-center justify-between text-slate-400 text-[10px] uppercase font-bold tracking-wider">
             <span>Real-time Speech Recognition Feed</span>
             {lastCommand && (
@@ -236,10 +236,10 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
             )}
           </div>
 
-          <div className="min-h-7 flex items-center text-slate-200 text-sm">
+          <div className="min-h-6 flex items-center text-slate-200 text-sm">
             {interimTranscript ? (
               <span className="text-amber-400 italic font-sans flex items-center gap-1.5">
-                <span className="size-1.5 bg-amber-400 rounded-full animate-ping" />
+                <span className="size-1.5 bg-amber-400 rounded-full shrink-0" />
                 "{interimTranscript}"
               </span>
             ) : transcript ? (
@@ -247,7 +247,7 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
                 "{transcript}"
               </span>
             ) : (
-              <span className="text-slate-500 italic font-sans">
+              <span className="text-slate-500 italic font-sans text-xs">
                 {isListening
                   ? 'Listening... say e.g. "Add 2 points Team A" or "Timeout Team B"'
                   : 'Click "Start Voice" or use the quick test buttons to issue commands.'}
@@ -255,19 +255,23 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
             )}
           </div>
 
-          {feedbackMessage && (
-            <div className="pt-1 border-t border-white/10 flex items-center gap-2 text-[11px] text-primary-foreground font-medium font-sans">
-              <CheckCircle2 className="size-3.5 text-emerald-400 shrink-0" />
-              <span>{feedbackMessage}</span>
-            </div>
-          )}
-
-          {error && (
-            <div className="pt-1 border-t border-red-500/20 flex items-center gap-2 text-[11px] text-red-400 font-medium font-sans">
-              <AlertCircle className="size-3.5 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
+          <div className="pt-1 border-t border-white/10 min-h-[1.35rem] flex items-center gap-2 text-[11px] font-medium font-sans">
+            {error ? (
+              <div className="flex items-center gap-1.5 text-red-400">
+                <AlertCircle className="size-3.5 shrink-0" />
+                <span>{error}</span>
+              </div>
+            ) : feedbackMessage ? (
+              <div className="flex items-center gap-1.5 text-primary-foreground">
+                <CheckCircle2 className="size-3.5 text-emerald-400 shrink-0" />
+                <span>{feedbackMessage}</span>
+              </div>
+            ) : (
+              <span className="text-slate-500 text-[10px]">
+                Ready for voice or quick-test input
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Manual Voice Simulator Input for Fallback or Testing */}

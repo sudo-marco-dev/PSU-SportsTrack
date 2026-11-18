@@ -40,6 +40,7 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
     isListening,
     transcript,
     interimTranscript,
+    voiceError,
     activeQuery,
     queryResults,
     isLoadingResults,
@@ -71,14 +72,15 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
           onClick={() => {
             if (!isOpen) {
               setIsOpen(true);
-              startListening();
+              startListening(180);
             } else {
+              stopListening();
               setIsOpen(false);
             }
           }}
           className={`size-14 rounded-full shadow-2xl p-0 transition-all duration-300 relative group flex items-center justify-center border-2 border-white/20 active:scale-95 ${
             isListening
-              ? 'bg-red-600 hover:bg-red-700 ring-4 ring-red-500/40 animate-pulse'
+              ? 'bg-red-600 hover:bg-red-700 ring-4 ring-red-500/40'
               : 'bg-primary hover:bg-primary/90 hover:scale-105'
           }`}
           title="Open PSU SportsTrack Voice Assistant"
@@ -139,20 +141,24 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                   {isListening ? 'Listening live...' : 'Voice Feed'}
                 </span>
                 <Button
+                  type="button"
                   size="sm"
                   variant="outline"
-                  onClick={isListening ? stopListening : startListening}
-                  className={`h-7 px-3 text-xs font-bold gap-1.5 border-white/20 rounded-lg ${
-                    isListening ? 'bg-red-500/20 text-red-300 border-red-500/40' : 'bg-white/10 text-white'
+                  data-testid="btn-hud-speak-toggle"
+                  onClick={() => (isListening ? stopListening() : startListening(0))}
+                  className={`h-8 px-3.5 text-xs font-bold gap-1.5 border-white/20 rounded-lg transition-colors active:scale-[0.98] ${
+                    isListening
+                      ? 'bg-red-500/20 text-red-300 border-red-500/40 hover:bg-red-500/30'
+                      : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
                   {isListening ? (
                     <>
-                      <MicOff className="size-3" /> Stop
+                      <MicOff className="size-3.5" /> Stop
                     </>
                   ) : (
                     <>
-                      <Mic className="size-3" /> Speak
+                      <Mic className="size-3.5" /> Speak
                     </>
                   )}
                 </Button>
@@ -160,7 +166,7 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
 
               <div className="min-h-10 flex items-center text-slate-200">
                 {interimTranscript ? (
-                  <p className="text-amber-300 text-sm italic font-sans animate-pulse">
+                  <p className="text-amber-300 text-sm italic font-sans">
                     "{interimTranscript}"
                   </p>
                 ) : transcript ? (
@@ -173,6 +179,15 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                   </p>
                 )}
               </div>
+
+              {voiceError && (
+                <div
+                  data-testid="hud-voice-error"
+                  className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-1.5 text-xs text-amber-200"
+                >
+                  {voiceError}
+                </div>
+              )}
 
               {/* Active Context Badges & Auto-Correction */}
               <div className="flex flex-wrap items-center gap-1.5 pt-1">

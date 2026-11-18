@@ -7,7 +7,7 @@
  * providing structured result cards and verified navigation links with zero 404 errors.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import {
   Search,
@@ -486,7 +486,11 @@ export const VoiceQuerySearch: React.FC = () => {
     setSearchParams(newParams);
   };
 
-  // Web Speech Recognition for in-page microphone
+  const pageRecognitionRef = useRef<any>(null);
+  const pageInterimRef = useRef<string>('');
+  const pageFinalProcessedRef = useRef<boolean>(false);
+
+  // Web Speech Recognition for in-page microphone (with mobile interim flush)
   const toggleSpeechRecognition = () => {
     const win = typeof window !== 'undefined' ? (window as any) : null;
     const SpeechRecognitionClass = win?.SpeechRecognition || win?.webkitSpeechRecognition;
@@ -496,8 +500,22 @@ export const VoiceQuerySearch: React.FC = () => {
       return;
     }
 
-    if (isListening) {
+    if (isListening || pageRecognitionRef.current) {
+      const pending = pageInterimRef.current.trim();
+      try {
+        pageRecognitionRef.current?.stop?.();
+      } catch {
+        // ignore
+      }
+      pageRecognitionRef.current = null;
       setIsListening(false);
+      if (!pageFinalProcessedRef.current && pending) {
+        pageFinalProcessedRef.current = true;
+        pageInterimRef.current = '';
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set('q', pending);
+        setSearchParams(newParams);
+      }
       return;
     }
 
@@ -505,22 +523,38 @@ export const VoiceQuerySearch: React.FC = () => {
       const recognition = new SpeechRecognitionClass();
       recognition.continuous = false;
       recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
       recognition.lang = 'en-US';
+
+      pageInterimRef.current = '';
+      pageFinalProcessedRef.current = false;
 
       recognition.onstart = () => {
         setIsListening(true);
       };
 
       recognition.onresult = (event: any) => {
-        let transcript = '';
+        let interim = '';
+        let final = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) {
-          transcript += event.results[i][0].transcript;
+          const piece = event.results[i]?.[0]?.transcript || '';
+          if (event.results[i].isFinal) {
+            final += piece;
+          } else {
+            interim += piece;
+          }
         }
-        setInputVal(transcript);
-        if (event.results[0].isFinal) {
+        const combined = (final || interim).trim();
+        if (combined) {
+          pageInterimRef.current = combined;
+          setInputVal(combined);
+        }
+        if (final.trim() && !pageFinalProcessedRef.current) {
+          pageFinalProcessedRef.current = true;
+          pageInterimRef.current = '';
           setIsListening(false);
           const newParams = new URLSearchParams(searchParams);
-          newParams.set('q', transcript.trim());
+          newParams.set('q', final.trim());
           setSearchParams(newParams);
         }
       };
@@ -531,11 +565,22 @@ export const VoiceQuerySearch: React.FC = () => {
 
       recognition.onend = () => {
         setIsListening(false);
+        pageRecognitionRef.current = null;
+        const pending = pageInterimRef.current.trim();
+        if (!pageFinalProcessedRef.current && pending) {
+          pageFinalProcessedRef.current = true;
+          pageInterimRef.current = '';
+          const newParams = new URLSearchParams(searchParams);
+          newParams.set('q', pending);
+          setSearchParams(newParams);
+        }
       };
 
+      pageRecognitionRef.current = recognition;
       recognition.start();
     } catch {
       setIsListening(false);
+      pageRecognitionRef.current = null;
     }
   };
 
