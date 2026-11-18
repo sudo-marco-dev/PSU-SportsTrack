@@ -1,13 +1,32 @@
 /**
  * Touchless Gestures Hook for Courtside Kiosks
  * PSU SportsTrack - Multimodal Interaction Interface
+ *
+ * Manages webcam stream lifecycle, attaches the live <video> and 21-landmark
+ * overlay <canvas> to the MediaPipe HandLandmarker engine, enforces Live Armed vs.
+ * Sensor Test Lock (Dry-Run) gating, and syncs anatomical Left/Right hand telemetry.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { GestureType, GestureState, TouchlessActionMode } from '@/types/multimodal';
-import { TouchlessGestureEngine, type GestureTelemetry } from '@/lib/touchlessGestureEngine';
+import type {
+  GestureType,
+  GestureState,
+  TouchlessActionMode,
+  HandSide,
+  HandPoseName,
+  TouchlessModelStatus,
+} from '@/types/multimodal';
+import {
+  TouchlessGestureEngine,
+  createIdleTrackedHandState,
+  type GestureTelemetry,
+} from '@/lib/touchlessGestureEngine';
 
-interface UseTouchlessGesturesOptions {
+export interface UseTouchlessGesturesOptions {
+  leftTeamLabel?: string;
+  rightTeamLabel?: string;
+  maxPoint?: number;
+  onHandCommand?: (side: HandSide, pose: HandPoseName, confidence: number) => void;
   onSwipeLeft?: () => void;
   onSwipeRight?: () => void;
   onOpenPalm?: () => void;
@@ -17,115 +36,159 @@ interface UseTouchlessGesturesOptions {
 }
 
 export function useTouchlessGestures(options: UseTouchlessGesturesOptions = {}) {
-  const { autoStart = false } = options;
+  const {
+    leftTeamLabel = 'Team A',
+    rightTeamLabel = 'Team B',
+    maxPoint = 3,
+    autoStart = false,
+  } = options;
 
-  const [state, setState] = useState<GestureState>({
+  const [isArmed, setIsArmed] = useState<boolean>(true);
+  const [invertHandedness, setInvertHandedness] = useState<boolean>(false);
+  const [touchlessMode, setTouchlessMode] = useState<TouchlessActionMode>('score');
+  const [selectedPointValue, setSelectedPointValue] = useState<1 | 2 | 3>(2);
+
+  const [state, setState] = useState<GestureState>(() => ({
     detectedGesture: 'none',
+    detectedHandSide: undefined,
     confidence: 0,
     isCameraActive: false,
     lastTriggered: 0,
     motionVelocity: { x: 0, y: 0 },
     error: null,
+    modelStatus: 'idle',
+    isArmed: true,
+    leftHand: createIdleTrackedHandState('Show Left Hand'),
+    rightHand: createIdleTrackedHandState('Show Right Hand'),
     leftHandDetected: false,
     rightHandDetected: false,
     topZoneDetected: false,
     leftChargePercent: 0,
     rightChargePercent: 0,
     topChargePercent: 0,
-  });
-
-  const [touchlessMode, setTouchlessMode] = useState<TouchlessActionMode>('score');
-  const [selectedPointValue, setSelectedPointValue] = useState<1 | 2 | 3>(2);
+  }));
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const engineRef = useRef<TouchlessGestureEngine | null>(null);
+  const bannerTimerRef = useRef<number | null>(null);
+
   const optionsRef = useRef(options);
   optionsRef.current = options;
+
+  const isArmedRef = useRef(isArmed);
+  isArmedRef.current = isArmed;
+
+  const invertHandednessRef = useRef(invertHandedness);
+  invertHandednessRef.current = invertHandedness;
+
+  const leftTeamLabelRef = useRef(leftTeamLabel);
+  leftTeamLabelRef.current = leftTeamLabel;
+
+  const rightTeamLabelRef = useRef(rightTeamLabel);
+  rightTeamLabelRef.current = rightTeamLabel;
+
+  const maxPointRef = useRef(maxPoint);
+  maxPointRef.current = maxPoint;
 
   const handleTelemetry = useCallback((telemetry: GestureTelemetry) => {
     setState((prev) => ({
       ...prev,
-      leftHandDetected: telemetry.leftHandDetected,
-      rightHandDetected: telemetry.rightHandDetected,
-      topZoneDetected: telemetry.topZoneDetected,
-      leftChargePercent: telemetry.leftChargePercent,
-      rightChargePercent: telemetry.rightChargePercent,
-      topChargePercent: telemetry.topChargePercent,
+      leftHand: telemetry.leftHand,
+      rightHand: telemetry.rightHand,
+      leftHandDetected: telemetry.leftHand.detected,
+      rightHandDetected: telemetry.rightHand.detected,
+      leftChargePercent: telemetry.leftHand.chargePercent,
+      rightChargePercent: telemetry.rightHand.chargePercent,
     }));
   }, []);
 
-  const handleGestureDetected = useCallback((gesture: GestureType, confidence: number) => {
-    setState((prev) => ({
-      ...prev,
-      detectedGesture: gesture,
-      confidence,
-      lastTriggered: Date.now(),
-      leftHandDetected: gesture === 'swipe_left' ? true : prev.leftHandDetected,
-      rightHandDetected: gesture === 'swipe_right' ? true : prev.rightHandDetected,
-      topZoneDetected: gesture === 'open_palm' ? true : prev.topZoneDetected,
-      leftChargePercent: gesture === 'swipe_left' ? 100 : prev.leftChargePercent,
-      rightChargePercent: gesture === 'swipe_right' ? 100 : prev.rightChargePercent,
-      topChargePercent: gesture === 'open_palm' ? 100 : prev.topChargePercent,
-    }));
+  const handleModelStatusChange = useCallback(
+    (modelStatus: TouchlessModelStatus, errorMessage?: string | null) => {
+      setState((prev) => ({
+        ...prev,
+        modelStatus,
+        error: errorMessage ?? (modelStatus === 'error' ? prev.error : null),
+      }));
+    },
+    []
+  );
 
-    switch (gesture) {
-      case 'swipe_left':
-        optionsRef.current.onSwipeLeft?.();
-        break;
-      case 'swipe_right':
-        optionsRef.current.onSwipeRight?.();
-        break;
-      case 'open_palm':
-        optionsRef.current.onOpenPalm?.();
-        break;
-      case 'thumbs_up':
-        optionsRef.current.onThumbsUp?.();
-        break;
-      case 'peace_sign':
-        optionsRef.current.onPeaceSign?.();
-        break;
-      default:
-        break;
+  const dispatchLegacyCallback = useCallback((side: HandSide, pose: HandPoseName) => {
+    if (pose === 'open_palm') {
+      optionsRef.current.onOpenPalm?.();
+    } else if (pose === 'thumbs_up') {
+      optionsRef.current.onThumbsUp?.();
+    } else if (pose === 'shaka') {
+      optionsRef.current.onPeaceSign?.();
+    } else if (side === 'left') {
+      optionsRef.current.onSwipeLeft?.();
+    } else if (side === 'right') {
+      optionsRef.current.onSwipeRight?.();
     }
-
-    // Reset visual gesture display after 1.5 seconds
-    setTimeout(() => {
-      setState((prev) =>
-        prev.detectedGesture === gesture
-          ? {
-              ...prev,
-              detectedGesture: 'none',
-              leftChargePercent: gesture === 'swipe_left' ? 0 : prev.leftChargePercent,
-              rightChargePercent: gesture === 'swipe_right' ? 0 : prev.rightChargePercent,
-              topChargePercent: gesture === 'open_palm' ? 0 : prev.topChargePercent,
-              leftHandDetected: gesture === 'swipe_left' ? false : prev.leftHandDetected,
-              rightHandDetected: gesture === 'swipe_right' ? false : prev.rightHandDetected,
-              topZoneDetected: gesture === 'open_palm' ? false : prev.topZoneDetected,
-            }
-          : prev
-      );
-    }, 1500);
   }, []);
 
-  /**
-   * Binds a visible React <video> element to the live MediaStream and gesture engine
-   */
+  const handleHandCommand = useCallback(
+    (side: HandSide, pose: HandPoseName, confidence: number) => {
+      if (bannerTimerRef.current) {
+        window.clearTimeout(bannerTimerRef.current);
+      }
+
+      setState((prev) => ({
+        ...prev,
+        detectedGesture: pose as GestureType,
+        detectedHandSide: side,
+        confidence,
+        lastTriggered: Date.now(),
+      }));
+
+      // Only mutate live scoreboard/clock state when Sensor is Armed.
+      if (isArmedRef.current) {
+        if (optionsRef.current.onHandCommand) {
+          optionsRef.current.onHandCommand(side, pose, confidence);
+        } else {
+          dispatchLegacyCallback(side, pose);
+        }
+      }
+
+      bannerTimerRef.current = window.setTimeout(() => {
+        setState((prev) => ({
+          ...prev,
+          detectedGesture: 'none',
+          detectedHandSide: undefined,
+        }));
+      }, 1700);
+    },
+    [dispatchLegacyCallback]
+  );
+
   const bindVideoElement = useCallback((el: HTMLVideoElement | null) => {
-    if (!el) return;
     videoRef.current = el;
+    if (!el) {
+      engineRef.current?.attachVideo(null);
+      return;
+    }
     if (streamRef.current && el.srcObject !== streamRef.current) {
       el.srcObject = streamRef.current;
       el.play().catch(() => {});
     }
-    if (engineRef.current) {
-      engineRef.current.attachVideo(el);
-    }
+    engineRef.current?.attachVideo(el);
+  }, []);
+
+  const bindOverlayCanvas = useCallback((el: HTMLCanvasElement | null) => {
+    canvasRef.current = el;
+    engineRef.current?.attachOverlayCanvas(el);
   }, []);
 
   const stopCamera = useCallback(() => {
+    if (bannerTimerRef.current) {
+      window.clearTimeout(bannerTimerRef.current);
+      bannerTimerRef.current = null;
+    }
+
     if (engineRef.current) {
-      engineRef.current.stop();
+      engineRef.current.dispose();
       engineRef.current = null;
     }
 
@@ -141,7 +204,11 @@ export function useTouchlessGestures(options: UseTouchlessGesturesOptions = {}) 
     setState((prev) => ({
       ...prev,
       isCameraActive: false,
+      modelStatus: 'idle',
       detectedGesture: 'none',
+      detectedHandSide: undefined,
+      leftHand: createIdleTrackedHandState('Show Left Hand'),
+      rightHand: createIdleTrackedHandState('Show Right Hand'),
       leftHandDetected: false,
       rightHandDetected: false,
       topZoneDetected: false,
@@ -153,7 +220,10 @@ export function useTouchlessGestures(options: UseTouchlessGesturesOptions = {}) 
 
   const startCamera = useCallback(async () => {
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-      setState((prev) => ({ ...prev, error: 'Webcam API not supported in this browser environment.' }));
+      setState((prev) => ({
+        ...prev,
+        error: 'Webcam API not supported in this browser environment.',
+      }));
       return;
     }
 
@@ -179,25 +249,43 @@ export function useTouchlessGestures(options: UseTouchlessGesturesOptions = {}) 
       await videoRef.current.play();
 
       const engine = new TouchlessGestureEngine({
-        onGesture: handleGestureDetected,
+        onGesture: () => {},
+        onHandCommand: handleHandCommand,
         onTelemetry: handleTelemetry,
-        dwellDurationMs: 1000,
-        cooldownMs: 1100,
+        onModelStatusChange: handleModelStatusChange,
+        dwellDurationMs: 850,
+        releaseRequiredMs: 220,
+        minDetectionConfidence: 0.7,
+        invertHandedness: invertHandednessRef.current,
+        leftTeamLabel: leftTeamLabelRef.current,
+        rightTeamLabel: rightTeamLabelRef.current,
+        maxPoint: maxPointRef.current,
       });
 
       engine.attachVideo(videoRef.current);
-      engine.start();
+      if (canvasRef.current) {
+        engine.attachOverlayCanvas(canvasRef.current);
+      }
       engineRef.current = engine;
 
-      setState((prev) => ({ ...prev, isCameraActive: true, error: null }));
-    } catch (err: any) {
+      setState((prev) => ({
+        ...prev,
+        isCameraActive: true,
+        modelStatus: 'loading',
+        error: null,
+      }));
+
+      await engine.start();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Camera error';
       setState((prev) => ({
         ...prev,
         isCameraActive: false,
-        error: `Camera access denied or unavailable: ${err.message || 'Error'}`,
+        modelStatus: 'error',
+        error: `Camera access denied or unavailable: ${message}`,
       }));
     }
-  }, [handleGestureDetected, handleTelemetry, stopCamera]);
+  }, [handleHandCommand, handleModelStatusChange, handleTelemetry, stopCamera]);
 
   const recalibrateCamera = useCallback(() => {
     engineRef.current?.recalibrateBackground();
@@ -211,12 +299,62 @@ export function useTouchlessGestures(options: UseTouchlessGesturesOptions = {}) 
     }
   }, [state.isCameraActive, startCamera, stopCamera]);
 
+  const toggleArmed = useCallback(() => {
+    setIsArmed((prev) => {
+      const next = !prev;
+      setState((s) => ({ ...s, isArmed: next }));
+      return next;
+    });
+  }, []);
+
+  const toggleInvertHandedness = useCallback(() => {
+    setInvertHandedness((prev) => {
+      const next = !prev;
+      engineRef.current?.setInvertHandedness(next);
+      return next;
+    });
+  }, []);
+
+  const simulateHandCommand = useCallback(
+    (side: HandSide, pose: HandPoseName) => {
+      handleHandCommand(side, pose, 0.98);
+    },
+    [handleHandCommand]
+  );
+
   const simulateGesture = useCallback(
     (gesture: GestureType) => {
-      handleGestureDetected(gesture, 0.96);
+      switch (gesture) {
+        case 'swipe_left':
+          simulateHandCommand('left', 'two_fingers');
+          break;
+        case 'swipe_right':
+          simulateHandCommand('right', 'two_fingers');
+          break;
+        case 'peace_sign':
+          simulateHandCommand('left', 'shaka');
+          break;
+        case 'one_finger':
+        case 'two_fingers':
+        case 'three_fingers':
+        case 'four_fingers':
+        case 'open_palm':
+        case 'closed_fist':
+        case 'thumbs_up':
+        case 'shaka':
+          simulateHandCommand('left', gesture);
+          break;
+        default:
+          break;
+      }
     },
-    [handleGestureDetected]
+    [simulateHandCommand]
   );
+
+  // Sync kiosk team names & sport maxPoint dynamically (handles swap sides / sport changes)
+  useEffect(() => {
+    engineRef.current?.updateLabels(leftTeamLabel, rightTeamLabel, maxPoint);
+  }, [leftTeamLabel, rightTeamLabel, maxPoint]);
 
   useEffect(() => {
     if (autoStart) {
@@ -230,12 +368,22 @@ export function useTouchlessGestures(options: UseTouchlessGesturesOptions = {}) 
 
   return {
     ...state,
+    isArmed,
+    setIsArmed: (next: boolean) => {
+      setIsArmed(next);
+      setState((s) => ({ ...s, isArmed: next }));
+    },
+    toggleArmed,
+    invertHandedness,
+    toggleInvertHandedness,
     videoRef,
     bindVideoElement,
+    bindOverlayCanvas,
     recalibrateCamera,
     startCamera,
     stopCamera,
     toggleCamera,
+    simulateHandCommand,
     simulateGesture,
     touchlessMode,
     setTouchlessMode,

@@ -86,10 +86,43 @@ export interface ParsedPublicVoiceQuery {
   confidence: number;
 }
 
-// Touchless Gesture Types
+// Touchless Gesture Types (21-Landmark Hand & Finger Tracking)
 export type TouchlessActionMode = 'score' | 'select_player' | 'deduct' | 'sub_foul';
 
+export type HandSide = 'left' | 'right';
+
+export type HandPoseName =
+  | 'one_finger'
+  | 'two_fingers'
+  | 'three_fingers'
+  | 'four_fingers'
+  | 'open_palm'
+  | 'closed_fist'
+  | 'thumbs_up'
+  | 'shaka'
+  | 'none';
+
+export type HandTrackingPhase = 'idle' | 'charging' | 'locked_until_release';
+
+export type TouchlessModelStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+export interface TrackedHandState {
+  detected: boolean;
+  pose: HandPoseName;
+  fingerCount: number;
+  score: number;
+  chargePercent: number;
+  phase: HandTrackingPhase;
+  actionLabel: string;
+}
+
 export type GestureType =
+  | 'one_finger'
+  | 'two_fingers'
+  | 'three_fingers'
+  | 'four_fingers'
+  | 'closed_fist'
+  | 'shaka'
   | 'swipe_left'
   | 'swipe_right'
   | 'open_palm'
@@ -100,11 +133,16 @@ export type GestureType =
 
 export interface GestureState {
   detectedGesture: GestureType;
+  detectedHandSide?: HandSide | null;
   confidence: number;
   isCameraActive: boolean;
+  modelStatus: TouchlessModelStatus;
+  isArmed: boolean;
   lastTriggered: number;
   motionVelocity: { x: number; y: number };
   error: string | null;
+  leftHand: TrackedHandState;
+  rightHand: TrackedHandState;
   leftHandDetected?: boolean;
   rightHandDetected?: boolean;
   topZoneDetected?: boolean;

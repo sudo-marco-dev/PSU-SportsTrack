@@ -1,206 +1,227 @@
 /**
- * Touchless Gesture Recognition Engine for PSU SportsTrack
- * Spatial-zone optical hand detector with center face-exclusion mask and
- * dwell-charge percentages (0% - 100%) using HTML5 Canvas.
+ * MediaPipe 21-Landmark Hand & Finger Touchless Gesture Engine for PSU SportsTrack
+ * Replaces pixel-box motion triggers with genuine anatomical Left/Right hand
+ * skeletal tracking, finger counting (1-5, Fist, Thumbs Up, Shaka), aligned canvas
+ * wireframe rendering, and a 3-layer Dwell + Release-to-Rearm safety gate.
  * Complies with Capstone HCI-2 Touchless Interface requirements.
  */
 
-import type { GestureType } from '@/types/multimodal';
+import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
+import type {
+  GestureType,
+  HandPoseName,
+  HandSide,
+  TouchlessModelStatus,
+  TrackedHandState,
+} from '@/types/multimodal';
+import {
+  classifyHandPose,
+  describeHandAction,
+  formatPoseLabel,
+  FINGERTIP_INDICES,
+  HAND_SKELETON_CONNECTIONS,
+  HandPoseDwellTracker,
+  resolveMirroredHandSide,
+  type LandmarkPoint,
+} from '@/lib/handPoseClassifier';
 
 export interface GestureTelemetry {
-  leftHandDetected: boolean;
-  rightHandDetected: boolean;
-  topZoneDetected: boolean;
-  leftChargePercent: number;
-  rightChargePercent: number;
-  topChargePercent: number;
+  leftHand: TrackedHandState;
+  rightHand: TrackedHandState;
 }
 
 export interface GestureDetectionOptions {
   onGesture: (gesture: GestureType, confidence: number) => void;
+  onHandCommand?: (side: HandSide, pose: HandPoseName, confidence: number) => void;
   onTelemetry?: (telemetry: GestureTelemetry) => void;
-  minMotionThreshold?: number; // Minimum luminance delta against background (default 22)
-  swipeVelocityThreshold?: number; // Legacy option kept for config compatibility
-  holdDurationMs?: number; // Legacy hold duration alias
-  dwellDurationMs?: number; // Sustained presence time to charge 0% -> 100% (default 1000ms)
-  cooldownMs?: number; // Milliseconds between gesture triggers (default 1100ms)
+  onModelStatusChange?: (status: TouchlessModelStatus, errorMessage?: string | null) => void;
+  dwellDurationMs?: number;
+  cooldownMs?: number;
+  releaseRequiredMs?: number;
+  minDetectionConfidence?: number;
+  invertHandedness?: boolean;
+  maxPoint?: number;
+  leftTeamLabel?: string;
+  rightTeamLabel?: string;
+  // Legacy config aliases preserved for existing callers & unit tests
+  minMotionThreshold?: number;
+  swipeVelocityThreshold?: number;
+  holdDurationMs?: number;
 }
 
-export interface ZoneEvaluationResult {
-  leftActiveRatio: number;
-  rightActiveRatio: number;
-  topActiveRatio: number;
-  faceIgnoredCount: number;
-}
-
-/**
- * Evaluates spatial zones on an RGBA frame buffer, explicitly masking out the center face region.
- * Pure helper exported for deterministic unit testing and frame loop reuse.
- */
-export function evaluateSpatialZones(
-  currData: Uint8ClampedArray,
-  bgData: Uint8ClampedArray,
-  prevData: Uint8ClampedArray,
-  width: number,
-  height: number,
-  threshold: number
-): ZoneEvaluationResult {
-  const leftMaxX = Math.floor(width * 0.28);
-  const rightMinX = Math.ceil(width * 0.72);
-  const sideMinY = Math.floor(height * 0.12);
-  const sideMaxY = Math.ceil(height * 0.88);
-  const topMaxY = Math.floor(height * 0.22);
-  const topMinX = Math.floor(width * 0.30);
-  const topMaxX = Math.ceil(width * 0.70);
-
-  let leftTotal = 0;
-  let leftActive = 0;
-  let rightTotal = 0;
-  let rightActive = 0;
-  let topTotal = 0;
-  let topActive = 0;
-  let faceIgnoredCount = 0;
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      // Center Face Exclusion Mask (x: 28%..72%, y: 22%..100%)
-      if (x >= leftMaxX && x <= rightMinX && y >= topMaxY) {
-        faceIgnoredCount++;
-        continue;
-      }
-
-      const inLeft = x < leftMaxX && y >= sideMinY && y <= sideMaxY;
-      const inRight = x > rightMinX && y >= sideMinY && y <= sideMaxY;
-      const inTop = x >= topMinX && x <= topMaxX && y < topMaxY;
-
-      if (!inLeft && !inRight && !inTop) {
-        continue;
-      }
-
-      const idx = (y * width + x) * 4;
-      const r = currData[idx];
-      const g = currData[idx + 1];
-      const b = currData[idx + 2];
-
-      const currLum = 0.299 * r + 0.587 * g + 0.114 * b;
-      const bgLum = 0.299 * bgData[idx] + 0.587 * bgData[idx + 1] + 0.114 * bgData[idx + 2];
-      const prevLum = 0.299 * prevData[idx] + 0.587 * prevData[idx + 1] + 0.114 * prevData[idx + 2];
-
-      const bgDiff = Math.abs(currLum - bgLum);
-      const motionDiff = Math.abs(currLum - prevLum);
-
-      // Subtle YCbCr skin contrast cue only when foreground differs from baseline room background
-      const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
-      const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
-      const isSkinHue = cb >= 77 && cb <= 127 && cr >= 133 && cr <= 173;
-      const effectiveThreshold = isSkinHue ? threshold * 0.75 : threshold;
-
-      const isPixelActive = bgDiff > effectiveThreshold || motionDiff > threshold * 0.9;
-
-      if (inLeft) {
-        leftTotal++;
-        if (isPixelActive) leftActive++;
-      } else if (inRight) {
-        rightTotal++;
-        if (isPixelActive) rightActive++;
-      } else if (inTop) {
-        topTotal++;
-        if (isPixelActive) topActive++;
-      }
-    }
-  }
-
+export function createIdleTrackedHandState(actionLabel = 'Show Hand & Fingers'): TrackedHandState {
   return {
-    leftActiveRatio: leftTotal > 0 ? leftActive / leftTotal : 0,
-    rightActiveRatio: rightTotal > 0 ? rightActive / rightTotal : 0,
-    topActiveRatio: topTotal > 0 ? topActive / topTotal : 0,
-    faceIgnoredCount,
+    detected: false,
+    pose: 'none',
+    fingerCount: 0,
+    score: 0,
+    chargePercent: 0,
+    phase: 'idle',
+    actionLabel,
   };
+}
+
+interface FrameHandCandidate {
+  side: HandSide;
+  score: number;
+  landmarks: LandmarkPoint[];
+  pose: HandPoseName;
+  fingerCount: number;
+  fingers: { thumb: boolean; index: boolean; middle: boolean; ring: boolean; pinky: boolean };
 }
 
 export class TouchlessGestureEngine {
   private video: HTMLVideoElement | null = null;
-  private canvas: HTMLCanvasElement;
-  private ctx: CanvasRenderingContext2D | null;
-  private prevFrameData: Uint8ClampedArray | null = null;
-  private bgFrameData: Uint8ClampedArray | null = null;
+  private overlayCanvas: HTMLCanvasElement | null = null;
+  private handLandmarker: HandLandmarker | null = null;
   private animFrameId: number | null = null;
   private options: GestureDetectionOptions;
+  private dwellTracker: HandPoseDwellTracker;
 
-  // Running tracking metrics
-  private lastTriggerTime = 0;
-  private lastFrameTime = 0;
-  private warmupFrames = 0;
   private isRunning = false;
+  private isInitializing = false;
+  private lastProcessTime = 0;
+  private lastVideoTime = -1;
+  private invertHandedness = false;
+  private leftTeamLabel = 'Team A';
+  private rightTeamLabel = 'Team B';
+  private maxPoint = 3;
 
-  // Dwell charge accumulators (milliseconds)
-  private leftChargeMs = 0;
-  private rightChargeMs = 0;
-  private topChargeMs = 0;
   private lastTelemetry: GestureTelemetry = {
-    leftHandDetected: false,
-    rightHandDetected: false,
-    topZoneDetected: false,
-    leftChargePercent: 0,
-    rightChargePercent: 0,
-    topChargePercent: 0,
+    leftHand: createIdleTrackedHandState(),
+    rightHand: createIdleTrackedHandState(),
   };
 
   constructor(options: GestureDetectionOptions) {
     this.options = {
-      minMotionThreshold: 22,
-      swipeVelocityThreshold: 18,
-      holdDurationMs: 1000,
-      dwellDurationMs: options.dwellDurationMs || options.holdDurationMs || 1000,
-      cooldownMs: 1100,
+      dwellDurationMs: options.dwellDurationMs || options.holdDurationMs || 850,
+      cooldownMs: options.cooldownMs ?? 700,
+      releaseRequiredMs: options.releaseRequiredMs ?? 220,
+      minDetectionConfidence: options.minDetectionConfidence ?? 0.7,
       ...options,
     };
 
-    // Off-screen downsampled canvas (64x48) for ultra-fast mirrored processing (<1ms per frame)
-    if (typeof document !== 'undefined') {
-      this.canvas = document.createElement('canvas');
-      this.canvas.width = 64;
-      this.canvas.height = 48;
-      this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
-    } else {
-      this.canvas = null as any;
-      this.ctx = null;
-    }
+    this.invertHandedness = Boolean(options.invertHandedness);
+    this.leftTeamLabel = options.leftTeamLabel || 'Team A';
+    this.rightTeamLabel = options.rightTeamLabel || 'Team B';
+    this.maxPoint = options.maxPoint ?? 3;
+
+    this.dwellTracker = new HandPoseDwellTracker({
+      dwellMs: this.options.dwellDurationMs,
+      cooldownMs: this.options.cooldownMs,
+      releaseRequiredMs: this.options.releaseRequiredMs,
+    });
   }
 
-  public attachVideo(videoElement: HTMLVideoElement) {
+  public updateLabels(leftTeamLabel: string, rightTeamLabel: string, maxPoint = 3) {
+    this.leftTeamLabel = leftTeamLabel || 'Team A';
+    this.rightTeamLabel = rightTeamLabel || 'Team B';
+    this.maxPoint = maxPoint;
+  }
+
+  public setInvertHandedness(invert: boolean) {
+    this.invertHandedness = invert;
+    this.dwellTracker.resetAll();
+  }
+
+  public attachVideo(videoElement: HTMLVideoElement | null) {
     this.video = videoElement;
-    if (!this.canvas && typeof document !== 'undefined') {
-      this.canvas = document.createElement('canvas');
-      this.canvas.width = 64;
-      this.canvas.height = 48;
-      this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
-    }
+    this.lastVideoTime = -1;
+  }
+
+  public attachOverlayCanvas(canvasElement: HTMLCanvasElement | null) {
+    this.overlayCanvas = canvasElement;
   }
 
   public recalibrateBackground() {
-    this.bgFrameData = null;
-    this.prevFrameData = null;
-    this.warmupFrames = 0;
-    this.resetCharges();
+    this.dwellTracker.resetAll();
+    this.emitIdleTelemetry();
+  }
+
+  private emitIdleTelemetry() {
     this.emitTelemetry({
-      leftHandDetected: false,
-      rightHandDetected: false,
-      topZoneDetected: false,
-      leftChargePercent: 0,
-      rightChargePercent: 0,
-      topChargePercent: 0,
+      leftHand: createIdleTrackedHandState(`Show Left Hand (${this.leftTeamLabel})`),
+      rightHand: createIdleTrackedHandState(`Show Right Hand (${this.rightTeamLabel})`),
     });
+  }
+
+  private async ensureHandLandmarkerLoaded(): Promise<HandLandmarker | null> {
+    if (this.handLandmarker) {
+      this.options.onModelStatusChange?.('ready', null);
+      return this.handLandmarker;
+    }
+    if (this.isInitializing || typeof window === 'undefined') return null;
+
+    this.isInitializing = true;
+    this.options.onModelStatusChange?.('loading', null);
+
+    try {
+      let vision;
+      try {
+        vision = await FilesetResolver.forVisionTasks('/mediapipe/wasm');
+      } catch {
+        // Fallback to jsDelivr CDN WASM if local assets are unavailable
+        vision = await FilesetResolver.forVisionTasks(
+          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm'
+        );
+      }
+
+      const baseModelPaths = [
+        '/mediapipe/models/hand_landmarker.task',
+        'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+      ];
+
+      const delegates: Array<'GPU' | 'CPU'> = ['GPU', 'CPU'];
+      let created: HandLandmarker | null = null;
+      let lastErr: unknown = null;
+
+      for (const modelAssetPath of baseModelPaths) {
+        for (const delegate of delegates) {
+          try {
+            created = await HandLandmarker.createFromOptions(vision, {
+              baseOptions: { modelAssetPath, delegate },
+              runningMode: 'VIDEO',
+              numHands: 2,
+              minHandDetectionConfidence: this.options.minDetectionConfidence ?? 0.7,
+              minHandPresenceConfidence: this.options.minDetectionConfidence ?? 0.7,
+              minTrackingConfidence: 0.68,
+            });
+            break;
+          } catch (err) {
+            lastErr = err;
+          }
+        }
+        if (created) break;
+      }
+
+      if (!created) {
+        throw lastErr || new Error('Failed to load MediaPipe HandLandmarker model.');
+      }
+
+      this.handLandmarker = created;
+      this.options.onModelStatusChange?.('ready', null);
+      return created;
+    } catch (err: any) {
+      const msg = err?.message || 'Unable to initialize MediaPipe hand landmark model.';
+      this.options.onModelStatusChange?.('error', msg);
+      return null;
+    } finally {
+      this.isInitializing = false;
+    }
   }
 
   public start() {
     if (this.isRunning) return;
     this.isRunning = true;
-    this.prevFrameData = null;
-    this.bgFrameData = null;
-    this.warmupFrames = 0;
-    this.lastFrameTime = Date.now();
-    this.resetCharges();
+    this.lastProcessTime = Date.now();
+    this.lastVideoTime = -1;
+    this.dwellTracker.resetAll();
+
+    // Only attempt WASM/model loading in a real browser environment with video attached
+    if (typeof window !== 'undefined') {
+      void this.ensureHandLandmarkerLoaded();
+    }
+
     this.loop();
   }
 
@@ -214,49 +235,32 @@ export class TouchlessGestureEngine {
       }
       this.animFrameId = null;
     }
-    this.prevFrameData = null;
-    this.bgFrameData = null;
-    this.resetCharges();
-    this.emitTelemetry({
-      leftHandDetected: false,
-      rightHandDetected: false,
-      topZoneDetected: false,
-      leftChargePercent: 0,
-      rightChargePercent: 0,
-      topChargePercent: 0,
-    });
+    this.dwellTracker.resetAll();
+    this.clearOverlayCanvas();
+    this.emitIdleTelemetry();
   }
 
-  private resetCharges() {
-    this.leftChargeMs = 0;
-    this.rightChargeMs = 0;
-    this.topChargeMs = 0;
-  }
-
-  private emitTelemetry(next: GestureTelemetry) {
-    const prev = this.lastTelemetry;
-    if (
-      prev.leftHandDetected === next.leftHandDetected &&
-      prev.rightHandDetected === next.rightHandDetected &&
-      prev.topZoneDetected === next.topZoneDetected &&
-      prev.leftChargePercent === next.leftChargePercent &&
-      prev.rightChargePercent === next.rightChargePercent &&
-      prev.topChargePercent === next.topChargePercent
-    ) {
-      return;
+  public dispose() {
+    this.stop();
+    if (this.handLandmarker) {
+      try {
+        this.handLandmarker.close();
+      } catch {
+        // no-op
+      }
+      this.handLandmarker = null;
     }
-    this.lastTelemetry = next;
-    this.options.onTelemetry?.(next);
   }
 
   private loop = () => {
     if (!this.isRunning) return;
 
     const now = Date.now();
-    // Run optical analysis at ~30 FPS for balanced CPU usage and responsive 0-100% meters
-    if (now - this.lastFrameTime >= 30) {
-      this.processCurrentFrame(now);
-      this.lastFrameTime = now;
+    // Run MediaPipe inference at ~30 FPS for crisp tracking without overloading device CPU/GPU
+    if (now - this.lastProcessTime >= 32) {
+      const dt = Math.min(100, Math.max(16, now - this.lastProcessTime));
+      this.processCurrentFrame(now, dt);
+      this.lastProcessTime = now;
     }
 
     if (typeof requestAnimationFrame !== 'undefined') {
@@ -266,157 +270,257 @@ export class TouchlessGestureEngine {
     }
   };
 
-  private processCurrentFrame(now: number) {
-    if (!this.video || !this.ctx || this.video.readyState < 2) return;
-
-    const w = this.canvas.width;
-    const h = this.canvas.height;
-    const dt = Math.min(100, Math.max(15, now - this.lastFrameTime));
-
-    // Mirror horizontally so screen Left matches user's mirrored Left side
-    this.ctx.save();
-    this.ctx.scale(-1, 1);
-    this.ctx.drawImage(this.video, -w, 0, w, h);
-    this.ctx.restore();
-
-    const frame = this.ctx.getImageData(0, 0, w, h);
-    const data = frame.data;
-
-    if (!this.prevFrameData || !this.bgFrameData) {
-      this.prevFrameData = new Uint8ClampedArray(data);
-      this.bgFrameData = new Uint8ClampedArray(data);
-      this.warmupFrames = 1;
+  private processCurrentFrame(now: number, dt: number) {
+    if (!this.video || !this.handLandmarker || this.video.readyState < 2 || this.video.videoWidth === 0) {
       return;
     }
 
-    // Brief 8-frame camera auto-exposure stabilization before evaluating triggers
-    if (this.warmupFrames < 8) {
-      for (let i = 0; i < data.length; i++) {
-        this.bgFrameData[i] = Math.round(this.bgFrameData[i] * 0.7 + data[i] * 0.3);
+    if (this.video.currentTime === this.lastVideoTime) {
+      return;
+    }
+    this.lastVideoTime = this.video.currentTime;
+
+    let result;
+    try {
+      const ts = typeof performance !== 'undefined' ? performance.now() : now;
+      result = this.handLandmarker.detectForVideo(this.video, ts);
+    } catch {
+      return;
+    }
+
+    const candidates: { left: FrameHandCandidate | null; right: FrameHandCandidate | null } = {
+      left: null,
+      right: null,
+    };
+
+    const landmarkSets = result?.landmarks || [];
+    const handednessSets = result?.handedness || result?.handednesses || [];
+    const minScore = this.options.minDetectionConfidence ?? 0.7;
+
+    for (let i = 0; i < landmarkSets.length; i++) {
+      const lm = landmarkSets[i] as LandmarkPoint[];
+      const cat = handednessSets[i]?.[0];
+      const mpScore = cat?.score ?? 0.85;
+      if (mpScore < minScore) continue;
+
+      const classified = classifyHandPose(lm);
+      if (!classified.valid) continue;
+
+      const side = resolveMirroredHandSide(cat?.categoryName, this.invertHandedness);
+      const existing = candidates[side];
+      if (!existing || mpScore > existing.score) {
+        candidates[side] = {
+          side,
+          score: mpScore,
+          landmarks: lm,
+          pose: classified.pose,
+          fingerCount: classified.fingerCount,
+          fingers: classified.fingers,
+        };
       }
-      this.prevFrameData.set(data);
-      this.warmupFrames++;
-      return;
     }
 
-    const threshold = this.options.minMotionThreshold || 22;
-    const evalResult = evaluateSpatialZones(data, this.bgFrameData, this.prevFrameData, w, h, threshold);
+    // Step deterministic 3-layer dwell & release state machine for both hands
+    const leftStep = this.dwellTracker.step(
+      'left',
+      Boolean(candidates.left),
+      candidates.left?.pose ?? 'none',
+      dt,
+      now
+    );
+    const rightStep = this.dwellTracker.step(
+      'right',
+      Boolean(candidates.right),
+      candidates.right?.pose ?? 'none',
+      dt,
+      now
+    );
 
-    // Save frame for motion diff on next tick
-    this.prevFrameData.set(data);
+    const leftHandState: TrackedHandState = {
+      detected: Boolean(candidates.left),
+      pose: candidates.left?.pose ?? 'none',
+      fingerCount: candidates.left?.fingerCount ?? 0,
+      score: candidates.left?.score ?? 0,
+      chargePercent: leftStep.chargePercent,
+      phase: leftStep.phase,
+      actionLabel: candidates.left
+        ? describeHandAction(candidates.left.pose, this.leftTeamLabel, this.maxPoint)
+        : `Show Left Hand (${this.leftTeamLabel})`,
+    };
 
-    // Minimum active pixel ratio within each peripheral zone (10% prevents single-pixel noise)
-    const zoneRatioThreshold = 0.10;
-    const rawLeftDetected = evalResult.leftActiveRatio >= zoneRatioThreshold;
-    const rawRightDetected = evalResult.rightActiveRatio >= zoneRatioThreshold;
-    const rawTopDetected = evalResult.topActiveRatio >= zoneRatioThreshold;
+    const rightHandState: TrackedHandState = {
+      detected: Boolean(candidates.right),
+      pose: candidates.right?.pose ?? 'none',
+      fingerCount: candidates.right?.fingerCount ?? 0,
+      score: candidates.right?.score ?? 0,
+      chargePercent: rightStep.chargePercent,
+      phase: rightStep.phase,
+      actionLabel: candidates.right
+        ? describeHandAction(candidates.right.pose, this.rightTeamLabel, this.maxPoint)
+        : `Show Right Hand (${this.rightTeamLabel})`,
+    };
 
-    // Gentle background adaptation ONLY in zones that are currently idle
-    this.adaptIdleBackground(data, w, h, rawLeftDetected, rawRightDetected, rawTopDetected);
+    this.drawOverlay(candidates, leftHandState, rightHandState);
+    this.emitTelemetry({ leftHand: leftHandState, rightHand: rightHandState });
 
-    const cooldown = this.options.cooldownMs || 1100;
-    const inCooldown = now - this.lastTriggerTime < cooldown;
-
-    if (inCooldown) {
-      this.resetCharges();
-      this.emitTelemetry({
-        leftHandDetected: rawLeftDetected,
-        rightHandDetected: rawRightDetected,
-        topZoneDetected: rawTopDetected,
-        leftChargePercent: 0,
-        rightChargePercent: 0,
-        topChargePercent: 0,
-      });
-      return;
+    if (leftStep.fired && leftStep.firedPose) {
+      const conf = candidates.left?.score ?? 0.95;
+      this.options.onHandCommand?.('left', leftStep.firedPose, conf);
+      this.options.onGesture?.(leftStep.firedPose, conf);
     }
 
-    const dwellMs = this.options.dwellDurationMs || 1000;
-
-    // Update dwell charges (build smoothly while present, decay faster when absent)
-    this.leftChargeMs = rawLeftDetected
-      ? Math.min(dwellMs, this.leftChargeMs + dt)
-      : Math.max(0, this.leftChargeMs - dt * 1.8);
-
-    this.rightChargeMs = rawRightDetected
-      ? Math.min(dwellMs, this.rightChargeMs + dt)
-      : Math.max(0, this.rightChargeMs - dt * 1.8);
-
-    // Top clock zone requires neither side zone simultaneously active
-    this.topChargeMs = rawTopDetected && !rawLeftDetected && !rawRightDetected
-      ? Math.min(dwellMs, this.topChargeMs + dt)
-      : Math.max(0, this.topChargeMs - dt * 2.0);
-
-    const leftChargePercent = Math.min(100, Math.round((this.leftChargeMs / dwellMs) * 100));
-    const rightChargePercent = Math.min(100, Math.round((this.rightChargeMs / dwellMs) * 100));
-    const topChargePercent = Math.min(100, Math.round((this.topChargeMs / dwellMs) * 100));
-
-    this.emitTelemetry({
-      leftHandDetected: rawLeftDetected,
-      rightHandDetected: rawRightDetected,
-      topZoneDetected: rawTopDetected,
-      leftChargePercent,
-      rightChargePercent,
-      topChargePercent,
-    });
-
-    if (leftChargePercent >= 100) {
-      this.triggerGesture('swipe_left', Math.min(0.99, 0.85 + evalResult.leftActiveRatio * 0.25));
-      return;
-    }
-
-    if (rightChargePercent >= 100) {
-      this.triggerGesture('swipe_right', Math.min(0.99, 0.85 + evalResult.rightActiveRatio * 0.25));
-      return;
-    }
-
-    if (topChargePercent >= 100) {
-      this.triggerGesture('open_palm', Math.min(0.99, 0.85 + evalResult.topActiveRatio * 0.25));
-      return;
+    if (rightStep.fired && rightStep.firedPose) {
+      const conf = candidates.right?.score ?? 0.95;
+      this.options.onHandCommand?.('right', rightStep.firedPose, conf);
+      this.options.onGesture?.(rightStep.firedPose, conf);
     }
   }
 
-  private adaptIdleBackground(
-    currData: Uint8ClampedArray,
-    w: number,
-    h: number,
-    leftBusy: boolean,
-    rightBusy: boolean,
-    topBusy: boolean
+  private clearOverlayCanvas() {
+    if (!this.overlayCanvas) return;
+    const ctx = this.overlayCanvas.getContext('2d');
+    if (ctx) {
+      ctx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+    }
+  }
+
+  private drawOverlay(
+    candidates: { left: FrameHandCandidate | null; right: FrameHandCandidate | null },
+    leftState: TrackedHandState,
+    rightState: TrackedHandState
   ) {
-    if (!this.bgFrameData) return;
-    const leftMaxX = Math.floor(w * 0.28);
-    const rightMinX = Math.ceil(widthClamp(w * 0.72));
-    const topMaxY = Math.floor(h * 0.22);
+    if (!this.overlayCanvas || !this.video) return;
+    const w = this.video.videoWidth || 640;
+    const h = this.video.videoHeight || 480;
+    if (this.overlayCanvas.width !== w) this.overlayCanvas.width = w;
+    if (this.overlayCanvas.height !== h) this.overlayCanvas.height = h;
 
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        if (x < leftMaxX && leftBusy) continue;
-        if (x > rightMinX && rightBusy) continue;
-        if (y < topMaxY && x >= leftMaxX && x <= rightMinX && topBusy) continue;
+    const ctx = this.overlayCanvas.getContext('2d');
+    if (!ctx) return;
 
-        const idx = (y * w + x) * 4;
-        this.bgFrameData[idx] = Math.round(this.bgFrameData[idx] * 0.98 + currData[idx] * 0.02);
-        this.bgFrameData[idx + 1] = Math.round(this.bgFrameData[idx + 1] * 0.98 + currData[idx + 1] * 0.02);
-        this.bgFrameData[idx + 2] = Math.round(this.bgFrameData[idx + 2] * 0.98 + currData[idx + 2] * 0.02);
+    ctx.clearRect(0, 0, w, h);
+
+    const drawSingleHand = (cand: FrameHandCandidate, state: TrackedHandState, isLeft: boolean) => {
+      const lm = cand.landmarks;
+      // Coordinates aligned to mirrored CSS video (`-scale-x-100`) while keeping canvas text upright
+      const toX = (nx: number) => (1 - nx) * w;
+      const toY = (ny: number) => ny * h;
+
+      const primaryColor = isLeft ? '#F97316' : '#06B6D4'; // Palawan Solar Orange vs Cyan
+      const lightColor = isLeft ? '#FDBA74' : '#67E8F9';
+
+      // 1. Skeleton Bone Connectors
+      ctx.strokeStyle = state.phase === 'locked_until_release' ? '#10B981' : primaryColor;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      for (const [startIdx, endIdx] of HAND_SKELETON_CONNECTIONS) {
+        const a = lm[startIdx];
+        const b = lm[endIdx];
+        ctx.beginPath();
+        ctx.moveTo(toX(a.x), toY(a.y));
+        ctx.lineTo(toX(b.x), toY(b.y));
+        ctx.stroke();
       }
+
+      // 2. Landmark Joints & Extended Fingertip Highlights
+      const fingerByTip: Record<number, boolean> = {
+        4: cand.fingers.thumb,
+        8: cand.fingers.index,
+        12: cand.fingers.middle,
+        16: cand.fingers.ring,
+        20: cand.fingers.pinky,
+      };
+
+      for (let i = 0; i < lm.length; i++) {
+        const pt = lm[i];
+        const x = toX(pt.x);
+        const y = toY(pt.y);
+        const isTip = (FINGERTIP_INDICES as readonly number[]).includes(i);
+        const isExt = isTip && fingerByTip[i];
+
+        ctx.beginPath();
+        ctx.arc(x, y, isTip ? (isExt ? 7 : 4.5) : 3, 0, Math.PI * 2);
+        ctx.fillStyle = isExt ? '#FFFFFF' : lightColor;
+        ctx.fill();
+        if (isExt) {
+          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = primaryColor;
+          ctx.stroke();
+        }
+      }
+
+      // 3. Wrist Dwell-Charge Circular Progress Ring
+      const wx = toX(lm[0].x);
+      const wy = toY(lm[0].y);
+      ctx.beginPath();
+      ctx.arc(wx, wy, 22, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      if (state.chargePercent > 0 || state.phase === 'locked_until_release') {
+        const endAngle =
+          state.phase === 'locked_until_release'
+            ? Math.PI * 2 - Math.PI / 2
+            : -Math.PI / 2 + (Math.PI * 2 * state.chargePercent) / 100;
+        ctx.beginPath();
+        ctx.arc(wx, wy, 22, -Math.PI / 2, endAngle);
+        ctx.strokeStyle = state.phase === 'locked_until_release' ? '#10B981' : primaryColor;
+        ctx.lineWidth = 5;
+        ctx.stroke();
+      }
+
+      // 4. Crisp HUD Badge Above Hand
+      const minY = Math.min(...lm.map((p) => toY(p.y)));
+      const labelX = Math.max(80, Math.min(w - 80, wx));
+      const labelY = Math.max(24, minY - 14);
+      const poseTitle = formatPoseLabel(cand.pose).toUpperCase();
+      const statusSuffix =
+        state.phase === 'locked_until_release'
+          ? 'FIRED - DROP HAND'
+          : cand.pose === 'none'
+          ? 'HOLD POSE'
+          : `${state.chargePercent}%`;
+      const tagText = `${isLeft ? 'L' : 'R'}: ${poseTitle} (${statusSuffix})`;
+
+      ctx.font = 'bold 12px monospace';
+      const metrics = ctx.measureText(tagText);
+      const boxW = metrics.width + 16;
+      const boxH = 22;
+
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.88)';
+      ctx.strokeStyle = state.phase === 'locked_until_release' ? '#10B981' : primaryColor;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(labelX - boxW / 2, labelY - boxH / 2, boxW, boxH, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(tagText, labelX, labelY);
+    };
+
+    if (candidates.left) drawSingleHand(candidates.left, leftState, true);
+    if (candidates.right) drawSingleHand(candidates.right, rightState, false);
+  }
+
+  private emitTelemetry(next: GestureTelemetry) {
+    const prev = this.lastTelemetry;
+    if (
+      prev.leftHand.detected === next.leftHand.detected &&
+      prev.leftHand.pose === next.leftHand.pose &&
+      prev.leftHand.chargePercent === next.leftHand.chargePercent &&
+      prev.leftHand.phase === next.leftHand.phase &&
+      prev.rightHand.detected === next.rightHand.detected &&
+      prev.rightHand.pose === next.rightHand.pose &&
+      prev.rightHand.chargePercent === next.rightHand.chargePercent &&
+      prev.rightHand.phase === next.rightHand.phase
+    ) {
+      return;
     }
+    this.lastTelemetry = next;
+    this.options.onTelemetry?.(next);
   }
-
-  private triggerGesture(gesture: GestureType, confidence: number) {
-    this.lastTriggerTime = Date.now();
-    this.resetCharges();
-    this.emitTelemetry({
-      leftHandDetected: gesture === 'swipe_left',
-      rightHandDetected: gesture === 'swipe_right',
-      topZoneDetected: gesture === 'open_palm',
-      leftChargePercent: gesture === 'swipe_left' ? 100 : 0,
-      rightChargePercent: gesture === 'swipe_right' ? 100 : 0,
-      topChargePercent: gesture === 'open_palm' ? 100 : 0,
-    });
-    this.options.onGesture(gesture, confidence);
-  }
-}
-
-function widthClamp(v: number): number {
-  return Math.max(0, v);
 }

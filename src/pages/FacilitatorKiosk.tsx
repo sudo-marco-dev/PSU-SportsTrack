@@ -1485,50 +1485,87 @@ export const FacilitatorKiosk = () => {
     },
   });
 
-  const touchlessModeRef = useRef<'score' | 'select_player' | 'deduct' | 'sub_foul'>('score');
-  const touchlessPointsRef = useRef<1 | 2 | 3>(2);
+  const touchlessMaxPoint = useMemo(
+    () => Math.max(1, ...sportProfile.actions.map((a) => a.points)),
+    [sportProfile.actions]
+  );
 
-  // Multimodal Touchless Gestures Hook for Facilitator Kiosk (Left = Team A, Right = Team B, Top = Clock)
+  const leftColumnTeamName = isSwappedSides
+    ? match?.team_b?.name || 'Team B'
+    : match?.team_a?.name || 'Team A';
+  const rightColumnTeamName = isSwappedSides
+    ? match?.team_a?.name || 'Team A'
+    : match?.team_b?.name || 'Team B';
+
+  // Multimodal Touchless Hand-AI Hook for Facilitator Kiosk (Left Hand = Left Column, Right Hand = Right Column)
   const touchlessGestures = useTouchlessGestures({
-    onOpenPalm: () => {
-      handleToggleClock();
-    },
-    onPeaceSign: () => {
-      setSubModalTeam('a');
-    },
-    onThumbsUp: () => {
-      void handleHandsFreeScore('a', touchlessPointsRef.current, 'Touchless Confirm', 'Touchless Quick Score');
-    },
-    onSwipeLeft: () => {
-      const mode = touchlessModeRef.current;
-      if (mode === 'score') {
-        void handleHandsFreeScore('a', touchlessPointsRef.current, 'Touchless Left Hand', 'Touchless Left Hand Score');
-      } else if (mode === 'select_player') {
-        handleSelectPlayerHandsFree('a');
-      } else if (mode === 'deduct') {
-        void handleQuickDeduct('a', 1);
-      } else if (mode === 'sub_foul') {
-        setSubModalTeam('a');
-      }
-    },
-    onSwipeRight: () => {
-      const mode = touchlessModeRef.current;
-      if (mode === 'score') {
-        void handleHandsFreeScore('b', touchlessPointsRef.current, 'Touchless Right Hand', 'Touchless Right Hand Score');
-      } else if (mode === 'select_player') {
-        handleSelectPlayerHandsFree('b');
-      } else if (mode === 'deduct') {
-        void handleQuickDeduct('b', 1);
-      } else if (mode === 'sub_foul') {
-        setSubModalTeam('b');
+    leftTeamLabel: leftColumnTeamName,
+    rightTeamLabel: rightColumnTeamName,
+    maxPoint: touchlessMaxPoint,
+    onHandCommand: (side, pose) => {
+      const targetTeam: 'a' | 'b' = (side === 'left') !== isSwappedSides ? 'a' : 'b';
+      const resolveScoreAction = (desired: number) => {
+        const clamped = Math.min(desired, touchlessMaxPoint);
+        return (
+          sportProfile.actions.find((a) => a.points === clamped) ?? {
+            label: `+${clamped}`,
+            points: clamped,
+            actionType: `Hand AI +${clamped}`,
+          }
+        );
+      };
+
+      switch (pose) {
+        case 'one_finger': {
+          const act = resolveScoreAction(1);
+          void handleHandsFreeScore(
+            targetTeam,
+            act.points,
+            act.actionType,
+            `Hand AI 1-Finger (${act.label})`
+          );
+          break;
+        }
+        case 'two_fingers': {
+          const act = resolveScoreAction(2);
+          void handleHandsFreeScore(
+            targetTeam,
+            act.points,
+            act.actionType,
+            `Hand AI 2-Fingers (${act.label})`
+          );
+          break;
+        }
+        case 'three_fingers': {
+          const act = resolveScoreAction(3);
+          void handleHandsFreeScore(
+            targetTeam,
+            act.points,
+            act.actionType,
+            `Hand AI 3-Fingers (${act.label})`
+          );
+          break;
+        }
+        case 'four_fingers':
+          handleSelectPlayerHandsFree(targetTeam);
+          break;
+        case 'open_palm':
+          handleToggleClock();
+          break;
+        case 'closed_fist':
+          void handleQuickDeduct(targetTeam, 1);
+          break;
+        case 'thumbs_up':
+          void handleCallTimeout(targetTeam);
+          break;
+        case 'shaka':
+          setSubModalTeam(targetTeam);
+          break;
+        default:
+          break;
       }
     },
   });
-
-  useEffect(() => {
-    touchlessModeRef.current = touchlessGestures.touchlessMode;
-    touchlessPointsRef.current = touchlessGestures.selectedPointValue;
-  }, [touchlessGestures.touchlessMode, touchlessGestures.selectedPointValue]);
 
   // Console Lease Claim with Conflict of Interest check and Shortage Policy Override
   const handleClaimLease = async (force: boolean = false, overrideReason?: string) => {
@@ -2047,8 +2084,9 @@ export const FacilitatorKiosk = () => {
             <div className="max-h-[42vh] overflow-y-auto scrollbar-hide space-y-2 pr-0.5">
               <TouchlessGestureHUD
                 gestures={touchlessGestures}
-                teamAName={match.team_a?.name || 'Team A'}
-                teamBName={match.team_b?.name || 'Team B'}
+                leftTeamName={leftColumnTeamName}
+                rightTeamName={rightColumnTeamName}
+                maxPoint={touchlessMaxPoint}
               />
               <VoiceScoringWidget
                 voice={voiceScoring}
