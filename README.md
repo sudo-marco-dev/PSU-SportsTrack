@@ -16,6 +16,7 @@ Official Palawan State University (PSU) Sports Tracking, Live Scoring & Tourname
 - **Sport-Specific Scoring Profiles**: Dedicated scoring logic for 9 collegiate ball sports (Basketball, Volleyball, Soccer, Sepak Takraw, Baseball, Softball, Table Tennis, Pickleball, Esports).
 - **Institutional Athlete Verification**: Student corporate email validation and in-browser PDF.js canvas viewer for university Certificates of Registration.
 - **Strict Role-Based Access Control**: Standardized permissions across 5 canonical roles: `super_admin`, `facilitator`, `coach`, `player_student`, and `player_faculty`.
+- **HCI-2 Multimodal Interaction Suite (`feat/multimodal-voice-scoring`)**: Combines MediaPipe 21-landmark hand & finger Kiosk controls, hands-free courtside voice scoring, and conversational public voice & fuzzy query search (`/search`). See [HCI2_MULTIMODAL_GUIDE.md](HCI2_MULTIMODAL_GUIDE.md) for architecture, seamless integration proofs, scopes, and limitations.
 
 ## 🛠️ Tech Stack
 
