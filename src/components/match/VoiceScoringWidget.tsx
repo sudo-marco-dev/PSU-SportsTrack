@@ -142,7 +142,7 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
               size="lg"
               data-testid="btn-toggle-voice-scoring"
               onClick={toggleListening}
-              className={`w-full justify-center font-black uppercase tracking-wide gap-2 h-10 px-4 rounded-xl transition-colors shadow-lg active:scale-[0.98] ${
+              className={`w-full justify-center font-black uppercase tracking-wide gap-2 h-10 px-4 rounded-xl transition-colors shadow-lg ${
                 isListening
                   ? 'bg-red-600 hover:bg-red-700 text-white shadow-red-900/40 ring-2 ring-red-500/40'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-900/40'
@@ -364,25 +364,27 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
           </div>
         )}
 
-        {/* Recent Voice Command Audit Trail */}
-        {history.length > 0 && (
-          <div className="space-y-1 pt-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Recent Voice Actions:
+        {/* Recent Voice Command Audit Trail (Always-rendered h-7 row prevents widget height jump after 1st command) */}
+        <div className="h-7 pt-1 border-t border-white/10 flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">
+            Recent Voice Actions:
+          </span>
+          {history.length > 0 ? (
+            history.slice(0, 4).map((cmd, idx) => (
+              <Badge
+                key={idx}
+                variant="secondary"
+                className="bg-white/10 text-slate-300 text-[10px] font-mono px-2 py-0 border border-white/10 shrink-0"
+              >
+                {cmd.intent.toUpperCase()}: "{cmd.rawTranscript}"
+              </Badge>
+            ))
+          ) : (
+            <span className="text-[10px] text-slate-500 italic truncate">
+              None recorded yet in this session
             </span>
-            <div className="flex flex-wrap gap-1.5">
-              {history.slice(0, 4).map((cmd, idx) => (
-                <Badge
-                  key={idx}
-                  variant="secondary"
-                  className="bg-white/10 text-slate-300 text-[10px] font-mono px-2 py-0.5 border border-white/10"
-                >
-                  {cmd.intent.toUpperCase()}: "{cmd.rawTranscript}"
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

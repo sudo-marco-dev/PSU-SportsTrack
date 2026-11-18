@@ -2049,16 +2049,21 @@ export const FacilitatorKiosk = () => {
             <div className="flex items-center gap-1.5 min-w-0 flex-1 text-[11px] font-black uppercase tracking-wider text-slate-300 overflow-hidden">
               <Camera className="size-3.5 text-orange-400 shrink-0" />
               <span className="truncate">Hands-Free Multimodal Deck</span>
-              {touchlessGestures.isCameraActive && (
-                <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px] font-black uppercase px-1.5 py-0 shrink-0">
-                  Camera Live
-                </Badge>
-              )}
-              {voiceScoring.isListening && (
-                <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[9px] font-black uppercase px-1.5 py-0 shrink-0">
-                  Voice Live
-                </Badge>
-              )}
+              <Badge
+                className={`w-20 justify-center text-[9px] font-black uppercase px-1.5 py-0 shrink-0 ${
+                  voiceScoring.isListening
+                    ? 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+                    : touchlessGestures.isCameraActive
+                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                    : 'bg-slate-900 text-slate-500 border-white/10'
+                }`}
+              >
+                {voiceScoring.isListening
+                  ? 'Voice Live'
+                  : touchlessGestures.isCameraActive
+                  ? 'Camera Live'
+                  : 'Standby'}
+              </Badge>
             </div>
             <button
               type="button"

@@ -151,7 +151,7 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                   variant="outline"
                   data-testid="btn-hud-speak-toggle"
                   onClick={() => (isListening ? stopListening() : startListening())}
-                  className={`h-8 w-24 justify-center px-3 text-xs font-bold gap-1.5 border-white/20 rounded-lg transition-colors active:scale-[0.98] shrink-0 ${
+                  className={`h-8 w-24 justify-center px-3 text-xs font-bold gap-1.5 border-white/20 rounded-lg transition-colors shrink-0 ${
                     isListening
                       ? 'bg-red-600 text-white border-red-500 hover:bg-red-700'
                       : 'bg-white/10 text-white hover:bg-white/20'
@@ -187,12 +187,12 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                 )}
               </div>
 
-              {/* Stable Status / Feedback Footer Row (Always rendered so card height never jumps) */}
-              <div className="pt-2 border-t border-white/10 min-h-[1.75rem] flex items-center justify-between gap-2 text-xs">
+              {/* Stable Status / Feedback Footer Row (Strict h-10 height so 2-line errors never jump card height) */}
+              <div className="pt-2 border-t border-white/10 h-10 overflow-hidden flex items-center justify-between gap-2 text-xs">
                 {voiceError ? (
                   <div
                     data-testid="hud-voice-error"
-                    className="text-amber-300 text-[11px] font-medium line-clamp-2"
+                    className="text-amber-300 text-[11px] leading-tight font-medium line-clamp-2"
                   >
                     {voiceError}
                   </div>

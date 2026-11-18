@@ -203,11 +203,22 @@ test.describe('Multimodal Voice Scoring UI & Mobile Chrome Anti-Glitch Tests', (
       (window as any).webkitSpeechRecognition = AbortingMobileSpeechRecognition;
       (window as any).SpeechRecognition = AbortingMobileSpeechRecognition;
 
-      // Provide synthetic microphone stream and mock Whisper transcriber for deterministic test speed
-      (window as any).__psuMockAudioTranscriber = async () => 'Who won last week?';
+      // Provide synthetic microphone stream (simulating initial Android AudioRecord busy error on 1st attempt)
+      // and delayed Whisper transcriber to verify double-tapping Stop does not abort in-flight transcription
+      (window as any).__psuMockAudioTranscriber = async () => {
+        await new Promise((r) => setTimeout(r, 150));
+        return 'Who won last week?';
+      };
 
+      let gumCalls = 0;
       if (navigator.mediaDevices) {
         navigator.mediaDevices.getUserMedia = async () => {
+          gumCalls += 1;
+          if (gumCalls === 1) {
+            const busyErr = new Error('Could not start audio source');
+            busyErr.name = 'NotReadableError';
+            throw busyErr;
+          }
           const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
@@ -237,8 +248,8 @@ test.describe('Multimodal Voice Scoring UI & Mobile Chrome Anti-Glitch Tests', (
     // Tap Speak on mobile
     await speakToggleBtn.click();
 
-    // Wait 120ms (well past the 30ms webkitSpeechRecognition 'aborted' + 'onend' event!)
-    await page.waitForTimeout(120);
+    // Wait 260ms (past the 30ms webkitSpeechRecognition 'aborted' + 160ms getUserMedia retry!)
+    await page.waitForTimeout(260);
 
     // Button MUST STILL be in "Stop" state (did NOT revert back to "Speak"!)
     await expect(speakToggleBtn).toContainText('Stop');
@@ -248,7 +259,9 @@ test.describe('Multimodal Voice Scoring UI & Mobile Chrome Anti-Glitch Tests', (
     expect(duringBox).not.toBeNull();
     expect(Math.abs((duringBox?.height || 0) - (beforeBox?.height || 0))).toBeLessThanOrEqual(2);
 
-    // Now tap "Stop" to finish and transcribe the captured microphone audio
+    // Tap "Stop" twice rapidly while transcription is in flight (verifies 2nd tap does not abort transcription)
+    await speakToggleBtn.click();
+    await page.waitForTimeout(30);
     await speakToggleBtn.click();
 
     // Verify the transcribed query ("Who won last week?") was processed and rendered the Direct Answer card!
@@ -398,5 +411,10 @@ test.describe('Multimodal Voice Scoring UI & Mobile Chrome Anti-Glitch Tests', (
     await toggleBtn.click();
 
     await expect(voiceWidget).toContainText('Recorded +2 for CNHS', { timeout: 8000 });
+
+    // Widget height MUST NOT jump even after the first command populates the Recent Voice Actions audit trail
+    const afterCommandBox = await voiceWidget.boundingBox();
+    expect(afterCommandBox).not.toBeNull();
+    expect(Math.abs((afterCommandBox?.height || 0) - (beforeWidgetBox?.height || 0))).toBeLessThanOrEqual(2);
   });
 });

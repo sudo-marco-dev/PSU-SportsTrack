@@ -2,18 +2,19 @@
  * Universal Mobile & Desktop Speech Recognition Engine for PSU SportsTrack
  *
  * Solves the Android Chrome Mobile `webkitSpeechRecognition` instant-abort (`ERROR_CLIENT` /
- * `error: "aborted"`) and premature `onend` hardware bug:
+ * `error: "aborted"`), silent hang, and premature `onend` hardware bugs:
  *
  * - Stage 1 (Native Web Speech API): Invokes `SpeechRecognition.start()` synchronously on tap.
  *   Deduplicates Android Chrome's cumulative `event.results` array and flushes uncommitted
- *   interim transcripts on `onend`.
+ *   interim transcripts on `onend`. Includes a 1,200ms mobile watchdog if the OS recognizer
+ *   hangs silently without emitting speech results.
  * - Stage 2 (Automatic Hardware Mic + On-Device Whisper Fallback): When Android Chrome's native
- *   `SpeechRecognizer` intent immediately aborts (`onerror: "aborted"`, `"service-not-allowed"`,
- *   `"network"`, `"audio-capture"`) or terminates prematurely (`onend` within <1400ms with zero
- *   transcript), the engine DOES NOT flip `isListening` back to `false` (preventing card glitching).
- *   Instead, it seamlessly opens the microphone via `navigator.mediaDevices.getUserMedia({ audio: true })`,
- *   tracks real-time voice activity (VAD) via Web Audio `AudioContext` + `MediaRecorder` backup, and
- *   transcribes the 16kHz PCM audio in-browser using `@xenova/transformers` (`Xenova/whisper-tiny.en`).
+ *   `SpeechRecognizer` intent aborts, hangs, or terminates with zero transcript, the engine
+ *   DOES NOT flip `isListening` back to `false` (preventing card glitching and state reversion).
+ *   Instead, it seamlessly opens the microphone via `navigator.mediaDevices.getUserMedia` (with
+ *   automatic retry if the OS audio binder is still releasing), tracks real-time voice activity
+ *   (VAD) via a tap-unlocked Web Audio `AudioContext` + `MediaRecorder` backup, and transcribes
+ *   16kHz PCM audio in-browser using `@xenova/transformers` (`Xenova/whisper-tiny.en`).
  */
 
 import { suspendAudioContextForMic } from './audioFx';
@@ -24,16 +25,68 @@ interface IWindow extends Window {
   __psuMockAudioTranscriber?: (pcm16k: Float32Array) => Promise<string>;
 }
 
+const NATIVE_ABORT_STORAGE_KEY = 'psu_native_speech_aborted';
+
 export const IS_MOBILE_BROWSER =
   typeof navigator !== 'undefined' &&
-  /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  (/Android|iPhone|iPad|iPod|Mobile|CriOS|FxiOS/i.test(navigator.userAgent) ||
+    (navigator.maxTouchPoints > 1 &&
+      typeof window !== 'undefined' &&
+      window.innerWidth <= 1024));
 
-// Session-sticky flag: once native SpeechRecognition aborts prematurely on a mobile device,
+// Session-sticky flag: once native SpeechRecognition aborts or hangs on a mobile device,
 // subsequent taps bypass the broken Android SpeechRecognizer intent and go straight to Stage 2.
-let nativeSpeechAbortedOnDevice = false;
+let nativeSpeechAbortedOnDevice = (() => {
+  try {
+    return typeof sessionStorage !== 'undefined' && sessionStorage.getItem(NATIVE_ABORT_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+})();
 
-// Singleton cached Whisper pipeline promise so the quantized model is loaded only once per session
+function markNativeSpeechAbortedOnDevice(): void {
+  nativeSpeechAbortedOnDevice = true;
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(NATIVE_ABORT_STORAGE_KEY, '1');
+    }
+  } catch {
+    // ignore storage restrictions
+  }
+}
+
+// Singleton cached Whisper pipeline promise + live progress listener set
 let whisperPipelinePromise: Promise<any> | null = null;
+const whisperProgressListeners = new Set<(statusText: string) => void>();
+let lastWhisperProgressText: string | null = null;
+
+// Shared recording AudioContext unlocked synchronously on user tap
+let sharedRecordingAudioCtx: AudioContext | null = null;
+
+/**
+ * Unlocks or resumes a Web Audio context synchronously inside the user's tap gesture
+ * so mobile browsers (Chrome Android / iOS Safari) never leave the context suspended
+ * when Stage 2 microphone capture attaches asynchronously.
+ */
+function unlockRecordingAudioContextOnTap(): AudioContext | null {
+  if (typeof window === 'undefined') return null;
+  const AudioCtx =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AudioCtx) return null;
+
+  try {
+    if (!sharedRecordingAudioCtx || sharedRecordingAudioCtx.state === 'closed') {
+      sharedRecordingAudioCtx = new AudioCtx();
+    }
+    if (sharedRecordingAudioCtx.state === 'suspended') {
+      void sharedRecordingAudioCtx.resume().catch(() => {});
+    }
+    return sharedRecordingAudioCtx;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Extracts clean interim and final transcripts while preventing Android Chrome's
@@ -72,12 +125,20 @@ export function extractCleanSpeechTranscript(event: any): { interim: string; fin
 /**
  * Preloads the quantized on-device Whisper speech-to-text pipeline in the background
  * so mobile fallback transcription executes with minimal latency.
+ * Supports attaching progress listeners even if preloading was already started earlier.
  */
 export function preloadMobileWhisperModel(
   onProgress?: (statusText: string) => void
 ): Promise<any> {
   if (typeof window !== 'undefined' && (window as unknown as IWindow).__psuMockAudioTranscriber) {
     return Promise.resolve((window as unknown as IWindow).__psuMockAudioTranscriber);
+  }
+
+  if (onProgress) {
+    whisperProgressListeners.add(onProgress);
+    if (lastWhisperProgressText) {
+      onProgress(lastWhisperProgressText);
+    }
   }
 
   if (!whisperPipelinePromise) {
@@ -87,23 +148,50 @@ export function preloadMobileWhisperModel(
         // Crucial for Vite/Vercel SPAs: prevent fetching `/models/...` from local SPA rewrite
         env.allowLocalModels = false;
         env.useBrowserCache = true;
+        // Prevent cross-origin Worker SecurityError from jsDelivr CDN on production HTTPS origins
+        if (env.backends?.onnx?.wasm) {
+          env.backends.onnx.wasm.numThreads = 1;
+          env.backends.onnx.wasm.proxy = false;
+        }
 
-        return await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en', {
-          quantized: true,
-          progress_callback: (prog: any) => {
-            if (onProgress && prog?.status === 'progress' && typeof prog?.progress === 'number') {
-              onProgress(`Preparing voice engine (${Math.round(prog.progress)}%)...`);
-            }
-          },
-        });
+        const loadedPipeline = await pipeline(
+          'automatic-speech-recognition',
+          'Xenova/whisper-tiny.en',
+          {
+            quantized: true,
+            progress_callback: (prog: any) => {
+              if (prog?.status === 'progress' && typeof prog?.progress === 'number') {
+                const text = `Preparing voice engine (${Math.round(prog.progress)}%)...`;
+                lastWhisperProgressText = text;
+                whisperProgressListeners.forEach((listener) => {
+                  try {
+                    listener(text);
+                  } catch {
+                    // ignore listener error
+                  }
+                });
+              }
+            },
+          }
+        );
+
+        lastWhisperProgressText = null;
+        return loadedPipeline;
       } catch (err) {
         whisperPipelinePromise = null;
+        lastWhisperProgressText = null;
         throw err;
       }
     })();
   }
 
-  return whisperPipelinePromise;
+  if (!onProgress) {
+    return whisperPipelinePromise;
+  }
+
+  return whisperPipelinePromise.finally(() => {
+    whisperProgressListeners.delete(onProgress);
+  });
 }
 
 /**
@@ -215,6 +303,48 @@ export function cleanWhisperTranscript(raw: string): string {
   return cleaned;
 }
 
+/**
+ * Acquires hardware microphone stream with automatic backoff retry when Android's
+ * SpeechRecognizer binder is still releasing audio hardware (`NotReadableError`).
+ */
+async function acquireMicrophoneStreamWithRetry(isCancelled: () => boolean): Promise<MediaStream> {
+  const attempts: MediaStreamConstraints[] = [
+    {
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+    },
+    { audio: true },
+    { audio: true },
+  ];
+  const retryDelaysMs = [160, 340];
+
+  let lastErr: any = null;
+  for (let i = 0; i < attempts.length; i++) {
+    if (isCancelled()) {
+      throw new Error('Cancelled');
+    }
+    try {
+      return await navigator.mediaDevices.getUserMedia(attempts[i]);
+    } catch (err: any) {
+      lastErr = err;
+      const isPermissionDenied =
+        err?.name === 'NotAllowedError' ||
+        err?.name === 'PermissionDeniedError' ||
+        err?.name === 'SecurityError' ||
+        /denied|permission/i.test(err?.message || '');
+      if (isPermissionDenied || i === attempts.length - 1) {
+        throw err;
+      }
+      const delay = retryDelaysMs[i] || 200;
+      await new Promise<void>((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastErr;
+}
+
 export interface HybridSpeechCallbacks {
   onStart?: () => void;
   onInterim?: (text: string) => void;
@@ -233,8 +363,8 @@ export interface HybridSpeechSession {
 /**
  * Starts a hybrid speech recognition session:
  * - Tries native `SpeechRecognition` synchronously on user tap.
- * - If native `SpeechRecognition` is unsupported, aborts (`error: "aborted"`), or ends
- *   prematurely (<1400ms with 0 words), seamlessly transitions to `getUserMedia` + Web Audio VAD +
+ * - If native `SpeechRecognition` is unsupported, aborts (`error: "aborted"`), hangs (>1200ms on mobile
+ *   with 0 results), or ends with 0 words, seamlessly transitions to `getUserMedia` + Web Audio VAD +
  *   on-device Whisper STT WITHOUT dropping `isListening`.
  */
 export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): HybridSpeechSession {
@@ -243,22 +373,27 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
 
   let isAborted = false;
   let isFinished = false;
+  let isTranscribing = false;
   let finalDelivered = false;
   let recognition: any = null;
+  let nativeWatchdogTimer: number | null = null;
+  let nativeStopFallbackTimer: number | null = null;
 
   // Fallback Web Audio + MediaRecorder recording state
   let mediaStream: MediaStream | null = null;
   let mediaRecorder: MediaRecorder | null = null;
   const mediaBlobChunks: BlobPart[] = [];
-  let audioContext: AudioContext | null = null;
   let sourceNode: MediaStreamAudioSourceNode | null = null;
   let processorNode: ScriptProcessorNode | null = null;
+  let muteGainNode: GainNode | null = null;
   let maxDurationTimer: number | null = null;
   const pcmChunks: Float32Array[] = [];
   let recordedSampleRate = 16000;
   let fallbackActive = false;
 
   suspendAudioContextForMic();
+  // Unlock Web Audio context synchronously inside the user tap gesture
+  const unlockedAudioCtx = unlockRecordingAudioContextOnTap();
 
   if (
     typeof window !== 'undefined' &&
@@ -271,6 +406,17 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
       // ignore
     }
   }
+
+  const clearNativeTimers = () => {
+    if (nativeWatchdogTimer !== null && typeof window !== 'undefined') {
+      window.clearTimeout(nativeWatchdogTimer);
+      nativeWatchdogTimer = null;
+    }
+    if (nativeStopFallbackTimer !== null && typeof window !== 'undefined') {
+      window.clearTimeout(nativeStopFallbackTimer);
+      nativeStopFallbackTimer = null;
+    }
+  };
 
   const cleanupFallbackHardware = () => {
     if (maxDurationTimer !== null && typeof window !== 'undefined') {
@@ -294,6 +440,14 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
       }
       processorNode = null;
     }
+    if (muteGainNode) {
+      try {
+        muteGainNode.disconnect();
+      } catch {
+        // ignore
+      }
+      muteGainNode = null;
+    }
     if (sourceNode) {
       try {
         sourceNode.disconnect();
@@ -310,17 +464,10 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
       }
       mediaStream = null;
     }
-    if (audioContext && audioContext.state !== 'closed') {
-      try {
-        void audioContext.close();
-      } catch {
-        // ignore
-      }
-      audioContext = null;
-    }
   };
 
-  const cleanupNativeRecognition = () => {
+  const cleanupNativeRecognition = (useAbort = true) => {
+    clearNativeTimers();
     if (recognition) {
       const ref = recognition;
       recognition = null;
@@ -329,7 +476,11 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
       ref.onerror = null;
       ref.onend = null;
       try {
-        ref.stop?.();
+        if (useAbort && typeof ref.abort === 'function') {
+          ref.abort();
+        } else {
+          ref.stop?.();
+        }
       } catch {
         // ignore
       }
@@ -337,48 +488,64 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
   };
 
   const finalizeFallbackTranscription = async () => {
-    if (isAborted || finalDelivered) return;
+    if (isAborted || finalDelivered || isTranscribing) return;
+    isTranscribing = true;
+    isFinished = true;
     fallbackActive = false;
 
-    // If MediaRecorder is running and ScriptProcessorNode captured 0 PCM chunks (e.g. suspended AudioContext),
-    // decode the MediaRecorder blob as backup
-    if (pcmChunks.length === 0 && mediaRecorder && mediaRecorder.state !== 'inactive') {
+    // Stop MediaRecorder cleanly first so any buffered blob chunks flush before hardware teardown
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
       await new Promise<void>((resolve) => {
         if (!mediaRecorder) {
           resolve();
           return;
         }
-        mediaRecorder.onstop = () => resolve();
+        const safetyTimer = setTimeout(resolve, 300);
+        mediaRecorder.onstop = () => {
+          clearTimeout(safetyTimer);
+          resolve();
+        };
         try {
           mediaRecorder.stop();
         } catch {
+          clearTimeout(safetyTimer);
           resolve();
         }
       });
-
-      if (mediaBlobChunks.length > 0 && typeof window !== 'undefined') {
-        try {
-          const blob = new Blob(mediaBlobChunks);
-          const arrayBuf = await blob.arrayBuffer();
-          const AudioCtx =
-            window.AudioContext ||
-            (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-          const decodeCtx = new AudioCtx();
-          const decoded = await decodeCtx.decodeAudioData(arrayBuf);
-          recordedSampleRate = decoded.sampleRate || 16000;
-          pcmChunks.push(new Float32Array(decoded.getChannelData(0)));
-          void decodeCtx.close().catch(() => {});
-        } catch {
-          // ignore decode error
-        }
-      }
     }
 
     cleanupFallbackHardware();
-    mediaBlobChunks.length = 0;
 
-    const { pcm16k, maxRms } = preparePcm16kForWhisper(pcmChunks, recordedSampleRate);
+    let { pcm16k, maxRms } = preparePcm16kForWhisper(pcmChunks, recordedSampleRate);
     pcmChunks.length = 0;
+
+    // If ScriptProcessorNode captured 0 or silent frames, decode MediaRecorder blob as backup
+    if (
+      (pcm16k.length < 600 || maxRms < 0.007) &&
+      mediaBlobChunks.length > 0 &&
+      typeof window !== 'undefined'
+    ) {
+      try {
+        const blob = new Blob(mediaBlobChunks);
+        const arrayBuf = await blob.arrayBuffer();
+        const AudioCtx =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        const decodeCtx = unlockedAudioCtx && unlockedAudioCtx.state !== 'closed'
+          ? unlockedAudioCtx
+          : new AudioCtx();
+        const decoded = await decodeCtx.decodeAudioData(arrayBuf);
+        const backupChunks = [new Float32Array(decoded.getChannelData(0))];
+        const backupPrepared = preparePcm16kForWhisper(backupChunks, decoded.sampleRate || 16000);
+        if (backupPrepared.pcm16k.length > pcm16k.length || backupPrepared.maxRms > maxRms) {
+          pcm16k = backupPrepared.pcm16k;
+          maxRms = backupPrepared.maxRms;
+        }
+      } catch {
+        // ignore decode error
+      }
+    }
+    mediaBlobChunks.length = 0;
 
     const customMock =
       typeof window !== 'undefined'
@@ -386,6 +553,7 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
         : undefined;
 
     if (!customMock && (pcm16k.length < 600 || maxRms < 0.007)) {
+      isTranscribing = false;
       if (!isAborted) {
         callbacks.onError?.('No speech heard. Tap the voice button and speak clearly.');
         callbacks.onEnd?.();
@@ -400,19 +568,27 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
       if (customMock) {
         rawText = await customMock(pcm16k);
       } else {
-        const transcriber = await preloadMobileWhisperModel((progText) => {
-          if (!isAborted) callbacks.onInterim?.(progText);
-        });
+        let transcriber: any;
+        try {
+          transcriber = await preloadMobileWhisperModel((progText) => {
+            if (!isAborted) callbacks.onInterim?.(progText);
+          });
+        } catch {
+          // Retry model load once in case of transient mobile network hiccup
+          transcriber = await preloadMobileWhisperModel((progText) => {
+            if (!isAborted) callbacks.onInterim?.(progText);
+          });
+        }
         if (isAborted) return;
         callbacks.onInterim?.('Processing spoken command...');
         const output = await transcriber(pcm16k, {
-          chunk_length_s: 15,
-          stride_length_s: 3,
+          max_new_tokens: 40,
           return_timestamps: false,
         });
         rawText = typeof output === 'string' ? output : output?.text || '';
       }
 
+      isTranscribing = false;
       if (isAborted) return;
 
       const cleaned = cleanWhisperTranscript(rawText);
@@ -425,6 +601,7 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
         callbacks.onEnd?.();
       }
     } catch (err: any) {
+      isTranscribing = false;
       if (!isAborted) {
         callbacks.onError?.(
           `Voice processing unavailable (${err?.message || 'error'}). Try typing below.`
@@ -435,11 +612,12 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
   };
 
   const startFallbackAudioCapture = async () => {
-    if (isAborted || finalDelivered || fallbackActive) return;
+    if (isAborted || finalDelivered || fallbackActive || isTranscribing) return;
     fallbackActive = true;
-    cleanupNativeRecognition();
+    cleanupNativeRecognition(true);
 
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      fallbackActive = false;
       callbacks.onError?.(
         'Microphone access is not available in this browser. Please use HTTPS or type below.'
       );
@@ -451,13 +629,7 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
     void preloadMobileWhisperModel().catch(() => {});
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
+      const stream = await acquireMicrophoneStreamWithRetry(() => isAborted);
 
       if (isAborted) {
         stream.getTracks().forEach((t) => t.stop());
@@ -487,11 +659,13 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
       const AudioCtx =
         window.AudioContext ||
         (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      const ctx = new AudioCtx();
+      const ctx =
+        unlockedAudioCtx && unlockedAudioCtx.state !== 'closed'
+          ? unlockedAudioCtx
+          : new AudioCtx();
       if (ctx.state === 'suspended') {
         await ctx.resume().catch(() => {});
       }
-      audioContext = ctx;
       recordedSampleRate = ctx.sampleRate || 16000;
 
       const source = ctx.createMediaStreamSource(stream);
@@ -500,13 +674,17 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
       const processor = ctx.createScriptProcessor(2048, 1, 1);
       processorNode = processor;
 
+      const silentGain = ctx.createGain();
+      silentGain.gain.value = 0;
+      muteGainNode = silentGain;
+
       let activeVoiceFrames = 0;
       let silenceMsAfterSpeech = 0;
       let totalElapsedMs = 0;
       let notifiedVoiceDetected = false;
 
       processor.onaudioprocess = (e: AudioProcessingEvent) => {
-        if (isAborted || !fallbackActive) return;
+        if (isAborted || !fallbackActive || isTranscribing) return;
         const input = e.inputBuffer.getChannelData(0);
         const copy = new Float32Array(input.length);
         copy.set(input);
@@ -543,10 +721,11 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
       };
 
       source.connect(processor);
-      processor.connect(ctx.destination);
+      processor.connect(silentGain);
+      silentGain.connect(ctx.destination);
 
       maxDurationTimer = window.setTimeout(() => {
-        if (fallbackActive && !isAborted) {
+        if (fallbackActive && !isAborted && !isTranscribing) {
           void finalizeFallbackTranscription();
         }
       }, 9000);
@@ -568,7 +747,7 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
     }
   };
 
-  // If native SpeechRecognition is missing OR already known to abort on this mobile device,
+  // If native SpeechRecognition is missing OR already known to abort/hang on this mobile device,
   // jump straight to Stage 2 hardware microphone capture!
   if (!SpeechRecognitionClass || (IS_MOBILE_BROWSER && nativeSpeechAbortedOnDevice)) {
     callbacks.onStart?.();
@@ -585,12 +764,13 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
       recognition.lang = 'en-US';
 
       recognition.onstart = () => {
-        if (isAborted) return;
+        if (isAborted || fallbackActive) return;
         callbacks.onStart?.();
       };
 
       recognition.onresult = (event: any) => {
         if (isAborted || fallbackActive) return;
+        clearNativeTimers();
         const { interim, final } = extractCleanSpeechTranscript(event);
         const combined = final || interim;
 
@@ -602,14 +782,15 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
         if (final && !finalDelivered) {
           finalDelivered = true;
           latestInterim = '';
-          cleanupNativeRecognition();
+          cleanupNativeRecognition(false);
           callbacks.onFinal(final);
           callbacks.onEnd?.();
         }
       };
 
       recognition.onerror = (event: any) => {
-        if (isAborted || fallbackActive) return;
+        if (isAborted || fallbackActive || isTranscribing) return;
+        clearNativeTimers();
         const errCode = event?.error || 'unknown';
 
         // If speech was already captured before mobile fired 'aborted'/'no-speech', flush it in onend
@@ -618,9 +799,10 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
         }
 
         // On mobile (or when native SpeechRecognition throws 'aborted', 'service-not-allowed',
-        // 'not-allowed', 'audio-capture', or 'network'), seamlessly hand off to Stage 2
-        // hardware microphone capture WITHOUT dropping out of listening state!
+        // 'not-allowed', 'audio-capture', 'network', or mobile 'no-speech'), seamlessly hand off
+        // to Stage 2 hardware microphone capture WITHOUT dropping out of listening state!
         if (
+          IS_MOBILE_BROWSER ||
           errCode === 'aborted' ||
           errCode === 'service-not-allowed' ||
           errCode === 'not-allowed' ||
@@ -628,24 +810,27 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
           errCode === 'network'
         ) {
           if (IS_MOBILE_BROWSER || errCode === 'aborted' || errCode === 'service-not-allowed') {
-            nativeSpeechAbortedOnDevice = true;
+            markNativeSpeechAbortedOnDevice();
           }
           void startFallbackAudioCapture();
           return;
         }
 
-        cleanupNativeRecognition();
+        cleanupNativeRecognition(true);
         if (errCode === 'no-speech') {
           callbacks.onError?.('No speech heard. Tap the voice button and speak right away.');
         } else {
-          callbacks.onError?.(`Voice recognition notice (${errCode}). Try speaking again or type below.`);
+          callbacks.onError?.(
+            `Voice recognition notice (${errCode}). Try speaking again or type below.`
+          );
         }
         callbacks.onEnd?.();
       };
 
       recognition.onend = () => {
-        if (isAborted || fallbackActive || finalDelivered) return;
-        cleanupNativeRecognition();
+        if (isAborted || fallbackActive || isTranscribing || finalDelivered) return;
+        clearNativeTimers();
+        cleanupNativeRecognition(false);
 
         const pending = latestInterim.trim();
         if (pending.length > 0) {
@@ -663,13 +848,13 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
         }
 
         // CRITICAL ANDROID CHROME FIX:
-        // Android Chrome often fires `onstart` followed immediately by `onend` (<1400ms)
+        // Android Chrome often fires `onstart` followed by `onend` with 0 results
         // WITHOUT firing `onerror` when the OS SpeechRecognizer binder fails.
         // Detect this premature termination and seamlessly hand off to Stage 2 `getUserMedia`!
         const elapsedMs = Date.now() - startedAt;
-        if (elapsedMs < 1400) {
+        if (IS_MOBILE_BROWSER || elapsedMs < 2200) {
           if (IS_MOBILE_BROWSER) {
-            nativeSpeechAbortedOnDevice = true;
+            markNativeSpeechAbortedOnDevice();
           }
           void startFallbackAudioCapture();
           return;
@@ -678,12 +863,31 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
         callbacks.onEnd?.();
       };
 
+      // Mobile Native Watchdog: if Android Chrome's SpeechRecognizer hangs silently for 1,200ms
+      // with zero results, seamlessly switch to Stage 2 hardware microphone capture!
+      if (IS_MOBILE_BROWSER && typeof window !== 'undefined') {
+        nativeWatchdogTimer = window.setTimeout(() => {
+          nativeWatchdogTimer = null;
+          if (
+            !isAborted &&
+            !isFinished &&
+            !fallbackActive &&
+            !isTranscribing &&
+            !finalDelivered &&
+            latestInterim.trim().length === 0
+          ) {
+            markNativeSpeechAbortedOnDevice();
+            void startFallbackAudioCapture();
+          }
+        }, 1200);
+      }
+
       // Invoke .start() 100% synchronously on the user tap call stack
       recognition.start();
       callbacks.onStart?.();
     } catch {
       if (IS_MOBILE_BROWSER) {
-        nativeSpeechAbortedOnDevice = true;
+        markNativeSpeechAbortedOnDevice();
       }
       void startFallbackAudioCapture();
     }
@@ -692,22 +896,37 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
   return {
     finishAndTranscribe: () => {
       if (isAborted) return;
+      // If Whisper transcription is already in progress, let it finish rather than aborting it!
+      if (isTranscribing) {
+        callbacks.onInterim?.('Transcribing your voice...');
+        return;
+      }
       if (isFinished) {
         isAborted = true;
         fallbackActive = false;
-        cleanupNativeRecognition();
+        cleanupNativeRecognition(true);
         cleanupFallbackHardware();
         callbacks.onEnd?.();
         return;
       }
       isFinished = true;
+      clearNativeTimers();
       if (fallbackActive) {
         void finalizeFallbackTranscription();
       } else if (recognition) {
         try {
           recognition.stop?.();
+          if (typeof window !== 'undefined') {
+            nativeStopFallbackTimer = window.setTimeout(() => {
+              nativeStopFallbackTimer = null;
+              if (!isAborted && !finalDelivered && !fallbackActive && !isTranscribing) {
+                cleanupNativeRecognition(true);
+                callbacks.onEnd?.();
+              }
+            }, 450);
+          }
         } catch {
-          cleanupNativeRecognition();
+          cleanupNativeRecognition(true);
           callbacks.onEnd?.();
         }
       } else {
@@ -718,8 +937,9 @@ export function startHybridSpeechSession(callbacks: HybridSpeechCallbacks): Hybr
       if (isAborted) return;
       isAborted = true;
       isFinished = true;
+      isTranscribing = false;
       fallbackActive = false;
-      cleanupNativeRecognition();
+      cleanupNativeRecognition(true);
       cleanupFallbackHardware();
     },
   };

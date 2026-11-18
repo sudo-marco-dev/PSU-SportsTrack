@@ -61,11 +61,17 @@ export function usePublicVoiceAssistant() {
   const sessionRef = useRef<HybridSpeechSession | null>(null);
   const isListeningRef = useRef<boolean>(false);
 
-  // Warm up on-device Whisper in the background when the assistant dialog opens on mobile
+  // Warm up on-device Whisper in the background on mobile (on idle after mount + when dialog opens)
   useEffect(() => {
-    if (isOpen && IS_MOBILE_BROWSER) {
+    if (!IS_MOBILE_BROWSER) return;
+    if (isOpen) {
       void preloadMobileWhisperModel().catch(() => {});
+      return;
     }
+    const warmupTimer = window.setTimeout(() => {
+      void preloadMobileWhisperModel().catch(() => {});
+    }, 1200);
+    return () => window.clearTimeout(warmupTimer);
   }, [isOpen]);
 
   const abortCurrentSession = useCallback(() => {
