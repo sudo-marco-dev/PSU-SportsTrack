@@ -19,6 +19,8 @@
 8. [Branch File Inventory & Symbol Traceability](#8-branch-file-inventory--symbol-traceability)
 9. [Empirical Verification & Automated Test Coverage](#9-empirical-verification--automated-test-coverage)
 10. [Anticipated HCI-2 Panel Defense Questions](#10-anticipated-hci-2-panel-defense-questions)
+11. [Live Presentation Demo Script & Sample Triggers Reference](#11-live-presentation-demo-script--sample-triggers-reference)
+12. [Detailed Guide: What Can vs. Cannot Be Done (Voice & Gesture Boundaries)](#12-detailed-guide-what-can-vs-cannot-be-done-voice--gesture-boundaries)
 
 ---
 
@@ -217,3 +219,147 @@ Verified on branch `feat/multimodal-voice-scoring`:
    No. MediaPipe WASM and `hand_landmarker.task` are self-hosted in `public/mediapipe/` for offline execution, `commitScoreAction` automatically routes writes into `offlineQueue` when offline, and every voice widget provides typed input chips plus pose simulator buttons as clean graceful fallbacks.
 4. **"Why use deterministic rule/NLU parsing for public voice search instead of sending queries to an external LLM?"**  
    Deterministic NLU (`parseNaturalVoiceQuery`) executes locally in milliseconds with zero API keys, zero external cost per student search, predictable Levenshtein typo recovery (`distance <= 2`), strict zero-404 route whitelisting, and verifiable query execution directly against PSU's live PostgreSQL schema.
+
+---
+
+## 11. Live Presentation Demo Script & Sample Triggers Reference
+
+Use the following **tested demo lines and gestures** during your HCI-2 presentation. Every utterance below is mapped directly to its exact parser intent in [smartVoiceQueryEngine.ts](src/lib/smartVoiceQueryEngine.ts), [publicVoiceAssistant.ts](src/lib/publicVoiceAssistant.ts), [voiceCommandParser.ts](src/lib/voiceCommandParser.ts), and [handPoseClassifier.ts](src/lib/handPoseClassifier.ts).
+
+### 11.1 Part 1 — Public Conversational Voice Search Demo Lines (`PublicVoiceAssistantHUD` & `/search`)
+
+> **How to Launch in Presentation:** Click the bottom-right floating microphone button (`btn-universal-voice-assistant`) on any public page, or open `/search` directly. You can either speak into the microphone or type/click the exact phrase inside the search bar.
+
+#### A. Vague Top-N Leaderboards & Analytical Questions (Best Opening Demo Lines)
+| Exact Demo Line to Speak / Type | Parsed Intent (`QueryIntent`) | Target Route / View | Expected System & UI Behavior |
+| :--- | :--- | :--- | :--- |
+| **"What's the top 3 highest scoring player?"** | `question_top_scorers` (`topN = 3`) | `/athletics?sort=points` (or `/search`) | Aggregates `fetchBatchPlayerSummaries()`, speaks the #1 scorer's total points & PPG, and renders a 3-row ranked Direct Answer card. |
+| **"What's the top 5 highest win rate tribes or squads?"** | `question_tribe_squad_win_rate` (`topN = 5`, `entityTarget = 'both'`) | `/ranking?tab=win_rate` (or `/search`) | Computes win rates across all completed matches for both PSU `clusters` (Tribes) and `teams` (Squads) and renders a Top-5 ranked leaderboard card. |
+| **"Who is the highest rated college right now?"** | `question_top_college` | `/ranking` | Evaluates live university standings across completed fixtures and highlights the #1 leading college in a Direct Answer card. |
+| **"Search for highest MVP"** *(or **"Who has the most gold stars?"**)* | `question_highest_mvp` | `/ranking?tab=stars` | Ranks athletes by weighted star score (`Gold * 3 + Red * 1`) and displays the top MVP leader card. |
+| **"Search for player with highest win rate"** | `question_highest_win_rate` (`topN = 1`) | `/athletics?sort=win_rate` | Computes athlete match participation win percentages and surfaces the highest win-rate athlete. |
+| **"Who won last week?"** | `question_winner` (`last_week`) | `/search?q=...&type=matches` | Queries completed matches in the previous week window and announces the winning team and final score. |
+| **"Who won last year?"** | `question_winner` (`last_year`) | `/search?q=...&type=matches` | Checks previous calendar year (`match_time \|\| created_at`); if no fixtures exist for that year, triggers Smart Temporal Fallback to the latest completed match. |
+
+#### B. Conversational Temporal & Sport-Filtered Fixture Searches
+| Exact Demo Line to Speak / Type | Resolved `TemporalWindow` & `sport` | Expected System & UI Behavior |
+| :--- | :--- | :--- |
+| **"What's the last matches from basketball this last week?"** | `type: 'last_week'`, `expectedStatus: 'Completed'`, `sport: 'basketball'` | Filters completed Basketball fixtures from last week (or shows a clear fallback badge if the window is empty). |
+| **"What's the upcoming games for this month?"** | `type: 'this_month'`, `expectedStatus: 'Scheduled'` | Displays all scheduled fixtures within the current calendar month with active context badges. |
+| **"What's the upcoming games for this day?"** *(or **"games today"**)* | `type: 'today'`, `expectedStatus: 'Scheduled'` | Filters today's scheduled matches (`00:00:00` to `23:59:59` local time). |
+| **"What's the upcoming games for this week?"** | `type: 'this_week'`, `expectedStatus: 'Scheduled'` | Lists all scheduled fixtures for the current week. |
+| **"Search for volleyball games next week"** | `type: 'next_week'`, `expectedStatus: 'Scheduled'`, `sport: 'volleyball'` | Filters next week's scheduled Volleyball fixtures. |
+| **"Search past games last month"** | `type: 'last_month'`, `expectedStatus: 'Completed'` | Lists completed matches from the previous calendar month. |
+
+#### C. Directory & Entity Lookups (Athletes, Colleges, Sport Schedules)
+| Exact Demo Line to Speak / Type | Parsed Query Type | Expected System & UI Behavior |
+| :--- | :--- | :--- |
+| **"Search for player Dela Cruz"** *(or **"Player Santos"**)* | `filter_players` (`player_search`) | Queries `users` table by `full_name` and displays matching verified athlete cards with college affiliation. |
+| **"Search for CET"** *(or **"College of Engineering"** or **"Colleges"**)* | `filter_colleges` (`college_search`) | Resolves `CET` (`College of Engineering and Technology`) or lists all 9 PSU colleges with direct `View Standings` links. |
+| **"Basketball schedule"** *(or **"Show pickleball schedule"**)* | `filter_matches` / `sport_schedule` | Displays scheduled matches and tournament brackets for that sport (`basketball`, `volleyball`, `football`, `sepak takraw`, `badminton`, `table tennis`, `chess`, `soccer`, `futsal`, `baseball`, `softball`, `pickleball`). |
+
+#### D. Direct Zero-404 Navigation Shortcuts
+| Exact Demo Line to Speak / Type | Verified Route Target | Spoken Confirmation |
+| :--- | :--- | :--- |
+| **"Go to rankings"** *(or **"Open standings"**)* | `/ranking` | *"Navigating to College Standings and Medal Rankings."* |
+| **"Open tournaments"** *(or **"Go to brackets"**)* | `/explorer` | *"Navigating to Tournament Explorer."* |
+| **"Navigate to athletics"** *(or **"Open scouting"**)* | `/athletics` | *"Navigating to Athletics Scouting Hub."* |
+| **"Take me to search"** | `/search` | *"Opening Dedicated Voice Query Search Hub."* |
+| **"Go to home"** | `/` | *"Navigating to PSU SportsTrack Home."* |
+
+#### E. Resilience & Auto-Correction Demo Lines (Showcasing Edge-Case Intelligence)
+| Exact Demo Line to Speak / Type | What It Demonstrates to the Panel | Exact Engine Behavior |
+| :--- | :--- | :--- |
+| **"Search for baskitball games this week"** | **Levenshtein Fuzzy Sport Recovery (`distance <= 2`)** | Auto-corrects `"baskitball"` → `"basketball"` and renders an amber **Auto-Correction Notice** pill on `/search`. |
+| **"Show see ba standings"** *(or **"kass colleges"**)* | **Phonetic College Alias Recovery** | Maps speech-to-text homophones `"see ba"` → `CBA` and `"kass"` → `CAS` automatically. |
+| **"Who won in baseball last year?"** | **Smart Temporal Window Fallback** | When a strict time/sport combination returns `0` matches, automatically broadens to available completed records and displays a transparent fallback explanation banner instead of a blank screen. |
+
+---
+
+### 11.2 Part 2 — Courtside Voice Scoring Demo Lines (`FacilitatorKiosk` & `LiveMatch`)
+
+> **Prerequisite for Live Demo:** Log in as a `facilitator` or `super_admin`, open an `Ongoing` match in Kiosk mode (`/match/:id/kiosk`), and ensure you hold the **Console Lease**. Expand the **Hands-Free Multimodal Deck** and click **Start Voice** (or type/click inside `VoiceScoringWidget`).
+
+| Official Action | Exact Demo Line to Speak | Parsed Output (`ParsedVoiceCommand`) | Kiosk Execution Result |
+| :--- | :--- | :--- | :--- |
+| **Team Field Goal (`+2`)** | **"Give 2 points to Team A"** *(or use actual team name, e.g., **"Add 2 points to CET"**)* | `intent: 'score', team: 'a', points: 2, actionType: 'Field Goal'` | Commits `+2` to Team A via `commitScoreAction`, plays score chime, and speaks confirmation. |
+| **Player-Attributed Score** | **"Give 2 points to Team A player 1"** *(or **"3 points to Team B number 12"**)* | `intent: 'score', team: 'a', points: 2, playerNumber: 1` | Focuses jersey `#1` on Team A, records `+2` points and `PTS_2` player stat event, and logs `#1` in the live match ticker. |
+| **3-Pointer Shortcut (`+3`)** | **"Three pointer for Team B"** *(or **"Give 3 points to Team B"**)* | `intent: 'score', team: 'b', points: 3, actionType: '3-Pointer'` | Awards `+3` (or clamps to sport max in 1-point sports). |
+| **Free Throw / Single (`+1`)** | **"Free throw for Team A"** *(or **"Add 1 point to Team A"**)* | `intent: 'score', team: 'a', points: 1, actionType: 'Free Throw'` | Awards `+1` to Team A. |
+| **Hands-Free Player Focus** | **"Pick player 5 Team A"** *(or **"Select player 8 Team B"**)* | `intent: 'select_player', team: 'a', playerNumber: 5` | Sets active scorer focus to jersey `#5` (`selectedScorerA`) without adding points yet. |
+| **2-Player Substitution** | **"Substitute player 1 to player 2 from Team A"** *(or **"Sub in 10 for 4 Team B"**)* | `intent: 'substitution', subOutPlayerNumber: 1, subInPlayerNumber: 2` | Executes roster swap (`handleConfirmSub`), plays sub horn, and logs `[SUBSTITUTION]` to match events. |
+| **Pause Game / Clock** | **"Pause game"** *(or **"Pause clock"**, **"Stop time"**, **"Freeze match"**)* | `intent: 'clock', clockAction: 'pause'` | Pauses the running Kiosk game clock and plays clock-pause audio cue. |
+| **Resume Game / Clock** | **"Resume match"** *(or **"Resume clock"**, **"Unpause"**, **"Start time"**)* | `intent: 'clock', clockAction: 'resume'` | Resumes the paused Kiosk game clock. |
+| **Score Deduction** | **"Deduct 2 points from Team B"** *(or **"Minus 1 point Team A"**)* | `intent: 'deduct', team: 'b', points: 2` | Calls `handleQuickDeduct('b', 2)` to log a compensating score correction. |
+| **Player or Team Foul** | **"Foul on player 7 Team A"** *(or **"Foul on Team B"**)* | `intent: 'foul', team: 'a', playerNumber: 7` | Increments team/player foul counter (`handleAddFoul`). |
+| **Official Timeout** | **"Timeout Team A"** *(or **"Call time for Team B"**)* | `intent: 'timeout', team: 'a'` | Triggers official timeout (`handleCallTimeout`), deducts timeout pip, and sounds klaxon. |
+| **Undo Last Score** | **"Undo last score"** *(or **"Cancel last"**)* | `intent: 'undo'` | Reverts the most recent score action (`handleUndoLastScore`). |
+| **Live Commentary** | **"Commentary fast break layup by number 12"** | `intent: 'commentary', notes: 'fast break layup by number 12'` | Publishes live text commentary to the spectator ticker. |
+
+---
+
+### 11.3 Part 3 — Kiosk 21-Landmark Hand & Finger Gesture Demo Script (`TouchlessGestureHUD`)
+
+Run this 5-step sequence during your defense to prove the camera tracks **real anatomical hand/finger landmarks** rather than random screen regions:
+
+1. **Step 1 — Enable Camera & Show Face Immunity (`Test Lock / Dry-Run`):**
+   - Click **Enable Hand AI Camera** (`btn-toggle-touchless-camera`), then click **Live Armed** to switch into **Test Lock (Dry-Run)** (`btn-toggle-touchless-armed`).
+   - Lean your face left, right, and center across the camera frame with no hands raised.
+   - **Point out to the panel:** Both `Left Hand` and `Right Hand` cards stay at `IDLE (0%)` because faces lack a 21-joint hand skeleton (`palmSize >= 0.065`, confidence `>= 0.70`).
+2. **Step 2 — Show Anatomical Left vs. Right Hand Anywhere in Frame:**
+   - Raise your **Left Hand** on the *right* side of the webcam frame and hold **2 Fingers** (`Index + Middle`).
+   - **Point out to the panel:** The orange **Left Hand** card charges to `100%` and displays `[DRY-RUN] LEFT HAND: +2 Points`, proving handedness is anatomical rather than tied to a left/right screen box.
+3. **Step 3 — Switch to `Live Armed` & Demonstrate Referee Finger Poses (`850ms` Dwell):**
+   - Click **Test Lock (Dry-Run)** to return to **Live Armed**.
+   - Hold **Left Hand — 4 Fingers** (thumb tucked) for `850ms` → cycles the focused athlete on the Left Team.
+   - Hold **Left Hand — 2 Fingers** for `850ms` → awards `+2 Points` to the focused Left Team athlete.
+   - Hold **Right Hand — 3 Fingers** (`Index + Middle + Ring`) for `850ms` → awards `+3 Points` to the Right Team.
+4. **Step 4 — Demonstrate the `RELEASE TO REARM` Anti-Double-Score Lock:**
+   - Keep holding **Right Hand — 3 Fingers** continuously in front of the camera after it fires.
+   - **Point out to the panel:** The badge locks at `RELEASE TO REARM (0%)` and **never double-scores** no matter how long the hand stays up. Lower your hand for `220ms` to watch it rearm back to `IDLE`.
+5. **Step 5 — Demonstrate Game Control Poses (`Open Palm`, `Closed Fist`, `Thumbs Up`, `Shaka`):**
+   - Hold **Open Palm (5 Fingers)** → Pauses or resumes the match clock.
+   - Hold **Closed Fist (0 Fingers curled)** → Deducts `-1 Point` correction on that hand's team.
+   - Hold **Thumbs Up** → Calls an official Timeout for that hand's team.
+   - Hold **Shaka (Thumb + Pinky)** → Opens the Substitution Drawer for that hand's team.
+
+---
+
+## 12. Detailed Guide: What Can vs. Cannot Be Done (Voice & Gesture Boundaries)
+
+### 12.1 Public Voice Search (`smartVoiceQueryEngine.ts` & `publicVoiceAssistant.ts`) — Can vs. Cannot Matrix
+
+| Capability Dimension | What You **CAN** Say (Supported) | What You **CANNOT** Say (Unsupported) | Exact Parser / System Behavior When Attempted | Valid Alternative Phrasing |
+| :--- | :--- | :--- | :--- | :--- |
+| **1. Conversational Memory (Single-Turn vs. Multi-Turn)** | Complete self-contained questions in one sentence: *"What's the last matches from basketball this last week?"* | Contextual follow-up pronouns relying on a previous turn: *"What about volleyball?"* or *"Now filter those by CET."* | Each query runs statelessly through `parseNaturalVoiceQuery()`. Follow-up fragments are treated as standalone searches (e.g., searching all volleyball matches without the prior time filter). | Restate the full intent in one sentence: *"What's the last matches from volleyball this last week?"* |
+| **2. Temporal Filtering (`TemporalWindow`)** | Relative natural time windows: `today` / `this day` / `tonight`, `yesterday`, `this week`, `last week` / `this last week`, `next week`, `this month`, `last month`, `this year`, `last year`, `upcoming`, `past` / `recent`. | Arbitrary calendar dates, clock times, or custom date ranges: *"Games on October 14 at 3 PM"* or *"Matches between March 2 and March 9."* | `resolveTemporalWindow()` returns `undefined` for specific calendar dates and searches across all dates for the mentioned sport/college. | Use relative windows: *"Upcoming basketball games this month"* or filter manually on `/explorer`. |
+| **3. Statistical Aggregations & Leaderboards** | Top-N scorers (`top 3 highest scoring player`), Top-N tribe/squad win rates (`top 5 highest win rate tribes or squads`), athlete win rate, MVP/star leaders, and college standings. | Granular box-score sub-statistics not stored as separate DB columns: *"Who has the most rebounds, assists, or steals in the 3rd quarter?"* or *"Free throw percentage leader."* | Falls back to `filter_players` or `general` search on `/search` because the database schema tracks match scores, `PTS_x` events, win/loss records, and Gold/Red stars. | Ask for supported metrics: *"What's the top 3 highest scoring player?"* or *"Search for highest MVP."* |
+| **4. Fuzzy Typo & Homophone Recovery** | 1-to-2 character typos on sports (`"baskitball"`, `"vollyball"`, `Levenshtein <= 2`), 1-char typos on college codes (`<= 1`), and registered phonetic aliases (`"see ba"`, `"kass"`, `"ceat"`). | Severe phonetic distortion (`> 2` edits, e.g., *"bzkxball"*), non-PSU colleges, or conversational Tagalog sentences (*"Sino ang nanalo kahapon sa basketball?"*). | Unrecognized words are not force-matched to random sports/colleges; the engine routes to `/search?q=...` and shows a clean Empty State with a `Reset` button if no DB rows match. | Speak English keywords with PSU college codes/names (*"Who won yesterday in basketball?"*). |
+| **5. Compound Multi-Intent Sentences** | Combining **Sport + College + Temporal Window** in one query: *"Upcoming basketball games for CET this week."* | Combining **multiple distinct questions/actions** in one breath: *"Who won last week and who is the top scorer and open rankings?"* | Deterministic priority cascade executes the first matched high-priority intent (`question_top_scorers` precedes `question_winner`, which precedes `navigation`). | Ask one question or navigation command per voice trigger. |
+| **6. Public Read-Only Security Boundary** | Searching any public tournament, match fixture, athlete profile, college standing, or schedule. | Attempting to mutate scores or access admin routes from the public assistant: *"Add 3 points to CET"* or *"Open admin audit logs."* | `PublicVoiceAssistantHUD` has zero write hooks and only whitelists public routes (`/`, `/ranking`, `/explorer`, `/athletics`, `/search`). Admin/write phrases harmlessly route to `/search?q=...`. | Use the authenticated Courtside Kiosk (`/match/:id/kiosk`) with a valid scorekeeper lease for scoring. |
+
+---
+
+### 12.2 Courtside Voice Scoring (`voiceCommandParser.ts` & `useVoiceScoring.ts`) — Can vs. Cannot Matrix
+
+| Capability Dimension | What You **CAN** Do (Supported) | What You **CANNOT** Do (Unsupported) | Exact Parser / System Behavior When Attempted | Valid Alternative Phrasing |
+| :--- | :--- | :--- | :--- | :--- |
+| **1. Team Target Resolution (`resolveTeam`)** | Specify `"Team A"`, `"Team B"`, `"Team 1"`, `"Team 2"`, or the actual competing team/college name or word (`"Give 2 points to CET"`). | Omit the team when awarding points: *"Give 2 points"* or *"Three pointer!"* without naming a team. | `useVoiceScoring` blocks execution and speaks feedback: *"Could not detect which team. Please specify Team A or Team B."* | Always include the team: *"Give 2 points to Team A"* or *"Three pointer Team B."* |
+| **2. Point Increments (`extractPoints`)** | Spoken action terms (`"free throw"` = 1, `"goal"` = 1, `"layup"`/`"dunk"`/`"basket"`/`"field goal"` = 2, `"three pointer"`/`"triple"` = 3), digits `1–10`, or number words `"one"` through `"five"`. | Request large arbitrary point jumps (`"Add 50 points to Team A"`) or arithmetic expressions (`"Set Team A score to 42"`). | Digits `> 10` and number words `> five` are ignored by `extractPoints()`, returning `intent: 'unknown'` so a misheard number never corrupts the match score. | Issue standard per-play increments (`+1`, `+2`, `+3`) or use Kiosk manual controls. |
+| **3. Player Attribution (`extractPlayerNumber`)** | Target players by jersey number (`0–99` digits or spoken words `"zero"` through `"twenty five"`): *"Give 2 points to Team A player 12"* or *"Pick player 5 Team A."* | Attribute points by speaking an athlete's full name/surname: *"Give 2 points to Dela Cruz from Team A."* | `extractPlayerNumber()` looks for `#` / `player` / `number` / `jersey` + number. If no jersey number is spoken, the score is credited to the currently focused player (`selectedScorerA/B`) or team total. | Speak the athlete's jersey number: *"Give 2 points to Team A player 12."* |
+| **4. Roster Substitutions (`parseSubstitution`)** | Two-number swap syntax: *"Substitute player 1 to player 2 from Team A"*, *"Sub out 4 for 10 Team B"*, or *"Sub in 10 for 4 Team B."* | Whole-lineup swaps (*"Sub out all starters"*) or single-number commands (*"Substitute player 5"*). | `parseSubstitution()` requires extracting two valid jersey numbers (`subOut` and `subIn`). Single-number phrases do not fire a substitution. | State both outgoing and incoming jersey numbers: *"Sub in 10 for 4 Team A."* |
+| **5. Game Clock Control (`clock` intent)** | Binary state transitions: *"Pause clock"*, *"Pause game"*, *"Stop time"*, *"Freeze match"*, *"Resume match"*, *"Unpause"*, *"Start time"*. | Arbitrary clock editing or period jumping by voice: *"Set clock to 2 minutes 15 seconds"* or *"Jump to 4th quarter."* | Only `clockAction: 'pause' \| 'resume'` is dispatched to `handleToggleClock()`. If the clock is already paused, saying *"Pause game"* is a safe no-op. | Use the Kiosk center console period/clock adjustment controls for custom time edits. |
+| **6. Score Deductions & Undo (`deduct` / `undo`)** | Exact point deductions (*"Deduct 2 points from Team B"*, *"Minus 1 Team A"*) or reverting the last score (*"Undo last score"*). | Multi-step historical rollback by voice (*"Undo the last 5 plays"* or *"Delete the 1st quarter score"*). | `handleUndoLastScore()` holds a single-action reference (`lastScoreActionRef`) and resets `canUndo` after reverting once. | Use `"Deduct X points from Team A/B"` for additional score corrections. |
+
+---
+
+### 12.3 Kiosk 21-Landmark Hand & Finger Control (`handPoseClassifier.ts` & `TouchlessGestureEngine`) — Can vs. Cannot Matrix
+
+| Capability Dimension | What You **CAN** Do (Supported) | What You **CANNOT** Do (Unsupported) | Exact Engine Behavior When Attempted | Best Practice for Live Demo |
+| :--- | :--- | :--- | :--- | :--- |
+| **1. Static Finger Geometry vs. Motion Swipes** | Hold any of the **8 static referee finger poses** (`1F`, `2F`, `3F`, `4F`, `Open Palm`, `Closed Fist`, `Thumbs Up`, `Shaka`) steady for `850ms`. | Rapid waving, horizontal hand swipes, finger snapping, or drawing shapes in the air. | Moving or changing finger counts resets `HandPoseDwellTracker`'s charge back toward `0%`. Only a steady `850ms` pose fires `100%`. | Hold your palm facing the webcam steadily until the wrist ring & percentage bar hit `100%`. |
+| **2. Anti-Double-Score Lock (`locked_until_release`)** | Score once per deliberate hold, then lower your hand (or change pose) for `>= 220ms` to rearm for the next play. | Keep `2 Fingers` raised continuously expecting it to add `+2` every second in a loop. | Immediately after firing at `100%`, the hand slot enters `locked_until_release` (`RELEASE TO REARM`) and outputs `fired: false` until released for `220ms`. | Lower your hand briefly or close/open your palm after each score chime to rearm. |
+| **3. Player Selection (`4 Fingers`) vs. Direct Jersey Jump** | Hold `4 Fingers` (thumb tucked) on Left or Right hand to cycle sequentially through that team's active on-court roster (`handleSelectPlayerHandsFree`). | Sign a two-digit jersey number like `#24` directly with hand fingers in one gesture. | Human hands have 5 digits; `1–3` fingers are reserved for `+1/+2/+3` points, `4` cycles players, and `5` toggles the clock. | Use `4 Fingers` to cycle on-court starters, or combine with Courtside Voice (*"Pick player 24 Team A"*). |
+| **4. Anatomical Handedness & Camera Framing** | Raise your physical **Left Hand** or **Right Hand** anywhere inside the webcam frame (`0.4m – 1.8m` from lens, `palmSize >= 0.065`). | Trigger gestures from across the gymnasium (`> 2.5m` away), with hands half-cropped off-screen, or with fingers turned sideways hiding the palm. | `classifyHandPose` rejects frames where `palmSize < 0.065` or MediaPipe confidence `< 0.70`, keeping the indicator at `IDLE`. | Keep your full palm and fingers visible inside the video viewport; use **Flip L/R** if using an unmirrored external USB webcam. |
+| **5. Simultaneous Two-Hand Independency** | Track both Left and Right hands simultaneously (`numHands: 2`) with independent `0–100%` charge bars. | Have two different people waving hands in front of the same Kiosk webcam at once without triggering poses. | MediaPipe tracks up to 2 hands in frame. If table officials are switching seats, enable **Test Lock (Dry-Run)** (`btn-toggle-touchless-armed`) so no live score is triggered. | Toggle **Test Lock (Dry-Run)** whenever adjusting the camera or demonstrating non-scoring hand tracking. |
+
