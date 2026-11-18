@@ -4,7 +4,6 @@
  */
 
 import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -66,50 +65,53 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
   };
 
   return (
-    <Card className="rounded-2xl border border-white/10 bg-slate-950 text-white shadow-xl overflow-hidden transition-all">
-      <CardHeader className="py-3 px-4 border-b border-white/10 flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <div
-              className={`size-3 rounded-full ${
-                isListening ? 'bg-emerald-500 animate-ping absolute inset-0' : ''
-              }`}
-            />
-            <div
-              className={`size-3 rounded-full relative z-10 ${
-                isListening ? 'bg-emerald-400' : 'bg-slate-500'
-              }`}
-            />
-          </div>
-          <CardTitle className="text-sm sm:text-base font-black uppercase tracking-wider flex items-center gap-2">
-            <span>Multimodal Voice Scoring</span>
-            <Badge
-              variant="outline"
-              className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border ${
-                !isSupported
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
-                  : isListening
-                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
-                  : 'bg-slate-800 text-slate-400 border-slate-700'
-              }`}
-            >
-              {!isSupported ? 'Browser Unsupported' : isListening ? 'Listening Live' : 'Voice Standby'}
-            </Badge>
-          </CardTitle>
+    <div
+      data-testid="voice-scoring-widget"
+      className="rounded-2xl border border-white/10 bg-slate-950 text-white shadow-xl overflow-hidden"
+    >
+      {/* Locked 1-Line Header Bar (Never wraps or resizes on mobile) */}
+      <div className="h-12 px-3.5 border-b border-white/10 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span
+            className={`size-2.5 rounded-full shrink-0 ${
+              isListening ? 'bg-emerald-400' : 'bg-slate-500'
+            }`}
+          />
+          <span className="text-xs sm:text-sm font-black uppercase tracking-wider truncate">
+            Multimodal Voice Scoring
+          </span>
+          <Badge
+            variant="outline"
+            className={`w-28 justify-center shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 border ${
+              !isSupported
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
+                : isListening
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
+                : 'bg-slate-800 text-slate-400 border-slate-700'
+            }`}
+          >
+            {!isSupported ? 'Unsupported' : isListening ? 'Listening Live' : 'Voice Standby'}
+          </Badge>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 shrink-0">
           <Button
+            type="button"
             size="sm"
             variant="ghost"
             className="size-8 p-0 text-slate-400 hover:text-white hover:bg-white/10 rounded-full"
             onClick={() => setIsMuted(!isMuted)}
             title={isMuted ? 'Unmute Audio Speech Confirmation' : 'Mute Audio Speech Confirmation'}
           >
-            {isMuted ? <VolumeX className="size-4 text-red-400" /> : <Volume2 className="size-4 text-emerald-400" />}
+            {isMuted ? (
+              <VolumeX className="size-4 text-red-400" />
+            ) : (
+              <Volume2 className="size-4 text-emerald-400" />
+            )}
           </Button>
 
           <Button
+            type="button"
             size="sm"
             variant="ghost"
             className="size-8 p-0 text-slate-400 hover:text-white hover:bg-white/10 rounded-full"
@@ -119,27 +121,28 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
             <HelpCircle className="size-4" />
           </Button>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="p-3.5 space-y-3">
-        {/* Primary Voice Control + Live Audio Transcript Box (Placed at top for instant mobile visibility) */}
+      <div className="p-3 space-y-2.5">
+        {/* Primary Voice Control + Live Audio Transcript Box (Strict equal heights prevent mobile jump/glitch) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-stretch">
-          <div className="lg:col-span-4 flex flex-col justify-between bg-slate-900/90 p-3 rounded-xl border border-white/10 gap-2">
+          <div className="lg:col-span-4 h-[5.5rem] flex flex-col justify-between bg-slate-900/90 p-3 rounded-xl border border-white/10 overflow-hidden">
             <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              <span className="inline-flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1.5 truncate">
                 <Activity className="size-3.5 text-orange-400 shrink-0" />
-                <span>Microphone Control</span>
+                <span className="truncate">Microphone Control</span>
               </span>
-              <span className={isListening ? 'text-emerald-400' : 'text-slate-500'}>
+              <span className={`shrink-0 ${isListening ? 'text-emerald-400' : 'text-slate-500'}`}>
                 {isListening ? 'Active' : 'Standby'}
               </span>
             </div>
 
             <Button
+              type="button"
               size="lg"
               data-testid="btn-toggle-voice-scoring"
               onClick={toggleListening}
-              className={`w-full justify-center font-black uppercase tracking-wide gap-2 h-11 px-4 rounded-xl transition-colors shadow-lg active:scale-[0.98] ${
+              className={`w-full justify-center font-black uppercase tracking-wide gap-2 h-10 px-4 rounded-xl transition-colors shadow-lg active:scale-[0.98] ${
                 isListening
                   ? 'bg-red-600 hover:bg-red-700 text-white shadow-red-900/40 ring-2 ring-red-500/40'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-900/40'
@@ -159,8 +162,8 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
             </Button>
           </div>
 
-          {/* Live Audio Transcript Box (Fixed minimum height prevents mobile scroll jumping) */}
-          <div className="lg:col-span-8 bg-slate-900/90 rounded-xl p-3 border border-white/10 font-mono text-xs min-h-[5.5rem] flex flex-col justify-between gap-1.5">
+          {/* Live Audio Transcript Box (Strict 5.5rem height prevents mobile scroll or layout jumping) */}
+          <div className="lg:col-span-8 h-[5.5rem] bg-slate-900/90 rounded-xl p-3 border border-white/10 font-mono text-xs flex flex-col justify-between overflow-hidden">
             <div className="flex items-center justify-between gap-2 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
               <span className="truncate">Real-time Speech Recognition Feed</span>
               {lastCommand && (
@@ -170,7 +173,7 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
               )}
             </div>
 
-            <div className="min-h-6 flex items-center text-slate-200 text-xs sm:text-sm">
+            <div className="h-5 flex items-center text-slate-200 text-xs overflow-hidden">
               {interimTranscript ? (
                 <span className="text-amber-400 italic font-sans flex items-center gap-1.5 truncate">
                   <span className="size-1.5 bg-amber-400 rounded-full shrink-0" />
@@ -189,7 +192,7 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
               )}
             </div>
 
-            <div className="pt-1 border-t border-white/10 min-h-[1.35rem] flex items-center gap-2 text-[11px] font-medium font-sans">
+            <div className="pt-1 border-t border-white/10 h-5 flex items-center gap-2 text-[11px] font-medium font-sans overflow-hidden">
               {error ? (
                 <div className="flex items-center gap-1.5 text-red-400 truncate">
                   <AlertCircle className="size-3.5 shrink-0" />
@@ -201,7 +204,7 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
                   <span className="truncate">{feedbackMessage}</span>
                 </div>
               ) : (
-                <span className="text-slate-500 text-[10px]">
+                <span className="text-slate-500 text-[10px] truncate">
                   Ready for voice or quick-test input
                 </span>
               )}
@@ -216,6 +219,7 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
           </span>
           <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-1.5 w-full">
             <Button
+              type="button"
               size="sm"
               variant="outline"
               className="h-8 w-full justify-center px-2 text-[11px] font-bold bg-slate-950 border-white/15 hover:bg-slate-800 text-orange-400 rounded-lg truncate active:scale-[0.98]"
@@ -224,6 +228,7 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
               <span className="truncate">+2 {(teamAName || 'Team A').slice(0, 7)}</span>
             </Button>
             <Button
+              type="button"
               size="sm"
               variant="outline"
               className="h-8 w-full justify-center px-2 text-[11px] font-bold bg-slate-950 border-white/15 hover:bg-slate-800 text-cyan-400 rounded-lg truncate active:scale-[0.98]"
@@ -232,6 +237,7 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
               <span className="truncate">+3 {(teamBName || 'Team B').slice(0, 7)}</span>
             </Button>
             <Button
+              type="button"
               size="sm"
               variant="outline"
               className="h-8 w-full justify-center px-2 text-[11px] font-bold bg-slate-950 border-white/15 hover:bg-slate-800 text-slate-200 rounded-lg truncate active:scale-[0.98]"
@@ -240,6 +246,7 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
               <span className="truncate">Pick #1</span>
             </Button>
             <Button
+              type="button"
               size="sm"
               variant="outline"
               className="h-8 w-full justify-center px-2 text-[11px] font-bold bg-slate-950 border-white/15 hover:bg-slate-800 text-slate-200 inline-flex items-center rounded-lg truncate active:scale-[0.98]"
@@ -254,6 +261,7 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
               <span>#2</span>
             </Button>
             <Button
+              type="button"
               size="sm"
               variant="outline"
               className="h-8 w-full justify-center px-2 text-[11px] font-bold bg-slate-950 border-white/15 hover:bg-slate-800 text-amber-300 rounded-lg truncate active:scale-[0.98]"
@@ -262,6 +270,7 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
               <span className="truncate">Timeout</span>
             </Button>
             <Button
+              type="button"
               size="sm"
               variant="outline"
               className="h-8 w-full justify-center px-2 text-[11px] font-bold bg-slate-950 border-white/15 hover:bg-slate-800 text-emerald-400 rounded-lg truncate active:scale-[0.98]"
@@ -271,6 +280,7 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
               <span className="truncate">Pause</span>
             </Button>
             <Button
+              type="button"
               size="sm"
               variant="outline"
               className="h-8 w-full justify-center px-2 text-[11px] font-bold bg-slate-950 border-white/15 hover:bg-slate-800 text-rose-400 rounded-lg truncate active:scale-[0.98]"
@@ -280,6 +290,7 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
               <span className="truncate">Deduct -1</span>
             </Button>
             <Button
+              type="button"
               size="sm"
               variant="outline"
               className="h-8 w-full justify-center px-2 text-[11px] font-bold bg-slate-950 border-white/15 hover:bg-slate-800 text-amber-300 rounded-lg truncate active:scale-[0.98]"
@@ -315,13 +326,14 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
 
         {/* Collapsible Multimodal Voice Cheatsheet Guide */}
         {showGuide && (
-          <div className="bg-slate-900/90 rounded-xl p-3 border border-white/15 text-xs space-y-2 animate-in fade-in slide-in-from-top-2">
+          <div className="bg-slate-900/90 rounded-xl p-3 border border-white/15 text-xs space-y-2">
             <div className="flex items-center justify-between font-bold text-slate-200">
               <span className="uppercase tracking-wider text-[11px] text-primary flex items-center gap-1.5">
                 <Sparkles className="size-3.5 text-amber-400" />
                 Multimodal Voice Interaction Guide (Capstone Rubric)
               </span>
               <button
+                type="button"
                 onClick={() => setShowGuide(false)}
                 className="text-slate-400 hover:text-white"
               >
@@ -330,7 +342,9 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
               <div className="bg-slate-950/60 p-2 rounded-lg border border-white/5 space-y-1">
-                <span className="font-bold text-orange-400 block uppercase">Scoring & Player Selection</span>
+                <span className="font-bold text-orange-400 block uppercase">
+                  Scoring &amp; Player Selection
+                </span>
                 <p className="text-slate-400">"Add 2 points to Team A player 1"</p>
                 <p className="text-slate-400">"3 pointer for {teamBName || 'Team B'}"</p>
                 <p className="text-slate-400">"Pick player 12 Team A"</p>
@@ -338,7 +352,9 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
               </div>
 
               <div className="bg-slate-950/60 p-2 rounded-lg border border-white/5 space-y-1">
-                <span className="font-bold text-emerald-400 block uppercase">Game Flow & Subs</span>
+                <span className="font-bold text-emerald-400 block uppercase">
+                  Game Flow &amp; Subs
+                </span>
                 <p className="text-slate-400">"Pause game" / "Resume game"</p>
                 <p className="text-slate-400">"Substitute player 1 to player 2 from Team A"</p>
                 <p className="text-slate-400">"Timeout Team A" / "Foul on Player 24"</p>
@@ -367,7 +383,7 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };

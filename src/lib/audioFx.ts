@@ -30,6 +30,16 @@ function getAudioContext(): AudioContext | null {
 }
 
 /**
+ * Suspends the shared Web Audio context while microphone speech capture is active
+ * so Android AudioManager does not revoke microphone audio focus.
+ */
+export function suspendAudioContextForMic(): void {
+  if (audioCtx && audioCtx.state === 'running') {
+    audioCtx.suspend().catch(() => {});
+  }
+}
+
+/**
  * Check if Courtside Audio FX is enabled in localStorage
  */
 export function isAudioEnabled(): boolean {

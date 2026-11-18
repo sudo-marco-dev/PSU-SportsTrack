@@ -2045,17 +2045,17 @@ export const FacilitatorKiosk = () => {
       {/* Multimodal Interaction Controls: Voice Scoring & Touchless Camera HUD */}
       {isAuthorized && match.status !== 'Completed' && (
         <div className="w-full shrink-0 mb-2 space-y-1.5">
-          <div className="flex items-center justify-between px-2 py-1 rounded-xl bg-slate-950 border border-white/10">
-            <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-wider text-slate-300">
-              <Camera className="size-3.5 text-orange-400" />
-              <span>Hands-Free Multimodal Deck</span>
+          <div className="h-8 flex items-center justify-between gap-2 px-2.5 rounded-xl bg-slate-950 border border-white/10 overflow-hidden">
+            <div className="flex items-center gap-1.5 min-w-0 flex-1 text-[11px] font-black uppercase tracking-wider text-slate-300 overflow-hidden">
+              <Camera className="size-3.5 text-orange-400 shrink-0" />
+              <span className="truncate">Hands-Free Multimodal Deck</span>
               {touchlessGestures.isCameraActive && (
-                <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px] font-black uppercase px-1.5 py-0">
+                <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px] font-black uppercase px-1.5 py-0 shrink-0">
                   Camera Live
                 </Badge>
               )}
               {voiceScoring.isListening && (
-                <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[9px] font-black uppercase px-1.5 py-0">
+                <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[9px] font-black uppercase px-1.5 py-0 shrink-0">
                   Voice Live
                 </Badge>
               )}
@@ -2064,7 +2064,7 @@ export const FacilitatorKiosk = () => {
               type="button"
               data-testid="btn-toggle-multimodal-deck"
               onClick={() => setIsMultimodalOpen((prev) => !prev)}
-              className="text-[10px] font-black uppercase tracking-wider text-orange-400 hover:text-orange-300 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-900 border border-white/10"
+              className="shrink-0 text-[10px] font-black uppercase tracking-wider text-orange-400 hover:text-orange-300 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-900 border border-white/10"
             >
               {isMultimodalOpen ? (
                 <>
@@ -2082,16 +2082,16 @@ export const FacilitatorKiosk = () => {
 
           {isMultimodalOpen && (
             <div className="max-h-[42vh] overflow-y-auto overscroll-contain touch-pan-y scrollbar-hide space-y-2 pr-0.5">
+              <VoiceScoringWidget
+                voice={voiceScoring}
+                teamAName={match.team_a?.name || 'Team A'}
+                teamBName={match.team_b?.name || 'Team B'}
+              />
               <TouchlessGestureHUD
                 gestures={touchlessGestures}
                 leftTeamName={leftColumnTeamName}
                 rightTeamName={rightColumnTeamName}
                 maxPoint={touchlessMaxPoint}
-              />
-              <VoiceScoringWidget
-                voice={voiceScoring}
-                teamAName={match.team_a?.name || 'Team A'}
-                teamBName={match.team_b?.name || 'Team B'}
               />
             </div>
           )}

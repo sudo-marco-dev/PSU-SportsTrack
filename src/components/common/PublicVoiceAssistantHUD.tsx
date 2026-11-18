@@ -131,13 +131,19 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
             </div>
           </DialogHeader>
 
-          <div className="p-5 space-y-4">
-            {/* Real-time Listening Soundwave Banner */}
-            <div className="bg-slate-900/90 rounded-xl p-4 border border-white/10 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                  <Activity className="size-3.5 text-primary" />
-                  {isListening ? 'Listening live...' : 'Voice Feed'}
+          <div className="p-4 sm:p-5 space-y-3.5">
+            {/* Real-time Listening Soundwave Banner (Fixed-height slots prevent mobile card jump/glitch) */}
+            <div className="bg-slate-900/90 rounded-xl p-3.5 border border-white/10 space-y-2">
+              <div className="h-8 flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 truncate">
+                  <Activity
+                    className={`size-3.5 shrink-0 ${
+                      isListening ? 'text-emerald-400' : 'text-primary'
+                    }`}
+                  />
+                  <span className={isListening ? 'text-emerald-400' : 'text-slate-400'}>
+                    {isListening ? 'Listening live...' : 'Voice Feed'}
+                  </span>
                 </span>
                 <Button
                   type="button"
@@ -145,67 +151,96 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                   variant="outline"
                   data-testid="btn-hud-speak-toggle"
                   onClick={() => (isListening ? stopListening() : startListening())}
-                  className={`h-8 px-3.5 text-xs font-bold gap-1.5 border-white/20 rounded-lg transition-colors active:scale-[0.98] ${
+                  className={`h-8 w-24 justify-center px-3 text-xs font-bold gap-1.5 border-white/20 rounded-lg transition-colors active:scale-[0.98] shrink-0 ${
                     isListening
-                      ? 'bg-red-500/20 text-red-300 border-red-500/40 hover:bg-red-500/30'
+                      ? 'bg-red-600 text-white border-red-500 hover:bg-red-700'
                       : 'bg-white/10 text-white hover:bg-white/20'
                   }`}
                 >
                   {isListening ? (
                     <>
-                      <MicOff className="size-3.5" /> Stop
+                      <MicOff className="size-3.5 shrink-0" />
+                      <span>Stop</span>
                     </>
                   ) : (
                     <>
-                      <Mic className="size-3.5" /> Speak
+                      <Mic className="size-3.5 shrink-0" />
+                      <span>Speak</span>
                     </>
                   )}
                 </Button>
               </div>
 
-              <div className="min-h-10 flex items-center text-slate-200">
+              <div className="h-11 flex items-center text-slate-200 overflow-hidden">
                 {interimTranscript ? (
-                  <p className="text-amber-300 text-sm italic font-sans">
+                  <p className="text-amber-300 text-xs sm:text-sm italic font-sans line-clamp-2">
                     "{interimTranscript}"
                   </p>
                 ) : transcript ? (
-                  <p className="text-emerald-300 text-sm font-semibold font-sans">
+                  <p className="text-emerald-300 text-xs sm:text-sm font-semibold font-sans line-clamp-2">
                     "{transcript}"
                   </p>
                 ) : (
-                  <p className="text-slate-500 text-xs italic font-sans">
+                  <p className="text-slate-400 text-xs italic font-sans line-clamp-2">
                     Try saying: "Search for upcoming games this week" or "Who has the most stars?"
                   </p>
                 )}
               </div>
 
-              {voiceError && (
-                <div
-                  data-testid="hud-voice-error"
-                  className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-1.5 text-xs text-amber-200"
-                >
-                  {voiceError}
-                </div>
-              )}
-
-              {/* Active Context Badges & Auto-Correction */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                {activeQuery?.sport && (
-                  <Badge variant="outline" className="text-[10px] uppercase font-bold border-primary/50 text-primary bg-primary/10">
-                    Sport: {activeQuery.sport}
-                  </Badge>
-                )}
-                {activeQuery?.temporalWindow && (
-                  <Badge variant="outline" className="text-[10px] font-bold border-amber-500/50 text-amber-300 bg-amber-500/10">
-                    Period: {activeQuery.temporalWindow.label}
-                  </Badge>
-                )}
-                {queryResults?.isFallback && (
-                  <Badge variant="outline" className="text-[10px] font-bold border-sky-500/50 text-sky-300 bg-sky-500/10">
-                    Smart Fallback Active
-                  </Badge>
+              {/* Stable Status / Feedback Footer Row (Always rendered so card height never jumps) */}
+              <div className="pt-2 border-t border-white/10 min-h-[1.75rem] flex items-center justify-between gap-2 text-xs">
+                {voiceError ? (
+                  <div
+                    data-testid="hud-voice-error"
+                    className="text-amber-300 text-[11px] font-medium line-clamp-2"
+                  >
+                    {voiceError}
+                  </div>
+                ) : activeQuery?.spokenResponse ? (
+                  <>
+                    <span className="text-primary-foreground font-medium text-[11px] truncate">
+                      {activeQuery.spokenResponse}
+                    </span>
+                    {activeQuery.targetRoute && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => navigateToResult()}
+                        className="h-6 text-[11px] font-bold text-amber-400 hover:text-amber-300 gap-1 p-0 px-2 shrink-0"
+                      >
+                        Go <ArrowRight className="size-3" />
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-[11px] text-slate-500 truncate">
+                    {isListening
+                      ? 'Microphone active — speak clearly then pause or tap Stop'
+                      : 'Tap Speak for voice search or select a quick command below'}
+                  </span>
                 )}
               </div>
+
+              {/* Active Context Badges & Auto-Correction */}
+              {(activeQuery?.sport || activeQuery?.temporalWindow || queryResults?.isFallback) && (
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  {activeQuery?.sport && (
+                    <Badge variant="outline" className="text-[10px] uppercase font-bold border-primary/50 text-primary bg-primary/10">
+                      Sport: {activeQuery.sport}
+                    </Badge>
+                  )}
+                  {activeQuery?.temporalWindow && (
+                    <Badge variant="outline" className="text-[10px] font-bold border-amber-500/50 text-amber-300 bg-amber-500/10">
+                      Period: {activeQuery.temporalWindow.label}
+                    </Badge>
+                  )}
+                  {queryResults?.isFallback && (
+                    <Badge variant="outline" className="text-[10px] font-bold border-sky-500/50 text-sky-300 bg-sky-500/10">
+                      Smart Fallback Active
+                    </Badge>
+                  )}
+                </div>
+              )}
 
               {/* Fuzzy Auto-Correction Notice */}
               {activeQuery?.fuzzyCorrection && (
@@ -232,22 +267,6 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                   className="bg-sky-500/10 border border-sky-500/30 rounded-lg px-3 py-1.5 text-xs text-sky-200"
                 >
                   {queryResults.fallbackMessage}
-                </div>
-              )}
-
-              {activeQuery?.spokenResponse && (
-                <div className="pt-2 border-t border-white/10 text-xs text-primary-foreground font-medium flex items-center justify-between">
-                  <span>{activeQuery.spokenResponse}</span>
-                  {activeQuery.targetRoute && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => navigateToResult()}
-                      className="h-6 text-[11px] font-bold text-amber-400 hover:text-amber-300 gap-1 p-0 px-2"
-                    >
-                      Go <ArrowRight className="size-3" />
-                    </Button>
-                  )}
                 </div>
               )}
             </div>

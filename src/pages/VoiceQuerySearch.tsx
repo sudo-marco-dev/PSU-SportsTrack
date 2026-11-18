@@ -39,7 +39,12 @@ import {
   type SmartVoiceAnalysis,
   type FuzzyCorrection,
 } from '@/lib/smartVoiceQueryEngine';
-import { extractCleanSpeechTranscript } from '@/hooks/usePublicVoiceAssistant';
+import {
+  IS_MOBILE_BROWSER,
+  preloadMobileWhisperModel,
+  startHybridSpeechSession,
+  type HybridSpeechSession,
+} from '@/lib/mobileSpeechEngine';
 
 interface MatchItem {
   id: string;
@@ -487,109 +492,58 @@ export const VoiceQuerySearch: React.FC = () => {
     setSearchParams(newParams);
   };
 
-  const pageRecognitionRef = useRef<any>(null);
-  const pageInterimRef = useRef<string>('');
-  const pageFinalProcessedRef = useRef<boolean>(false);
+  const pageSessionRef = useRef<HybridSpeechSession | null>(null);
 
-  // Web Speech Recognition for in-page microphone (with mobile interim flush)
+  useEffect(() => {
+    if (IS_MOBILE_BROWSER) {
+      void preloadMobileWhisperModel().catch(() => {});
+    }
+    return () => {
+      pageSessionRef.current?.abort();
+      pageSessionRef.current = null;
+    };
+  }, []);
+
+  // Hybrid Speech Recognition for in-page microphone (Native Web Speech + Mobile Hardware Mic/Whisper fallback)
   const toggleSpeechRecognition = () => {
-    const win = typeof window !== 'undefined' ? (window as any) : null;
-    const SpeechRecognitionClass = win?.SpeechRecognition || win?.webkitSpeechRecognition;
-
-    if (!SpeechRecognitionClass) {
-      alert('Speech Recognition is not supported on this browser. Please type your query.');
+    if (isListening || pageSessionRef.current) {
+      pageSessionRef.current?.finishAndTranscribe();
       return;
     }
 
-    if (isListening || pageRecognitionRef.current) {
-      const pending = pageInterimRef.current.trim();
-      try {
-        pageRecognitionRef.current?.stop?.();
-      } catch {
-        // ignore
-      }
-      pageRecognitionRef.current = null;
-      setIsListening(false);
-      if (!pageFinalProcessedRef.current && pending) {
-        pageFinalProcessedRef.current = true;
-        pageInterimRef.current = '';
-        const newParams = new URLSearchParams(searchParams);
-        newParams.set('q', pending);
-        setSearchParams(newParams);
-      }
-      return;
-    }
-
-    try {
-      const recognition = new SpeechRecognitionClass();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.maxAlternatives = 1;
-      recognition.lang = 'en-US';
-
-      pageInterimRef.current = '';
-      pageFinalProcessedRef.current = false;
-
-      recognition.onstart = () => {
+    setIsListening(true);
+    pageSessionRef.current = startHybridSpeechSession({
+      onStart: () => {
         setIsListening(true);
-      };
-
-      recognition.onresult = (event: any) => {
-        const { interim, final } = extractCleanSpeechTranscript(event);
-        const combined = final || interim;
-        if (combined) {
-          pageInterimRef.current = combined;
-          setInputVal(combined);
-        }
-        if (final && !pageFinalProcessedRef.current) {
-          pageFinalProcessedRef.current = true;
-          pageInterimRef.current = '';
-          setIsListening(false);
-          const newParams = new URLSearchParams(searchParams);
-          newParams.set('q', final);
-          setSearchParams(newParams);
-        }
-      };
-
-      recognition.onerror = (event: any) => {
-        if (pageInterimRef.current.trim().length > 0) return;
-        setIsListening(false);
-        pageRecognitionRef.current = null;
-        const errCode = event?.error || '';
+      },
+      onInterim: (text) => {
         if (
-          (errCode === 'not-allowed' || errCode === 'service-not-allowed') &&
-          typeof navigator !== 'undefined' &&
-          navigator.mediaDevices?.getUserMedia
+          !text.startsWith('Listening...') &&
+          !text.startsWith('Hearing your voice') &&
+          !text.startsWith('Transcribing') &&
+          !text.startsWith('Preparing') &&
+          !text.startsWith('Processing')
         ) {
-          navigator.mediaDevices
-            .getUserMedia({ audio: true })
-            .then((stream) => {
-              stream.getTracks().forEach((t) => t.stop());
-            })
-            .catch(() => {});
+          setInputVal(text);
         }
-      };
-
-      recognition.onend = () => {
+      },
+      onFinal: (finalText) => {
+        setInputVal(finalText);
         setIsListening(false);
-        pageRecognitionRef.current = null;
-        const pending = pageInterimRef.current.trim();
-        if (!pageFinalProcessedRef.current && pending) {
-          pageFinalProcessedRef.current = true;
-          pageInterimRef.current = '';
-          const newParams = new URLSearchParams(searchParams);
-          newParams.set('q', pending);
-          setSearchParams(newParams);
-        }
-      };
-
-      pageRecognitionRef.current = recognition;
-      recognition.start();
-      setIsListening(true);
-    } catch {
-      setIsListening(false);
-      pageRecognitionRef.current = null;
-    }
+        pageSessionRef.current = null;
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set('q', finalText);
+        setSearchParams(newParams);
+      },
+      onError: () => {
+        setIsListening(false);
+        pageSessionRef.current = null;
+      },
+      onEnd: () => {
+        setIsListening(false);
+        pageSessionRef.current = null;
+      },
+    });
   };
 
   // Aggregate Counts
@@ -667,9 +621,9 @@ export const VoiceQuerySearch: React.FC = () => {
               size="sm"
               onClick={toggleSpeechRecognition}
               data-testid="btn-voice-search-mic"
-              className={`size-10 p-0 rounded-xl border border-white/20 transition-all ${
+              className={`size-10 p-0 rounded-xl border border-white/20 transition-colors ${
                 isListening
-                  ? 'bg-red-600 text-white animate-pulse border-red-500'
+                  ? 'bg-red-600 text-white border-red-500 ring-2 ring-red-500/40'
                   : 'bg-white/10 text-slate-300 hover:text-white hover:bg-white/20'
               }`}
               title={isListening ? 'Stop Voice Listening' : 'Speak to Search'}
