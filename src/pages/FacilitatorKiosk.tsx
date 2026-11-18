@@ -21,6 +21,9 @@ import {
   CheckCircle2,
   Trophy,
   Lock,
+  Camera,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import {
   Dialog,
@@ -228,6 +231,9 @@ export const FacilitatorKiosk = () => {
     actionDesc?: string;
   } | null>(null);
   const [isSubmittingScore, setIsSubmittingScore] = useState(false);
+
+  // Collapsible Hands-Free Multimodal Deck
+  const [isMultimodalOpen, setIsMultimodalOpen] = useState(true);
 
   // Score Animations and Deltas
   const prevScoresRef = useRef<{ a: number; b: number; hasInitialized: boolean }>({
@@ -797,15 +803,20 @@ export const FacilitatorKiosk = () => {
     setPendingScoreAction({ team, points, actionType, actionDesc });
   };
 
-  // Commit Score with Selected Player Credit or Team Point
-  const handleConfirmScoreCredit = async (chosenPlayerId: string | null) => {
-    if (!match || !pendingScoreAction || isSubmittingScore) return;
+  // Core shared score persistence & broadcast helper
+  const commitScoreAction = async (
+    team: 'a' | 'b',
+    points: number,
+    actionType: string,
+    actionDesc: string | undefined,
+    chosenPlayerId: string | null
+  ) => {
+    if (!match || isSubmittingScore) return;
     if (!user || !isAuthorized) {
       setPendingScoreAction(null);
       return;
     }
 
-    const { team, points, actionType, actionDesc } = pendingScoreAction;
     setIsSubmittingScore(true);
 
     try {
@@ -959,6 +970,58 @@ export const FacilitatorKiosk = () => {
     }
   };
 
+  // Commit Score with Selected Player Credit or Team Point
+  const handleConfirmScoreCredit = async (chosenPlayerId: string | null) => {
+    if (!pendingScoreAction) return;
+    await commitScoreAction(
+      pendingScoreAction.team,
+      pendingScoreAction.points,
+      pendingScoreAction.actionType,
+      pendingScoreAction.actionDesc,
+      chosenPlayerId
+    );
+  };
+
+  // Direct Hands-Free Score execution (for Voice & Touchless Gestures without blocking modal prompts)
+  const handleHandsFreeScore = async (
+    team: 'a' | 'b',
+    points: number,
+    actionType: string,
+    actionDesc?: string,
+    playerNumber?: number
+  ) => {
+    if (!match) return;
+    if (!user) {
+      toast.error('You must log in to record official scores in the tournament database.');
+      openLoginModal();
+      return;
+    }
+    if (!isAuthorized) {
+      toast.error('You must claim the scoring console lease before updating points.');
+      return;
+    }
+    if (match.status === 'Completed') {
+      toast.error('Match is already Completed. Reopen the match in Match Control before modifying scores.');
+      return;
+    }
+
+    const targetTeamId = team === 'a' ? match.team_a_id : match.team_b_id;
+    let resolvedPlayerId: string | null = team === 'a' ? selectedScorerA : selectedScorerB;
+
+    if (playerNumber !== undefined && targetTeamId) {
+      const targetPlayer = rosterPlayers.find(
+        (p) => p.team_id === targetTeamId && p.jersey_number === playerNumber
+      );
+      if (targetPlayer) {
+        resolvedPlayerId = targetPlayer.player_id;
+        if (team === 'a') setSelectedScorerA(targetPlayer.player_id);
+        else setSelectedScorerB(targetPlayer.player_id);
+      }
+    }
+
+    await commitScoreAction(team, points, actionType, actionDesc, resolvedPlayerId);
+  };
+
   // 1-Tap Undo Last Score Action
   const handleUndoLastScore = async () => {
     if (!match || !lastScoreActionRef.current) return;
@@ -1063,8 +1126,8 @@ export const FacilitatorKiosk = () => {
     playWhistleSound();
   };
 
-  // Quick 1-Tap Deduct
-  const handleQuickDeduct = async (team: 'a' | 'b') => {
+  // Quick 1-Tap / Hands-Free Deduct
+  const handleQuickDeduct = async (team: 'a' | 'b', customPoints?: number) => {
     if (!match) return;
     if (!user) {
       toast.error('You must log in to record score corrections.');
@@ -1082,9 +1145,10 @@ export const FacilitatorKiosk = () => {
     const current = team === 'a' ? match.team_a_score : match.team_b_score;
     if (current <= 0) return;
 
-    const points = sportProfile.deductibleValues[0] || 1;
-    const newScoreA = team === 'a' ? match.team_a_score - points : match.team_a_score;
-    const newScoreB = team === 'b' ? match.team_b_score - points : match.team_b_score;
+    const requestedPoints = customPoints || sportProfile.deductibleValues[0] || 1;
+    const points = Math.min(current, requestedPoints);
+    const newScoreA = team === 'a' ? Math.max(0, match.team_a_score - points) : match.team_a_score;
+    const newScoreB = team === 'b' ? Math.max(0, match.team_b_score - points) : match.team_b_score;
     const teamName = team === 'a' ? match.team_a?.name : match.team_b?.name;
 
     const { data: updatedMatches, error } = await supabase
@@ -1255,9 +1319,11 @@ export const FacilitatorKiosk = () => {
   // Execute Player Substitution: Plays table sub horn and broadcasts banner
   const handleConfirmSub = async (
     subOutPlayer: RosterPlayerItem,
-    subInPlayer: RosterPlayerItem
+    subInPlayer: RosterPlayerItem,
+    teamOverride?: 'a' | 'b'
   ) => {
-    if (!match || !subModalTeam || isSubmittingSub) return;
+    const targetTeam = teamOverride || subModalTeam;
+    if (!match || !targetTeam || isSubmittingSub) return;
     if (match.status === 'Completed') {
       toast.error('Match is already concluded. Substitutions are locked.');
       return;
@@ -1274,7 +1340,7 @@ export const FacilitatorKiosk = () => {
 
     setIsSubmittingSub(true);
     try {
-      if (subModalTeam === 'a') {
+      if (targetTeam === 'a') {
         setActivePlayerIdsA((prev) => {
           const next = new Set(prev);
           next.delete(subOutPlayer.player_id);
@@ -1297,7 +1363,7 @@ export const FacilitatorKiosk = () => {
       }
 
       playSubHornSound();
-      const teamName = subModalTeam === 'a' ? match.team_a?.name || 'Team A' : match.team_b?.name || 'Team B';
+      const teamName = targetTeam === 'a' ? match.team_a?.name || 'Team A' : match.team_b?.name || 'Team B';
       const outJersey = subOutPlayer.jersey_number ? `${subOutPlayer.jersey_number}` : '';
       const inJersey = subInPlayer.jersey_number ? `${subInPlayer.jersey_number}` : '';
       const resolveName = (u: RosterPlayerItem['users']) => {
@@ -1307,7 +1373,7 @@ export const FacilitatorKiosk = () => {
       };
       const outName = resolveName(subOutPlayer.users) || (outJersey ? `Jersey #${outJersey}` : 'Player');
       const inName = resolveName(subInPlayer.users) || (inJersey ? `Jersey #${inJersey}` : 'Player');
-      const desc = `[Substitution]: ${outJersey ? '#' + outJersey + ' ' : ''}${outName} Off -> ${inJersey ? '#' + inJersey + ' ' : ''}${inName} On for ${teamName}.`;
+      const desc = `[Substitution]: ${outJersey ? '#' + outJersey + ' ' : ''}${outName} Off to ${inJersey ? '#' + inJersey + ' ' : ''}${inName} On for ${teamName}.`;
       toast.success(desc);
 
       if (broadcastChannelRef.current) {
@@ -1318,7 +1384,7 @@ export const FacilitatorKiosk = () => {
             payload: {
               id: `sub-${Date.now()}`,
               match_id: match.id,
-              team: subModalTeam,
+              team: targetTeam,
               teamName,
               outPlayer: outName,
               inPlayer: inName,
@@ -1344,21 +1410,50 @@ export const FacilitatorKiosk = () => {
   const activePlayersB = useMemo(() => teamBPlayers.filter((p) => activePlayerIdsB.has(p.player_id)), [teamBPlayers, activePlayerIdsB]);
   const benchPlayersB = useMemo(() => teamBPlayers.filter((p) => !activePlayerIdsB.has(p.player_id)), [teamBPlayers, activePlayerIdsB]);
 
+  // Hands-free player target selector / cycler for Voice & Touchless controls
+  const handleSelectPlayerHandsFree = (team: 'a' | 'b', playerNumber?: number) => {
+    const pool = team === 'a' ? activePlayersA : activePlayersB;
+    const fullPool = team === 'a' ? teamAPlayers : teamBPlayers;
+    const candidates = pool.length > 0 ? pool : fullPool;
+    const teamName = team === 'a' ? match?.team_a?.name || 'Team A' : match?.team_b?.name || 'Team B';
+
+    if (playerNumber !== undefined) {
+      const target = fullPool.find((p) => p.jersey_number === playerNumber);
+      if (target) {
+        if (team === 'a') setSelectedScorerA(target.player_id);
+        else setSelectedScorerB(target.player_id);
+        toast.info(`Focused #${target.jersey_number} (${teamName}) for scoring`);
+      } else {
+        toast.warning(`Player #${playerNumber} not found on ${teamName} roster`);
+      }
+      return;
+    }
+
+    if (candidates.length === 0) {
+      toast.info(`Selected ${teamName} column`);
+      return;
+    }
+
+    const currentId = team === 'a' ? selectedScorerA : selectedScorerB;
+    const currentIdx = candidates.findIndex((p) => p.player_id === currentId);
+    const nextPlayer = candidates[(currentIdx + 1) % candidates.length];
+    if (team === 'a') setSelectedScorerA(nextPlayer.player_id);
+    else setSelectedScorerB(nextPlayer.player_id);
+    const rawU: any = nextPlayer.users;
+    const pName = Array.isArray(rawU) ? rawU[0]?.full_name : rawU?.full_name || 'Athlete';
+    toast.info(`Focused #${nextPlayer.jersey_number ?? '--'} ${pName} (${teamName})`);
+  };
+
   // Multimodal Voice Scoring Hook for Facilitator Kiosk
   const voiceScoring = useVoiceScoring({
     teamAName: match?.team_a?.name || 'Team A',
     teamBName: match?.team_b?.name || 'Team B',
     sport: match?.tournament?.sport || 'General',
     onScore: (team, points, actionType, description, playerNumber) => {
-      if (playerNumber) {
-        const pool = team === 'a' ? teamAPlayers : teamBPlayers;
-        const target = pool.find((p) => p.jersey_number === playerNumber);
-        if (target) {
-          if (team === 'a') setSelectedScorerA(target.player_id);
-          else setSelectedScorerB(target.player_id);
-        }
-      }
-      handleScore(team, points, actionType, description);
+      void handleHandsFreeScore(team, points, actionType, description, playerNumber);
+    },
+    onSelectPlayer: (team, playerNumber) => {
+      handleSelectPlayerHandsFree(team, playerNumber);
     },
     onSubstitution: (team, subOutJersey, subInJersey) => {
       const activeList = team === 'a' ? activePlayersA : activePlayersB;
@@ -1366,8 +1461,7 @@ export const FacilitatorKiosk = () => {
       const subOut = activeList.find((p) => p.jersey_number === subOutJersey) || activeList[0];
       const subIn = benchList.find((p) => p.jersey_number === subInJersey) || benchList[0];
       if (subOut && subIn) {
-        setSubModalTeam(team);
-        handleConfirmSub(subOut, subIn);
+        void handleConfirmSub(subOut, subIn, team);
       } else {
         toast.warning(`Could not find jersey #${subOutJersey} or #${subInJersey} for substitution.`);
       }
@@ -1377,21 +1471,24 @@ export const FacilitatorKiosk = () => {
         handleToggleClock();
       }
     },
-    onDeduct: (team) => {
-      handleQuickDeduct(team);
+    onDeduct: (team, pts) => {
+      void handleQuickDeduct(team, pts);
     },
     onTimeout: (team) => {
-      handleCallTimeout(team || 'a');
+      void handleCallTimeout(team || 'a');
     },
     onFoul: (team) => {
-      handleAddFoul(team || 'a');
+      void handleAddFoul(team || 'a');
     },
     onUndo: () => {
-      if (canUndo) handleUndoLastScore();
+      if (canUndo) void handleUndoLastScore();
     },
   });
 
-  // Multimodal Touchless Gestures Hook for Facilitator Kiosk
+  const touchlessModeRef = useRef<'score' | 'select_player' | 'deduct' | 'sub_foul'>('score');
+  const touchlessPointsRef = useRef<1 | 2 | 3>(2);
+
+  // Multimodal Touchless Gestures Hook for Facilitator Kiosk (Left = Team A, Right = Team B, Top = Clock)
   const touchlessGestures = useTouchlessGestures({
     onOpenPalm: () => {
       handleToggleClock();
@@ -1400,12 +1497,38 @@ export const FacilitatorKiosk = () => {
       setSubModalTeam('a');
     },
     onThumbsUp: () => {
-      handleScore('a', 2, 'Field Goal', 'Touchless +2 pts');
+      void handleHandsFreeScore('a', touchlessPointsRef.current, 'Touchless Confirm', 'Touchless Quick Score');
     },
     onSwipeLeft: () => {
-      if (canUndo) handleUndoLastScore();
+      const mode = touchlessModeRef.current;
+      if (mode === 'score') {
+        void handleHandsFreeScore('a', touchlessPointsRef.current, 'Touchless Left Hand', 'Touchless Left Hand Score');
+      } else if (mode === 'select_player') {
+        handleSelectPlayerHandsFree('a');
+      } else if (mode === 'deduct') {
+        void handleQuickDeduct('a', 1);
+      } else if (mode === 'sub_foul') {
+        setSubModalTeam('a');
+      }
+    },
+    onSwipeRight: () => {
+      const mode = touchlessModeRef.current;
+      if (mode === 'score') {
+        void handleHandsFreeScore('b', touchlessPointsRef.current, 'Touchless Right Hand', 'Touchless Right Hand Score');
+      } else if (mode === 'select_player') {
+        handleSelectPlayerHandsFree('b');
+      } else if (mode === 'deduct') {
+        void handleQuickDeduct('b', 1);
+      } else if (mode === 'sub_foul') {
+        setSubModalTeam('b');
+      }
     },
   });
+
+  useEffect(() => {
+    touchlessModeRef.current = touchlessGestures.touchlessMode;
+    touchlessPointsRef.current = touchlessGestures.selectedPointValue;
+  }, [touchlessGestures.touchlessMode, touchlessGestures.selectedPointValue]);
 
   // Console Lease Claim with Conflict of Interest check and Shortage Policy Override
   const handleClaimLease = async (force: boolean = false, overrideReason?: string) => {
@@ -1882,15 +2005,58 @@ export const FacilitatorKiosk = () => {
         </div>
       )}
 
-      {/* Multimodal Interaction Controls: Voice Scoring & Touchless Gestures (HCI Capstone) */}
+      {/* Multimodal Interaction Controls: Voice Scoring & Touchless Camera HUD */}
       {isAuthorized && match.status !== 'Completed' && (
-        <div className="w-full shrink-0 mb-2 space-y-2">
-          <TouchlessGestureHUD gestures={touchlessGestures} />
-          <VoiceScoringWidget
-            voice={voiceScoring}
-            teamAName={match.team_a?.name || 'Team A'}
-            teamBName={match.team_b?.name || 'Team B'}
-          />
+        <div className="w-full shrink-0 mb-2 space-y-1.5">
+          <div className="flex items-center justify-between px-2 py-1 rounded-xl bg-slate-950 border border-white/10">
+            <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-wider text-slate-300">
+              <Camera className="size-3.5 text-orange-400" />
+              <span>Hands-Free Multimodal Deck</span>
+              {touchlessGestures.isCameraActive && (
+                <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px] font-black uppercase px-1.5 py-0">
+                  Camera Live
+                </Badge>
+              )}
+              {voiceScoring.isListening && (
+                <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[9px] font-black uppercase px-1.5 py-0">
+                  Voice Live
+                </Badge>
+              )}
+            </div>
+            <button
+              type="button"
+              data-testid="btn-toggle-multimodal-deck"
+              onClick={() => setIsMultimodalOpen((prev) => !prev)}
+              className="text-[10px] font-black uppercase tracking-wider text-orange-400 hover:text-orange-300 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-900 border border-white/10"
+            >
+              {isMultimodalOpen ? (
+                <>
+                  <span>Collapse</span>
+                  <ChevronUp className="size-3.5" />
+                </>
+              ) : (
+                <>
+                  <span>Expand</span>
+                  <ChevronDown className="size-3.5" />
+                </>
+              )}
+            </button>
+          </div>
+
+          {isMultimodalOpen && (
+            <div className="max-h-[42vh] overflow-y-auto scrollbar-hide space-y-2 pr-0.5">
+              <TouchlessGestureHUD
+                gestures={touchlessGestures}
+                teamAName={match.team_a?.name || 'Team A'}
+                teamBName={match.team_b?.name || 'Team B'}
+              />
+              <VoiceScoringWidget
+                voice={voiceScoring}
+                teamAName={match.team_a?.name || 'Team A'}
+                teamBName={match.team_b?.name || 'Team B'}
+              />
+            </div>
+          )}
         </div>
       )}
 

@@ -157,14 +157,21 @@ export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQ
     }
   }
 
-  // 2. Exact Classic Upcoming Games Trigger ("upcoming games this week", "games this week")
+  // 2. Exact Classic Upcoming Games Trigger ("upcoming games this week", generic "upcoming games")
+  const isClassicUpcomingScope =
+    !smart.sport &&
+    (!smart.temporalWindow ||
+      smart.temporalWindow.type === 'this_week' ||
+      smart.temporalWindow.type === 'upcoming');
+
   if (
-    norm.includes('upcoming games') ||
-    norm.includes('games this week') ||
-    norm.includes('upcoming matches') ||
-    norm.includes('matches this week') ||
-    norm.includes('next games') ||
-    norm.includes('schedule this week')
+    isClassicUpcomingScope &&
+    (norm.includes('upcoming games') ||
+      norm.includes('games this week') ||
+      norm.includes('upcoming matches') ||
+      norm.includes('matches this week') ||
+      norm.includes('next games') ||
+      norm.includes('schedule this week'))
   ) {
     return {
       rawTranscript,
@@ -195,17 +202,26 @@ export function parsePublicVoiceQuery(rawTranscript: string): ParsedPublicVoiceQ
     };
   }
 
-  // 4. Interrogative Questions & Analytical Intents (Who won, highest rated college, highest win rate)
+  // 4. Interrogative Questions & Top-N Analytical Intents
   if (
     smart.intent === 'question_winner' ||
     smart.intent === 'question_top_college' ||
     smart.intent === 'question_highest_mvp' ||
-    smart.intent === 'question_highest_win_rate'
+    smart.intent === 'question_highest_win_rate' ||
+    smart.intent === 'question_top_scorers' ||
+    smart.intent === 'question_tribe_squad_win_rate'
   ) {
     let qType: PublicVoiceAssistantQueryType = 'match_search';
-    if (smart.intent === 'question_top_college') qType = 'college_search';
-    else if (smart.intent === 'question_highest_mvp') qType = 'highest_stars';
-    else if (smart.intent === 'question_highest_win_rate') qType = 'player_search';
+    if (smart.intent === 'question_top_college' || smart.intent === 'question_tribe_squad_win_rate') {
+      qType = 'college_search';
+    } else if (smart.intent === 'question_highest_mvp') {
+      qType = 'highest_stars';
+    } else if (
+      smart.intent === 'question_highest_win_rate' ||
+      smart.intent === 'question_top_scorers'
+    ) {
+      qType = 'player_search';
+    }
 
     return {
       rawTranscript,

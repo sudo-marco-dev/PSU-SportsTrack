@@ -32,7 +32,8 @@ import {
   Volume2,
   VolumeX,
   LayoutGrid,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Lock
 } from 'lucide-react';
 import { logAudit } from '@/lib/audit';
 import { MvpCandidateSelect, type MvpCandidateOption } from '@/components/match/MvpCandidateSelect';
@@ -2099,12 +2100,14 @@ export const LiveMatch = () => {
               {match.designated_facilitator_id && (
                 <div className="w-full pb-1 flex items-center gap-2">
                   {isDesignatedForMe ? (
-                    <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold">
-                      ⭐ You are the designated match official
+                    <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold inline-flex items-center gap-1">
+                      <Star className="size-3 fill-emerald-400" />
+                      <span>You are the designated match official</span>
                     </Badge>
                   ) : isDesignatedLocked ? (
-                    <Badge className="bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[10px] font-bold">
-                      🔒 Reserved for {match.designated_facilitator?.full_name || 'Designated Official'}
+                    <Badge className="bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[10px] font-bold inline-flex items-center gap-1">
+                      <Lock className="size-3" />
+                      <span>Reserved for {match.designated_facilitator?.full_name || 'Designated Official'}</span>
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="text-slate-400 border-white/10 text-[10px]">

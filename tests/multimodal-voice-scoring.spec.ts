@@ -89,6 +89,34 @@ test.describe('Multimodal Voice Parser Grammar & Intent Unit Tests', () => {
     expect(result.intent).toBe('commentary');
     expect(result.notes).toContain('Fast break dunk');
   });
+
+  test('12. Accurately parses game pause/resume commands without saying "clock"', () => {
+    const pauseCmd = parseVoiceCommand('Pause game', matchContext);
+    expect(pauseCmd.intent).toBe('clock');
+    expect(pauseCmd.clockAction).toBe('pause');
+
+    const resumeCmd = parseVoiceCommand('Resume match', matchContext);
+    expect(resumeCmd.intent).toBe('clock');
+    expect(resumeCmd.clockAction).toBe('resume');
+  });
+
+  test('13. Accurately parses hands-free player selection and exact deduction points', () => {
+    const pickCmd = parseVoiceCommand('Pick player 5 Team A', matchContext);
+    expect(pickCmd.intent).toBe('select_player');
+    expect(pickCmd.team).toBe('a');
+    expect(pickCmd.playerNumber).toBe(5);
+
+    const deductCmd = parseVoiceCommand('Deduct 2 points from Team B', matchContext);
+    expect(deductCmd.intent).toBe('deduct');
+    expect(deductCmd.team).toBe('b');
+    expect(deductCmd.points).toBe(2);
+
+    const subInForCmd = parseVoiceCommand('Sub in 10 for 4 Team A', matchContext);
+    expect(subInForCmd.intent).toBe('substitution');
+    expect(subInForCmd.team).toBe('a');
+    expect(subInForCmd.subInPlayerNumber).toBe(10);
+    expect(subInForCmd.subOutPlayerNumber).toBe(4);
+  });
 });
 
 test.describe('Multimodal Voice Scoring UI Component Tests', () => {

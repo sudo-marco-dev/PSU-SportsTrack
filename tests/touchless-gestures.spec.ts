@@ -4,7 +4,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { TouchlessGestureEngine } from '../src/lib/touchlessGestureEngine';
+import { TouchlessGestureEngine, evaluateSpatialZones } from '../src/lib/touchlessGestureEngine';
 import type { GestureType } from '../src/types/multimodal';
 
 test.describe('Touchless Gesture Engine Unit Tests', () => {
@@ -32,6 +32,58 @@ test.describe('Touchless Gesture Engine Unit Tests', () => {
       engine.start();
       engine.stop();
     }).not.toThrow();
+  });
+
+  test('3. Center Face Exclusion Mask ignores center face movement while detecting Left and Right Hand zones independently', () => {
+    const w = 64;
+    const h = 48;
+    const size = w * h * 4;
+    const bg = new Uint8ClampedArray(size).fill(20);
+    const prev = new Uint8ClampedArray(size).fill(20);
+
+    // Case A: Heavy movement ONLY inside center face exclusion region (x: 20..44, y: 12..46)
+    const faceCurr = new Uint8ClampedArray(bg);
+    for (let y = 14; y < 44; y++) {
+      for (let x = 22; x < 42; x++) {
+        const idx = (y * w + x) * 4;
+        faceCurr[idx] = 220;
+        faceCurr[idx + 1] = 180;
+        faceCurr[idx + 2] = 160;
+      }
+    }
+    const faceResult = evaluateSpatialZones(faceCurr, bg, prev, w, h, 22);
+    expect(faceResult.faceIgnoredCount).toBeGreaterThan(500);
+    expect(faceResult.leftActiveRatio).toBe(0);
+    expect(faceResult.rightActiveRatio).toBe(0);
+    expect(faceResult.topActiveRatio).toBe(0);
+
+    // Case B: Hand held in Left Zone (x < 17, y: 8..40)
+    const leftCurr = new Uint8ClampedArray(bg);
+    for (let y = 10; y < 38; y++) {
+      for (let x = 2; x < 14; x++) {
+        const idx = (y * w + x) * 4;
+        leftCurr[idx] = 210;
+        leftCurr[idx + 1] = 160;
+        leftCurr[idx + 2] = 135;
+      }
+    }
+    const leftResult = evaluateSpatialZones(leftCurr, bg, prev, w, h, 22);
+    expect(leftResult.leftActiveRatio).toBeGreaterThan(0.3);
+    expect(leftResult.rightActiveRatio).toBe(0);
+
+    // Case C: Hand held in Right Zone (x > 46, y: 8..40)
+    const rightCurr = new Uint8ClampedArray(bg);
+    for (let y = 10; y < 38; y++) {
+      for (let x = 49; x < 61; x++) {
+        const idx = (y * w + x) * 4;
+        rightCurr[idx] = 210;
+        rightCurr[idx + 1] = 160;
+        rightCurr[idx + 2] = 135;
+      }
+    }
+    const rightResult = evaluateSpatialZones(rightCurr, bg, prev, w, h, 22);
+    expect(rightResult.rightActiveRatio).toBeGreaterThan(0.3);
+    expect(rightResult.leftActiveRatio).toBe(0);
   });
 });
 

@@ -156,21 +156,29 @@ export const VoiceQuerySearch: React.FC = () => {
     try {
       // 0. Smart Natural Language Understanding
       let analysis: SmartVoiceAnalysis | null = null;
+      let smartMatchesOverride: MatchItem[] | null = null;
+
       if (term) {
         analysis = parseNaturalVoiceQuery(term);
         setSmartAnalysis(analysis);
         setFuzzyCorrection(analysis.fuzzyCorrection || null);
 
-        // Check for direct analytical questions (e.g. "Who won last week?", "Highest rated college")
-        if (
+        // Execute Smart NLU engine for analytical questions, Top-N leaderboards, and temporal filters
+        const isSmartQueryIntent =
           analysis.intent === 'question_winner' ||
           analysis.intent === 'question_top_college' ||
           analysis.intent === 'question_highest_mvp' ||
-          analysis.intent === 'question_highest_win_rate'
-        ) {
+          analysis.intent === 'question_highest_win_rate' ||
+          analysis.intent === 'question_top_scorers' ||
+          analysis.intent === 'question_tribe_squad_win_rate' ||
+          (analysis.intent === 'filter_matches' && (Boolean(analysis.temporalWindow) || Boolean(analysis.sport)));
+
+        if (isSmartQueryIntent) {
           const smartResult = await executeSmartVoiceQuery(analysis);
           if (smartResult.directAnswer) {
             setDirectAnswer(smartResult.directAnswer);
+          } else {
+            setDirectAnswer(null);
           }
           if (smartResult.isFallback) {
             setIsFallback(true);
@@ -178,6 +186,12 @@ export const VoiceQuerySearch: React.FC = () => {
           } else {
             setIsFallback(false);
             setFallbackMessage('');
+          }
+          if (
+            analysis.intent === 'question_winner' ||
+            analysis.intent === 'filter_matches'
+          ) {
+            smartMatchesOverride = smartResult.items as MatchItem[];
           }
         } else {
           setDirectAnswer(null);
@@ -189,8 +203,8 @@ export const VoiceQuerySearch: React.FC = () => {
       // Effective search keyword (using auto-corrected sport or term if available)
       const effectiveTerm = analysis?.fuzzyCorrection?.corrected || term;
 
-      // 1. Matches Query (with Temporal & Status awareness)
-      let matchQuery = supabase
+      // 1. Matches Query
+      const matchQuery = supabase
         .from('matches')
         .select(`
           id,
@@ -198,25 +212,15 @@ export const VoiceQuerySearch: React.FC = () => {
           round,
           venue,
           match_time,
+          created_at,
           team_a_score,
           team_b_score,
           team_a:teams!matches_team_a_id_fkey(name),
           team_b:teams!matches_team_b_id_fkey(name),
           tournament:tournaments!matches_tournament_id_fkey(name, sport)
         `)
-        .order('match_time', { ascending: false })
-        .limit(20);
-
-      // Apply Temporal Filter if present
-      if (analysis?.temporalWindow?.startDate && analysis?.temporalWindow?.endDate) {
-        matchQuery = matchQuery
-          .gte('match_time', analysis.temporalWindow.startDate)
-          .lte('match_time', analysis.temporalWindow.endDate);
-      }
-
-      if (analysis?.temporalWindow?.expectedStatus && analysis?.temporalWindow.expectedStatus !== 'any') {
-        matchQuery = matchQuery.eq('status', analysis.temporalWindow.expectedStatus);
-      }
+        .order('created_at', { ascending: false })
+        .limit(40);
 
       // 2. Players Query
       let playerQuery = supabase
@@ -296,7 +300,9 @@ export const VoiceQuerySearch: React.FC = () => {
       ]);
 
       // Process Matches
-      if (mRes.status === 'fulfilled' && mRes.value.data) {
+      if (smartMatchesOverride !== null) {
+        setMatches(smartMatchesOverride);
+      } else if (mRes.status === 'fulfilled' && mRes.value.data) {
         let mData = mRes.value.data as unknown as MatchItem[];
 
         // Sport filter
@@ -543,13 +549,14 @@ export const VoiceQuerySearch: React.FC = () => {
   const showStars = activeTab === 'all' || activeTab === 'rankings';
   const showSchedules = activeTab === 'all' || activeTab === 'schedules';
 
-  const hasAnyResults = totalCount > 0;
+  const hasAnyResults = totalCount > 0 || Boolean(directAnswer);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 pb-20" data-testid="page-voice-query-search">
       {/* Search Header Banner */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-primary/15 via-slate-900/60 to-slate-950 border-b border-white/10 px-4 py-8 sm:py-12">
-        <div className="max-w-5xl mx-auto">
+      <section className="relative overflow-hidden bg-slate-950 border-b border-white/10 px-4 py-8 sm:py-12">
+        <div className="absolute right-0 top-0 h-full w-64 bg-orange-500/10 -skew-x-12 translate-x-32 pointer-events-none" />
+        <div className="max-w-5xl mx-auto relative z-10">
           {/* Eyebrow & Title */}
           <div className="flex items-center gap-2 mb-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 border border-primary/30 text-primary text-[11px] font-black uppercase tracking-widest">
@@ -632,37 +639,44 @@ export const VoiceQuerySearch: React.FC = () => {
             <button
               type="button"
               onClick={() => handleQuickSearch('Who won last week?', 'matches')}
-              className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-300 text-xs transition-colors flex items-center gap-1"
+              className="px-2.5 py-1 rounded-lg bg-slate-900 border border-emerald-500/30 hover:bg-slate-800 text-emerald-400 text-xs font-bold transition-colors flex items-center gap-1"
             >
               <Trophy className="size-3" /> Who won last week?
             </button>
             <button
               type="button"
               onClick={() => handleQuickSearch('Who is the highest rated college right now?', 'colleges')}
-              className="px-2.5 py-1 rounded-lg bg-sky-500/10 border border-sky-500/30 hover:bg-sky-500/20 text-sky-300 text-xs transition-colors flex items-center gap-1"
+              className="px-2.5 py-1 rounded-lg bg-slate-900 border border-orange-500/30 hover:bg-slate-800 text-orange-400 text-xs font-bold transition-colors flex items-center gap-1"
             >
               <GraduationCap className="size-3" /> Highest rated college
             </button>
             <button
               type="button"
-              onClick={() => handleQuickSearch('Search for upcoming games this month', 'matches')}
-              className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 text-xs transition-colors flex items-center gap-1"
+              onClick={() => handleQuickSearch("What's the top 3 highest scoring player?", 'players')}
+              className="px-2.5 py-1 rounded-lg bg-slate-900 border border-white/15 hover:bg-slate-800 text-slate-200 text-xs font-bold transition-colors flex items-center gap-1"
             >
-              <Calendar className="size-3 text-primary" /> Upcoming games this month
+              <Star className="size-3 text-orange-400" /> Top 3 scorers
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickSearch("What's the top 5 highest win rate tribes or squads?", 'colleges')}
+              className="px-2.5 py-1 rounded-lg bg-slate-900 border border-white/15 hover:bg-slate-800 text-slate-200 text-xs font-bold transition-colors flex items-center gap-1"
+            >
+              <Trophy className="size-3 text-emerald-400" /> Top 5 tribes win rate
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickSearch('Search for upcoming games this month', 'matches')}
+              className="px-2.5 py-1 rounded-lg bg-slate-900 border border-white/15 hover:bg-slate-800 text-slate-200 text-xs font-bold transition-colors flex items-center gap-1"
+            >
+              <Calendar className="size-3 text-orange-400" /> Upcoming games this month
             </button>
             <button
               type="button"
               onClick={() => handleQuickSearch('Search for basketball games this week', 'matches')}
-              className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 text-xs transition-colors"
+              className="px-2.5 py-1 rounded-lg bg-slate-900 border border-white/15 hover:bg-slate-800 text-slate-200 text-xs font-bold transition-colors"
             >
               Basketball games this week
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickSearch('Search for player with highest win rate', 'players')}
-              className="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-300 text-xs transition-colors flex items-center gap-1"
-            >
-              <Star className="size-3" /> Highest win rate
             </button>
           </div>
         </div>
@@ -821,27 +835,27 @@ export const VoiceQuerySearch: React.FC = () => {
           {directAnswer && (
             <div
               data-testid="page-direct-answer-card"
-              className="bg-gradient-to-r from-amber-500/20 via-primary/20 to-emerald-500/20 border-2 border-amber-500/40 rounded-2xl p-5 shadow-2xl space-y-3"
+              className="bg-slate-900 border-2 border-orange-500/40 rounded-2xl p-5 shadow-2xl space-y-3"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <span className="p-2 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/40">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="p-2 rounded-xl bg-orange-500/15 text-orange-400 border border-orange-500/30 shrink-0">
                     <Sparkles className="size-5" />
                   </span>
-                  <div>
-                    <span className="text-xs font-black uppercase tracking-wider text-amber-300">
+                  <div className="min-w-0">
+                    <span className="text-xs font-black uppercase tracking-wider text-orange-400 block truncate">
                       {directAnswer.title}
                     </span>
                     <p className="text-[11px] text-slate-400">Synthesized from live tournament database records</p>
                   </div>
                 </div>
-                <Badge className="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold">
+                <Badge className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-black uppercase shrink-0">
                   {directAnswer.badge || 'Direct Answer'}
                 </Badge>
               </div>
 
               <div>
-                <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                <h3 className="text-xl sm:text-2xl font-black italic uppercase text-white tracking-tight">
                   {directAnswer.headline}
                 </h3>
                 {directAnswer.details && (
@@ -851,10 +865,51 @@ export const VoiceQuerySearch: React.FC = () => {
                 )}
               </div>
 
+              {/* Top-N Ranked Leaderboard List */}
+              {Array.isArray(directAnswer.leaderboard) && directAnswer.leaderboard.length > 0 && (
+                <div
+                  data-testid="page-direct-answer-leaderboard"
+                  className="grid gap-2 pt-2 border-t border-white/10"
+                >
+                  {directAnswer.leaderboard.map((row) => (
+                    <div
+                      key={row.rank}
+                      className="flex items-center justify-between gap-3 bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2.5"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span
+                          className={`text-sm font-black font-mono tabular-nums w-6 shrink-0 ${
+                            row.rank === 1 ? 'text-orange-400' : 'text-slate-400'
+                          }`}
+                        >
+                          #{row.rank}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-black uppercase tracking-tight text-white truncate">
+                            {row.name}
+                          </p>
+                          {row.subtitle && (
+                            <p className="text-xs text-slate-400 truncate">{row.subtitle}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-sm font-black font-mono tabular-nums text-orange-400 block">
+                          {row.metricValue}
+                        </span>
+                        {row.metricLabel && (
+                          <span className="text-[10px] text-slate-400 block">{row.metricLabel}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="pt-2 border-t border-white/10 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {directAnswer.metricValue && (
-                    <span className="text-sm font-black text-amber-300 bg-black/40 px-2.5 py-1 rounded-lg border border-white/10">
+                    <span className="text-sm font-black font-mono tabular-nums text-orange-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-white/10">
                       {directAnswer.metricValue}
                     </span>
                   )}
@@ -869,7 +924,7 @@ export const VoiceQuerySearch: React.FC = () => {
                     size="sm"
                     onClick={() => navigate(directAnswer.entityRoute!)}
                     data-testid="btn-page-direct-answer-view"
-                    className="text-xs bg-primary hover:bg-primary/90 text-white font-bold rounded-xl gap-1.5"
+                    className="text-xs bg-orange-500 hover:bg-orange-600 text-slate-950 font-black uppercase rounded-xl gap-1.5"
                   >
                     Open Fixture / Profile <ArrowRight className="size-3.5" />
                   </Button>

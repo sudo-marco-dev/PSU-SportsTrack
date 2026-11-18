@@ -239,66 +239,104 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
             </div>
 
             {/* Direct Answer AI Highlight Card */}
-            {(queryResults?.directAnswer || activeQuery?.directAnswer) && (
-              <div
-                data-testid="hud-direct-answer-card"
-                className="bg-gradient-to-r from-amber-500/20 via-primary/20 to-emerald-500/20 border-2 border-amber-500/40 rounded-2xl p-4 shadow-xl space-y-2"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="p-1.5 rounded-lg bg-amber-400/20 text-amber-300 border border-amber-400/40">
-                      <Sparkles className="size-4" />
-                    </span>
-                    <span className="text-[11px] font-black uppercase tracking-wider text-amber-300">
-                      {(queryResults?.directAnswer || activeQuery?.directAnswer)?.title || 'Direct Answer'}
-                    </span>
+            {(queryResults?.directAnswer || activeQuery?.directAnswer) && (() => {
+              const da = queryResults?.directAnswer || activeQuery?.directAnswer;
+              if (!da) return null;
+              return (
+                <div
+                  data-testid="hud-direct-answer-card"
+                  className="bg-slate-900 border-2 border-orange-500/40 rounded-2xl p-4 shadow-xl space-y-2.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="p-1.5 rounded-lg bg-orange-500/15 text-orange-400 border border-orange-500/30 shrink-0">
+                        <Sparkles className="size-4" />
+                      </span>
+                      <span className="text-[11px] font-black uppercase tracking-wider text-orange-400 truncate">
+                        {da.title || 'Direct Answer'}
+                      </span>
+                    </div>
+                    <Badge className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-black uppercase shrink-0">
+                      {da.badge || 'Verified Result'}
+                    </Badge>
                   </div>
-                  <Badge className="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold">
-                    {(queryResults?.directAnswer || activeQuery?.directAnswer)?.badge || 'Verified Result'}
-                  </Badge>
-                </div>
 
-                <div>
-                  <h4 className="text-base sm:text-lg font-black text-white leading-snug">
-                    {(queryResults?.directAnswer || activeQuery?.directAnswer)?.headline}
-                  </h4>
-                  {(queryResults?.directAnswer || activeQuery?.directAnswer)?.details && (
-                    <p className="text-xs text-slate-300 mt-1">
-                      {(queryResults?.directAnswer || activeQuery?.directAnswer)?.details}
-                    </p>
+                  <div>
+                    <h4 className="text-base sm:text-lg font-black italic uppercase tracking-tight text-white leading-snug">
+                      {da.headline}
+                    </h4>
+                    {da.details && (
+                      <p className="text-xs text-slate-300 mt-1">
+                        {da.details}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Top-N Ranked Leaderboard Rows */}
+                  {Array.isArray(da.leaderboard) && da.leaderboard.length > 0 && (
+                    <div
+                      data-testid="hud-direct-answer-leaderboard"
+                      className="space-y-1.5 pt-2 border-t border-white/10"
+                    >
+                      {da.leaderboard.map((row: any) => (
+                        <div
+                          key={row.rank}
+                          className="flex items-center justify-between gap-2 bg-slate-950 border border-white/10 rounded-xl px-3 py-1.5"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span
+                              className={`text-xs font-black font-mono tabular-nums w-5 shrink-0 ${
+                                row.rank === 1 ? 'text-orange-400' : 'text-slate-400'
+                              }`}
+                            >
+                              #{row.rank}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-white truncate">{row.name}</p>
+                              {row.subtitle && (
+                                <p className="text-[10px] text-slate-400 truncate">{row.subtitle}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="text-xs font-black font-mono tabular-nums text-orange-400 block">
+                              {row.metricValue}
+                            </span>
+                            {row.metricLabel && (
+                              <span className="text-[9px] text-slate-400 block">{row.metricLabel}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
-                </div>
 
-                <div className="pt-2 border-t border-white/10 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {(queryResults?.directAnswer || activeQuery?.directAnswer)?.metricValue && (
-                      <span className="text-xs font-black text-amber-300 bg-black/40 px-2 py-0.5 rounded border border-white/10">
-                        {(queryResults?.directAnswer || activeQuery?.directAnswer)?.metricValue}
-                      </span>
-                    )}
-                    {(queryResults?.directAnswer || activeQuery?.directAnswer)?.metricLabel && (
-                      <span className="text-[11px] text-slate-400">
-                        {(queryResults?.directAnswer || activeQuery?.directAnswer)?.metricLabel}
-                      </span>
-                    )}
+                  <div className="pt-2 border-t border-white/10 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {da.metricValue && (
+                        <span className="text-xs font-black font-mono tabular-nums text-orange-400 bg-slate-950 px-2 py-0.5 rounded border border-white/10">
+                          {da.metricValue}
+                        </span>
+                      )}
+                      {da.metricLabel && (
+                        <span className="text-[11px] text-slate-400">
+                          {da.metricLabel}
+                        </span>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      data-testid="btn-hud-direct-answer-view"
+                      onClick={() => navigateToResult(da.entityRoute || activeQuery?.targetRoute)}
+                      className="h-7 text-xs bg-slate-950 hover:bg-slate-800 text-white border-white/15 gap-1 rounded-lg"
+                    >
+                      View Details <ArrowRight className="size-3" />
+                    </Button>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    data-testid="btn-hud-direct-answer-view"
-                    onClick={() =>
-                      navigateToResult(
-                        (queryResults?.directAnswer || activeQuery?.directAnswer)?.entityRoute ||
-                          activeQuery?.targetRoute
-                      )
-                    }
-                    className="h-7 text-xs bg-white/10 hover:bg-white/20 text-white border-white/20 gap-1 rounded-lg"
-                  >
-                    View Details <ArrowRight className="size-3" />
-                  </Button>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Dynamic Results Preview Section */}
             {isLoadingResults ? (
@@ -389,12 +427,15 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                         className="bg-white/5 border border-white/10 rounded-xl p-3 flex items-center justify-between"
                       >
                         <div className="flex items-center gap-2.5">
-                          <div className="size-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center text-primary font-bold text-xs">
-                            {player.full_name?.charAt(0) || 'P'}
+                          <div className="size-8 rounded-full bg-orange-500/15 border border-orange-500/40 flex items-center justify-center text-orange-400 font-bold text-xs">
+                            {(player.full_name || player.name || 'P').charAt(0)}
                           </div>
                           <div>
-                            <p className="font-bold text-sm text-slate-100">{player.full_name}</p>
-                            <p className="text-[11px] text-slate-400">{player.college?.college_name || 'PSU Student Athlete'}</p>
+                            <p className="font-bold text-sm text-slate-100">{player.full_name || player.name}</p>
+                            <p className="text-[11px] text-slate-400">
+                              {player.college?.college_name || player.collegeName || player.college || 'PSU Student Athlete'}
+                              {player.totalPoints !== undefined ? ` • ${player.totalPoints} PTS` : ''}
+                            </p>
                           </div>
                         </div>
                         <Button
@@ -442,7 +483,7 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                   </div>
                 )}
 
-                {/* College Search Previews */}
+                {/* College & Tribe/Squad Search Previews */}
                 {queryResults.type === 'college_search' && (
                   <div className="grid gap-2">
                     {queryResults.items.map((c: any, idx: number) => (
@@ -451,12 +492,15 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                         className="bg-white/5 border border-white/10 rounded-xl p-3 flex items-center justify-between"
                       >
                         <div className="flex items-center gap-2.5">
-                          <div className="size-8 rounded-lg bg-sky-500/20 border border-sky-500/40 flex items-center justify-center text-sky-300">
+                          <div className="size-8 rounded-lg bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-400">
                             <GraduationCap className="size-4" />
                           </div>
                           <div>
-                            <p className="font-bold text-sm text-slate-100">{c.college_name}</p>
-                            <p className="text-[11px] text-slate-400">{c.cluster?.name || 'Academic Unit'}</p>
+                            <p className="font-bold text-sm text-slate-100">{c.college_name || c.name}</p>
+                            <p className="text-[11px] text-slate-400">
+                              {c.cluster?.name || c.subtitle || 'Academic Unit'}
+                              {c.winRate !== undefined ? ` • ${c.winRate}% Win Rate` : ''}
+                            </p>
                           </div>
                         </div>
                         <Button
@@ -593,7 +637,23 @@ export const PublicVoiceAssistantHUD: React.FC = () => {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="text-xs h-7 bg-white/5 border-white/15 hover:bg-white/15 text-slate-300 rounded-lg"
+                  className="text-xs h-7 bg-slate-900 border-white/15 hover:bg-slate-800 text-slate-200 rounded-lg"
+                  onClick={() => handleQuickChip("What's the top 3 highest scoring player?")}
+                >
+                  <Trophy className="size-3 mr-1 text-orange-400" /> Top 3 scorers
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs h-7 bg-slate-900 border-white/15 hover:bg-slate-800 text-slate-200 rounded-lg"
+                  onClick={() => handleQuickChip("What's the top 5 highest win rate tribes or squads?")}
+                >
+                  <Star className="size-3 mr-1 text-emerald-400" /> Top 5 tribes win rate
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs h-7 bg-slate-900 border-white/15 hover:bg-slate-800 text-slate-200 rounded-lg"
                   onClick={() => handleQuickChip('Search for player with highest win rate')}
                 >
                   <Star className="size-3 mr-1 text-amber-400" /> Highest win rate

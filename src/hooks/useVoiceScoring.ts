@@ -42,10 +42,12 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
     sport = 'Basketball',
     onScore,
     onSubstitution,
+    onSelectPlayer,
     onDeduct,
     onTimeout,
     onFoul,
     onClockControl,
+    onPeriodChange,
     onCommentary,
     onUndo,
     enableSpeechFeedback = true,
@@ -149,6 +151,18 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
           break;
         }
 
+        case 'select_player': {
+          const targetTeam = team || 'a';
+          const targetName = (targetTeam === 'a' ? teamAName : teamBName) || 'Team';
+          onSelectPlayer?.(targetTeam, playerNumber || undefined);
+          const feedback = playerNumber
+            ? `Selected Player #${playerNumber} for ${targetName}`
+            : `Focused ${targetName} scoring column`;
+          setState((prev) => ({ ...prev, feedbackMessage: feedback }));
+          if (!isMuted) speakConfirmation(feedback);
+          break;
+        }
+
         case 'clock': {
           const action = clockAction === 'resume' ? 'resume' : 'pause';
           onClockControl?.(action);
@@ -164,12 +178,22 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
           break;
         }
 
+        case 'period': {
+          const dir = command.periodAction === 'prev' ? 'prev' : 'next';
+          onPeriodChange?.(dir);
+          const feedback = dir === 'next' ? 'Advancing to next period' : 'Returning to previous period';
+          setState((prev) => ({ ...prev, feedbackMessage: feedback }));
+          if (!isMuted) speakConfirmation(feedback);
+          break;
+        }
+
         case 'deduct': {
           const targetTeam = team || 'a';
           const targetName = (targetTeam === 'a' ? teamAName : teamBName) || 'Team';
-          onDeduct?.(targetTeam);
+          const deductPts = points || 1;
+          onDeduct?.(targetTeam, deductPts);
 
-          const feedback = `Score correction opened for ${targetName}`;
+          const feedback = `Deducted ${deductPts} point${deductPts > 1 ? 's' : ''} from ${targetName}`;
           setState((prev) => ({ ...prev, feedbackMessage: feedback }));
           if (!isMuted) speakConfirmation(feedback);
           break;
@@ -226,7 +250,7 @@ export function useVoiceScoring(options: VoiceScoringOptions) {
         }
       }
     },
-    [teamAName, teamBName, onScore, onSubstitution, onDeduct, onTimeout, onFoul, onClockControl, onCommentary, onUndo, isMuted]
+    [teamAName, teamBName, onScore, onSubstitution, onSelectPlayer, onDeduct, onTimeout, onFoul, onClockControl, onPeriodChange, onCommentary, onUndo, isMuted]
   );
 
   /**

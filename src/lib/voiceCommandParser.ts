@@ -178,6 +178,15 @@ function parseSubstitution(
 ): { subOut: number; subIn: number } | null {
   const norm = normalizeText(text);
 
+  // Pattern 0: sub in [Y] for/replacing [X] (ordered subIn first, subOut second)
+  const subInForMatch = norm.match(/sub\s+in\s+(?:player\s+|#)?(\d+)\s+(?:for|replacing|sub\s+out)\s+(?:player\s+|#)?(\d+)/i);
+  if (subInForMatch && subInForMatch[1] && subInForMatch[2]) {
+    return {
+      subOut: parseInt(subInForMatch[2], 10),
+      subIn: parseInt(subInForMatch[1], 10),
+    };
+  }
+
   // Pattern 1: sub out X sub in Y
   const subOutInMatch = norm.match(/sub\s+(?:out\s+)?(?:player\s+|#)?(\d+)\s+(?:sub\s+in\s+|(?:to|with|for)\s+(?:player\s+|#)?)(\d+)/i);
   if (subOutInMatch && subOutInMatch[1] && subOutInMatch[2]) {
@@ -187,8 +196,8 @@ function parseSubstitution(
     };
   }
 
-  // Pattern 2: substitute player X to player Y / substitute X with Y
-  const subMatch = norm.match(/sub(?:stitute)?\s+(?:player\s+|#)?(\d+)\s+(?:to|with|for)\s+(?:player\s+|#)?(\d+)/i);
+  // Pattern 2: substitute/replace player X to/with/for player Y
+  const subMatch = norm.match(/(?:sub(?:stitute)?|replace)\s+(?:player\s+|#)?(\d+)\s+(?:to|with|for)\s+(?:player\s+|#)?(\d+)/i);
   if (subMatch && subMatch[1] && subMatch[2]) {
     return {
       subOut: parseInt(subMatch[1], 10),
@@ -199,7 +208,7 @@ function parseSubstitution(
   // Pattern 3: words e.g. "substitute player one to player two"
   for (const [word1, num1] of Object.entries(NUMBER_WORDS)) {
     for (const [word2, num2] of Object.entries(NUMBER_WORDS)) {
-      if (new RegExp(`sub(?:stitute)?\\s+(?:player\\s+)?${word1}\\s+(?:to|with|for)\\s+(?:player\\s+)?${word2}\\b`, 'i').test(norm)) {
+      if (new RegExp(`(?:sub(?:stitute)?|replace)\\s+(?:player\\s+)?${word1}\\s+(?:to|with|for)\\s+(?:player\\s+)?${word2}\\b`, 'i').test(norm)) {
         return { subOut: num1, subIn: num2 };
       }
     }
@@ -221,7 +230,14 @@ export function parseVoiceCommand(
   const playerNumber = extractPlayerNumber(rawTranscript);
 
   // 1. Check for Substitution
-  if (norm.includes('substitute') || norm.includes('substitution') || norm.includes('sub out') || norm.startsWith('sub ')) {
+  if (
+    norm.includes('substitute') ||
+    norm.includes('substitution') ||
+    norm.includes('sub out') ||
+    norm.includes('sub in') ||
+    norm.startsWith('sub ') ||
+    norm.includes('replace player')
+  ) {
     const subInfo = parseSubstitution(rawTranscript, team);
     if (subInfo) {
       return {
@@ -240,16 +256,47 @@ export function parseVoiceCommand(
     }
   }
 
-  // 2. Check for Clock / Timer Controls
-  if (
+  // 2. Check for Timeout (must precede general pause/hold checks)
+  if (norm.includes('timeout') || norm.includes('time out') || norm.includes('call time')) {
+    return {
+      rawTranscript,
+      intent: 'timeout',
+      team,
+      teamName,
+      points: null,
+      actionType: 'Timeout',
+      playerNumber,
+      confidence: 0.9,
+      timestamp: Date.now(),
+    };
+  }
+
+  // 3. Check for Clock / Game Pause & Resume Controls
+  const isClockOrGameTarget =
     norm.includes('clock') ||
     norm.includes('timer') ||
     norm.includes('stopwatch') ||
+    norm.includes('game') ||
+    norm.includes('match') ||
+    norm.includes('unpause') ||
+    norm.includes('freeze') ||
     norm.includes('start time') ||
-    norm.includes('stop time')
-  ) {
-    const isPause = norm.includes('pause') || norm.includes('stop') || norm.includes('hold');
-    const isResume = norm.includes('resume') || norm.includes('start') || norm.includes('play') || norm.includes('run');
+    norm.includes('stop time');
+
+  if (isClockOrGameTarget) {
+    const isPause =
+      norm.includes('pause') ||
+      norm.includes('stop') ||
+      norm.includes('hold') ||
+      norm.includes('freeze');
+    const isResume =
+      norm.includes('unpause') ||
+      norm.includes('resume') ||
+      norm.includes('start') ||
+      norm.includes('play') ||
+      norm.includes('continue') ||
+      norm.includes('run');
+
     if (isPause || isResume) {
       return {
         rawTranscript,
@@ -257,7 +304,7 @@ export function parseVoiceCommand(
         team: null,
         teamName: null,
         points: null,
-        actionType: isPause ? 'Pause Clock' : 'Resume Clock',
+        actionType: isPause ? 'Pause Game' : 'Resume Game',
         playerNumber: null,
         clockAction: isPause ? 'pause' : 'resume',
         confidence: 0.95,
@@ -266,7 +313,25 @@ export function parseVoiceCommand(
     }
   }
 
-  // 3. Check for Undo / Cancel
+  // 4. Check for Pick / Select Player or Team (Hands-Free Attribution Target)
+  if (
+    /\b(?:pick|select|target|focus|choose)\b/i.test(norm) &&
+    (playerNumber !== null || team !== null)
+  ) {
+    return {
+      rawTranscript,
+      intent: 'select_player',
+      team,
+      teamName,
+      points: null,
+      actionType: playerNumber ? `Pick Player #${playerNumber}` : `Select ${teamName || 'Team'}`,
+      playerNumber,
+      confidence: 0.93,
+      timestamp: Date.now(),
+    };
+  }
+
+  // 5. Check for Undo / Cancel
   if (
     norm.includes('undo') ||
     norm.includes('cancel last') ||
@@ -286,22 +351,7 @@ export function parseVoiceCommand(
     };
   }
 
-  // 4. Check for Timeout
-  if (norm.includes('timeout') || norm.includes('time out') || norm.includes('call time')) {
-    return {
-      rawTranscript,
-      intent: 'timeout',
-      team,
-      teamName,
-      points: null,
-      actionType: 'Timeout',
-      playerNumber,
-      confidence: 0.9,
-      timestamp: Date.now(),
-    };
-  }
-
-  // 5. Check for Foul / Technical / Violation
+  // 6. Check for Foul / Technical / Violation
   if (
     norm.includes('foul') ||
     norm.includes('violation') ||
@@ -322,23 +372,26 @@ export function parseVoiceCommand(
     };
   }
 
-  // 6. Check for Deduction / Score Correction
+  // 7. Check for Deduction / Score Correction (with exact points extraction)
   if (
     norm.includes('deduct') ||
     norm.includes('minus') ||
     norm.includes('subtract') ||
     norm.includes('wave off') ||
-    norm.includes('correction')
+    norm.includes('correction') ||
+    norm.includes('remove point') ||
+    norm.includes('take away')
   ) {
+    const deductPointsInfo = extractPoints(rawTranscript);
     return {
       rawTranscript,
       intent: 'deduct',
       team,
       teamName,
-      points: null,
+      points: deductPointsInfo?.points || 1,
       actionType: 'Correction',
       playerNumber,
-      confidence: 0.85,
+      confidence: 0.88,
       timestamp: Date.now(),
     };
   }

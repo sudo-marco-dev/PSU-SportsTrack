@@ -19,6 +19,9 @@ import {
   CheckCircle2,
   AlertCircle,
   ChevronUp,
+  ArrowRight,
+  Pause,
+  MinusCircle,
 } from 'lucide-react';
 import type { useVoiceScoring } from '@/hooks/useVoiceScoring';
 
@@ -63,7 +66,7 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
   };
 
   return (
-    <Card className="rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-slate-900 via-slate-950 to-primary/10 text-white shadow-xl overflow-hidden transition-all">
+    <Card className="rounded-2xl border border-white/10 bg-slate-950 text-white shadow-xl overflow-hidden transition-all">
       <CardHeader className="py-3 px-4 border-b border-white/10 flex flex-row items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -185,15 +188,35 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
             <Button
               size="sm"
               variant="outline"
-              className="text-xs h-8 bg-white/5 border-white/20 hover:bg-white/15 text-purple-300"
+              className="text-xs h-8 bg-slate-900 border-white/15 hover:bg-slate-800 text-slate-200 inline-flex items-center"
               onClick={() => handleManualSimulate(`Substitute player 1 to player 2 from ${teamAName || 'Team A'}`)}
             >
-              Sub 1 $\rightarrow$ 2
+              <span>Sub #1</span>
+              <ArrowRight className="size-3 mx-1 text-orange-400" />
+              <span>#2</span>
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="text-xs h-8 bg-white/5 border-white/20 hover:bg-white/15 text-red-300"
+              className="text-xs h-8 bg-slate-900 border-white/15 hover:bg-slate-800 text-emerald-400"
+              onClick={() => handleManualSimulate('Pause game')}
+            >
+              <Pause className="size-3 mr-1" />
+              Pause
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs h-8 bg-slate-900 border-white/15 hover:bg-slate-800 text-rose-400"
+              onClick={() => handleManualSimulate(`Deduct 1 point from ${teamAName || 'Team A'}`)}
+            >
+              <MinusCircle className="size-3 mr-1" />
+              Deduct -1
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs h-8 bg-slate-900 border-white/15 hover:bg-slate-800 text-amber-300"
               onClick={() => handleManualSimulate('Undo last score')}
             >
               <RotateCcw className="size-3 mr-1" />
@@ -286,19 +309,19 @@ export const VoiceScoringWidget: React.FC<VoiceScoringWidgetProps> = ({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
               <div className="bg-slate-950/60 p-2 rounded-lg border border-white/5 space-y-1">
-                <span className="font-bold text-emerald-400 block">Scoring Commands</span>
-                <p className="text-slate-400">• "Add 2 points to Team A"</p>
-                <p className="text-slate-400">• "3 pointer for {teamBName || 'Team B'}"</p>
-                <p className="text-slate-400">• "Free throw Team A"</p>
-                <p className="text-slate-400">• "Goal for {teamAName || 'Team A'}"</p>
+                <span className="font-bold text-orange-400 block uppercase">Scoring & Player Selection</span>
+                <p className="text-slate-400">"Add 2 points to Team A player 1"</p>
+                <p className="text-slate-400">"3 pointer for {teamBName || 'Team B'}"</p>
+                <p className="text-slate-400">"Pick player 12 Team A"</p>
+                <p className="text-slate-400">"Deduct 2 points from {teamAName || 'Team A'}"</p>
               </div>
 
               <div className="bg-slate-950/60 p-2 rounded-lg border border-white/5 space-y-1">
-                <span className="font-bold text-amber-400 block">Game Flow Commands</span>
-                <p className="text-slate-400">• "Timeout Team A"</p>
-                <p className="text-slate-400">• "Foul on Player 24"</p>
-                <p className="text-slate-400">• "Score correction Team B"</p>
-                <p className="text-slate-400">• "Undo last score"</p>
+                <span className="font-bold text-emerald-400 block uppercase">Game Flow & Subs</span>
+                <p className="text-slate-400">"Pause game" / "Resume game"</p>
+                <p className="text-slate-400">"Substitute player 1 to player 2 from Team A"</p>
+                <p className="text-slate-400">"Timeout Team A" / "Foul on Player 24"</p>
+                <p className="text-slate-400">"Undo last score"</p>
               </div>
             </div>
           </div>

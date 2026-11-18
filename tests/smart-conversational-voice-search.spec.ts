@@ -75,6 +75,37 @@ test.describe('Smart Natural Language Understanding Unit Tests', () => {
     expect(typo2.sport).toBe('volleyball');
     expect(typo2.fuzzyCorrection?.corrected).toBe('volleyball');
   });
+
+  test('Handles vague conversational & Top-N ranking requests accurately', () => {
+    const vagueLastWeek = parseNaturalVoiceQuery("What's the last matches from basketball this last week?");
+    expect(vagueLastWeek.intent).toBe('filter_matches');
+    expect(vagueLastWeek.sport).toBe('basketball');
+    expect(vagueLastWeek.temporalWindow?.type).toBe('last_week');
+    expect(vagueLastWeek.temporalWindow?.expectedStatus).toBe('Completed');
+
+    const upcomingMonth = parseNaturalVoiceQuery("What's the upcoming games for this month?");
+    expect(upcomingMonth.intent).toBe('filter_matches');
+    expect(upcomingMonth.temporalWindow?.type).toBe('this_month');
+    expect(upcomingMonth.temporalWindow?.expectedStatus).toBe('Scheduled');
+
+    const upcomingDay = parseNaturalVoiceQuery("What's the upcoming games for this day?");
+    expect(upcomingDay.intent).toBe('filter_matches');
+    expect(upcomingDay.temporalWindow?.type).toBe('today');
+    expect(upcomingDay.temporalWindow?.expectedStatus).toBe('Scheduled');
+
+    const wonLastYear = parseNaturalVoiceQuery('Who won last year?');
+    expect(wonLastYear.intent).toBe('question_winner');
+    expect(wonLastYear.temporalWindow?.type).toBe('last_year');
+
+    const top3Scorers = parseNaturalVoiceQuery("What's the top 3 highest scoring player?");
+    expect(top3Scorers.intent).toBe('question_top_scorers');
+    expect(top3Scorers.topN).toBe(3);
+
+    const top5WinRate = parseNaturalVoiceQuery("What's the top 5 highest win rate tribes or squads?");
+    expect(top5WinRate.intent).toBe('question_tribe_squad_win_rate');
+    expect(top5WinRate.topN).toBe(5);
+    expect(top5WinRate.entityTarget).toBe('both');
+  });
 });
 
 test.describe('Smart Voice Query UI Integration Tests', () => {
@@ -148,5 +179,23 @@ test.describe('Smart Voice Query UI Integration Tests', () => {
 
     // Should navigate without 404
     await expect(page.locator('text=Arena Navigation Error')).not.toBeVisible();
+  });
+
+  test('Vague Top-3 scoring players query renders ranked Direct Answer card on /search', async ({ page }) => {
+    await page.goto("/search?q=What's%20the%20top%203%20highest%20scoring%20player%3F", { waitUntil: 'domcontentloaded' });
+
+    await expect(page.locator('[data-testid="page-voice-query-search"]')).toBeVisible({ timeout: 10000 });
+    const directCard = page.locator('[data-testid="page-direct-answer-card"]');
+    await expect(directCard).toBeVisible({ timeout: 10000 });
+    await expect(directCard).toContainText(/Top 3 Highest Scoring Players/i);
+  });
+
+  test('Vague Top-5 tribes/squads win rate query renders ranked Direct Answer card on /search', async ({ page }) => {
+    await page.goto("/search?q=What's%20the%20top%205%20highest%20win%20rate%20tribes%20or%20squads%3F", { waitUntil: 'domcontentloaded' });
+
+    await expect(page.locator('[data-testid="page-voice-query-search"]')).toBeVisible({ timeout: 10000 });
+    const directCard = page.locator('[data-testid="page-direct-answer-card"]');
+    await expect(directCard).toBeVisible({ timeout: 10000 });
+    await expect(directCard).toContainText(/Top 5 Highest Win Rate/i);
   });
 });
